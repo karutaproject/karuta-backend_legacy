@@ -1,2 +1,2 @@
-karuta-backend
+Karuta Backend
 ==============
