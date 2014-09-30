@@ -4656,6 +4656,12 @@ public class MysqlDataProvider implements DataProvider {
 			st = connection.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
+			
+			/// Finalement on crée un rôle designer
+			int groupid = postCreateRole(newPortfolioUuid, "designer", userId);
+
+			/// Ajoute la personne dans ce groupe
+			putUserGroup(Integer.toString(groupid), Integer.toString(userId));
 		}
 		catch( Exception e )
 		{
