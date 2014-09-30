@@ -1,0 +1,11 @@
+* my.cnf changes
+# Set group concat max length to 1 MB
+group_concat_max_len=1M 
+
+max_connections=1000
+
+* Some server hosting need a .htaccess to activate the backend and file server
+SetHandler jakarta-servlet
+SetEnv JK_WORKER_NAME ajp13
+AddHandler php-cgi .php
+#AddHandler php-cli .php

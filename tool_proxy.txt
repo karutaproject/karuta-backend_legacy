@@ -1,0 +1,107 @@
+{
+	"@context" : "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy",
+	"@type" : "ToolProxy",
+	"@id" : "http://lms.example.com/ToolProxy/869e5ce5-214c-4e85-86c6-b99e8458a592",
+	"tool_profile":
+	{
+		"custom":{},
+		"message":
+		[{
+			"message_type" : "basic-lti-launch-request",
+			"path" : "launch",
+			"enabled_capability":["Result.autocreate"],
+			"parameter":
+			[{
+				"name" : "result_uri",
+				"variable" : "Result.uri"
+				},
+				{
+				"name" : "discipline",
+				"fixed" : "chemistry"
+			}]
+		}],
+		"tool_consumer_profile":{},
+		"tool_proxy_guid" : "e8359010-009f-11e1-be50-0800200c9a66",
+		"lti_version" : "LTI-2p0",
+		"base_url":"",
+		"product_instance":
+		{
+			"guid" : "f188d950-dd73-11e0-9572-0800200c9a66",
+			"product_info":
+			{
+				"product_name":
+				{
+					"default_value":"Karuta",
+					"key":"product.name"
+				},
+				"description":
+				{
+					"default_value" : "Karuta portfolios"
+				},
+				"product_version" : "1.0",
+				"product_family":
+				{
+					"code" : "karuta",
+					"vendor" :
+					{
+						"code" : "karuta.portfolio",
+						"vendor_name" :
+						{
+							"default_value" : "Karuta Project",
+							"key" : "product.vendor.name"
+						},
+						"description":
+						{
+							"default_value" : "Karuta Portfolio"
+						},
+						"website" : "http://www.eportfolium.com",
+						"contact" :
+						{
+							"email" : "support@eportfolium.com"
+						}
+					}
+				}
+			}
+		},
+		"base_url_choice":
+		[{
+			"selector": "DefaultSelector",
+			"default_base_url": "http://www.eportfolium.com/lti/",
+			"secure_base_url":"https://www.eportfolium.com/"
+		}],
+		"resource_handler" :
+		[{
+			"resource_type":{ "code" : "karuta"},
+			"name":{"default_value" : "Karuta portfolio"},
+			"description":{"default_value" : "Karuta portfolio"},
+			"message":
+			[{
+				"message_type" : "basic-lti-launch-request",
+				"path" : "launch",
+				"enabled_capability":["Result.autocreate"],
+				"parameter" :
+				[{
+					"name" : "result_uri",
+					"variable" : "Result.uri"
+					},
+					{
+					"name" : "discipline",
+					"fixed" : "chemistry"
+				}]
+			}]
+		}]
+	},
+	"support":{},
+	"service_provider":{},
+	"service_owner":{},
+	"security_contract":
+	{
+		"shared_secret" : "ThisIsASecret!",
+		"tool_service" :
+		[{
+			"@type" : "RestServiceProfile",
+			"service" : "http://lms.example.com/profile/b6ffa601-ce1d-4549-9ccf-145670a964d4#Result.item",
+			"action" : ["GET", "PUT"]
+		}]
+	}
+}

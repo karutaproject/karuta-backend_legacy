@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	xmlns:web="http://java.sun.com/xml/ns/javaee/webapp_2_5.xsd"
+	id="WebApp_ID">
+	<display-name>Karuta Backend</display-name>
+	<resource-ref>
+		<description>DB Connection</description>
+		<res-ref-name>jdbc/portfolio-backend</res-ref-name>
+		<res-type>javax.sql.DataSource</res-type>
+		<res-auth>Container</res-auth>
+	</resource-ref>
+	<context-param>
+		<param-name>backendserver</param-name>
+		<param-value>localhost:8080/karuta-backend</param-value>
+	</context-param>
+	<context-param>
+		<param-name>fileserver</param-name>
+		<param-value>localhost:8080/RestFileServer</param-value>
+	</context-param>
+	
+	<servlet>
+		<servlet-name>Jersey REST Service</servlet-name>
+		<servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
+		<init-param>
+			<param-name>com.sun.jersey.config.property.packages</param-name>
+			<param-value>com.portfolio.rest;</param-value>
+		</init-param>
+		<init-param>
+			<param-name>dataProviderClass</param-name>
+			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
+		</init-param>
+		<init-param>
+			<param-name>logRestRequests</param-name>
+			<param-value>0</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Jersey REST Service</servlet-name>
+		<url-pattern>/rest/*</url-pattern>
+	</servlet-mapping>
+	<servlet>
+		<servlet-name>Admin Jersey REST Service</servlet-name>
+		<servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
+		<init-param>
+			<param-name>com.sun.jersey.config.property.packages</param-name>
+			<param-value>com.portfolio.admin;</param-value>
+		</init-param>
+		<init-param>
+			<param-name>adminProviderClass</param-name>
+			<param-value>com.portfolio.data.provider.MysqlAdminProvider</param-value>
+		</init-param>
+		<init-param>
+			<param-name>logRestRequests</param-name>
+			<param-value>0</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Admin Jersey REST Service</servlet-name>
+		<url-pattern>/admin/*</url-pattern>
+	</servlet-mapping>
+	 
+	<servlet>
+		<description></description>
+		<display-name>FileServlet</display-name>
+		<servlet-name>FileServlet</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.FileServlet</servlet-class>
+		<init-param>
+			<param-name>dataProviderClass</param-name>
+			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
+		</init-param>
+		<init-param>
+			<param-name>redirectedServer</param-name>
+			<param-value>localhost:8080/RestFileServer</param-value>
+		</init-param>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>FileServlet</servlet-name>
+		<url-pattern>/resources/resource/file/*</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<description></description>
+		<display-name>XSLT Servlet</display-name>
+		<servlet-name>XSLTServlet</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.XSLService</servlet-class>
+		<init-param>
+			<param-name>dataProviderClass</param-name>
+			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
+		</init-param>
+		<init-param>
+			<param-name>redirectedServer</param-name>
+			<param-value>localhost:8080/karuta-backend</param-value>
+		</init-param>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>XSLTServlet</servlet-name>
+		<url-pattern>/xsl</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<description></description>
+		<display-name>CSVServlet</display-name>
+		<servlet-name>CSVServlet</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.ConvertCSV</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>CSVServlet</servlet-name>
+		<url-pattern>/csv</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>LTI</servlet-name>
+		<servlet-class>com.portfolio.security.LTIServlet</servlet-class>
+		<init-param>
+			<param-name>dataProviderClass</param-name>
+			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
+		</init-param>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LTI</servlet-name>
+		<url-pattern>/lti/*</url-pattern>
+	</servlet-mapping>
+  <servlet>
+    <servlet-name>LTIv2</servlet-name>
+    <servlet-class>com.portfolio.security.LTIv2Servlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>LTIv2</servlet-name>
+    <url-pattern>/lti2/*</url-pattern>
+  </servlet-mapping>
+
+	<filter>
+		<filter-name>CAS Authentication Filter</filter-name>
+		<filter-class>org.jasig.cas.client.authentication.AuthenticationFilter</filter-class>
+		<init-param>
+			<param-name>casServerLoginUrl</param-name>
+			<param-value>https://himeko:8443/cas/login</param-value>
+		</init-param>
+		<init-param>
+			<param-name>service</param-name>
+			<param-value>http://localhost:8080/WAD6/jsp/login.jsp</param-value>
+		</init-param>
+	</filter>
+	<filter>
+		<filter-name>CAS Ticket Validation Filter</filter-name>
+		<filter-class>org.jasig.cas.client.validation.Cas10TicketValidationFilter</filter-class>
+		<init-param>
+			<param-name>casServerUrlPrefix</param-name>
+			<param-value>https://himeko:8443/cas</param-value>
+		</init-param>
+		<init-param>
+			<param-name>serverName</param-name>
+			<param-value>http://localhost:8080/</param-value>
+		</init-param>
+	</filter>
+	<filter>
+		<filter-name>CAS Wrapper Filter</filter-name>
+		<filter-class>org.jasig.cas.client.util.HttpServletRequestWrapperFilter</filter-class>
+	</filter>
+	<filter>
+		<filter-name>CAS Thread Filter</filter-name>
+		<filter-class>org.jasig.cas.client.util.AssertionThreadLocalFilter</filter-class>
+	</filter>
+	
+	<!--
+	<filter-mapping>
+		<filter-name>CAS Authentication Filter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	<filter-mapping>
+		<filter-name>CAS Ticket Validation Filter
+		</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	<filter-mapping>
+		<filter-name>CAS Wrapper Filter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	-->
+</web-app>

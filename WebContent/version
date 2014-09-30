@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<versions>
+	<version id='backend'>
+		<number>1.0.0.0</number>
+		<date>2014-09-30</date>
+	</version>
+	<version id='fileserver'>
+		<number>1.0.0.0</number>
+		<date>2014-09-30</date>
+	</version>
+</versions>

@@ -1,0 +1,43 @@
+<configuration debug="false">
+
+	<contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator"/>
+
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="LOGFILE" class="ch.qos.logback.core.FileAppender">
+		<file>${catalina.base}/logs/backend.log</file>
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<root level="TRACE">
+		<appender-ref ref="STDOUT" />
+		<appender-ref ref="LOGFILE" />
+	</root>
+
+	<root level="DEBUG">
+		<appender-ref ref="STDOUT" />
+		<appender-ref ref="LOGFILE" />
+	</root>
+	
+	<root level="INFO">
+		<appender-ref ref="STDOUT" />
+		<appender-ref ref="LOGFILE" />
+	</root>
+
+	<root level="WARN">
+		<appender-ref ref="STDOUT" />
+		<appender-ref ref="LOGFILE" />
+	</root>
+
+	<root level="ERROR">
+		<appender-ref ref="STDOUT" />
+		<appender-ref ref="LOGFILE" />
+	</root>
+
+</configuration>

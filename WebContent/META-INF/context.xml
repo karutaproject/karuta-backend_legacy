@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context>
+
+	<Resource name="jdbc/portfolio-backend" auth="Container"
+		type="javax.sql.DataSource" maxActive="1000" maxIdle="30" maxWait="10000"
+		driverClassName="com.mysql.jdbc.Driver" removeAbandoned="true"
+		removeAbandonedTimeout="1000" logAbandoned="true" validationQuery="SELECT 1"
+		username="karuta" password="karuta_password" 
+		url="jdbc:mysql://localhost/karuta-backend?autoReconnect=true&amp;useEncoding=true&amp;characterEncoding=UTF-8" /> 
+	<!--
+	<Resource name="jdbc/portfolio-backend" auth="Container"
+		type="javax.sql.DataSource" maxActive="1000" maxIdle="30" maxWait="10000"
+		driverClassName="oracle.jdbc.driver.OracleDriver" removeAbandoned="true"
+		removeAbandonedTimeout="1000" logAbandoned="true" validationQuery="SELECT 1 FROM DUAL"
+		username="karuta" password="k$pp42ita"
+		url="jdbc:oracle:thin:@//verglas.hec.ca:5112/KARUTA" />
+	-->
+	<ResourceLink global="jdbc/portfolio-backend" name="jdbc/portfolio-backend" type="javax.sql.DataSource" />
+	
+	<Parameter name="casUrlValidation" value="https://cas-upmf.grenet.fr/serviceValidate" override="false"/>
+	
+	<Parameter name="elggDefaultApiUrl" value="http://tanami.upmf-grenoble.fr/elgg/services/api/rest/json/" override="false"/>
+	<Parameter name="elggDefaultSiteUrl" value="http://tanami.upmf-grenoble.fr/elgg/" override="false"/>
+	<Parameter name="elggApiKey" value="apikey" override="false"/>
+	<Parameter name="elggDefaultUserPassword" value="defaultpassword" override="false"/>
+</Context>
