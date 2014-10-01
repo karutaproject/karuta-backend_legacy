@@ -99,6 +99,7 @@ import com.mysql.jdbc.Statement;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.FileUtils;
 import com.portfolio.data.utils.PictureUtils;
+import com.portfolio.data.utils.PostForm;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.rest.RestWebApplicationException;
 import com.portfolio.security.Credential;
@@ -801,7 +802,7 @@ public class MysqlDataProvider implements DataProvider {
 						+ "WHERE n.node_uuid=uuid2bin(?)";
 				if (dbserveur.equals("oracle")){
 					sql = "UPDATE node n "
-							+ "SET n.node_children_uuid=\" \" "
+							+ "SET n.node_children_uuid='' "
 							+ "WHERE n.node_uuid=uuid2bin(?)";
 				}
 				st = connection.prepareStatement(sql);
@@ -2807,13 +2808,15 @@ public class MysqlDataProvider implements DataProvider {
 					" LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid" + // Récupération des données res_context
 //					" LEFT JOIN (group_rights gr, group_info gi, group_user gu)" +     // Vérification des droits
 					" LEFT JOIN group_rights gr ON n.node_uuid=gr.id" +     // VÃ©rification des droits
-					" CROSS JOIN group_info gi ON gr.grid=gi.grid" +
-					" CROSS JOIN group_user gu ON gi.gid=gu.gid" +
+					" LEFT JOIN group_info gi ON gr.grid=gi.grid" +
+					" LEFT JOIN group_user gu ON gi.gid=gu.gid" +
 					" WHERE gu.userid=? AND gr.RD=1" +  // On doit au moins avoir le droit de lecture
 					" AND n.node_uuid IN (SELECT uuid FROM t_struc)";   // Selon note filtrage, prendre les noeud nécéssaire
 
 			st = connection.prepareStatement(sql);
 			st.setInt(1, userId);
+            System.out.println("oracle- sql="+sql);
+            System.out.println("oracle- userid="+userId);
 			res = st.executeQuery();
 		}
 		catch( SQLException e )
@@ -4656,7 +4659,7 @@ public class MysqlDataProvider implements DataProvider {
 			st = connection.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
-			
+
 			/// Finalement on crée un rôle designer
 			int groupid = postCreateRole(newPortfolioUuid, "designer", userId);
 
@@ -8224,7 +8227,11 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			for(int i=0;i<xmlFiles.length;i++)
 			{
-				BufferedReader br = new BufferedReader(new FileReader(new File(xmlFiles[i])));
+				String xmlFilepath = xmlFiles[i];
+				String xmlFilename = xmlFilepath.substring(xmlFilepath.lastIndexOf(File.separator));
+				if( xmlFilename.contains("_") ) continue;	// Case when we add an xml in the portfolio
+
+				BufferedReader br = new BufferedReader(new FileReader(new File(xmlFilepath)));
 				String line;
 				StringBuilder sb = new StringBuilder();
 
@@ -8278,7 +8285,7 @@ public class MysqlDataProvider implements DataProvider {
 			int index = tmpFileName.indexOf("_");
 			if( index == -1 )
 				index =  tmpFileName.indexOf(".");
-			int last = tmpFileName.lastIndexOf("/");
+			int last = tmpFileName.lastIndexOf(File.separator);
 			if( last == -1 )
 				last = 0;
 			String uuid = tmpFileName.substring(last, index);
@@ -8331,41 +8338,11 @@ public class MysqlDataProvider implements DataProvider {
 				// server backend
 				// fileserver
 				String backend = session.getServletContext().getInitParameter("backendserver");
-				String fileserver = session.getServletContext().getInitParameter("fileserver");
 
 				if( resolved != null )
 				{
-//					String urlTarget = "http://"+ fileserver + "/" + resolved;
-					String urlTarget = "http://"+ backend + "/" + resolved;
-
-					String fileName = file.getName();
-					FileInputStream sendFile = new FileInputStream(file);
-					long filesize = sendFile.available();
-
-					URL urlConn = new URL(urlTarget);
-					HttpURLConnection connect = (HttpURLConnection) urlConn.openConnection();
-					connect.setDoOutput(true);
-					connect.setUseCaches(false);                 /// We don't want to cache data
-					connect.setInstanceFollowRedirects(false);   /// Let client follow any redirection
-					String method = httpServletRequest.getMethod();
-					connect.setRequestMethod(method);
-
-					String context = httpServletRequest.getContextPath();
-					connect.setRequestProperty("app", context);
-
-					connect.setRequestProperty("filename",fileName);
-					connect.setRequestProperty("content-type", "application/octet-stream");
-					connect.setRequestProperty("content-length", Long.toString(filesize));
-
-					connect.connect();
-
-					OutputStream outputData = connect.getOutputStream();
-					IOUtils.copy(sendFile, outputData);
-					sendFile.close();
-
-					/// Those 2 lines are needed, otherwise, no request sent
-					int code = connect.getResponseCode();
-					String msg = connect.getResponseMessage();
+					/// Have to send it in FORM, compatibility with regular file posting
+					PostForm.sendFile(sessionval, backend, user, resolved, lang, file);
 
 					/// No need to fetch resulting ID, since we provided it
 					/*
@@ -8374,11 +8351,6 @@ public class MysqlDataProvider implements DataProvider {
 					IOUtils.copy(objReturn, idResponse);
 					fileid = idResponse.toString();
 					//*/
-
-					connect.disconnect();
-
-
-//					PostForm.sendFile(sessionval, backend, user, uuid, lang, file);
 				}
 
 				/*
