@@ -27,9 +27,12 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.activation.MimeType;
 import javax.naming.InitialContext;
@@ -44,6 +47,7 @@ import javax.servlet.http.HttpSession;
 import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
@@ -72,9 +76,11 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.security.Credential;
@@ -98,7 +104,7 @@ public class XSLService  extends HttpServlet {
 	DataSource ds;
 
 	private String server;
-	String baseDir = System.getProperty("catalina.base") + "/webapps";
+	String baseDir;
 	String servletDir;
 
 	private TransformerFactory transFactory;
@@ -109,6 +115,9 @@ public class XSLService  extends HttpServlet {
 	{
 		sc = config.getServletContext();
 		servletDir = sc.getRealPath("/");
+		int last = servletDir.lastIndexOf(File.separator);
+		last = servletDir.lastIndexOf(File.separator, last-1);
+		baseDir = servletDir.substring(0, last);
 		server = config.getInitParameter("redirectedServer");
 
 		//Setting up the JAXP TransformerFactory
@@ -119,15 +128,16 @@ public class XSLService  extends HttpServlet {
 
 		try
 		{
-			InitialContext cxt = new InitialContext();
-			ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
+			String dataProviderName = config.getInitParameter("dataProviderClass");
+			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
+			InitialContext cxt = new InitialContext();
+
+			/// Init this here, might fail depending on server hosting
+			ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
 			if ( ds == null ) {
 				throw new Exception("Data  jdbc/portfolio-backend source not found!");
 			}
-
-			String dataProviderName = config.getInitParameter("dataProviderClass");
-			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 		}
 		catch( Exception e )
 		{
@@ -160,14 +170,15 @@ public class XSLService  extends HttpServlet {
 		 */
 		try
 		{
-//			this.dataProvider.connect(new Properties());
-
 			//On initialise le dataProvider
-			Connection c = ds.getConnection();
-//			dataProvider.setDataSource(ds);
-//			dataProvider.connect(null);
+			Connection c = null;
+			//On initialise le dataProvider
+			if( ds == null )	// Case where we can't deploy context.xml
+			{ c = getConnection(); }
+			else
+			{ c = ds.getConnection(); }
 			dataProvider.setConnection(c);
-//			credential = new Credential(c);
+			credential = new Credential(c);
 		}
 		catch(Exception e)
 		{
@@ -611,5 +622,35 @@ public class XSLService  extends HttpServlet {
 		}
 	}
 
+	/// Horrible duplicate, make it shared somehow
+	public Connection getConnection() throws ParserConfigurationException, SAXException, IOException, SQLException, ClassNotFoundException
+	{
+		// Open META-INF/context.xml
+		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
+		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+		Document doc = documentBuilder.parse(sc.getRealPath("/")+"/META-INF/context.xml");
+		NodeList res = doc.getElementsByTagName("Resource");
+		Node dbres = res.item(0);
+
+		Properties info = new Properties();
+		NamedNodeMap attr = dbres.getAttributes();
+		String url = "";
+		for( int i=0; i<attr.getLength(); ++i )
+		{
+			Node att = attr.item(i);
+			String name = att.getNodeName();
+			String val = att.getNodeValue();
+			if( "url".equals(name) )
+				url = val;
+			else if( "username".equals(name) )	// username (context.xml) -> user (properties)
+				info.put("user", val);
+			else if( "driverClassName".equals(name) )
+				Class.forName(val);
+			else
+				info.put(name, val);
+		}
+
+		return DriverManager.getConnection(url, info);
+	}
 }
 
