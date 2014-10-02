@@ -18,35 +18,35 @@ GET: Fetch current user information, if not logged, return 401
 > 
 > Return:
 > 
-    <user id="{userid}">
-    <username>{username}</username>
-    <firstname>{First name}</firstname>
-    <lastname>{Last name}</lastname>
-    <email>{email}</email>
-    <admin>{is admin? 0|1}</admin>
-    <designer>{is designer? 0|1}</designer>
-    <active>{is active? 0|1}</active>
-    </user>
+	<user id="{userid}">
+		<username>{username}</username>
+		<firstname>{First name}</firstname>
+		<lastname>{Last name}</lastname>
+		<email>{email}</email>
+		<admin>{is admin? 0|1}</admin>
+		<designer>{is designer? 0|1}</designer>
+		<active>{is active? 0|1}</active>
+	</user>
 
 /credential/login
 PUT, POST: XML, login
 > Data sent: 
 > 
-    <credential>
-	 <login>username</login>
-	 <password>password</password>
-	 </credential>
+	<credential>
+		<login>username</login>
+		<password>password</password>
+	</credential>
 > Return:
 > 
-    <credential>
-    <useridentifier>{username}</useridentifier>
-    <token>{some_number}</token>
-    <firstname>{First name}</firstname>
-    <lastname>{Last name}</lastname>
-    <admin>{is admin? 0|1}</admin>
-    <designer>{is designer? 0|1}</designer>
-    <email>{email}</email>
-    </credential>
+	<credential>
+		<useridentifier>{username}</useridentifier>
+		<token>{some_number}</token>
+		<firstname>{First name}</firstname>
+		<lastname>{Last name}</lastname>
+		<admin>{is admin? 0|1}</admin>
+		<designer>{is designer? 0|1}</designer>
+		<email>{email}</email>
+	</credential>
 
 /credential/logout
 POST: Logout
@@ -58,30 +58,161 @@ POST: Logout
  	logout
 
 /credential/group/{group-id}:
-POST: Sélection d'un rôle (autrement on sélectionne le premier disponible)
+POST: Force role selection, when a person has multiple role in a portfolio
 > Data sent:
 > None
+> 
+> Return: None
 
 /credential/group/{portfolio-id}:
 GET: Les rôles d'un utilisateurs dans un portfolio (auto select si il y en a un)
+> Parameters:
+> None
+> 
+> Return:
+>
+	<groups>
+		<group id={group id} templateId={role id}>
+			<label>{group label}</label>
+			<role>{role label}<role>
+			<groupid>{group id}</groupid>
+		</group>
+		...
+	</groups>
 
 ## <a name="user"></a>User info
 
 /users:
 GET user list
+> Parameters:
+> None
+> 
+> Return:
+>
+	<users>
+		<user id="{user id}">
+			<username>{username}</username>
+			<firstname>{first name}</firstname>
+			<lastname>{last name}</lastname>
+			<admin>{is admin? 0|1}</admin>
+			<designer>{is designer? 0|1}</designer>
+			<email>{email}</email>
+			<active>{is active? 0|1}</active>
+		</user>
+		...
+	</users>
+
 POST: create user
+> Data sent:
+> 
+	<users>
+		<user>
+			<username>{username}</username>
+			<password>{password}</password>
+			<firstname>{first name}</firstname>
+			<lastname>{last name}</lastname>
+			<email>{email}</email>
+			<active>{0|1}</active>
+			<designer>{0|1}</designer>
+		</user>
+		...
+	</users>
+> 
+> Return:
+>
+	<users>
+		<user id="{user id}">
+			<username>{username}</username>
+			<password>{password}</password>
+			<firstname>{first name}</firstname>
+			<lastname>{last name}</lastname>
+			<email>{email}</email>
+			<active>{is active? 0|1}</active>
+			<designer>{is designer? 0|1}</designer>
+		</user>
+		...
+	</users>
+
 DELETE: delete user
+> Parameters:
+>
+	userId={userid}
+> Return:
+> 
+	supprimé
+	Nothing
 
 /users/user/{user-id}
 GET: info on user
+> Parameters:
+> None
+> 
+> Return:
+> 
+	<user id="{user id}">
+		<username>{username}</username>
+		<password>{password}</password>	
+		<firstname>{first name}</firstname>
+		<lastname>{last name}</lastname>
+		<email>{email}</email>
+		<active>{is active? 0|1}</active>
+		<designer>{is designer? 0|1}</designer>
+	</user>
+
+
 PUT: update info	CODE FORMAT
+> Data sent:
+> 
+	<user id="{user id}">
+		<username>{username}</username>
+		<password>{password}</password>	
+		<firstname>{first name}</firstname>
+		<lastname>{last name}</lastname>
+		<email>{email}</email>
+		<admin>{0|1}</admin>
+		<active>{0|1}</active>
+		<designer>{0|1}</designer>
+	</user>
+> Return:
+> 
+	{user id}
+
 DELETE: delete user
+> Parameters:
+>
+	userId={userid}
+> Return:
+> 
+	user {user id} deleted
 
 /users/user/username/{username}
 GET: fetch user id from username
+> Parameters:
+> None
+>
+> Return:
+> 
+	{user id}
 
 /users/user/{user-id}/groups
 GET: groups from a user
+> Parameters:
+> None
+>
+> Return:
+> 
+	<profiles id="{user id}">
+		<profile>
+			<username>{username}</username>
+			<password>{password}</password>
+			<firstname>{first name}</firstname>
+			<lastname>{last name}</lastname>
+			<email>{email}</email>
+			<admin>{0|1}</admin>
+			<active>{0|1}</active>
+			<designer>{0|1}</designer>
+		<profile>
+	</profiles>
 
 ## <a name="groups"></a>Groups
 
