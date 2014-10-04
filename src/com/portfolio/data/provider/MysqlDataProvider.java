@@ -2878,8 +2878,7 @@ public class MysqlDataProvider implements DataProvider {
 		        	      "SB NUMBER(1) NOT NULL, " +
 		                "AD NUMBER(1) NOT NULL, " +
 		                "types_id CLOB, " +
-		                "rules_id CLOB) " +
-		                ",  CONSTRAINT t_rights_UK_id UNIQUE (id) ON COMMIT DELETE ROWS";
+		                "rules_id CLOB) ON COMMIT DELETE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -8175,8 +8174,8 @@ public class MysqlDataProvider implements DataProvider {
 		String filename;
 		String[] xmlFiles;
 		String[] allFiles;
-		int formDataLength = httpServletRequest.getContentLength();
-		byte[] buff = new byte[formDataLength];
+//		int formDataLength = httpServletRequest.getContentLength();
+		byte[] buff = new byte[0x100000];	// 1MB buffer
 
 		// Recuperation de l'heure à laquelle le zip est créé
 		//Calendar cal = Calendar.getInstance();
