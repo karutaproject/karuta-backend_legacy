@@ -9,3 +9,6 @@ SetHandler jakarta-servlet
 SetEnv JK_WORKER_NAME ajp13
 AddHandler php-cgi .php
 #AddHandler php-cli .php
+
+* Current JVM option used
+JAVA_OPTS="-Djava.awt.headless=true -Dfile.encoding=UTF-8 -Xms128m -Xmx2048m -XX:PermSize=128m -XX:MaxPermSize=512m"
