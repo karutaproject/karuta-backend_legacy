@@ -42,42 +42,42 @@
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-core</artifactId>
-    	<version>3.3.1</version>
+    	<version>3.3.3</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-integration-atlassian</artifactId>
-    	<version>3.3.1</version>
+    	<version>3.3.3</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-integration-jboss</artifactId>
-    	<version>3.3.1</version>
+    	<version>3.3.3</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-integration-tomcat-common</artifactId>
-    	<version>3.3.1</version>
+    	<version>3.3.3</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-integration-tomcat-v6</artifactId>
-    	<version>3.3.1</version>
+    	<version>3.3.3</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-support-distributed-ehcache</artifactId>
-    	<version>3.3.1</version>
+    	<version>3.3.3</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-support-distributed-memcached</artifactId>
-    	<version>3.3.1</version>
+    	<version>3.3.3</version>
     </dependency>
     <dependency>
     	<groupId>edu.yale.its.tp.cas.client</groupId>
     	<artifactId>ServiceTicketValidator</artifactId>
-    	<version>3.3.1</version>
+    	<version>3.3.3</version>
 	    <scope>system</scope>
 	    <systemPath>${basedir}/WebContent/WEB-INF/lib/casclient.jar</systemPath>
     </dependency>
