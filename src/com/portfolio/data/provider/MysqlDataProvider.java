@@ -32,8 +32,6 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -81,7 +79,6 @@ import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.io.IOUtils;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -252,6 +249,9 @@ public class MysqlDataProvider implements DataProvider {
 		//{
 		// On recupere d'abord les informations dans la table structures
 		sql = "SELECT bin2uuid(res_node_uuid) AS res_node_uuid  FROM node WHERE portfolio_id= uuid2bin(?) AND res_node_uuid IS NOT NULL AND res_node_uuid<>'' ";
+		if (dbserveur.equals("oracle")){
+			sql = "SELECT bin2uuid(res_node_uuid) AS res_node_uuid  FROM node WHERE portfolio_id= uuid2bin(?) AND res_node_uuid IS NOT NULL ";
+		}
 		st = connection.prepareStatement(sql);
 		st.setString(1, portfolioUuid);
 
@@ -8185,7 +8185,7 @@ public class MysqlDataProvider implements DataProvider {
 		this.genererPortfolioUuidPreliminaire();
 
 		javax.servlet.http.HttpSession session = httpServletRequest.getSession(true);
-		String ppath = session.getServletContext().getRealPath(File.separator);
+		String ppath = session.getServletContext().getRealPath("/");
 		String outsideDir =ppath.substring(0,ppath.lastIndexOf(File.separator))+"_files"+File.separator;
 		File outsideDirectoryFile = new File(outsideDir);
 		System.out.println(outsideDir);
@@ -11550,8 +11550,10 @@ public class MysqlDataProvider implements DataProvider {
 					"SELECT t.node_uuid,t.node_parent_uuid,t.node_children_uuid," +
 					"t.res_node_uuid,t.res_res_node_uuid,t.res_context_node_uuid," +
 					"t.node_id, t.asm_type, portfolio_id," +
-					"'','',''," +
-					"false, false, false," +
+//					"'','',''," +
+					"' ',' ',' '," +
+//					"false, false, false," +
+					"0, 0, 0," +
 					"? " +
 					"FROM t_data t, node n " +
 					"WHERE n.node_uuid=uuid2bin(?) AND t.xsi_type IS NULL";
