@@ -8222,6 +8222,7 @@ public class MysqlDataProvider implements DataProvider {
 		///// Pour associer l'ancien uuid -> nouveau, pour les fichiers
 		HashMap<String,  String> resolve = new HashMap<String,String>();
 		String portfolioUuid = "erreur";
+		boolean hasLoaded = false;
 		try
 		{
 			for(int i=0;i<xmlFiles.length;i++)
@@ -8267,7 +8268,7 @@ public class MysqlDataProvider implements DataProvider {
 					/// Ajoute la personne dans ce groupe
 					putUserGroup(Integer.toString(groupid), Integer.toString(userId));
 
-
+					hasLoaded = true;
 				}
 			}
 		}
@@ -8276,6 +8277,7 @@ public class MysqlDataProvider implements DataProvider {
 			e.printStackTrace();
 		}
 
+		if( hasLoaded )
 		for(int i=0;i<allFiles.length;i++)
 		{
 			String fullPath = allFiles[i];
