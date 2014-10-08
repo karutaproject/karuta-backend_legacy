@@ -3225,8 +3225,17 @@ public class MysqlDataProvider implements DataProvider {
 		PreparedStatement st;
 		String sql = "";
 		int result = 0;
+		String parentid = "";
 		try
 		{
+			/// On trouve le parent, pour ré-ordonner la numérotation
+			sql = "SELECT bin2uuid(node_parent_uuid) FROM node WHERE node_uuid=uuid2bin(?)";
+			st = connection.prepareStatement(sql);
+			st.setString(1, nodeUuid);
+			ResultSet res = st.executeQuery();
+			if( res.next() )
+				parentid = res.getString("node_parent_uuid");
+
 			/// Pour le filtrage de la structure
 			sql = "CREATE TEMPORARY TABLE t_struc(" +
 					"uuid binary(16) UNIQUE NOT NULL, " +
@@ -3400,6 +3409,8 @@ public class MysqlDataProvider implements DataProvider {
 				}
 
 				connection.close();
+
+				updateMysqlNodeChildren(parentid);
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
