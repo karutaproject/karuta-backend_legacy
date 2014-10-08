@@ -1,0 +1,25 @@
+
+digraph Database {
+	splines=true;
+	overlap=prism;
+	node [shape=record];
+
+	nodes [label="{{node|}|node_uuid|node_parent_uuid|node_children_uuid|node_order|res_node_uuid|res_res_node_uuid|res_context_node_uuid|portfolio_id}"];
+	portf [label="{{portfolio|}|portfolio_id|root_node_uuid}"];
+	ress [label="{{resource_table|}|node_uuid}"];
+	cred [label="{{credential|}|userid}"];
+	gri [label="{{group_right_info|}|grid|portfolio_id}"];
+	gr [label="{{group_rights|}|grid|id|Node rights}"];
+	gi [label="{{group_info|}|gid|grid}"];
+	gu [label="{{group_user|}|gid|userid}"];
+
+	portf-> nodes
+	portf -> gri
+	nodes -> nodes
+	nodes -> ress
+	cred -> gu
+	gu -> gi
+	gi -> gri
+	gri -> gr
+	nodes -> gr
+}

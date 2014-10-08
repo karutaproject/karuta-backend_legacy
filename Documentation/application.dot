@@ -1,0 +1,25 @@
+digraph Application {
+	rankdir=LR;
+	splines=false;
+	node [shape=box,style=filled,fillcolor="#C0D0C0"];
+
+	subgraph cluster_Client {
+		style=filled; color="#D0C0A0"; label="Karuta-client";
+		jq [label="JQuery"];
+	}
+
+	subgraph cluster_Server {
+		style=filled; color="#D0C0A0"; label="Karuta-backend";
+		js [label="Jersey/Servlet"]
+		db [label="MySQL"];
+	}
+
+	subgraph cluster_Fileserver {
+		style=filled; color="#D0C0A0"; label="Karuta-fileserver";
+		fs [label="Filesystem"];
+	}
+
+	jq -> js [label="HTTP"];
+	js -> db [label="SQL"];
+	js -> fs [label="HTTP"]
+}
