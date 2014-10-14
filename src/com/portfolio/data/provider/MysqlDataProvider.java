@@ -3234,7 +3234,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.setString(1, nodeUuid);
 			ResultSet res = st.executeQuery();
 			if( res.next() )
-				parentid = res.getString("node_parent_uuid");
+				parentid = res.getString("bin2uuid(node_parent_uuid)");
 
 			/// Pour le filtrage de la structure
 			sql = "CREATE TEMPORARY TABLE t_struc(" +
@@ -3407,10 +3407,9 @@ public class MysqlDataProvider implements DataProvider {
 		            ocs.execute();
 		            ocs.close();
 				}
+				updateMysqlNodeChildren(parentid);
 
 				connection.close();
-
-				updateMysqlNodeChildren(parentid);
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -8377,8 +8376,10 @@ public class MysqlDataProvider implements DataProvider {
 			}
 		}
 
-		//TODO Supprimer le zip quand ça fonctionnera bien
-
+		File zipfile = new File(filename);
+		zipfile.delete();
+		File zipdir = new File(outsideDir+this.portfolioUuidPreliminaire+File.separator);
+		zipdir.delete();
 
 		return portfolioUuid;
 	}
@@ -8613,7 +8614,7 @@ public class MysqlDataProvider implements DataProvider {
 	{
 		String sql = "";
 		PreparedStatement st;
-		String text = "%semantictag=%"+semantictag+"%";
+		String text = "%semantictag=\""+semantictag+"\"%";
 
 		try
 		{
@@ -12945,7 +12946,7 @@ public class MysqlDataProvider implements DataProvider {
 													+ "WHERE node_uuid = uuid2bin(?) and metadata LIKE ?";
 											st = connection.prepareStatement(sql);
 											st.setString(1, listChildren[i]);
-											st.setString(2, "%semantictag=%"+semtag+"%");
+											st.setString(2, "%semantictag=\""+semtag+"\"%");
 											res4 = st.executeQuery();
 
 											if(res4.next()){
@@ -13058,11 +13059,11 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT  bin2uuid(node_uuid) AS node_uuid,bin2uuid(node_children_uuid) as node_children_uuid, code, semantictag "
 					+ "FROM node "
 					+ "WHERE portfolio_id = uuid2bin(?) "
-					+ "and  metadata LIKE '%semantictag=%'?'%' "
+					+ "and  metadata LIKE ? "
 					+ "and code = ?";
 			st = connection.prepareStatement(sql);
 			st.setString(1, pid);
-			st.setString(2, semtag_parent);
+			st.setString(2, "%semantictag=\""+semtag_parent+"\"%");
 			st.setString(3, code_parent);
 			res3 = st.executeQuery();
 
