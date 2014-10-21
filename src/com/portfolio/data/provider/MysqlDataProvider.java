@@ -651,6 +651,12 @@ public class MysqlDataProvider implements DataProvider {
 
 		}
 
+		/// Because Oracle can't do its work properly
+		if( "".equals(semanticTag) ) semanticTag = null;
+		if( "".equals(nodeChildrenUuid) ) nodeChildrenUuid = null;
+		if( "".equals(xsiType) ) xsiType = null;
+		if( "".equals(code) ) code = null;
+
 		try
 		{
 			if (dbserveur.equals("mysql")){
@@ -798,13 +804,8 @@ public class MysqlDataProvider implements DataProvider {
 			if( changes == 0 )	// Specific case when there's no children left in parent
 			{
 				sql = "UPDATE node n "
-						+ "SET n.node_children_uuid=\"\" "
+						+ "SET n.node_children_uuid=NULL "
 						+ "WHERE n.node_uuid=uuid2bin(?)";
-				if (dbserveur.equals("oracle")){
-					sql = "UPDATE node n "
-							+ "SET n.node_children_uuid='' "
-							+ "WHERE n.node_uuid=uuid2bin(?)";
-				}
 				st = connection.prepareStatement(sql);
 				st.setString(1, nodeUuid);
 				st.executeUpdate();
@@ -2514,7 +2515,7 @@ public class MysqlDataProvider implements DataProvider {
 						"r1.xsi_type AS r1_type, r1.content AS r1_content, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
 						"r2.content AS r2_content, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
 						"r3.content AS r3_content, n.asm_type, n.xsi_type, " +
-						"1 AS RD, 1 AS WR, 1 AS SB, 1 AS DL, '' AS types_id, '' AS rules_id " +
+						"1 AS RD, 1 AS WR, 1 AS SB, 1 AS DL, NULL AS types_id, NULL AS rules_id " +
 						"FROM node n " +
 						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +
 						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
@@ -2661,7 +2662,7 @@ public class MysqlDataProvider implements DataProvider {
 						"r1.xsi_type AS r1_type, r1.content AS r1_content, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
 						"r2.content AS r2_content, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
 						"r3.content AS r3_content, n.asm_type, n.xsi_type, " +
-						"1 AS RD, 1 AS WR, 1 AS SB, 1 AS DL, '' AS types_id, '' AS rules_id " +
+						"1 AS RD, 1 AS WR, 1 AS SB, 1 AS DL, NULL AS types_id, NULL AS rules_id " +
 						"FROM node n " +
 						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +
 						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
@@ -11363,6 +11364,7 @@ public class MysqlDataProvider implements DataProvider {
 		return output.toString();
 	}
 
+	@Deprecated
 	@Override
 	public String postUseType( int userId, String nodeUuid, Integer type )
 	{
