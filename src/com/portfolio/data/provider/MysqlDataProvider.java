@@ -8622,7 +8622,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_node_uuid) AS res_node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, bin2uuid(res_context_node_uuid) AS res_context_node_uuid, " +
 					"node_children_uuid, code, asm_type, label " +
 					"FROM node WHERE portfolio_id = uuid2bin(?) AND " +
-					"metadata LIKE ? ORDER BY node_order";
+					"metadata LIKE ? ORDER BY code";
 			//sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, node_children_uuid, code, asm_type, label FROM node WHERE portfolio_id = uuid2bin('c884bdcd-2165-469b-9939-14376f7f3500') AND metadata LIKE '%semantictag=%competence%'";
 			st = connection.prepareStatement(sql);
 
