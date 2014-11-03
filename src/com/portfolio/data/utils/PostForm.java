@@ -15,9 +15,7 @@
 
 package com.portfolio.data.utils;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -29,7 +27,6 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -63,6 +60,7 @@ public class PostForm
 
 			CloseableHttpResponse response = httpclient.execute(post);
 
+			/*
 			try
 			{
 				HttpEntity resEntity = response.getEntity();	/// Will be JSON
@@ -81,6 +79,7 @@ public class PostForm
 			{
 				response.close();
 			}
+			//*/
 		}
 		finally
 		{
