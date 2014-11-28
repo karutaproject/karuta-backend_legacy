@@ -19,14 +19,14 @@ public class NodeRight {
 
 	public int groupId=0;
 	public String groupLabel="";
-  public boolean add;
-	public boolean read;
-	public boolean write;
-	public boolean submit;
-	public boolean delete;
-	public boolean lier;
+  public Boolean add;
+	public Boolean read;
+	public Boolean write;
+	public Boolean submit;
+	public Boolean delete;
+	public Boolean lier;
 
-	public NodeRight(boolean add, boolean read,boolean write,boolean submit,boolean delete,boolean lier)
+	public NodeRight(Boolean add, Boolean read, Boolean write, Boolean submit, Boolean delete, Boolean lier)
 	{
 	  this.add = add;
 		this.read = read;

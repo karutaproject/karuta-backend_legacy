@@ -26,6 +26,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.portfolio.security.NodeRight;
+
 public class MongoDBDataProvider implements DataProvider {
 
 	/*
@@ -145,7 +147,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postInstanciatePortfolio( MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared ) throws Exception
+	public Object postInstanciatePortfolio( MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName ) throws Exception
 	{
 		// TODO Auto-generated method stub
 		return null;
@@ -591,6 +593,7 @@ public class MongoDBDataProvider implements DataProvider {
 		return null;
 	}
 
+	@Deprecated
 	@Override
 	public String postAddAction( int userId, Integer macro, String role,
 			String data )
@@ -599,6 +602,7 @@ public class MongoDBDataProvider implements DataProvider {
 		return null;
 	}
 
+	@Deprecated
 	@Override
 	public Integer postCreateMacro( int userId, String macroName )
 	{
@@ -634,6 +638,7 @@ public class MongoDBDataProvider implements DataProvider {
 		return null;
 	}
 
+	@Deprecated
 	@Override
 	public String putMacroAction( int userId, Integer macro, String role,
 			String data )
@@ -642,6 +647,7 @@ public class MongoDBDataProvider implements DataProvider {
 		return null;
 	}
 
+	@Deprecated
 	@Override
 	public String deleteMacro( int userId, Integer macro )
 	{
@@ -649,6 +655,7 @@ public class MongoDBDataProvider implements DataProvider {
 		return null;
 	}
 
+	@Deprecated
 	@Override
 	public String deleteMacroAction( int userId, Integer macro, String role )
 	{
@@ -656,6 +663,7 @@ public class MongoDBDataProvider implements DataProvider {
 		return null;
 	}
 
+	@Deprecated
 	@Override
 	public String postCreateType( int userId, String name )
 	{
@@ -670,6 +678,7 @@ public class MongoDBDataProvider implements DataProvider {
 		return null;
 	}
 
+	@Deprecated
 	@Override
 	public String postUseType( int userId, String nodeUuid, Integer type )
 	{
@@ -789,8 +798,14 @@ public class MongoDBDataProvider implements DataProvider {
 	{
 	// TODO Auto-generated method stub
 	return null;
-}
+	}
 
+	@Override
+	public String getNodeRights(String nodeUuid, int userId, int groupId) throws Exception
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 	@Override
 	public Object putNodeMetadata(MimeType mimeType, String nodeUuid,
@@ -856,6 +871,13 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
+	public String[] getPorfolioGroup( int userId, String groupName )
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
 	public String putRRGUpdate( int userId, Integer rrgId, String data )
 	{
 		// TODO Auto-generated method stub
@@ -875,6 +897,14 @@ public class MongoDBDataProvider implements DataProvider {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public String postRights(int userId, String uuid, String role, NodeRight rights)
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 
 	@Override
 	public String postRRGUser( int userId, Integer rrgid, Integer user )

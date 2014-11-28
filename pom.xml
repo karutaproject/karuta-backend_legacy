@@ -5,6 +5,10 @@
   <version>1.0.0.2</version>
   <packaging>war</packaging>
   <name>karuta-backend</name>
+  <properties>
+  	<JERSEY_VER>1.12</JERSEY_VER>
+  	<CAS_VER>3.3.3</CAS_VER>
+  </properties>
   <dependencies>
 		<dependency>
 			<groupId>javax.servlet</groupId>
@@ -42,37 +46,37 @@
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-core</artifactId>
-    	<version>3.3.3</version>
+    	<version>${CAS_VER}</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-integration-atlassian</artifactId>
-    	<version>3.3.3</version>
+    	<version>${CAS_VER}</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-integration-jboss</artifactId>
-    	<version>3.3.3</version>
+    	<version>${CAS_VER}</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-integration-tomcat-common</artifactId>
-    	<version>3.3.3</version>
+    	<version>${CAS_VER}</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-integration-tomcat-v6</artifactId>
-    	<version>3.3.3</version>
+    	<version>${CAS_VER}</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-support-distributed-ehcache</artifactId>
-    	<version>3.3.3</version>
+    	<version>${CAS_VER}</version>
     </dependency>
     <dependency>
     	<groupId>org.jasig.cas.client</groupId>
     	<artifactId>cas-client-support-distributed-memcached</artifactId>
-    	<version>3.3.3</version>
+    	<version>${CAS_VER}</version>
     </dependency>
     <dependency>
     	<groupId>cas</groupId>
@@ -163,17 +167,17 @@
     <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-client</artifactId>
-      <version>1.12</version>
+      <version>${JERSEY_VER}</version>
     </dependency>
     <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-core</artifactId>
-      <version>1.12</version>
+      <version>${JERSEY_VER}</version>
     </dependency>
     <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-json</artifactId>
-      <version>1.12</version>
+      <version>${JERSEY_VER}</version>
     </dependency>
 		<dependency>
 			<groupId>com.sun.jersey.contribs</groupId>
@@ -183,12 +187,12 @@
     <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-server</artifactId>
-      <version>1.12</version>
+      <version>${JERSEY_VER}</version>
     </dependency>
     <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-servlet</artifactId>
-      <version>1.12</version>
+      <version>${JERSEY_VER}</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jettison</groupId>
@@ -287,6 +291,19 @@
     	<artifactId>xmlgraphics-commons</artifactId>
     	<version>1.5</version>
     </dependency>
+    
+    <dependency>
+	    <groupId>org.apache.maven</groupId>
+	    <artifactId>maven-embedder</artifactId>
+	    <version>3.1.0</version>
+	    <exclusions>
+	      <exclusion>
+	        <groupId>*</groupId>
+	        <artifactId>*</artifactId>
+	      </exclusion>
+	    </exclusions>
+  	</dependency>
+    
   </dependencies>
   <build>
     <sourceDirectory>${basedir}/src</sourceDirectory>

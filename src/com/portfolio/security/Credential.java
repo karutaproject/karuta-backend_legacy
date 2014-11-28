@@ -565,8 +565,177 @@ public class Credential
 		return portfolio_id;
 	}
 
+
+	public boolean postRights( String role, int userId, String uuid, NodeRight rights, String portfolioUuid )
+	{
+		PreparedStatement st=null;
+		PreparedStatement st1=null;
+		PreparedStatement st2=null;
+		String sql;
+		String sqlUpdate;
+		String sqlInsert;
+		ResultSet generatedKeys;
+		ResultSet res=null;
+		ResultSet res2=null;
+		int grid = -1;
+		boolean reponse = false;
+
+		try
+		{
+			if(role != null && !role.trim().equals("") && rights !=null)
+			{
+				if( "user".equals(role) ) // Si le nom de group est 'user'. Le remplacer par le role de l'utilisateur (voir pour juste le nom plus tard)
+				{
+					sql = "SELECT bin2uuid(portfolio_id) as portfolio_id, gri.grid " +
+							"FROM group_user gu " +
+							"LEFT JOIN group_info gi ON gu.gid=gi.gid " +
+							"LEFT JOIN group_right_info gri ON gi.grid=gri.grid " +
+							"WHERE portfolio_id = uuid2bin(?) AND gu.userid = ?";
+					st = connection.prepareStatement(sql);
+					st.setString(1, portfolioUuid);
+					st.setInt(2, userId);
+					res = st.executeQuery();
+				}
+				else if( !"".equals(portfolioUuid) )	/// Rôle et portfolio
+				{
+					sql = "SELECT bin2uuid(portfolio_id) as portfolio_id FROM group_right_info gri  WHERE portfolio_id = uuid2bin(?) AND label = ?";
+					st = connection.prepareStatement(sql);
+					st.setString(1, portfolioUuid);
+					st.setString(2, role);
+					res = st.executeQuery();
+
+					if(!res.next())    /// Groupe non-existant
+					{
+						sqlInsert	= "INSERT INTO group_right_info(owner,label, portfolio_id) Values (?,?, uuid2bin(?)) ";
+						st1 = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+						if (dbserveur.equals("oracle")){
+							st1 = connection.prepareStatement(sqlInsert, new String[]{"grid"});
+						}
+						st1.setInt(1, userId);
+						st1.setString(2, role);
+						st1.setString(3, portfolioUuid);
+						st1.executeUpdate();
+
+						generatedKeys = st1.getGeneratedKeys();
+
+						if (generatedKeys.next()) {
+							grid = generatedKeys.getInt(1);
+						}
+						st1.close();
+
+						/// Crée une copie dans group_info, le temps de ré-organiser tout ça
+						sqlInsert = "INSERT INTO group_info(grid,owner,label) Values (?,?,?) ";
+						st1 = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+						if (dbserveur.equals("oracle")){
+							st1 = connection.prepareStatement(sqlInsert, new String[]{"gid"});
+						}
+						st1.setInt(1, grid);
+						st1.setInt(2, userId);
+						st1.setString(3, role);
+						st1.executeUpdate();
+						st1.close();
+					}
+
+					sql = "SELECT bin2uuid(portfolio_id) as portfolio_id,  grid FROM group_right_info gri  WHERE portfolio_id = uuid2bin(?) AND label = ?";
+					st = connection.prepareStatement(sql);
+					st.setString(1, portfolioUuid);
+					st.setString(2, role);
+					res = st.executeQuery();
+				}
+				else	// Rôle et uuid
+				{
+					sql = "SELECT bin2uuid(gri.portfolio_id) as portfolio_id, gri.grid " +
+							"FROM group_rights gr, group_right_info gri " +
+							"WHERE gr.id = uuid2bin(?) AND " +
+							"gri.label = ?";
+					st = connection.prepareStatement(sql);
+					st.setString(1, uuid);
+					st.setString(2, role);
+					res = st.executeQuery();
+				}
+
+				if(res.next())  /// On a trouvé notre groupe
+				{
+					if (grid == -1)
+					{
+						grid = res.getInt("grid");
+					}
+
+					sql = "SELECT bin2uuid(id) as id, grid FROM group_rights gri WHERE  grid=? AND id = uuid2bin(?) ";
+					st2 = connection.prepareStatement(sql);
+					st2.setInt(1, grid);
+					st2.setString(2, uuid);
+					res2 = st2.executeQuery();
+
+					if(res2.next())
+					{
+						try
+						{
+							sqlUpdate = "UPDATE group_rights SET RD=?, WR=?, DL=?, SB=? WHERE grid=? AND id=uuid2bin(?)";
+							st = connection.prepareStatement(sqlUpdate);
+							st.setBoolean(1, rights.read);
+							st.setBoolean(2, rights.write);
+							st.setBoolean(3, rights.delete);
+							st.setBoolean(4, rights.submit);
+							st.setInt(5, grid);
+							st.setString(6, uuid);
+							st.executeUpdate();
+						}
+						catch(Exception ex)
+						{
+
+						}
+						finally
+						{
+							if( st != null ) try{ st.close(); }catch( SQLException e ){ e.printStackTrace(); }
+						}
+					}
+					else
+					{
+						try
+						{
+							sqlUpdate = "INSERT INTO group_rights(grid, id, RD, WR, DL, SB) VALUES (?, uuid2bin(?),?,?,?,?)";
+							st = connection.prepareStatement(sqlUpdate);
+							st.setInt(1, grid);
+							st.setString(2, uuid);
+							st.setBoolean(1, rights.read);
+							st.setBoolean(2, rights.write);
+							st.setBoolean(3, rights.delete);
+							st.setBoolean(4, rights.submit);
+							st.executeUpdate();
+						}
+						catch(Exception ex)
+						{
+
+						}
+						finally
+						{
+							if( st != null ) try{ st.close(); }catch( SQLException e ){ e.printStackTrace(); }
+						}
+					}
+
+				}
+			}
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			reponse = false;
+		}
+		finally
+		{
+			if( res2 != null ) try{ res2.close(); }catch( SQLException e ){ e.printStackTrace(); }
+			if( res != null ) try{ res.close(); }catch( SQLException e ){ e.printStackTrace(); }
+			if( st != null ) try{ st.close(); }catch( SQLException e ){ e.printStackTrace(); }
+			if( st1 != null ) try{ st1.close(); }catch( SQLException e ){ e.printStackTrace(); }
+			if( st2 != null ) try{ st2.close(); }catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		return false;
+	}
+
 	//Ajout des droits du portfolio dans group_right_info, group_rights
-	// FIXME: omfg, il faut arranger ça... A traiter les droits d'un coup.
+	// FIXME: Ne peut pas enlever des droits
 	public boolean postGroupRight(String label, String uuid, String droit, String portfolioUuid, int userId)
 	{
 		PreparedStatement st=null;
@@ -625,7 +794,7 @@ public class Credential
 					st.setInt(2, userId);
 					res = st.executeQuery();
 				}
-				else
+				else if( !"".equals(portfolioUuid) )	/// Rôle et portfolio
 				{
 					sql = "SELECT bin2uuid(portfolio_id) as portfolio_id FROM group_right_info gri  WHERE portfolio_id = uuid2bin(?) AND label = ?";
 					st = connection.prepareStatement(sql);
@@ -671,8 +840,17 @@ public class Credential
 					st.setString(2, label);
 					res = st.executeQuery();
 				}
-
-
+				else	// Rôle et uuid
+				{
+					sql = "SELECT bin2uuid(gri.portfolio_id) as portfolio_id, gri.grid " +
+							"FROM group_rights gr, group_right_info gri " +
+							"WHERE gr.id = uuid2bin(?) AND " +
+							"gri.label = ?";
+					st = connection.prepareStatement(sql);
+					st.setString(1, uuid);
+					st.setString(2, label);
+					res = st.executeQuery();
+				}
 
 				if(res.next())  /// On a trouvé notre groupe
 				{

@@ -29,6 +29,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.sql.ResultSet;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -58,7 +59,6 @@ import org.xml.sax.InputSource;
 
 import com.mysql.jdbc.Connection;
 import com.mysql.jdbc.PreparedStatement;
-import com.mysql.jdbc.ResultSet;
 
 /*
 <%-- SAX classes --%>
@@ -349,7 +349,7 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 		try{
 			reqSQL = "SELECT xml FROM tree where id="+id;
 			ps = (PreparedStatement) connexion.prepareStatement(reqSQL);
-			rs = (ResultSet) ps.executeQuery();
+			rs = ps.executeQuery();
 			if (rs.next()) {
 				xmlString = rs.getString(1);
 			}

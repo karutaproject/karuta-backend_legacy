@@ -24,6 +24,7 @@ import java.io.RandomAccessFile;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Properties;
@@ -57,6 +58,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.http.HttpEntity;
@@ -83,12 +85,15 @@ import com.portfolio.eventbus.HandlerNotificationSakai;
 import com.portfolio.eventbus.KEvent;
 import com.portfolio.eventbus.KEventHandler;
 import com.portfolio.eventbus.KEventbus;
+import com.portfolio.security.Credential;
+import com.portfolio.security.NodeRight;
 import com.portfolio.socialnetwork.Elgg;
 import com.portfolio.socialnetwork.Ning;
 import com.sun.jersey.multipart.FormDataParam;
 
 import edu.yale.its.tp.cas.client.ServiceTicketValidator;
 
+/// I hate this line, sometime it works with a '/', sometime it doesn't
 @Path("/api")
 public class RestServicePortfolio
 {
@@ -105,6 +110,7 @@ public class RestServicePortfolio
 
 	DataSource ds;
 	DataProvider dataProvider;
+	Credential credential = null;
 	int logRestRequests = 0;
 	String label = null;
 	String casUrlValidation = null;
@@ -255,14 +261,20 @@ public class RestServicePortfolio
 	{
 		try
 		{
+			Connection con = null;
 			if( ds == null )	// Case where we can't deploy context.xml
 			{
-				Connection con = getConnection();
+				con = getConnection();
 				dataProvider.setConnection(con);
 			}
 			else
-				dataProvider.setConnection(ds.getConnection());
+			{
+				con = ds.getConnection();
+				dataProvider.setConnection(con);
+			}
 //			dataProvider.setDataSource(ds);
+
+			credential = new Credential(con);
 
 			/// Configure eventbus
 			//	    KEventHandler handlerDB = new HandlerDatabase(request, dataProvider);
@@ -908,7 +920,15 @@ public class RestServicePortfolio
 				}
 				else
 				{
-					returnValue = dataProvider.getPortfolios(new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId).toString();
+					if( userId != null && credential.isAdmin(ui.userId) )
+					{
+						returnValue = dataProvider.getPortfolios(new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId).toString();
+					}
+					else
+					{
+						returnValue = dataProvider.getPortfolios(new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId).toString();
+					}
+
 					if(accept.equals(MediaType.APPLICATION_JSON))
 						returnValue = XML.toJSONObject(returnValue).toString();
 				}
@@ -1208,7 +1228,7 @@ public class RestServicePortfolio
 	/// D'un portfolio, cr�e une instance ou l'on prend compte des droits sp�cifi� dans les attributs wad
 	@Path("/portfolios/instanciate/{portfolio-id}")
 	@POST
-	public String postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy)
+	public String postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname)
 	{
 		String value = "Instanciate: "+portfolioId;
 
@@ -1220,7 +1240,7 @@ public class RestServicePortfolio
 			if( "y".equalsIgnoreCase(copy) )
 				copyshared = true;
 
-			String returnValue = dataProvider.postInstanciatePortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared).toString();
+			String returnValue = dataProvider.postInstanciatePortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared, groupname).toString();
 			logRestRequest(httpServletRequest, value+" to: "+returnValue, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1523,6 +1543,151 @@ public class RestServicePortfolio
 		{
 			dataProvider.disconnect();
 		}
+	}
+
+	@Path("/nodes/node/{node-id}/rights")
+	@GET
+	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	@Consumes(MediaType.APPLICATION_XML)
+	public String getNodeRights( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
+	{
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+
+		try
+		{
+			String returnValue = dataProvider.getNodeRights(nodeUuid, ui.userId, groupId);
+			if(returnValue.length() != 0)
+			{
+				if(accept.equals(MediaType.APPLICATION_JSON))
+					returnValue = XML.toJSONObject(returnValue).toString();
+				logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+			}
+			else
+			{
+				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
+			}
+
+			return returnValue;
+		}
+		catch(RestWebApplicationException ex)
+		{
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+		}
+		catch(SQLException ex)
+		{
+			logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
+
+			throw new RestWebApplicationException(Status.NOT_FOUND, "Node "+nodeUuid+" not found");
+		}
+		catch(NullPointerException ex)
+		{
+			logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
+
+			throw new RestWebApplicationException(Status.NOT_FOUND, "Node "+nodeUuid+" not found");
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, null, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			dataProvider.disconnect();
+		}
+	}
+
+	@Path("/nodes/node/{node-id}/rights")
+	@POST
+	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	@Consumes(MediaType.APPLICATION_XML)
+	public String postNodeRights( String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
+	{
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+
+		try
+		{
+			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
+			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes("UTF-8")));
+
+			XPath xPath = XPathFactory.newInstance().newXPath();
+			String xpathRole = "//role";
+			XPathExpression findRole = xPath.compile(xpathRole);
+			NodeList roles = (NodeList) findRole.evaluate(doc, XPathConstants.NODESET);
+
+			/// For all roles we have to change
+			for( int i=0; i<roles.getLength(); ++i )
+			{
+				Node rolenode = roles.item(i);
+				String rolename = rolenode.getAttributes().getNamedItem("name").getNodeValue();
+				Node right = rolenode.getFirstChild();
+
+				//
+				if( "user".equals(rolename) )
+				{
+					/// username as role
+				}
+
+				if( "#text".equals(right.getNodeName()) )
+					right = right.getNextSibling();
+
+				if( "right".equals(right.getNodeName()) )	// Changing node rights
+				{
+					NamedNodeMap rights = right.getAttributes();
+
+					NodeRight noderight = new NodeRight(null,null,null,null,null,null);
+
+					String val = rights.getNamedItem("RD").getNodeValue();
+					if( val != null )
+						noderight.read = "Y".equals(val) ? true: false;
+					val = rights.getNamedItem("WR").getNodeValue();
+					if( val != null )
+						noderight.write = "Y".equals(val) ? true: false;
+					val = rights.getNamedItem("DL").getNodeValue();
+					if( val != null )
+						noderight.delete = "Y".equals(val) ? true: false;
+					val = rights.getNamedItem("SB").getNodeValue();
+					if( val != null )
+						noderight.submit = "Y".equals(val) ? true: false;
+
+					// change right
+					dataProvider.postRights(ui.userId, nodeUuid, rolename, noderight);
+				}
+				else if( "action".equals(right.getNodeName()) )	// Using an action on node
+				{
+					// reset right
+					dataProvider.postMacroOnNode(ui.userId, nodeUuid, "reset");
+				}
+			}
+
+//			returnValue = dataProvider.postRRGCreate(ui.userId, xmlNode);
+			logRestRequest(httpServletRequest, xmlNode, "Change rights", Status.OK.getStatusCode());
+		}
+		catch(RestWebApplicationException ex)
+		{
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+		}
+		catch(NullPointerException ex)
+		{
+			logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
+
+			throw new RestWebApplicationException(Status.NOT_FOUND, "Node "+nodeUuid+" not found");
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, null, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			dataProvider.disconnect();
+		}
+
+		return "";
 	}
 
 	@Path("/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag}")
@@ -2454,6 +2619,13 @@ public class RestServicePortfolio
 			eventbus.processEvent(event);
 
 			return returnValue;
+		}
+		catch( RestWebApplicationException ex )
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, xmlResource, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw ex;
 		}
 		catch(Exception ex)
 		{
@@ -4281,6 +4453,197 @@ public class RestServicePortfolio
 	/********************************************************/
 	/** Partie groupe de droits et utilisateurs            **/
 	/********************************************************/
+
+	@Path("/rights")
+	@POST
+	@Produces(MediaType.APPLICATION_XML)
+	public String postChangeRights(String xmlNode, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest )
+	{
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+
+		String returnValue="";
+		try
+		{
+			/**
+			 * <node uuid="">
+			 *   <role name="">
+			 *     <right RD="" WR="" DL="" />
+			 *     <action>reset</action>
+			 *   </role>
+			 * </node>
+			 *======
+			 * <portfolio uuid="">
+			 *   <xpath>XPATH</xpath>
+			 *   <role name="">
+			 *     <right RD="" WR="" DL="" />
+			 *     <action>reset</action>
+			 *   </role>
+			 * </portfolio>
+			 *======
+			 * <portfoliogroup name="">
+			 *   <xpath>XPATH</xpath>
+			 *   <role name="">
+			 *     <right RD="" WR="" DL="" />
+			 *     <action>reset</action>
+			 *   </role>
+			 * </portfoliogroup>
+			 **/
+
+			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
+			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes("UTF-8")));
+
+			XPath xPath = XPathFactory.newInstance().newXPath();
+			ArrayList<String> portfolio = new ArrayList<String>();
+			String xpathRole = "/role";
+			XPathExpression findRole = xPath.compile(xpathRole);
+			String xpathNodeFilter = "/xpath";
+			XPathExpression findXpath = xPath.compile(xpathNodeFilter);
+			String nodefilter = "";
+			NodeList roles = null;
+
+			/// Fetch portfolio(s)
+			String portfolioNode = "//portfoliogroup";
+			Node portgroupnode = (Node) xPath.compile(portfolioNode).evaluate(doc, XPathConstants.NODE);
+			if( portgroupnode == null )
+			{
+				String portgroupname = portgroupnode.getAttributes().getNamedItem("name").getNodeValue();
+				// Query portfolio group for list of uuid
+
+				// while( res.next() )
+				// portfolio.add(portfolio);
+
+				Node xpathNode = (Node) findXpath.evaluate(portgroupnode, XPathConstants.NODE);
+				nodefilter = xpathNode.getNodeValue();
+				roles = (NodeList) findRole.evaluate(portgroupnode, XPathConstants.NODESET);
+			}
+			else
+			{
+				// Or add the single one
+				portfolioNode = "//portfolio[@uuid]";
+				Node portnode = (Node) xPath.compile(portfolioNode).evaluate(doc, XPathConstants.NODE);
+				portfolio.add(portnode.getNodeValue());
+
+				Node xpathNode = (Node) findXpath.evaluate(portnode, XPathConstants.NODE);
+				nodefilter = xpathNode.getNodeValue();
+				roles = (NodeList) findRole.evaluate(portnode, XPathConstants.NODESET);
+			}
+
+			ArrayList<String> nodes = new ArrayList<String>();
+			XPathExpression xpathFilter = xPath.compile(nodefilter);
+			for( int i=0; i<portfolio.size(); ++i )	// For all portfolio
+			{
+				String portfolioUuid = portfolio.get(i);
+				String portfolioStr = dataProvider.getPortfolio(new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, null, null, ui.subId).toString();
+				Document docPort = documentBuilder.parse(new ByteArrayInputStream(portfolioStr.getBytes("UTF-8")));
+
+				/// Fetch nodes inside those portfolios
+				NodeList portNodes = (NodeList) xpathFilter.evaluate(docPort, XPathConstants.NODESET);
+				for( int j=0; j<portNodes.getLength(); ++j )
+				{
+					Node node = portNodes.item(j);
+					String nodeuuid = node.getAttributes().getNamedItem("id").getNodeValue();
+
+					nodes.add(nodeuuid);	// Keep those we have to change rights
+				}
+			}
+
+			/// Fetching single node
+			if( nodes.isEmpty() )
+			{
+				String singleNode = "/node";
+				Node sNode = (Node) xPath.compile(singleNode).evaluate(doc, XPathConstants.NODE);
+				String uuid = sNode.getAttributes().getNamedItem("uuid").getNodeValue();
+				nodes.add(uuid);
+				roles = (NodeList) findRole.evaluate(sNode, XPathConstants.NODESET);
+			}
+
+
+			/// For all roles we have to change
+			for( int i=0; i<roles.getLength(); ++i )
+			{
+				Node rolenode = roles.item(i);
+				String rolename = rolenode.getAttributes().getNamedItem("name").getNodeValue();
+				Node right = rolenode.getFirstChild();
+
+				//
+				if( "user".equals(rolename) )
+				{
+					/// username as role
+				}
+
+				if( "#text".equals(right.getNodeName()) )
+					right = right.getNextSibling();
+
+				if( "right".equals(right.getNodeName()) )	// Changing node rights
+				{
+					NamedNodeMap rights = right.getAttributes();
+
+					NodeRight noderight = new NodeRight(null,null,null,null,null,null);
+
+					String val = rights.getNamedItem("RD").getNodeValue();
+					if( val != null )
+						noderight.read = Boolean.parseBoolean(val);
+					val = rights.getNamedItem("WR").getNodeValue();
+					if( val != null )
+						noderight.write = Boolean.parseBoolean(val);
+					val = rights.getNamedItem("DL").getNodeValue();
+					if( val != null )
+						noderight.delete = Boolean.parseBoolean(val);
+					val = rights.getNamedItem("SB").getNodeValue();
+					if( val != null )
+						noderight.submit = Boolean.parseBoolean(val);
+
+
+					/// Apply modification for all nodes
+					for( int j=0; j<nodes.size(); ++j )
+					{
+						String nodeid = nodes.get(j);
+
+						// change right
+						dataProvider.postRights(ui.userId, nodeid, rolename, noderight);
+					}
+				}
+				else if( "action".equals(right.getNodeName()) )	// Using an action on node
+				{
+					/// Apply modification for all nodes
+					for( int j=0; j<nodes.size(); ++j )
+					{
+						String nodeid = nodes.get(j);
+
+						// TODO: check for reset keyword
+						// reset right
+						dataProvider.postMacroOnNode(ui.userId, nodeid, "reset");
+					}
+				}
+			}
+
+//			returnValue = dataProvider.postRRGCreate(ui.userId, xmlNode);
+			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
+			if(returnValue == "faux")
+			{
+				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
+			}
+
+			return returnValue;
+		}
+		catch(RestWebApplicationException ex)
+		{
+			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+			dataProvider.disconnect();
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			dataProvider.disconnect();
+		}
+	}
 
 	/// Liste les rrg selon certain param�tres, portfolio, utilisateur, role
 	@Path("/rolerightsgroups")

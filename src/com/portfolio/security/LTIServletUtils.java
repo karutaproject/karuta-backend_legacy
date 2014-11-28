@@ -15,6 +15,7 @@
 
 package com.portfolio.security;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -205,6 +206,9 @@ public class LTIServletUtils {
 			//*/
 
 			String userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+			if( userName == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
+				userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
+
 			session.setAttribute("userid", userId);
 			session.setAttribute("username", userName);
 			session.setAttribute("userRole", wadRole);
@@ -437,7 +441,11 @@ public class LTIServletUtils {
 			appli = appli.substring(appli.lastIndexOf("/")+1);
 		else
 			appli = appli.substring(appli.lastIndexOf("\\")+1);	 // pour windows
-		String Filename = "/opt/tomcat/"+appli+"/roleMap.properties";
+
+		String path = application.getRealPath("/");
+		path = path.replaceFirst(File.separator+"$", "_config"+File.separator);
+
+		String Filename = path+"roleMap.properties";
 		java.io.FileInputStream fichierSrce =  new java.io.FileInputStream(Filename);
 		java.io.BufferedReader readerSrce = new java.io.BufferedReader(new java.io.InputStreamReader(fichierSrce,"UTF-8"));
 		String line = null;

@@ -18,6 +18,9 @@ END uuid2bin;
 CREATE OR REPLACE 
 FUNCTION bin2uuid(bin IN RAW) RETURN CHAR DETERMINISTIC AS
 BEGIN
+    IF bin IS NULL THEN
+        return NULL;
+    ELSE
 	DECLARE HexData char(32 char) := rawtohex(bin);
 	BEGIN
 	return
@@ -31,21 +34,28 @@ BEGIN
 	    || '-'
 	    || substr(HexData, 21, 12));
 	END;
+    END IF;
+	
 END bin2uuid;
 /
 
-DROP TYPE tmpTableList FORCE;
-CREATE TYPE tmpTableList AS TABLE OF VARCHAR2(10 CHAR);
-/
-create or replace procedure drop_tables(tables_name tmpTableList)
+create or replace 
+procedure create_or_empty_table (v_table_name varchar2, v_sql varchar2)
 is
 begin
-  for i in 1..tables_name.count loop
-     begin  execute immediate 'drop table '||tables_name(i); exception when others then null; end;
-  end loop;
+	declare
+		v_counter number;
+	begin
+	  SELECT count(*) INTO v_counter FROM user_tables WHERE table_name = upper(v_table_name);
+		IF(v_counter <= 0)
+	 	THEN
+			execute immediate v_sql;
+		ELSE
+			execute immediate 'truncate table '||v_table_name;
+		END IF;
+	end;
 end;
 /
-
 --
 
 drop table annotation cascade constraints purge;
@@ -211,7 +221,7 @@ ALTER TRIGGER definition_type_TRG ENABLE;
 drop table file_table cascade constraints purge;
 CREATE TABLE file_table (
   node_uuid RAW(16) NOT NULL,
-  lang VARCHAR2(10 CHAR) DEFAULT '' NOT NULL,
+  lang VARCHAR2(10 CHAR) DEFAULT NULL,
   name VARCHAR2(254 CHAR) NOT NULL,
   type VARCHAR2(254 CHAR) DEFAULT NULL,
   extension VARCHAR2(10 CHAR) NOT NULL,
@@ -309,8 +319,8 @@ CREATE TABLE group_rights (
   DL NUMBER(1) DEFAULT '0' NOT NULL,
   SB NUMBER(1) DEFAULT '0' NOT NULL,
   AD NUMBER(1) DEFAULT '0' NOT NULL,
-  types_id CLOB,
-  rules_id CLOB,
+  types_id VARCHAR2(2000 CHAR),
+  rules_id VARCHAR2(2000 CHAR),
   notify_roles CLOB DEFAULT NULL,
   CONSTRAINT group_rights_PK PRIMARY KEY (grid,id)
 );
@@ -479,8 +489,8 @@ CREATE TABLE rule_table (
   WR NUMBER(1) DEFAULT '0' NOT NULL,
   DL NUMBER(1) DEFAULT '0' NOT NULL,
   AD NUMBER(1) DEFAULT '0' NOT NULL,
-  types_id CLOB,
-  rules_id CLOB,
+  types_id VARCHAR2(2000 CHAR),
+  rules_id VARCHAR2(2000 CHAR),
   CONSTRAINT rule_table_PK PRIMARY KEY (rule_id,role)
 );
 --
@@ -490,6 +500,26 @@ userid NUMBER(19,0) NOT NULL,
 portfolio_id RAW(16) NOT NULL,
 CONSTRAINT complete_share_PK PRIMARY KEY (userid,portfolio_id));
 
+--
+ALTER TABLE group_rights
+ADD CONSTRAINT group_rights_group_right__FK1 FOREIGN KEY(grid) REFERENCES group_right_info(grid)
+ON DELETE CASCADE ENABLE;
+
+ALTER TABLE group_info
+ADD CONSTRAINT group_info_group_right__FK1 FOREIGN KEY(grid) REFERENCES group_right_info(grid)
+ON DELETE CASCADE ENABLE;
+
+ALTER TABLE group_user
+ADD CONSTRAINT group_user_group_info_FK1 FOREIGN KEY(gid) REFERENCES group_info(gid)
+ON DELETE CASCADE ENABLE;
+
+ALTER TABLE definition_type
+ADD CONSTRAINT definition_type_definition_FK1 FOREIGN KEY(def_id) REFERENCES definition_info(def_id)
+ON DELETE CASCADE ENABLE;
+
+ALTER TABLE rule_table
+ADD CONSTRAINT rule_table_rule_info_FK1 FOREIGN KEY(rule_id) REFERENCES rule_info(rule_id)
+ON DELETE CASCADE ENABLE;
 
 --
 insert into credential(userid,login,can_substitute, is_admin,is_designer,active, display_firstname, display_lastname, email,password,token,c_date) values('1','root','0', '1','0', '1', 'root', '',NULL, crypt('mati'), NULL, NULL);

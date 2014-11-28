@@ -15,6 +15,7 @@
 
 package com.portfolio.security;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.naming.InitialContext;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -33,6 +35,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.sql.DataSource;
 
 import net.oauth.OAuthAccessor;
 import net.oauth.OAuthConsumer;
@@ -49,6 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.SqlUtils;
 
 /**
  * Class supporting lti integration
@@ -109,6 +113,27 @@ public class LTIServlet extends HttpServlet {
 	    this.sc = getServletConfig();
         String dataProviderName  =  this.sc.getInitParameter("dataProviderClass");
         dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
+
+  			// Try to initialize Datasource
+  			InitialContext cxt = new InitialContext();
+  			if ( cxt == null ) {
+  				throw new Exception("no context found!");
+  			}
+
+  			/// Init this here, might fail depending on server hosting
+  			DataSource ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
+  			if ( ds == null ) {
+  				throw new Exception("Data  jdbc/portfolio-backend source not found!");
+  			}
+
+  			if( ds == null )	// Case where we can't deploy context.xml
+  			{
+  				Connection con = SqlUtils.getConnection(application);
+  				dataProvider.setConnection(con);
+  			}
+  			else
+  				dataProvider.setConnection(ds.getConnection());
+//  			dataProvider.setDataSource(ds);
 
         /*
 		String DBuser =  (String)application.getAttribute("DBuser");
@@ -220,7 +245,10 @@ public class LTIServlet extends HttpServlet {
 			if( !"0".equals(userId) ) // FIXME: Need more checking and/or change uid String to int
 			{
 				session.setAttribute("uid", Integer.parseInt(userId));
-				session.setAttribute("user", payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID));
+				String userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+				if( userName == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
+					userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
+				session.setAttribute("user", userName);
 			}
 			else
 			{
@@ -277,6 +305,8 @@ public class LTIServlet extends HttpServlet {
 			//*/
 
 			String userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+			if( userName == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
+				userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
 			session.setAttribute("uid", Integer.parseInt(userId));
 			session.setAttribute("username", userName);
 			session.setAttribute("userRole", wadRole);
@@ -332,8 +362,13 @@ public class LTIServlet extends HttpServlet {
 		//// FIXME: Complete this with other info from LTI
 		//Does the user already exist?
 		String username = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+		if( username == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
+			username = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
+		if( username == null )	/// If all fail, at least we get the context_id
+			username = (String)payload.get(BasicLTIConstants.CONTEXT_ID);
+
 		userId = dataProvider.getUserId( username );
-		if ( userId == null ) {
+		if ( "0".equals(userId) ) {
 			//create it
 			userId = dataProvider.createUser(username);
 			outTrace.append("\nCreate User (self) results: " + userId);
@@ -454,7 +489,11 @@ public class LTIServlet extends HttpServlet {
 			appli = appli.substring(appli.lastIndexOf("/")+1);
 		else
 			appli = appli.substring(appli.lastIndexOf("\\")+1);	 // pour windows
-		String Filename = "/opt/tomcat/"+appli+"/roleMap.properties";
+
+		String path = application.getRealPath("/");
+		path = path.replaceFirst(File.separator+"$", "_config"+File.separator);
+
+		String Filename = path+"roleMap.properties";
 		java.io.FileInputStream fichierSrce =  new java.io.FileInputStream(Filename);
 		java.io.BufferedReader readerSrce = new java.io.BufferedReader(new java.io.InputStreamReader(fichierSrce,"UTF-8"));
 		String line = null;
@@ -581,7 +620,10 @@ public class LTIServlet extends HttpServlet {
 	        String line = null;
 	        String name = null;
 	        //--------------------------------------------------------
-	        String Filename = "/opt/tomcat/"+appli+"/configWAD.properties";
+	    		String path = application.getRealPath("/");
+	    		path = path.replaceFirst(File.separator+"$", "_config"+File.separator);
+
+	        String Filename = path+"configWAD.properties";
 	        java.io.FileInputStream fichierSrce =  new java.io.FileInputStream(Filename);
 	        java.io.BufferedReader readerSrce = new java.io.BufferedReader(new java.io.InputStreamReader(fichierSrce,"UTF-8"));
 	        String variable = null;

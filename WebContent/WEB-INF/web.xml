@@ -12,6 +12,10 @@
 		<res-auth>Container</res-auth>
 	</resource-ref>
 	<context-param>
+		<param-name>dataProviderClass</param-name>
+		<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
+	</context-param>
+	<context-param>
 		<param-name>backendserver</param-name>
 		<param-value>localhost:8080/karuta-backend</param-value>
 	</context-param>
@@ -40,27 +44,6 @@
 	<servlet-mapping>
 		<servlet-name>Jersey REST Service</servlet-name>
 		<url-pattern>/rest/*</url-pattern>
-	</servlet-mapping>
-	<servlet>
-		<servlet-name>Admin Jersey REST Service</servlet-name>
-		<servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
-		<init-param>
-			<param-name>com.sun.jersey.config.property.packages</param-name>
-			<param-value>com.portfolio.admin;</param-value>
-		</init-param>
-		<init-param>
-			<param-name>adminProviderClass</param-name>
-			<param-value>com.portfolio.data.provider.MysqlAdminProvider</param-value>
-		</init-param>
-		<init-param>
-			<param-name>logRestRequests</param-name>
-			<param-value>0</param-value>
-		</init-param>
-		<load-on-startup>1</load-on-startup>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>Admin Jersey REST Service</servlet-name>
-		<url-pattern>/admin/*</url-pattern>
 	</servlet-mapping>
 	 
 	<servlet>

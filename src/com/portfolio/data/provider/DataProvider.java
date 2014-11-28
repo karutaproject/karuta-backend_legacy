@@ -25,6 +25,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.portfolio.security.NodeRight;
+
 
 /**
  * @author vassoill
@@ -85,7 +87,7 @@ public interface DataProvider {
 	public Object postPortfolio(MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid) throws Exception;
 	public Object postPortfolioZip(MimeType mimeType, MimeType mimeType2,
 			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid) throws FileNotFoundException, IOException;
-	public Object postInstanciatePortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared ) throws Exception;
+	public Object postInstanciatePortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName ) throws Exception;
 	public Object postCopyPortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId ) throws Exception;
 
 	public Object deletePortfolio(String portfolioUuid, int userId, int groupId) throws Exception;;
@@ -106,6 +108,7 @@ public interface DataProvider {
 	public Object getNodesParent(MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws Exception;
 	public Object getNodeMetadataWad(MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException;
 	public String getResNode(String contextUuid, int userId, int groupId) throws Exception;
+	public String getNodeRights(String nodeUuid, int userId, int groupId) throws Exception;
 
 	public Object putNode(MimeType inMimeType,String nodeUuid,String in, int userId, int groupId) throws Exception;
 	public Object putNodeMetadata(MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception ;
@@ -216,7 +219,9 @@ public interface DataProvider {
 	/// À propos des macro-commandes pour la modification des droits
 	/// e.g.: submit, show/hide; ainsi que la partie gestion de ces commandes
 	public String postMacroOnNode(int userId, String nodeUuid, String macroName);
+	@Deprecated
 	public String postAddAction(int userId, Integer macro, String role, String data);
+	@Deprecated
 	public Integer postCreateMacro(int userId, String macroName);
 
 	public String getAllActionLabel(int userId);
@@ -224,15 +229,20 @@ public interface DataProvider {
 	public String getPortfolioMacro(int userId, String portfolioId);
 
 	public String putMacroName(int userId, Integer macro, String name);
+	@Deprecated
 	public String putMacroAction(int userId, Integer macro, String role, String data);
 
+	@Deprecated
 	public String deleteMacro(int userId, Integer macro);
+	@Deprecated
 	public String deleteMacroAction(int userId, Integer macro, String role);
 
 	/// À propos des types que l'on ajoute et les droits à créer lors d'une instanciation
 	/// Aussi la partie gestion des types
+	@Deprecated
 	public String postCreateType(int userId, String name);
 	public String postAddNodeType(int userId, Integer type, Integer nodeid, Integer parentid, Integer instance, String data);
+	@Deprecated
 	public String postUseType(int userId, String nodeUuid, Integer type);
 
 	public String getAllTypes(int userId);
@@ -249,12 +259,14 @@ public interface DataProvider {
 	public String getRRGList(int userId, String portfolio, Integer user, String role);
 	public String getRRGInfo(int userId, Integer rrgid);
 	public String getPortfolioInfo(int userId, String portId);
+	public String[] getPorfolioGroup( int userId, String groupName );
 
 	public String putRRGUpdate(int userId, Integer rrgId, String data);
 
 	public String postRRGCreate(int userId, String portfolio, String data);
 	public String postRRGUsers( int userId, Integer rrgid, String data );
 	public String postRRGUser(int userId, Integer rrgid, Integer user);
+	public String postRights(int userId, String uuid, String role, NodeRight rights);
 
 	public String deleteRRG(int userId, Integer rrgId);
 	public String deleteRRGUser(int userId, Integer rrgId, Integer user);
