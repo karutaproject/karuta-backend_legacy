@@ -255,18 +255,6 @@ public class FileServlet  extends HttpServlet
 					Element fileNode = (Element) idlist.item(0);
 					fileid = fileNode.getTextContent();
 				}
-
-				/// Or just a single one shared
-				if( "".equals(fileid) )
-				{
-					String filterResGen = "//fileid";
-					idlist = (NodeList) xPath.compile(filterResGen).evaluate(doc, XPathConstants.NODESET);
-					if( idlist.getLength() != 0 )
-					{
-						Element fileNode = (Element) idlist.item(0);
-						fileid = fileNode.getTextContent();
-					}
-				}
 			}
 		}
 		catch( Exception e2 )
@@ -589,13 +577,8 @@ public class FileServlet  extends HttpServlet
 			/// Or just a single one shared
 			if( "".equals(resolve) )
 			{
-				String filterResGen = "//fileid";
-				nodelist = (NodeList) xPath.compile(filterResGen).evaluate(doc, XPathConstants.NODESET);
-				if( nodelist.getLength() != 0 )
-				{
-					Element fileNode = (Element) nodelist.item(0);
-					resolve = fileNode.getTextContent();
-				}
+				response.setStatus(404);
+				return;
 			}
 
 			String filterName = "//filename[@lang='"+lang+"']";
