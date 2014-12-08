@@ -8728,7 +8728,7 @@ public class MysqlDataProvider implements DataProvider {
 	{
 		String sql = "";
 		PreparedStatement st;
-		String text = "%semantictag=\""+semantictag+"\"%";
+		String text = "%semantictag=%"+semantictag+"%";
 
 		try
 		{
@@ -13553,7 +13553,7 @@ public class MysqlDataProvider implements DataProvider {
 													+ "WHERE node_uuid = uuid2bin(?) and metadata LIKE ?";
 											st = connection.prepareStatement(sql);
 											st.setString(1, listChildren[i]);
-											st.setString(2, "%semantictag=\""+semtag+"\"%");
+											st.setString(2, "%semantictag=%"+semtag+"%");
 											res4 = st.executeQuery();
 
 											if(res4.next()){
@@ -13670,7 +13670,7 @@ public class MysqlDataProvider implements DataProvider {
 					+ "and code = ?";
 			st = connection.prepareStatement(sql);
 			st.setString(1, pid);
-			st.setString(2, "%semantictag=\""+semtag_parent+"\"%");
+			st.setString(2, "%semantictag=%"+semtag_parent+"%");
 			st.setString(3, code_parent);
 			res3 = st.executeQuery();
 
