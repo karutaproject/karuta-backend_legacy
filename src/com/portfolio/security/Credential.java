@@ -30,12 +30,20 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.portfolio.data.utils.ConfigUtils;
+
 /**
  * Servlet implementation class Credential
  */
 public class Credential
 {
+	final Logger logger = LoggerFactory.getLogger(Credential.class);
+
 	private final Connection connection;
+	public static final String NONE = "none";
 	public static final String ADD = "add";
 	public static final String READ = "read";
 	public static final String WRITE = "write";
@@ -44,8 +52,7 @@ public class Credential
 	public static final String LIER = "lier";
 	public static final String DELIER = "delier";
 
-	private final String dbserveur = "mysql";
-//	private final String dbserveur = "oracle";
+	private String dbserveur = null;
 
 	/**
 	 * @param connection
@@ -54,6 +61,7 @@ public class Credential
 	public Credential(Connection connection)
 	{
 		super();
+		dbserveur = ConfigUtils.get("serverType");
 		this.connection = connection;
 	}
 
@@ -313,7 +321,7 @@ public class Credential
 				{
 					// On regarde si la personne à un droit sur ce noeud dans l'un des groupes du portfolio
 					// Pourrait être un casse tête si un noeud est référencé dans plusieurs groupes
-					sql = "SELECT gi.gid, gri.label " +
+					sql = "SELECT gi.gid, gi.grid, gri.label " +
 							"FROM node n, group_right_info gri, group_info gi, group_user gu " +
 							"WHERE n.portfolio_id=gri.portfolio_id " +
 							"AND gri.grid=gi.grid " +
@@ -328,9 +336,11 @@ public class Credential
 					if( res.next() )
 					{
 						groupId = res.getInt(1);	// On prend le premier
-						String groupName = res.getString(2);
+						int grid = res.getInt(2);
+						String groupName = res.getString(3);
 						// Spécifie dans quel contexte on lui donne le droit
 						nodeRight.groupId = groupId;
+						nodeRight.rrgId = grid;
 						nodeRight.groupLabel = groupName;
 					}
 
@@ -381,6 +391,9 @@ public class Credential
 					nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
 				}
 
+				res.close();
+				st.close();
+
 				/// Les droits que l'on a du groupe "all"
 				/// NOTE: Pas de vérification si la personne est dans le groupe 'all'
 				///  Le fonctionnement voulu est différent de ce que j'avais prévu, mais ça marche aussi
@@ -404,7 +417,15 @@ public class Credential
 					nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
 					nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
 				}
+				res.close();
+				st.close();
 			} // fin else
+
+			/// Public rights (last chance for rights)
+			if( isPublic( node_uuid, null ) )
+			{
+				nodeRight.read = true;
+			}
 		}
 		catch(Exception ex)
 		{
@@ -418,6 +439,62 @@ public class Credential
 
 		return nodeRight;
 
+	}
+
+	/// From node, check if portoflio has user 'public' in group 'all'
+	public boolean isPublic( String node_uuid, String portfolio_uuid )
+	{
+		PreparedStatement st = null;
+		ResultSet res = null;
+		String sql = "";
+		boolean val = false;
+		try
+		{
+			if( node_uuid != null )
+			{
+				sql = "SELECT gu.userid " +
+						"FROM node n " +
+						"LEFT JOIN group_right_info gri ON n.portfolio_id=gri.portfolio_id " +
+						"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
+						"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
+						"LEFT JOIN credential c ON gu.userid=gu.userid " +
+						"WHERE n.node_uuid=uuid2bin(?) " +
+						"AND gri.label='all' " +
+						"AND c.login='public'";
+				st = connection.prepareStatement(sql);
+				st.setString(1, node_uuid);
+			}
+			else
+			{
+				sql = "SELECT gu.userid " +
+						"FROM group_right_info gri " +
+						"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
+						"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
+						"LEFT JOIN credential c ON gu.userid=gu.userid " +
+						"WHERE gri.portfolio_id=uuid2bin(?) " +
+						"AND gri.label='all' " +
+						"AND c.login='public'";
+				st = connection.prepareStatement(sql);
+				st.setString(1, portfolio_uuid);
+			}
+			res = st.executeQuery();
+			if(res.next())
+			{
+				val = true;
+			}
+			res.close();
+			st.close();
+		}
+		catch( Exception e )
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			if( st != null ) try{ st.close(); }catch( SQLException e ){ e.printStackTrace(); }
+			if( res != null ) try{ res.close(); }catch( SQLException e ){ e.printStackTrace(); }
+		}
+		return val;
 	}
 
 	public int getPublicUid()
@@ -744,7 +821,6 @@ public class Credential
 		String sql;
 		String sqlUpdate;
 		String sqlInsert;
-		ResultSet generatedKeys;
 		ResultSet res=null;
 		ResultSet res2=null;
 		int RD = 0;
@@ -804,29 +880,27 @@ public class Credential
 
 					if(!res.next())    /// Groupe non-existant
 					{
-						sqlInsert	= "INSERT INTO group_right_info(owner,label, portfolio_id) Values (?,?, uuid2bin(?)) ";
-						st1 = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
-						if (dbserveur.equals("oracle")){
+						res.close();
+						st.close();
+
+						sqlInsert	= "INSERT INTO group_right_info(owner, label, change_rights, portfolio_id) Values (?, ?, 0, uuid2bin(?)) ";
+						if( "mysql".equals(dbserveur) )
+							st1 = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+						if (dbserveur.equals("oracle"))
 							st1 = connection.prepareStatement(sqlInsert, new String[]{"grid"});
-						}
 						st1.setInt(1, userId);
 						st1.setString(2, label);
 						st1.setString(3, portfolioUuid);
 						st1.executeUpdate();
 
-						generatedKeys = st1.getGeneratedKeys();
-
-						if (generatedKeys.next()) {
-							grid = generatedKeys.getInt(1);
-						}
+						ResultSet keys = st1.getGeneratedKeys();
+						keys.next();
+						grid = keys.getInt(1);
 						st1.close();
 
 						/// Crée une copie dans group_info, le temps de ré-organiser tout ça
 						sqlInsert = "INSERT INTO group_info(grid,owner,label) Values (?,?,?) ";
-						st1 = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
-						if (dbserveur.equals("oracle")){
-							st1 = connection.prepareStatement(sqlInsert, new String[]{"gid"});
-						}
+						st1 = connection.prepareStatement(sqlInsert);
 						st1.setInt(1, grid);
 						st1.setInt(2, userId);
 						st1.setString(3, label);
@@ -854,11 +928,12 @@ public class Credential
 
 				if(res.next())  /// On a trouvé notre groupe
 				{
-
 					if (grid == -1)
 					{
 						grid = res.getInt("grid");
 					}
+					res.close();
+					st.close();
 
 					sql = "SELECT bin2uuid(id) as id, grid FROM group_rights gri WHERE  grid=? AND id = uuid2bin(?) ";
 					st2 = connection.prepareStatement(sql);
@@ -868,6 +943,8 @@ public class Credential
 
 					if(res2.next())
 					{
+						res2.close();
+						st2.close();
 						//if((grid == res2.getInt("grid") || uuid.equals(res2.getString("id"))))
 						//{
 						try
@@ -1078,6 +1155,7 @@ public class Credential
 		}
 		catch( SQLException e )
 		{
+			logger.error(e.getMessage());
 			e.printStackTrace();
 		}
 		finally
@@ -1089,6 +1167,7 @@ public class Credential
 		return status;
 	}
 
+	// System-wide designer
 	public boolean isCreator( Integer userId )
 	{
 		boolean status = false;
@@ -1120,7 +1199,7 @@ public class Credential
 		return status;
 	}
 
-	/// Across the system or specific portfolio
+	/// Specific portfolio designer
 	public boolean isDesigner( Integer userId, String nodeId )
 	{
 		boolean status = false;
@@ -1210,6 +1289,11 @@ public class Credential
 		{
 			e.printStackTrace();
 			return false;
+		}
+		finally
+		{
+			if( rs!=null ) try { rs.close(); } catch( SQLException e ) { e.printStackTrace(); }
+			if( stmt!=null ) try { stmt.close(); } catch( SQLException e ) { e.printStackTrace(); }
 		}
 		return false;
 	}

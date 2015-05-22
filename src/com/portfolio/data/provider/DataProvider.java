@@ -84,13 +84,15 @@ public interface DataProvider {
 	public Object putPortfolio(MimeType inMimeType,MimeType outMimeType,String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String modelId) throws Exception;
 	public Object putPortfolioConfiguration(String portfolioUuid,Boolean portfolioActive, Integer userId);
 
-	public Object postPortfolio(MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid) throws Exception;
+	public Object postPortfolio(MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid, boolean parseRights) throws Exception;
 	public Object postPortfolioZip(MimeType mimeType, MimeType mimeType2,
-			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid) throws FileNotFoundException, IOException;
-	public Object postInstanciatePortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName ) throws Exception;
-	public Object postCopyPortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId ) throws Exception;
+			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws FileNotFoundException, IOException;
+	public Object postInstanciatePortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception;
+	public Object postCopyPortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception;
 
-	public Object deletePortfolio(String portfolioUuid, int userId, int groupId) throws Exception;;
+	public Object deletePortfolio(String portfolioUuid, int userId, int groupId) throws Exception;
+
+	public boolean isCodeExist( String code );
 
 	/// Relatif aux mod�les
 	public Object getModels(MimeType mimeType, int userId)throws Exception;
@@ -104,7 +106,7 @@ public interface DataProvider {
 	public Object getNodes(MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws SQLException;
 	public Object getNodeBySemanticTag(MimeType mimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception;
 	Object getNodesBySemanticTag(MimeType outMimeType, int userId, int groupId, String portfolioUuid, String semanticTag) throws SQLException;
-	public Object getNodeWithXSL(MimeType mimeType, String nodeUuid, String xslFile, int userId, int groupId);
+	public Object getNodeWithXSL(MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId);
 	public Object getNodesParent(MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws Exception;
 	public Object getNodeMetadataWad(MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException;
 	public String getResNode(String contextUuid, int userId, int groupId) throws Exception;
@@ -164,11 +166,6 @@ public interface DataProvider {
 	public Object deleteUser(int userid, int userId1);
 	public Object deleteUsers(Integer userId, Integer userid2);
 
-	/// Relatif aux fichiers
-	public Object getFile(String nodeUuid,String lang);
-
-	public Object putFile(String nodeUuid,String lang,String fileName,String destDirectory, String type,String extension,int size,byte[] fileBytes, int userId) throws Exception;
-
 	/// Relatif aux ressources
 	public String getResourceNodeUuidByParentNodeUuid(String nodeParentUuid);
 	public String getRessource(String nodeUuid,int userId,int groupId, String type) throws SQLException;
@@ -219,41 +216,6 @@ public interface DataProvider {
 	/// À propos des macro-commandes pour la modification des droits
 	/// e.g.: submit, show/hide; ainsi que la partie gestion de ces commandes
 	public String postMacroOnNode(int userId, String nodeUuid, String macroName);
-	@Deprecated
-	public String postAddAction(int userId, Integer macro, String role, String data);
-	@Deprecated
-	public Integer postCreateMacro(int userId, String macroName);
-
-	public String getAllActionLabel(int userId);
-	public String getMacroActions(int userId, Integer macro);
-	public String getPortfolioMacro(int userId, String portfolioId);
-
-	public String putMacroName(int userId, Integer macro, String name);
-	@Deprecated
-	public String putMacroAction(int userId, Integer macro, String role, String data);
-
-	@Deprecated
-	public String deleteMacro(int userId, Integer macro);
-	@Deprecated
-	public String deleteMacroAction(int userId, Integer macro, String role);
-
-	/// À propos des types que l'on ajoute et les droits à créer lors d'une instanciation
-	/// Aussi la partie gestion des types
-	@Deprecated
-	public String postCreateType(int userId, String name);
-	public String postAddNodeType(int userId, Integer type, Integer nodeid, Integer parentid, Integer instance, String data);
-	@Deprecated
-	public String postUseType(int userId, String nodeUuid, Integer type);
-
-	public String getAllTypes(int userId);
-	public String getTypeData(int userId, Integer type);
-	public String getPortfolioTypes(int userId, String portfolioId);
-
-	public String putTypeName(int userId, Integer type, String name);
-	public String putTypeData(int userId, Integer type, Integer nodeid, Integer parentid, Integer instance, String data);
-
-	public String deleteType(int userId, Integer type);
-	public String deleteTypeNode(int userId, Integer type, Integer nodeid);
 
 	/// À propos de la gestion des groupes de droits
 	public String getRRGList(int userId, String portfolio, Integer user, String role);
@@ -282,4 +244,11 @@ public interface DataProvider {
 	//// Notification related
 	public Set<String[]> getNotificationUserList( int userId, int groupId, String uuid );
 	public boolean touchPortfolio( String fromNodeuuid, String fromPortuuid );
+
+	//// Other queries
+	// Check if email exist in system
+	public String[] logViaEmail( String email );
+	public String emailFromLogin( String username );
+	public boolean changePassword( String username, String password );
+	public boolean registerUser( String username, String password );
 }

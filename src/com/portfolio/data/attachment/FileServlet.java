@@ -29,14 +29,11 @@ import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.URL;
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.naming.InitialContext;
 import javax.servlet.ServletConfig;
@@ -52,7 +49,6 @@ import javax.sql.DataSource;
 import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
@@ -61,21 +57,24 @@ import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.httpclient.Header;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import com.google.gson.stream.JsonWriter;
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.ConfigUtils;
+import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.rest.RestWebApplicationException;
 import com.portfolio.security.Credential;
 
@@ -90,9 +89,9 @@ public class FileServlet  extends HttpServlet
 
 	private String server = "";
 	private String backend = "";
+	private String dataProviderName = "";
 	ServletContext servContext;
 	DataSource ds;
-	DataProvider dataProvider;
 	ArrayList<String> ourIPs = new ArrayList<String>();
 
 	@Override
@@ -117,14 +116,22 @@ public class FileServlet  extends HttpServlet
 		{
 		}
 
+//		servContext = config.getServletContext();
 		servContext = config.getServletContext();
-		backend = config.getServletContext().getInitParameter("backendserver");
-		server = config.getServletContext().getInitParameter("fileserver");
 		try
 		{
-			String dataProviderName  =  config.getInitParameter("dataProviderClass");
-			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
+			ConfigUtils.loadConfigFile(config);
+		}
+		catch( Exception e1 )
+		{
+			e1.printStackTrace();
+		}
+		backend = ConfigUtils.get("backendserver");
+		server = ConfigUtils.get("fileserver");
+		dataProviderName = ConfigUtils.get("dataProviderClass");
 
+		try
+		{
 			InitialContext cxt = new InitialContext();
 			if ( cxt == null ) {
 				throw new Exception("no context found!");
@@ -160,29 +167,15 @@ public class FileServlet  extends HttpServlet
 		// =====================================================================================
 		initialize(request);
 
-		int userId = 0;
-		int groupId = 0;
-		String user = "";
-
-		HttpSession session = request.getSession(true);
-		if( session != null )
-		{
-			Integer val = (Integer) session.getAttribute("uid");
-			if( val != null )
-				userId = val;
-			val = (Integer) session.getAttribute("gid");
-			if( val != null )
-				groupId = val;
-			user = (String) session.getAttribute("user");
-		}
-
+		DataProvider dataProvider = null;
 		Credential credential = null;
 		Connection c = null;
 		try
 		{
+			dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
 			//On initialise le dataProvider
 			if( ds == null )	// Case where we can't deploy context.xml
-			{ c = getConnection(); }
+			{ c = SqlUtils.getConnection(servContext); }
 			else
 			{ c = ds.getConnection(); }
 			dataProvider.setConnection(c);
@@ -193,9 +186,41 @@ public class FileServlet  extends HttpServlet
 			e.printStackTrace();
 		}
 
+		int userId = 0;
+		int groupId = 0;
+		String user = "";
+		boolean fromSakai = false;
+
+		String doCopy = request.getParameter("copy");
+		if( doCopy != null )
+			doCopy = "?copy";
+		else
+			doCopy = "";
+
+		HttpSession session = request.getSession(false);
+		if( session != null )
+		{
+			String srceType = request.getParameter("srce");
+			if( "sakai".equals(srceType) )
+			{
+				fromSakai = true;
+			}
+
+			Integer val = (Integer) session.getAttribute("uid");
+			if( val != null )
+				userId = val;
+			val = (Integer) session.getAttribute("gid");
+			if( val != null )
+				groupId = val;
+			user = (String) session.getAttribute("user");
+		}
+		else
+		{
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
 		/// uuid: celui de la ressource
-
 		/// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
 
 		String origin = request.getRequestURL().toString();
@@ -238,7 +263,8 @@ public class FileServlet  extends HttpServlet
 
 			/// Cherche si on a déjà envoyé quelque chose
 			XPath xPath = XPathFactory.newInstance().newXPath();
-			String filterRes = "//filename[@lang=\""+lang+"\"]";
+//			String filterRes = "//filename[@lang=\""+lang+"\"]";
+			String filterRes = "//*[local-name()='filename' and @lang='"+lang+"']";
 			NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 
 			String filename = "";
@@ -248,7 +274,8 @@ public class FileServlet  extends HttpServlet
 			if( !"".equals(filename) )
 			{
 				/// Already have one, per language
-				String filterId = "//fileid[@lang='"+lang+"']";
+//				String filterId = "//fileid[@lang='"+lang+"']";
+				String filterId = "//*[local-name()='fileid' and @lang='"+lang+"']";
 				NodeList idlist = (NodeList) xPath.compile(filterId).evaluate(doc, XPathConstants.NODESET);
 				if( idlist.getLength() != 0 )
 				{
@@ -266,22 +293,14 @@ public class FileServlet  extends HttpServlet
 		if( last < 0 )
 			last = 0;
 		fileid = fileid.substring(last);
-		/// request.getHeader("REFERRER");
 
 		/// écriture des données
-		String urlTarget = "http://"+ server + "/" + fileid;
+		String urlTarget = "http://"+ server + "/" + fileid+doCopy;
 //		String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
 
 		// Unpack form, fetch binary data and send
 	// Create a factory for disk-based file items
 		DiskFileItemFactory factory = new DiskFileItemFactory();
-
-		// Configure a repository (to ensure a secure temp location is used)
-		/*
-		ServletContext servletContext = this.getServletConfig().getServletContext();
-		File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
-		factory.setRepository(repository);
-		//*/
 
 		// Create a new file upload handler
 		ServletFileUpload upload = new ServletFileUpload(factory);
@@ -291,149 +310,121 @@ public class FileServlet  extends HttpServlet
 		// Parse the request
 		try
 		{
-			List<FileItem> items = upload.parseRequest(request);
-		// Process the uploaded items
-			Iterator<FileItem> iter = items.iterator();
-			while (iter.hasNext())
+			InputStream inputData = null;
+			String fileName = "";
+			long filesize = 0;
+			String contentType = "";
+
+			if( fromSakai )
 			{
-				FileItem item = iter.next();
+				String sakai_session = (String) session.getAttribute("sakai_session");
+				String sakai_server = (String) session.getAttribute("sakai_server");	// Base server http://localhost:9090
+				String srceUrl = request.getParameter("srceurl");
 
-				if ("uploadfile".equals(item.getFieldName()))
-				{
-					// Send raw data
-					InputStream inputData = item.getInputStream();
+				HttpClient client = new HttpClient();
 
-					/*
-					URL urlConn = new URL(urlTarget);
-					connection = (HttpURLConnection) urlConn.openConnection();
-					connection.setDoOutput(true);
-					connection.setUseCaches(false);                 /// We don't want to cache data
-					connection.setInstanceFollowRedirects(false);   /// Let client follow any redirection
-					String method = request.getMethod();
-					connection.setRequestMethod(method);
+				// Create connection to url
+				GetMethod get = new GetMethod(sakai_server+"/"+srceUrl);
+				// Set headers
+				Header header = new Header();
+				header.setName("JSESSIONID");
+				header.setValue(sakai_session);
+				get.setRequestHeader(header);
 
-					String context = request.getContextPath();
-					connection.setRequestProperty("app", context);
-					//*/
-
-					String fileName = item.getName();
-					long filesize = item.getSize();
-					String contentType = item.getContentType();
-
-//					/*
-					connection = CreateConnection( urlTarget, request );
-					connection.setRequestProperty("filename",uuid);
-					connection.setRequestProperty("content-type", "application/octet-stream");
-					connection.setRequestProperty("content-length", Long.toString(filesize));
-					//*/
-					connection.connect();
-
-					OutputStream outputData = connection.getOutputStream();
-					IOUtils.copy(inputData, outputData);
-
-					/// Those 2 lines are needed, otherwise, no request sent
-					int code = connection.getResponseCode();
-					String msg = connection.getResponseMessage();
-
-					InputStream objReturn = connection.getInputStream();
-					StringWriter idResponse = new StringWriter();
-					IOUtils.copy(objReturn, idResponse);
-					fileid = idResponse.toString();
-
-					connection.disconnect();
-
-					/// Construct Json
-					StringWriter StringOutput = new StringWriter();
-					JsonWriter writer = new JsonWriter(StringOutput);
-					writer.beginObject();
-					writer.name("files");
-					writer.beginArray();
-					writer.beginObject();
-
-					writer.name("name").value(fileName);
-					writer.name("size").value(filesize);
-					writer.name("type").value(contentType);
-					writer.name("url").value(origin);
-					writer.name("fileid").value(fileid);
-					//                               writer.name("deleteUrl").value(ref);
-					//                                       writer.name("deleteType").value("DELETE");
-					writer.endObject();
-
-					writer.endArray();
-					writer.endObject();
-
-					writer.close();
-
-					json = StringOutput.toString();
-
-
-					/*
-					DataOutputStream datawriter = new DataOutputStream(connection.getOutputStream());
-					byte[] buffer = new byte[1024];
-					int dataSize;
-					while( (dataSize = inputData.read(buffer,0,buffer.length)) != -1 )
-					{
-						datawriter.write(buffer, 0, dataSize);
-					}
-					datawriter.flush();
-					datawriter.close();
-					//*/
-//					outputData.close();
-//					inputData.close();
-
-					break;
+				int status = client.executeMethod(get);
+				if (status != HttpStatus.SC_OK) {
+					System.err.println("Method failed: " + get.getStatusLine());
 				}
+
+				// Retrieve inputData
+				inputData = get.getResponseBodyAsStream();
+				// File detail
+				Header nameHeader = get.getResponseHeader("Content-Disposition");
+				Header sizeHeader = get.getResponseHeader("Content-Length");
+				Header typeHeader = get.getResponseHeader("Content-Type");
+
+				filesize = Integer.parseInt(sizeHeader.getValue());
+				contentType = typeHeader.getValue();
+				fileName = nameHeader.getValue().split("=")[1];
+				if( fileName.startsWith("\"") )
+					fileName = fileName.substring(1, fileName.length()-1);
+			}
+			else
+			{
+				List<FileItem> items = upload.parseRequest(request);
+				// Process the uploaded items
+				Iterator<FileItem> iter = items.iterator();
+				while (iter.hasNext())
+				{
+					FileItem item = iter.next();
+
+					if ("uploadfile".equals(item.getFieldName()))
+					{
+						// Send raw data
+						inputData = item.getInputStream();
+
+						fileName = item.getName();
+						filesize = item.getSize();
+						contentType = item.getContentType();
+
+						break;
+					}
+				}
+			}
+
+			if( inputData != null )
+			{
+				connection = CreateConnection( urlTarget, request );
+				connection.setRequestProperty("filename",uuid);
+				connection.setRequestProperty("content-type", "application/octet-stream");
+				connection.setRequestProperty("content-length", Long.toString(filesize));
+				connection.connect();
+
+				/// Send data to fileserver
+				OutputStream outputData = connection.getOutputStream();
+				IOUtils.copy(inputData, outputData);
+
+				/// Those 2 lines are needed, otherwise, no request sent
+				int code = connection.getResponseCode();
+				String msg = connection.getResponseMessage();
+
+				/// Retrieving info
+				InputStream objReturn = connection.getInputStream();
+				StringWriter idResponse = new StringWriter();
+				IOUtils.copy(objReturn, idResponse);
+				fileid = idResponse.toString();
+
+				connection.disconnect();
+
+				/// Construct Json
+				StringWriter StringOutput = new StringWriter();
+				JsonWriter writer = new JsonWriter(StringOutput);
+				writer.beginObject();
+				writer.name("files");
+				writer.beginArray();
+				writer.beginObject();
+
+				writer.name("name").value(fileName);
+				writer.name("size").value(filesize);
+				writer.name("type").value(contentType);
+				writer.name("url").value(origin);
+				writer.name("fileid").value(fileid);
+				//                               writer.name("deleteUrl").value(ref);
+				//                                       writer.name("deleteType").value("DELETE");
+				writer.endObject();
+
+				writer.endArray();
+				writer.endObject();
+
+				writer.close();
+
+				json = StringOutput.toString();
 			}
 		}
 		catch( FileUploadException e1 )
 		{
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-
-		/*
-		HttpURLConnection connection = CreateConnection( urlTarget, request );
-
-		connection.setRequestProperty("referer", origin);
-
-		/// Send post data
-		ServletInputStream inputData = request.getInputStream();
-		DataOutputStream writer = new DataOutputStream(connection.getOutputStream());
-
-		byte[] buffer = new byte[1024];
-		int dataSize;
-		while( (dataSize = inputData.read(buffer,0,buffer.length)) != -1 )
-		{
-			writer.write(buffer, 0, dataSize);
-		}
-		inputData.close();
-		writer.close();
-
-		/// So we can forward some Set-Cookie
-		String ref = request.getHeader("referer");
-
-		/// Prend le JSON du fileserver
-		InputStream in = connection.getInputStream();
-
-		InitAnswer(connection, response, ref);
-
-		BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-		StringBuilder builder = new StringBuilder();
-		for( String line = null; (line = reader.readLine()) != null; )
-			builder.append(line).append("\n");
-		//*/
-
-		/// Envoie la mise à jour au backend
-		/*
-		try
-		{
-			PostForm.updateResource(session.getId(), backend, uuid, lang, json);
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
-		//*/
 
 		connection.disconnect();
 		/// Renvoie le JSON au client
@@ -450,6 +441,25 @@ public class FileServlet  extends HttpServlet
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		initialize(request);
+
+		DataProvider dataProvider = null;
+		Credential credential = null;
+		Connection c = null;
+		try
+		{
+			dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+			//On initialise le dataProvider
+			if( ds == null )	// Case where we can't deploy context.xml
+			{ c = SqlUtils.getConnection(servContext); }
+			else
+			{ c = ds.getConnection(); }
+			dataProvider.setConnection(c);
+			credential = new Credential(c);
+		}
+		catch(Exception e)
+		{
+			logger.error(e.getMessage());
+		}
 
 		int userId = 0;
 		int groupId = 0;
@@ -469,13 +479,14 @@ public class FileServlet  extends HttpServlet
 			user = (String) session.getAttribute("user");
 		}
 
+		/*
 		Credential credential = null;
 		try
 		{
 			//On initialise le dataProvider
 			Connection c = null;
 			if( ds == null )	// Case where we can't deploy context.xml
-			{ c = getConnection(); }
+			{ c = SqlUtils.getConnection(servContext); }
 			else
 			{ c = ds.getConnection(); }
 			dataProvider.setConnection(c);
@@ -485,6 +496,7 @@ public class FileServlet  extends HttpServlet
 		{
 			e.printStackTrace();
 		}
+		//*/
 
 		// =====================================================================================
 		boolean trace = false;
@@ -509,6 +521,7 @@ public class FileServlet  extends HttpServlet
 
 			/// Vérification des droits d'accès
 			// TODO: Might be something special with proxy and export/PDF, to investigate
+
 			if( !ourIPs.contains(sourceip) )
 			{
 				if( userId == 0 )
@@ -523,11 +536,11 @@ public class FileServlet  extends HttpServlet
 			else	// Si la requête est locale et qu'il n'y a pas de session, on ignore la vérification
 			{
 				System.out.println("IP OK: bypass");
+				logger.error("IP OK: bypass");
 			}
 
 			/// On récupère le noeud de la ressource pour retrouver le lien
 			String data = dataProvider.getResNode(uuid, userId, groupId);
-
 
 			//			javax.servlet.http.HttpSession session = request.getSession(true);
 			//====================================================
@@ -565,7 +578,8 @@ public class FileServlet  extends HttpServlet
 			XPath xPath = XPathFactory.newInstance().newXPath();
 
 			/// Either we have a fileid per language
-			String filterRes = "//fileid[@lang='"+lang+"']";
+//			String filterRes = "//fileid[@lang='"+lang+"']";
+			String filterRes = "//*[local-name()='fileid' and @lang='"+lang+"']";
 			NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 			String resolve = "";
 			if( nodelist.getLength() != 0 )
@@ -578,10 +592,12 @@ public class FileServlet  extends HttpServlet
 			if( "".equals(resolve) )
 			{
 				response.setStatus(404);
+				response.getOutputStream().close();
 				return;
 			}
 
-			String filterName = "//filename[@lang='"+lang+"']";
+//			String filterName = "//filename[@lang='"+lang+"']";
+			String filterName = "//*[local-name()='filename' and @lang='"+lang+"']";
 			NodeList textList = (NodeList) xPath.compile(filterName).evaluate(doc, XPathConstants.NODESET);
 			String filename = "";
 			if( textList.getLength() != 0 )
@@ -590,7 +606,8 @@ public class FileServlet  extends HttpServlet
 				filename = fileNode.getTextContent();
 			}
 
-			String filterType = "//type[@lang='"+lang+"']";
+//			String filterType = "//type[@lang='"+lang+"']";
+			String filterType = "//*[local-name()='type' and @lang='"+lang+"']";
 			textList = (NodeList) xPath.compile(filterType).evaluate(doc, XPathConstants.NODESET);
 			String type = "";
 			if( textList.getLength() != 0 )
@@ -629,11 +646,11 @@ public class FileServlet  extends HttpServlet
 			response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
 			ServletOutputStream output = response.getOutputStream();
 
-			byte[] buffer = new byte[completeSize];
+			byte[] buffer = new byte[0x100000];
 			int totalRead = 0;
 			int bytesRead = -1;
 
-			while ((bytesRead = input.read(buffer,0,completeSize)) != -1 || totalRead < completeSize) {
+			while ((bytesRead = input.read(buffer,0,0x100000)) != -1 || totalRead < completeSize) {
 				output.write(buffer, 0, bytesRead);
 				totalRead += bytesRead;
 			}
@@ -652,6 +669,7 @@ public class FileServlet  extends HttpServlet
 			e.printStackTrace();
 		}
 		catch(Exception e){
+			logger.error(e.getMessage());
 			logger.error(e.toString()+" -> "+e.getLocalizedMessage());
 			e.printStackTrace();
 			//wadbackend.WadUtilities.appendlogfile(logFName, "GETfile: error"+e);
@@ -666,6 +684,8 @@ public class FileServlet  extends HttpServlet
 				out.println("Erreur dans doGet: " +e);
 				out.close();
 			}
+			request.getInputStream().close();
+			response.getOutputStream().close();
 		}
 	}
 
@@ -777,37 +797,6 @@ public class FileServlet  extends HttpServlet
 			out.flush();  // close() should flush already, but Tomcat 5.5 doesn't
 			out.close();
 		}
-	}
-
-	/// Horrible duplicate, make it shared somehow
-	public Connection getConnection() throws ParserConfigurationException, SAXException, IOException, SQLException, ClassNotFoundException
-	{
-		// Open META-INF/context.xml
-		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
-		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		Document doc = documentBuilder.parse(servContext.getRealPath("/")+"/META-INF/context.xml");
-		NodeList res = doc.getElementsByTagName("Resource");
-		Node dbres = res.item(0);
-
-		Properties info = new Properties();
-		NamedNodeMap attr = dbres.getAttributes();
-		String url = "";
-		for( int i=0; i<attr.getLength(); ++i )
-		{
-			Node att = attr.item(i);
-			String name = att.getNodeName();
-			String val = att.getNodeValue();
-			if( "url".equals(name) )
-				url = val;
-			else if( "username".equals(name) )	// username (context.xml) -> user (properties)
-				info.put("user", val);
-			else if( "driverClassName".equals(name) )
-				Class.forName(val);
-			else
-				info.put(name, val);
-		}
-
-		return DriverManager.getConnection(url, info);
 	}
 
 	// [username, ?]

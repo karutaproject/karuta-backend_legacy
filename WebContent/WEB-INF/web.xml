@@ -15,14 +15,6 @@
 		<param-name>dataProviderClass</param-name>
 		<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
 	</context-param>
-	<context-param>
-		<param-name>backendserver</param-name>
-		<param-value>localhost:8080/karuta-backend</param-value>
-	</context-param>
-	<context-param>
-		<param-name>fileserver</param-name>
-		<param-value>localhost:8080/karuta-fileserver</param-value>
-	</context-param>
 	
 	<servlet>
 		<servlet-name>Jersey REST Service</servlet-name>
@@ -55,10 +47,6 @@
 			<param-name>dataProviderClass</param-name>
 			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
 		</init-param>
-		<init-param>
-			<param-name>redirectedServer</param-name>
-			<param-value>localhost:8080/karuta-fileserver</param-value>
-		</init-param>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>FileServlet</servlet-name>
@@ -74,14 +62,54 @@
 			<param-name>dataProviderClass</param-name>
 			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
 		</init-param>
-		<init-param>
-			<param-name>redirectedServer</param-name>
-			<param-value>localhost:8080/karuta-backend</param-value>
-		</init-param>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>XSLTServlet</servlet-name>
 		<url-pattern>/xsl</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<description></description>
+		<display-name>Message Servlet</display-name>
+		<servlet-name>MessageServlet</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.MessageService</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>MessageServlet</servlet-name>
+		<url-pattern>/message</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<description></description>
+		<display-name>Direct URL Servlet</display-name>
+		<servlet-name>DirectURLServlet</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.DirectURLService</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>DirectURLServlet</servlet-name>
+		<url-pattern>/direct</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<description></description>
+		<display-name>Mail Servlet</display-name>
+		<servlet-name>MailServlet</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.MailService</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>MailServlet</servlet-name>
+		<url-pattern>/mail</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<description></description>
+		<display-name>LTIServletImport</display-name>
+		<servlet-name>LTIServletImport</servlet-name>
+		<servlet-class>com.portfolio.security.LTIServletImport</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LTIServletImport</servlet-name>
+		<url-pattern>/retrieve</url-pattern>
 	</servlet-mapping>
 
 	<servlet>
@@ -94,6 +122,18 @@
 		<servlet-name>CSVServlet</servlet-name>
 		<url-pattern>/csv</url-pattern>
 	</servlet-mapping>
+
+	<servlet>
+		<description></description>
+		<display-name>Register Servlet</display-name>
+		<servlet-name>RegisterServlet</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.RegisterService</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>RegisterServlet</servlet-name>
+		<url-pattern>/register</url-pattern>
+	</servlet-mapping>
+
 
 	<servlet>
 		<servlet-name>LTI</servlet-name>
@@ -121,7 +161,7 @@
 		<filter-class>org.jasig.cas.client.authentication.AuthenticationFilter</filter-class>
 		<init-param>
 			<param-name>casServerLoginUrl</param-name>
-			<param-value>https://himeko:8443/cas/login</param-value>
+			<param-value>https://localhost:8443/cas/login</param-value>
 		</init-param>
 		<init-param>
 			<param-name>service</param-name>
@@ -133,7 +173,7 @@
 		<filter-class>org.jasig.cas.client.validation.Cas10TicketValidationFilter</filter-class>
 		<init-param>
 			<param-name>casServerUrlPrefix</param-name>
-			<param-value>https://himeko:8443/cas</param-value>
+			<param-value>https://localhost:8443/cas</param-value>
 		</init-param>
 		<init-param>
 			<param-name>serverName</param-name>

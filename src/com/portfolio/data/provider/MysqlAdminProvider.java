@@ -261,6 +261,9 @@ public class MysqlAdminProvider implements AdminProvider
 		//{
 		// On recupere d'abord les informations dans la table structures
 		sql = "SELECT bin2uuid(res_node_uuid) AS res_node_uuid  FROM node WHERE portfolio_id= uuid2bin(?) AND res_node_uuid IS NOT NULL AND res_node_uuid<>'' ";
+		if (dbserveur.equals("oracle")){
+			sql = "SELECT bin2uuid(res_node_uuid) AS res_node_uuid  FROM node WHERE portfolio_id= uuid2bin(?) AND res_node_uuid IS NOT NULL ";
+		}
 		st = connection.prepareStatement(sql);
 		st.setString(1, portfolioUuid);
 
@@ -616,6 +619,9 @@ public class MysqlAdminProvider implements AdminProvider
 						"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
 						"LEFT JOIN group_rights gr ON gri.grid=gr.grid " +
 						"WHERE gri.portfolio_id=uuid2bin(?)";
+				if (dbserveur.equals("oracle")){
+					sql = "DELETE FROM group_right_info gri WHERE gri.portfolio_id=uuid2bin(?)";
+				}
 				st = connection.prepareStatement(sql);
 				st.setString(1, portfolioUuid);
 				st.executeUpdate();
@@ -2284,7 +2290,8 @@ public class MysqlAdminProvider implements AdminProvider
 
 				String attr = result.getString("metadata_wad");
 				String metaFragwad;
-				if( !"".equals(attr) )  /// Attributes exists
+//				if( !"".equals(attr) )  /// Attributes exists
+		        if( attr!=null && !"".equals(attr) )  /// Attributes exists
 				{
 					metaFragwad = "<metadata-wad "+attr+"/>";
 				}
@@ -2467,7 +2474,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                  "uuid RAW(16) NOT NULL, " +
 		                  "node_parent_uuid RAW(16), " +
 		                  "t_level NUMBER(10,0)"+
-		                  ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT DELETE ROWS";    	  
+		                  ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";    	  
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -2483,7 +2490,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                "uuid RAW(16) NOT NULL, " +
 		                "node_parent_uuid RAW(16), " +
 		                "t_level NUMBER(10,0)"+
-		                ",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT DELETE ROWS";
+		                ",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -2612,7 +2619,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                  "uuid RAW(16) NOT NULL, " +
 		                  "node_parent_uuid RAW(16), " +
 		                  "t_level NUMBER(10,0)"+
-		                  ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT DELETE ROWS";
+		                  ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -2628,7 +2635,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                "uuid RAW(16) NOT NULL, " +
 		                "node_parent_uuid RAW(16), " +
 		                "t_level NUMBER(10,0)"+
-		                ",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT DELETE ROWS";
+		                ",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3038,7 +3045,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                  "format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 		                  "modif_user_id NUMBER(12) NOT NULL, " +
 		                  "modif_date timestamp DEFAULT NULL, " +
-		                  "portfolio_id RAW(16) DEFAULT NULL) ON COMMIT DELETE ROWS";
+		                  "portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3061,7 +3068,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                "content CLOB, " +
 		                "user_id NUMBER(11) DEFAULT NULL, " +
 		                "modif_user_id NUMBER(12) NOT NULL, " +
-		                "modif_date timestamp DEFAULT NULL) ON COMMIT DELETE ROWS";
+		                "modif_date timestamp DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3081,7 +3088,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                "uuid RAW(16) NOT NULL, " +
 		                "node_parent_uuid RAW(16), " +
 		                "t_level NUMBER(10,0)"+
-		                ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT DELETE ROWS";
+		                ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3101,7 +3108,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                "uuid RAW(16) NOT NULL, " +
 		                "node_parent_uuid RAW(16), " +
 		                "t_level NUMBER(10,0)"+
-		                ",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT DELETE ROWS";
+		                ",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3127,8 +3134,8 @@ public class MysqlAdminProvider implements AdminProvider
 		                "DL NUMBER(1) NOT NULL, " +
 		                "SB NUMBER(1) NOT NULL, " +
 		                "AD NUMBER(1) NOT NULL, " +
-		                "types_id CLOB, " +
-		                "rules_id CLOB) ON COMMIT DELETE ROWS";
+		                "types_id VARCHAR2(2000 CHAR), " +
+		                "rules_id VARCHAR2(2000 CHAR)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3399,7 +3406,7 @@ public class MysqlAdminProvider implements AdminProvider
 					"SET r.content=REPLACE(r.content, d.code, ?) " +
 					"WHERE d.asm_type='asmRoot'";
 			} else if (dbserveur.equals("oracle")){
-		        sql = "UPDATE t_res r SET r.content=(SELECT REPLACE(r2.content, d.code, ?) FROM t_data d LEFT JOIN t_res r2 ON d.res_res_node_uuid=r2.new_uuid WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d LEFT JOIN t_res r2 ON d.res_res_node_uuid=r2.new_uuid WHERE d.asm_type='asmRoot')";
+		        sql = "UPDATE t_res r SET r.content=(SELECT REPLACE(r2.content, d.code, ?) FROM t_data d LEFT JOIN t_res r2 ON d.res_res_node_uuid=r2.new_uuid WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d WHERE d.res_res_node_uuid=r.new_uuid AND d.asm_type='asmRoot')";
 			}
 			st = connection.prepareStatement(sql);
 			st.setString(1, newCode);
@@ -3623,7 +3630,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                "format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 		                "modif_user_id NUMBER(12) NOT NULL, " +
 		                "modif_date timestamp DEFAULT NULL, " +
-		                "portfolio_id RAW(16) DEFAULT NULL) ON COMMIT DELETE ROWS";
+		                "portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3648,7 +3655,7 @@ public class MysqlAdminProvider implements AdminProvider
 //		                "content CLOB, " +
 		                "user_id NUMBER(11) DEFAULT NULL, " +
 		                "modif_user_id NUMBER(12) NOT NULL, " +
-		                "modif_date timestamp DEFAULT NULL) ON COMMIT DELETE ROWS";
+		                "modif_date timestamp DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3669,7 +3676,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                "new_uuid RAW(16) NOT NULL, " +
 		                "uuid RAW(16) UNIQUE NOT NULL, " +
 		                "node_parent_uuid RAW(16) NOT NULL, " +
-		                "t_level NUMBER(10,0)) ON COMMIT DELETE ROWS";
+		                "t_level NUMBER(10,0)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3691,7 +3698,7 @@ public class MysqlAdminProvider implements AdminProvider
 		                "uuid RAW(16) UNIQUE NOT NULL, " +
 		                "node_parent_uuid RAW(16) NOT NULL, " +
 		                "t_level NUMBER(10,0)"+
-		                ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT DELETE ROWS";
+		                ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -3799,7 +3806,7 @@ public class MysqlAdminProvider implements AdminProvider
 					"WHERE (d.res_node_uuid=r.node_uuid " +
 					"OR res_res_node_uuid=r.node_uuid " +
 					"OR res_context_node_uuid=r.node_uuid) " +
-					"AND (shared_res=false OR shared_node=false OR shared_node_res=false)";
+					"AND (shared_res=0 OR shared_node=0 OR shared_node_res=0)";
 			st = connection.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
@@ -3932,10 +3939,10 @@ public class MysqlAdminProvider implements AdminProvider
 					"(SELECT gri.grid, gri.label " +
 					"FROM node n " +
 					"LEFT JOIN group_right_info gri ON n.portfolio_id=gri.portfolio_id " +
-					"WHERE n.node_uuid=uuid2bin(?)) AS g," +  // Retrouve les groupes de destination via le noeud de destination
+					"WHERE n.node_uuid=uuid2bin(?)) g," +  // Retrouve les groupes de destination via le noeud de destination
 					"(SELECT gri.label, s.new_uuid, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD, gr.types_id, gr.rules_id " +
 					"FROM t_struc s, group_rights gr, group_right_info gri " +
-					"WHERE s.uuid=gr.id AND gr.grid=gri.grid) AS r " + // Prend la liste des droits actuel des noeuds dupliqu�s
+					"WHERE s.uuid=gr.id AND gr.grid=gri.grid) r " + // Prend la liste des droits actuel des noeuds dupliqu�s
 					"WHERE g.label=r.label"; // On croise le nouveau 'grid' avec le 'grid' d'origine via le label
 			st = connection.prepareStatement(sql);
 			st.setString(1, destUuid);
@@ -7811,7 +7818,7 @@ public class MysqlAdminProvider implements AdminProvider
 			      sql = "CREATE GLOBAL TEMPORARY TABLE t_struc(" +
 			              "uuid RAW(16) NOT NULL, " +
 			              "t_level NUMBER(10,0)"+
-			                ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT DELETE ROWS";
+			                ",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -7824,7 +7831,7 @@ public class MysqlAdminProvider implements AdminProvider
 			      sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_2(" +
 			              "uuid RAW(16) NOT NULL, " +
 			              "t_level NUMBER(10,0)"+
-			                ",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT DELETE ROWS";
+			                ",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -8306,6 +8313,9 @@ public class MysqlAdminProvider implements AdminProvider
 			sql = "DELETE ri, rt FROM rule_info AS ri " +
 					"LEFT JOIN rule_table AS rt ON ri.rule_id=rt.rule_id " +
 					"WHERE ri.rule_id=?";
+			if (dbserveur.equals("oracle")){
+				sql = "DELETE FROM rule_info AS ri WHERE ri.rule_id=?";
+			}
 			st = connection.prepareStatement(sql);
 			st.setInt(1, macro);
 			st.executeUpdate();
@@ -8551,7 +8561,7 @@ public class MysqlAdminProvider implements AdminProvider
 			        		"node_children_uuid CLOB," +
 			        		"res_node_uuid RAW(16)," +
 			        		"res_res_node_uuid RAW(16)," +
-			        		"res_context_node_uuid RAW(16)) ON COMMIT DELETE ROWS";
+			        		"res_context_node_uuid RAW(16)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -8576,8 +8586,8 @@ public class MysqlAdminProvider implements AdminProvider
 			        		"WR NUMBER(1)," +
 			        		"DL NUMBER(1)," +
 			        		"AD NUMBER(1)," +
-			        		"types_id CLOB," +
-			        		"rules_id CLOB) ON COMMIT DELETE ROWS";
+			        		"types_id VARCHAR2(2000 CHAR)," +
+			        		"rules_id VARCHAR2(2000 CHAR)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -8594,7 +8604,7 @@ public class MysqlAdminProvider implements AdminProvider
 			        		"parent_node NUMBER(19,0)," +
 			        		"node_uuid RAW(16)," +
 			        		"asm_type VARCHAR2(50 CHAR)," +
-			        		"xsi_type VARCHAR2(50 CHAR)) ON COMMIT DELETE ROWS";
+			        		"xsi_type VARCHAR2(50 CHAR)) ON COMMIT PRESERVE ROWS";
 			}
 			st = connection.prepareStatement(sql);
 			st.execute();
@@ -8696,8 +8706,10 @@ public class MysqlAdminProvider implements AdminProvider
 					"SELECT t.node_uuid,t.node_parent_uuid,t.node_children_uuid," +
 					"t.res_node_uuid,t.res_res_node_uuid,t.res_context_node_uuid," +
 					"t.node_id, t.asm_type, portfolio_id," +
-					"'','',''," +
-					"false, false, false," +
+//					"'','',''," +
+					"' ',' ',' '," +
+//					"false, false, false," +
+					"0, 0, 0," +
 					"? " +
 					"FROM t_data t, node n " +
 					"WHERE n.node_uuid=uuid2bin(?) AND t.xsi_type IS NULL";
@@ -9078,6 +9090,9 @@ public class MysqlAdminProvider implements AdminProvider
 			sql = "DELETE di, dt FROM definition_info AS di " +
 					"LEFT JOIN definition_type AS dt ON di.def_id=dt.def_id " +
 					"WHERE di.def_id=?";
+			if (dbserveur.equals("oracle")){
+				sql = "DELETE FROM definition_info AS di WHERE di.def_id=?";
+			}
 			st = connection.prepareStatement(sql);
 			st.setInt(1, type);
 			st.executeUpdate();
@@ -9357,7 +9372,7 @@ public class MysqlAdminProvider implements AdminProvider
 		try
 		{
 			// group_right_info pid:grid -> group_info grid:gid -> group_user gid:userid
-			String sql = "SELECT gri.grid, gri.label, gu.userid " +
+			String sql = "SELECT gri.grid AS grid, gri.label AS label, gu.userid AS userid " +
 					"FROM group_right_info gri " +
 					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
@@ -9380,9 +9395,9 @@ public class MysqlAdminProvider implements AdminProvider
 			long rrg = 0;
 			while( res.next() )
 			{
-				if( rrg != res.getLong("gri.grid") )
+				if( rrg != res.getLong("grid") )
 				{
-					rrg = res.getLong("gri.grid");
+					rrg = res.getLong("grid");
 					Element rrgNode = document.createElement("rrg");
 					rrgNode.setAttribute("id", Long.toString(rrg));
 
@@ -9396,7 +9411,7 @@ public class MysqlAdminProvider implements AdminProvider
 					root.appendChild(rrgNode);
 				}
 
-				Long uid = res.getLong("gu.userid");
+				Long uid = res.getLong("userid");
 				if( !res.wasNull() )
 				{
 					Element user = document.createElement("user");
@@ -9781,6 +9796,9 @@ public class MysqlAdminProvider implements AdminProvider
 					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
 					"WHERE gri.grid=?";
+			if (dbserveur.equals("oracle")){
+				sqlRRG = "DELETE FROM group_right_info AS gri WHERE gri.grid=?";
+			}
 			PreparedStatement rrgst = connection.prepareStatement(sqlRRG);
 			rrgst.setInt(1, rrgId);
 			rrgst.executeUpdate();

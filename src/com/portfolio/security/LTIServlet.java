@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.util.Calendar;
@@ -35,6 +36,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import javax.sql.DataSource;
 
 import net.oauth.OAuthAccessor;
@@ -46,8 +48,10 @@ import net.oauth.SimpleOAuthValidator;
 import net.oauth.server.OAuthServlet;
 import net.oauth.signature.OAuthSignatureMethod;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.imsglobal.basiclti.BasicLTIConstants;
 import org.imsglobal.basiclti.BasicLTIUtil;
+import org.sakaiproject.basiclti.util.BlowFish;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -313,8 +317,15 @@ public class LTIServlet extends HttpServlet {
 			session.setAttribute("gid", Integer.parseInt(siteRoleGroupId));
 			session.setAttribute("useridentifier", userName);
 
-			//Send along to WAD now
-			response.sendRedirect((String)application.getAttribute("lti_redirect_location"));
+			String link = processEncrypted(request, payload);
+
+			if( "".equals(link) ) // Regular old behavior (which need to be changed some time donw the road)
+				//Send along to WAD now
+				response.sendRedirect((String)application.getAttribute("lti_redirect_location"));
+			else	// Otherwise, show different service
+			{
+				response.getWriter().write(link);
+			}
 		}
 		catch (Exception e) {
 			outTrace.append("\nSOMETHING BAD JUST HAPPENED!!!: " + e);
@@ -343,6 +354,39 @@ public class LTIServlet extends HttpServlet {
 		}
 
 	}
+
+	private String processEncrypted( HttpServletRequest request, Map<String, Object> payload ) throws UnsupportedEncodingException
+	{
+		String link = "";
+		String encrypted_session = (String)payload.get("ext_sakai_encrypted_session");
+		String serverid = (String)payload.get("ext_sakai_serverid");
+		String sakaiserver = (String)payload.get("ext_sakai_server");
+
+		if( encrypted_session == null || serverid == null || sakaiserver == null ) return link;
+
+		ServletContext application = getServletConfig().getServletContext();
+		String oauth_consumer_key = (String) payload.get("oauth_consumer_key");
+    final String configPrefix = "basiclti.provider." + oauth_consumer_key + ".";
+    final String oauth_secret = (String)application.getAttribute(configPrefix+ "secret");
+
+		/// Fetch and decode session
+		String sha1Secret = DigestUtils.sha1Hex(oauth_secret);
+
+    String sessionid = BlowFish.decrypt(sha1Secret, encrypted_session);
+
+		sessionid += "."+serverid;
+
+		HttpSession session = request.getSession(true);
+		/// Safer than sending it back through the pipes
+		session.setAttribute("sakai_session", sessionid);
+		session.setAttribute("sakai_server", sakaiserver);
+
+		link = "<p>Ready to import</p>\n";
+
+    return link;
+	}
+
+
 
 	/**
 	 * Lookup or create a user based on the data in the valueMap
@@ -623,7 +667,7 @@ public class LTIServlet extends HttpServlet {
 	    		String path = application.getRealPath("/");
 	    		path = path.replaceFirst(File.separator+"$", "_config"+File.separator);
 
-	        String Filename = path+"configWAD.properties";
+	        String Filename = path+"configKaruta.properties";
 	        java.io.FileInputStream fichierSrce =  new java.io.FileInputStream(Filename);
 	        java.io.BufferedReader readerSrce = new java.io.BufferedReader(new java.io.InputStreamReader(fichierSrce,"UTF-8"));
 	        String variable = null;

@@ -147,14 +147,14 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postInstanciatePortfolio( MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName ) throws Exception
+	public Object postInstanciatePortfolio( MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object postCopyPortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId ) throws Exception
+	public Object postCopyPortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception
 	{
 		// TODO Auto-generated method stub
 		return null;
@@ -197,7 +197,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object postPortfolio(MimeType inMimeType, MimeType outMimeType,
-			String in, int userId, int groupId, String modelId, int substid) throws Exception {
+			String in, int userId, int groupId, String modelId, int substid, boolean parseRights ) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -214,6 +214,12 @@ public class MongoDBDataProvider implements DataProvider {
 			String in, int userId, int groupId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public boolean isCodeExist( String code )
+	{
+		return false;
 	}
 
 	@Override
@@ -248,14 +254,6 @@ public class MongoDBDataProvider implements DataProvider {
 	public void disconnect(){
 
 
-	}
-
-
-
-	@Override
-	public Object getFile(String nodeUuid,String lang)
-	{
-		return null;
 	}
 
 	@Override
@@ -416,7 +414,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object postPortfolioZip(MimeType mimeType, MimeType mimeType2,
-			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid) throws FileNotFoundException, IOException
+			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws FileNotFoundException, IOException
 			{
 		// TODO Auto-generated method stub
 		return null;
@@ -424,14 +422,6 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public String getPortfolioUuidByNodeUuid(String nodeUuid) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object putFile(String nodeUuid, String lang, String fileName,
-			String destDirectory, String type, String extension, int size,
-			byte[] fileBytes, int userId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -528,7 +518,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object getNodeWithXSL(MimeType mimeType, String nodeUuid,
-			String xslFile, int userId, int groupId) {
+			String xslFile, String parameters, int userId, int groupId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -592,149 +582,6 @@ public class MongoDBDataProvider implements DataProvider {
 		// TODO Auto-generated method stub
 		return null;
 	}
-
-	@Deprecated
-	@Override
-	public String postAddAction( int userId, Integer macro, String role,
-			String data )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Deprecated
-	@Override
-	public Integer postCreateMacro( int userId, String macroName )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String getAllActionLabel( int userId )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String getMacroActions( int userId, Integer macro )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String getPortfolioMacro( int userId, String portfolioId )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String putMacroName( int userId, Integer macro, String name )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Deprecated
-	@Override
-	public String putMacroAction( int userId, Integer macro, String role,
-			String data )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Deprecated
-	@Override
-	public String deleteMacro( int userId, Integer macro )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Deprecated
-	@Override
-	public String deleteMacroAction( int userId, Integer macro, String role )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Deprecated
-	@Override
-	public String postCreateType( int userId, String name )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String postAddNodeType( int userId, Integer type, Integer nodeid, Integer parentid, Integer instance, String data )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Deprecated
-	@Override
-	public String postUseType( int userId, String nodeUuid, Integer type )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String getAllTypes( int userId )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String getTypeData( int userId, Integer type )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String getPortfolioTypes( int userId, String portfolioId )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String putTypeName( int userId, Integer type, String name )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String putTypeData( int userId, Integer type, Integer nodeid, Integer parentid, Integer instance, String data )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String deleteType( int userId, Integer type )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String deleteTypeNode( int userId, Integer type, Integer nodeid )
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 
 	@Override
 	public String getRole(MimeType mimeType, int grid, int userId)
@@ -1033,6 +880,33 @@ public class MongoDBDataProvider implements DataProvider {
 	@Override
 	public boolean touchPortfolio( String fromNodeuuid, String fromPortuuid  )
 	{
+		return false;
+	}
+
+	@Override
+	public String[] logViaEmail( String email )
+	{
+		return null;
+	}
+
+	@Override
+	public String emailFromLogin( String username )
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean changePassword( String username, String password )
+	{
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean registerUser( String username, String password )
+	{
+		// TODO Auto-generated method stub
 		return false;
 	}
 

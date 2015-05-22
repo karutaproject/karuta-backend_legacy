@@ -18,6 +18,7 @@ package com.portfolio.security;
 public class NodeRight {
 
 	public int groupId=0;
+	public int rrgId=0;
 	public String groupLabel="";
   public Boolean add;
 	public Boolean read;

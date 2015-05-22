@@ -80,6 +80,7 @@ public class ConvertCSV  extends HttpServlet {
 
 		initialize(request);
 		response.setContentType("application/json");
+		response.setCharacterEncoding("UTF-8");
 
 		JSONObject data = new JSONObject();
 		try
@@ -155,6 +156,7 @@ public class ConvertCSV  extends HttpServlet {
 		{
 			out = response.getWriter();
 			out.print(data);
+			request.getInputStream().close();
 		}
 		catch( IOException e )
 		{

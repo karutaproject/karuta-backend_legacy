@@ -426,8 +426,10 @@ CREATE INDEX root_node_uuid ON portfolio (root_node_uuid ASC);
 
 drop table portfolio_group cascade constraints purge;
 CREATE TABLE portfolio_group (
-  pg NUMBER(19,0) NOT NULL,
-  CONSTRAINT portfolio_group_PK PRIMARY KEY (pg)
+  owner NUMBER(19,0) NOT NULL,
+  portfolio_id RAW(16) NOT NULL,
+  group_name VARCHAR2(255 CHAR) NOT NULL,
+  CONSTRAINT portfolio_group_PK PRIMARY KEY (portfolio_id,group_name)
 );
 
 drop table portfolio_group_members cascade constraints purge;

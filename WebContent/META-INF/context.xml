@@ -2,7 +2,7 @@
 <Context>
 
 	<Resource name="jdbc/portfolio-backend" auth="Container"
-		type="javax.sql.DataSource" maxActive="1000" maxIdle="30" maxWait="10000"
+		type="javax.sql.DataSource" maxActive="1000" minIdle="10" maxWait="10000"
 		driverClassName="com.mysql.jdbc.Driver" removeAbandoned="true"
 		removeAbandonedTimeout="1000" logAbandoned="true" validationQuery="SELECT 1"
 		username="karuta" password="karuta_password" 
@@ -12,8 +12,8 @@
 		type="javax.sql.DataSource" maxActive="1000" maxIdle="30" maxWait="10000"
 		driverClassName="oracle.jdbc.driver.OracleDriver" removeAbandoned="true"
 		removeAbandonedTimeout="1000" logAbandoned="true" validationQuery="SELECT 1 FROM DUAL"
-		username="karuta" password="k$pp42ita"
-		url="jdbc:oracle:thin:@//verglas.hec.ca:5112/KARUTA" />
+		username="karuta" password="karuta_password"
+		url="jdbc:oracle:thin:@//localhost:5112/KARUTA" />
 	-->
 	<ResourceLink global="jdbc/portfolio-backend" name="jdbc/portfolio-backend" type="javax.sql.DataSource" />
 	

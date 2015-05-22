@@ -45,6 +45,8 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.commons.lang3.StringEscapeUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentFragment;
@@ -80,7 +82,7 @@ import com.mysql.jdbc.PreparedStatement;
 
 public class DomUtils
 {
-
+	final static Logger logger = LoggerFactory.getLogger(DomUtils.class);
 
 //  =======================================
 	private static String dom2string(Document dom) throws Exception {  // à supprimer
@@ -211,6 +213,7 @@ public class DomUtils
 //  =======================================
 public static String processXSLTfile2String (Document xml, String xslFile, String param[], String paramVal[], StringBuffer outTrace) throws Exception {
 //  =======================================
+	logger.debug("<br>-->processXSLTfile2String-"+xslFile);
 	outTrace.append("<br>-->processXSLTfile2String-"+xslFile);
 	Transformer transformer = TransformerFactory.newInstance().newTransformer(new StreamSource(new File(xslFile)));
 	outTrace.append(".1");
@@ -220,12 +223,15 @@ public static String processXSLTfile2String (Document xml, String xslFile, Strin
 	outTrace.append(".3");
 	for (int i = 0; i < param.length; i++) {
 		outTrace.append("<br>setParemater - "+param[i]+":"+paramVal[i]+"...");
+		logger.debug("<br>setParemater - "+param[i]+":"+paramVal[i]+"...");
 		transformer.setParameter(param[i], paramVal[i]);
 		outTrace.append("ok");
+		logger.debug("ok");
 	}
 	outTrace.append(".4");
 	transformer.transform(source, result);
 	outTrace.append("<br><--processXSLTfile2String-"+xslFile);
+	logger.debug("<br><--processXSLTfile2String-"+xslFile);
 	return result.getWriter().toString();
 }
 

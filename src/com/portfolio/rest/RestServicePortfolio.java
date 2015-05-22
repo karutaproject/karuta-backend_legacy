@@ -21,13 +21,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.io.StringWriter;
+import java.math.BigInteger;
+import java.security.MessageDigest;
 import java.sql.Connection;
-import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -55,12 +57,25 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.commons.httpclient.Header;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpException;
+import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -75,10 +90,12 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
+import com.portfolio.data.utils.MailUtils;
+import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.data.utils.javaUtils;
 import com.portfolio.eventbus.HandlerLogging;
 import com.portfolio.eventbus.HandlerNotificationSakai;
@@ -120,14 +137,20 @@ public class RestServicePortfolio
 	String elggDefaultUserPassword = null;
 
 	ServletContext servContext;
-
+	ServletConfig servConfig;
 
 	KEventbus eventbus = new KEventbus();
 
+	/**
+	 * Initialize service objects
+	 **/
 	public RestServicePortfolio( @Context ServletConfig sc , @Context ServletContext context)
 	{
 		try
 		{
+			// Loading configKaruta.properties
+			ConfigUtils.loadConfigFile(sc);
+
 			// Initialize data provider and cas
 			try
 			{
@@ -176,6 +199,7 @@ public class RestServicePortfolio
 				elggDefaultUserPassword = null;
 			};
 
+			servConfig = sc;
 			servContext = context;
 			String dataProviderName  =  sc.getInitParameter("dataProviderClass");
 			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
@@ -227,36 +251,9 @@ public class RestServicePortfolio
 
 	}
 
-	public Connection getConnection() throws ParserConfigurationException, SAXException, IOException, SQLException, ClassNotFoundException
-	{
-		// Open META-INF/context.xml
-		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
-		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		Document doc = documentBuilder.parse(servContext.getRealPath("/")+"/META-INF/context.xml");
-		NodeList res = doc.getElementsByTagName("Resource");
-		Node dbres = res.item(0);
-
-		Properties info = new Properties();
-		NamedNodeMap attr = dbres.getAttributes();
-		String url = "";
-		for( int i=0; i<attr.getLength(); ++i )
-		{
-			Node att = attr.item(i);
-			String name = att.getNodeName();
-			String val = att.getNodeValue();
-			if( "url".equals(name) )
-				url = val;
-			else if( "username".equals(name) )	// username (context.xml) -> user (properties)
-				info.put("user", val);
-			else if( "driverClassName".equals(name) )
-				Class.forName(val);
-			else
-				info.put(name, val);
-		}
-
-		return DriverManager.getConnection(url, info);
-	}
-
+	/**
+	 * Initialize DB connections
+	 **/
 	public void initService( HttpServletRequest request )
 	{
 		try
@@ -264,7 +261,7 @@ public class RestServicePortfolio
 			Connection con = null;
 			if( ds == null )	// Case where we can't deploy context.xml
 			{
-				con = getConnection();
+				con = SqlUtils.getConnection(servContext);
 				dataProvider.setConnection(con);
 			}
 			else
@@ -275,6 +272,15 @@ public class RestServicePortfolio
 //			dataProvider.setDataSource(ds);
 
 			credential = new Credential(con);
+
+			/// Configure session
+			/// FIXME: Oracle part might be missing
+			if( "mysql".equals(ConfigUtils.get("serverType")) )
+			{
+				PreparedStatement st = con.prepareStatement("SET SESSION group_concat_max_len = 1048576");	// 1MB
+				st.execute();
+				st.close();
+			}
 
 			/// Configure eventbus
 			//	    KEventHandler handlerDB = new HandlerDatabase(request, dataProvider);
@@ -292,6 +298,9 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 * Fetch user session info
+	 **/
 	public UserInfo checkCredential(HttpServletRequest request, String login, String token, String group )
 	{
 		HttpSession session = request.getSession(true);
@@ -312,7 +321,22 @@ public class RestServicePortfolio
 		return ui;
 	}
 
-	/// Fetch current user information
+	/**
+	 *	Fetch current user info
+	 *	GET /rest/api/credential
+	 *	parameters:
+	 *	return:
+	 *	<user id="uid">
+	 *		<username></username>
+	 *		<firstname></firstname>
+	 *		<lastname></lastname>
+	 *		<email></email>
+	 *		<admin>1/0</admin>
+	 *		<designer>1/0</designer>
+	 *		<active>1/0</active>
+	 *		<substitute>1/0</substitute>
+	 *	</user>
+	 **/
 	@Path("/credential")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -346,8 +370,17 @@ public class RestServicePortfolio
 	}
 
 
-
-
+	/**
+	 *	Get groups from a user id
+	 *	GET /rest/api/groups
+	 *	parameters:
+	 *	- group: group id
+	 *	return:
+	 *	<groups>
+	 *		<group id="gid" owner="uid" templateId="rrgid">GROUP LABEL</group>
+	 *		...
+	 *	</groups>
+	 **/
 	@Path("/groups")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -376,6 +409,25 @@ public class RestServicePortfolio
 	}
 
 
+	/**
+	 *	Get user list
+	 *	GET /rest/api/users
+	 *	parameters:
+	 *	return:
+	 *	<users>
+	 *		<user id="uid">
+	 *			<username></username>
+	 *			<firstname></firstname>
+	 *			<lastname></lastname>
+	 *			<admin>1/0</admin>
+	 *			<designer>1/0</designer>
+	 *			<email></email>
+	 *			<active>1/0</active>
+	 *			<substitute>1/0</substitute>
+	 *		</user>
+	 *		...
+	 *	</users>
+	 **/
 	@Path("/users")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -403,6 +455,22 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Get a specific user info
+	 *	GET /rest/api/users/user/{user-id}
+	 *	parameters:
+	 *	return:
+	 *	<user id="uid">
+	 *		<username></username>
+	 *		<firstname></firstname>
+	 *		<lastname></lastname>
+	 *		<admin>1/0</admin>
+	 *		<designer>1/0</designer>
+	 *		<email></email>
+	 *		<active>1/0</active>
+	 *		<substitute>1/0</substitute>
+	 *	</user>
+	 **/
 	@Path("/users/user/{user-id}")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -436,6 +504,35 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Modify user info
+	 *	PUT /rest/api/users/user/{user-id}
+	 *	body:
+	 *	<user id="uid">
+	 *		<username></username>
+	 *		<firstname></firstname>
+	 *		<lastname></lastname>
+	 *		<admin>1/0</admin>
+	 *		<designer>1/0</designer>
+	 *		<email></email>
+	 *		<active>1/0</active>
+	 *		<substitute>1/0</substitute>
+	 *	</user>
+	 *
+	 *	parameters:
+	 *
+	 *	return:
+	 *	<user id="uid">
+	 *		<username></username>
+	 *		<firstname></firstname>
+	 *		<lastname></lastname>
+	 *		<admin>1/0</admin>
+	 *		<designer>1/0</designer>
+	 *		<email></email>
+	 *		<active>1/0</active>
+	 *		<substitute>1/0</substitute>
+	 *	</user>
+	 **/
 	@Path("/users/user/{user-id}")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -463,6 +560,13 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Get user id from username
+	 *	GET /rest/api/users/user/username/{username}
+	 *	parameters:
+	 *	return:
+	 *	userid (long)
+	 **/
 	@Path("/users/user/username/{username}")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -493,6 +597,20 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Get a list of role/group for this user
+	 *	GET /rest/api/users/user/{user-id}/groups
+	 *	parameters:
+	 *	return:
+	 *	<profiles>
+	 *		<profile>
+	 *			<group id="gid">
+	 *				<label></label>
+	 *				<role></role>
+	 *			</group>
+	 *		</profile>
+	 *	</profiles>
+	 **/
 	@Path("/users/user/{user-id}/groups")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -520,6 +638,28 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Get rights in a role from a groupid
+	 *	GET /rest/api/groupRights
+	 *	parameters:
+	 *	- group: role id
+	 *	return:
+	 *	<groupRights>
+	 *		<groupRight  gid="groupid" templateId="grouprightid>
+	 *			<item
+	 *				AD="True/False"
+	 *				creator="uid";
+	 *				date="";
+	 *				DL="True/False"
+	 *				id=uuid
+	 *				owner=uid";
+	 *				RD="True/False"
+	 *				SB="True"/"False"
+	 *				typeId=" ";
+	 *				WR="True/False"/>";
+	 *		</groupRight>
+	 *	</groupRights>
+	 **/
 	@Path("/groupRights")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -547,6 +687,19 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Get role list from portfolio from uuid
+	 *	GET /rest/api/groupRightsInfos
+	 *	parameters:
+	 *	- portfolioId: portfolio uuid
+	 *	return:
+	 *	<groupRightsInfos>
+	 *		<groupRightInfo grid="grouprightid">
+	 *			<label></label>
+	 *			<owner>UID</owner>
+	 *		</groupRightInfo>
+	 *	</groupRightsInfos>
+	 **/
 	@Path("/groupRightsInfos")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -574,6 +727,31 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Get a portfolio from uuid
+	 *	GET /rest/api/portfolios/portfolio/{portfolio-id}
+	 *	parameters:
+	 *	- resources:
+	 *	- files: if set with resource, return a zip file
+	 *	- export: if set, return xml as a file download
+	 *	return:
+	 *	zip
+	 *	as file download
+	 *	content
+	 *	<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+	 *	<portfolio code=\"0\" id=\""+portfolioUuid+"\" owner=\""+isOwner+"\"><version>4</version>
+	 *		<asmRoot>
+	 *			<asm*>
+	 *				<metadata-wad></metadata-wad>
+	 *				<metadata></metadata>
+	 *				<metadata-epm></metadata-epm>
+	 *				<asmResource xsi_type="nodeRes">
+	 *				<asmResource xsi_type="context">
+	 *				<asmResource xsi_type="SPECIFIC TYPE">
+	 *			</asm*>
+	 *		</asmRoot>
+	 *	</portfolio>
+	 **/
 	@Path("/portfolios/portfolio/{portfolio-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, "application/zip", MediaType.APPLICATION_OCTET_STREAM})
@@ -593,6 +771,7 @@ public class RestServicePortfolio
 
 			if( response == null )
 			{
+				/// Finding back code. Not really pretty
 				Date time = new Date();
 				Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
 				NodeList codes = doc.getDocumentElement().getElementsByTagName("code");
@@ -634,7 +813,8 @@ public class RestServicePortfolio
 
 					/// Find all fileid/filename
 					XPath xPath = XPathFactory.newInstance().newXPath();
-					String filterRes = "//asmResource/fileid";
+//					String filterRes = "//asmResource/fileid[text()]";	// fileid which has something in it
+					String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
 					NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 
 					/// Direct link to data
@@ -652,21 +832,39 @@ public class RestServicePortfolio
 					for( int i=0; i<nodelist.getLength(); ++i )
 					{
 						Node res = nodelist.item(i);
+						/// Check if fileid has a lang
+						Node langAtt = res.getAttributes().getNamedItem("lang");
+						String filterName = "";
+						if( langAtt != null )
+						{
+							lang = langAtt.getNodeValue();
+//							filterName = "./filename[@lang='"+lang+"' and text()]";
+							filterName = "//*[local-name()='filename' and @lang='"+lang+"' and text()]";
+						}
+						else
+						{
+//							filterName = "./filename[@lang and text()]";
+							filterName = "//*[local-name()='filename' and @lang and text()]";
+						}
+
+						logger.error("MARKER 3a");
+
 						Node p = res.getParentNode();	// resource -> container
 						Node gp = p.getParentNode();	// container -> context
 						Node uuidNode = gp.getAttributes().getNamedItem("id");
 						String uuid = uuidNode.getTextContent();
 
-						String filterName = "./filename[@lang and text()]";
 						NodeList textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
 						String filename = "";
 						if( textList.getLength() != 0 )
 						{
 							Element fileNode = (Element) textList.item(0);
 							filename = fileNode.getTextContent();
-							lang = fileNode.getAttribute("lang");
+							lang = fileNode.getAttribute("lang");	// In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
 							if( "".equals(lang) ) lang = "fr";
 						}
+
+						logger.error("MARKER 3b");
 
 						String servlet = httpServletRequest.getRequestURI();
 						servlet = servlet.substring(0, servlet.indexOf("/", 7));
@@ -693,14 +891,16 @@ public class RestServicePortfolio
 						if( lastDot < 0 )
 							lastDot = 0;
 						String filenameext = filename.substring(0);	/// find extension
-						int extindex = filenameext.lastIndexOf(".");
-						filenameext = uuid +"_"+ lang + filenameext.substring(extindex);
+						int extindex = filenameext.lastIndexOf(".") + 1;
+						filenameext = uuid +"_"+ lang +"."+ filenameext.substring(extindex);
 
 						// Save it to zip file
 //						int length = (int) entity.getContentLength();
 						InputStream content = entity.getContent();
 
 //						BufferedInputStream bis = new BufferedInputStream(entity.getContent());
+
+						logger.error("MARKER 3c");
 
 						ze = new ZipEntry(filenameext);
 						try
@@ -838,10 +1038,16 @@ public class RestServicePortfolio
         }
 	}*/
 
+	/**
+	 *	Return the portfolio from its code
+	 *	GET /rest/api/portfolios/code/{code}
+	 *	parameters:
+	 *	return:
+	 *	see 'content' of "GET /rest/api/portfolios/portfolio/{portfolio-id}"
+	 **/
 	@Path("/portfolios/portfolio/code/{code}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-
 	public String getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
@@ -883,12 +1089,38 @@ public class RestServicePortfolio
 		}
 	}
 
-	/// Liste des portfolios de l'utilisateur courant
+	/**
+	 *	List portfolios for current user (return also other things, but should be removed)
+	 *	GET /rest/api/portfolios
+	 *	parameters:
+	 *	- active: false/0	(also show inactive portoflios)
+	 *	- code
+	 *	- n: number of results (10<n<50)
+	 *	- i: index start + n
+	 *	return:
+	 *	<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+	 *	<portfolios>
+	 *		<portfolio  id="uuid" root_node_id="uuid" owner="Y/N" ownerid="uid" modified="DATE">
+	 *			<asmRoot id="uuid">
+	 *				<metadata-wad/>
+	 *				<metadata-epm/>
+	 *				<metadata/>
+	 *				<code></code>
+	 *				<label/>
+	 *				<description/>
+	 *				<semanticTag/>
+	 *				<asmResource xsi_type="nodeRes"></asmResource>
+	 *				<asmResource xsi_type="context"/>
+	 *			</asmRoot>
+	 *		</portfolio>
+	 *		...
+	 *	</portfolios>
+	 **/
 	@Path("/portfolios")
 	@GET
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid )
+	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
@@ -962,7 +1194,15 @@ public class RestServicePortfolio
 		}
 	}
 
-	/// R�-�crit le portfolios
+	/**
+	 *	Rewrite portfolio content
+	 *	PUT /rest/api/portfolios/portfolios/{portfolio-id}
+	 *	parameters:
+	 *	content
+	 *	see GET /rest/api/portfolios/portfolio/{portfolio-id}
+	 *	and/or the asm format
+	 *	return:
+	 **/
 	@Path("/portfolios/portfolio/{portfolio-id}")
 	@PUT
 	@Consumes(MediaType.APPLICATION_XML)
@@ -974,8 +1214,10 @@ public class RestServicePortfolio
 		try
 		{
 			Boolean portfolioActive;
-			try { if(active.equals("false") ||  active.equals("0")) portfolioActive = false; else portfolioActive = true; }
-			catch(Exception ex) { portfolioActive = null; };
+			if("false".equals(active) || "0".equals(active))
+				portfolioActive = false;
+			else
+				portfolioActive = true;
 
 			dataProvider.putPortfolio(new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio,portfolioUuid, ui.userId,portfolioActive, groupId,null);
 			logRestRequest(httpServletRequest, xmlPortfolio, null, Status.OK.getStatusCode());
@@ -996,6 +1238,14 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Modify some portfolio option
+	 *	PUT /rest/api/portfolios/portfolios/{portfolio-id}
+	 *	parameters:
+	 *	- portfolio: uuid
+	 *	- active:	0/1, true/false
+	 *	return:
+	 **/
 	@Path("/portfolios")
 	@PUT
 	@Consumes(MediaType.APPLICATION_XML)
@@ -1028,6 +1278,27 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Add a user
+	 *	POST /rest/api/users
+	 *	parameters:
+	 *	content:
+	 *	<users>
+	 *		<user id="uid">
+	 *			<username></username>
+	 *			<firstname></firstname>
+	 *			<lastname></lastname>
+	 *			<admin>1/0</admin>
+	 *			<designer>1/0</designer>
+	 *			<email></email>
+	 *			<active>1/0</active>
+	 *			<substitute>1/0</substitute>
+	 *		</user>
+	 *		...
+	 *	</users>
+	 *
+	 *	return:
+	 **/
 	@Path("/users")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
@@ -1045,6 +1316,7 @@ public class RestServicePortfolio
 		}
 		catch(Exception ex)
 		{
+			logger.error(ex.getMessage());
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmluser, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
 
@@ -1056,7 +1328,13 @@ public class RestServicePortfolio
 		}
 	}
 
-
+	/**
+	 *	Unused (?)
+	 *	POST /rest/api/label/{label}
+	 *	parameters:
+	 *	return:
+	 **/
+	@Deprecated
 	@Path("/label/{label}")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -1087,7 +1365,14 @@ public class RestServicePortfolio
 		}
 	}
 
-	/// S�lection du r�le de l'utilisateur courant
+	/**
+	 *	Selecting role for current user
+	 *	TODO: Was deactivated, but it might come back later on
+	 *	POST /rest/api/credential/group/{group-id}
+	 *	parameters:
+	 *	- group: group id
+	 *	return:
+	 **/
 	@Path("/credential/group/{group-id}")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -1124,6 +1409,15 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Add a user group
+	 *	POST /rest/api/credential/group/{group-id}
+	 *	parameters:
+	 *	<group grid="" owner="" label=""></group>
+	 *
+	 *	return:
+	 *	<group grid="" owner="" label=""></group>
+	 **/
 	@Path("group")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -1131,9 +1425,6 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
-		/**
-		 * <group grid="" owner="" label=""></group>
-		 */
 		try
 		{
 			String xmlGroup = (String) dataProvider.postGroup(xmlgroup, ui.userId);
@@ -1158,6 +1449,15 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Insert a user in a user group
+	 *	POST /rest/api/groupsUsers
+	 *	parameters:
+	 *	-	group: gid
+	 *	- userId: uid
+	 *	return:
+	 *	<ok/>
+	 **/
 	@Path("/groupsUsers")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -1191,6 +1491,14 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Change the group right associated to a user group
+	 *	POST /rest/api/RightGroup
+	 *	parameters:
+	 *	- group:	user group id
+	 *	- groupRightId: group right id
+	 *	return:
+	 **/
 	@Path("RightGroup")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -1225,28 +1533,55 @@ public class RestServicePortfolio
 		return null;
 	}
 
-	/// D'un portfolio, cr�e une instance ou l'on prend compte des droits sp�cifi� dans les attributs wad
+	/**
+	 *	From a base portfolio, make an instance with parsed rights in the attributes
+	 *	POST /rest/api/portfolios/instanciate/{portfolio-id}
+	 *	parameters:
+	 *	- sourcecode: if set, rather than use the provided portfolio uuid, search for the portfolio by code
+	 *	- targetcode: code we want the portfolio to have. If code already exists, adds a number after
+	 *	- copyshared: y/null Make a copy of shared nodes, rather than keeping the link to the original data
+	 *	- owner: true/null Set the current user instanciating the portfolio as owner. Otherwise keep the one that created it.
+	 *
+	 *	return:
+	 *	instanciated portfolio uuid
+	 **/
 	@Path("/portfolios/instanciate/{portfolio-id}")
 	@POST
-	public String postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname)
+	public String postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname, @QueryParam("owner") String setowner)
 	{
 		String value = "Instanciate: "+portfolioId;
 
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
+		//// TODO: IF user is creator and has parameter owner -> change ownership
+
 		try
 		{
+			boolean setOwner = false;
+			if( "true".equals(setowner) )
+				setOwner = true;
 			boolean copyshared = false;
 			if( "y".equalsIgnoreCase(copy) )
 				copyshared = true;
 
-			String returnValue = dataProvider.postInstanciatePortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared, groupname).toString();
+			/// Check if code exist, find a suitable one otherwise. Eh.
+			String newcode = tgtcode;
+			int num = 0;
+			while( dataProvider.isCodeExist(newcode) )
+				newcode = tgtcode+" ("+ num++ +")";
+			tgtcode = newcode;
+
+			String returnValue = dataProvider.postInstanciatePortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
 			logRestRequest(httpServletRequest, value+" to: "+returnValue, returnValue, Status.OK.getStatusCode());
+
+			if( returnValue.startsWith("erreur") )
+				throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, returnValue);
 
 			return returnValue;
 		}
 		catch(Exception ex)
 		{
+			logger.error(ex.getMessage());
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, value+" --> Error", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
 
@@ -1258,17 +1593,38 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	From a base portfolio, just make a direct copy without rights parsing
+	 *	POST /rest/api/portfolios/copy/{portfolio-id}
+	 *	parameters:
+	 *	Same as in instanciate
+	 *	return:
+	 *	Same as in instanciate
+	 **/
 	@Path("/portfolios/copy/{portfolio-id}")
 	@POST
-	public String postCopyPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode )
+	public String postCopyPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("owner") String setowner )
 	{
 		String value = "Instanciate: "+portfolioId;
 
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
+		//// TODO: IF user is creator and has parameter owner -> change ownership
+
 		try
 		{
-			String returnValue = dataProvider.postCopyPortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId ).toString();
+			boolean setOwner = false;
+			if( "true".equals(setowner) )
+				setOwner = true;
+
+			/// Check if code exist, find a suitable one otherwise. Eh.
+			String newcode = tgtcode;
+			int num = 0;
+			while( dataProvider.isCodeExist(newcode) )
+				newcode = tgtcode+" ("+ num++ +")";
+			tgtcode = newcode;
+
+			String returnValue = dataProvider.postCopyPortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, setOwner ).toString();
 			logRestRequest(httpServletRequest, value+" to: "+returnValue, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1286,27 +1642,124 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	As a form, import xml into the database
+	 *	POST /rest/api/portfolios
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/portfolios")
 	@POST
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_XML)
-	public String postFormPortfolio(@FormDataParam("uploadfile") String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId)
+	public String postFormPortfolio(@FormDataParam("uploadfile") String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @QueryParam("instance") String instance )
 	{
-		return postPortfolio(xmlPortfolio, user, token, groupId, sc, httpServletRequest, userId, modelId);
+		return postPortfolio(xmlPortfolio, user, token, groupId, sc, httpServletRequest, userId, modelId, srceType, srceUrl, xsl, instance);
 	}
 
-	///	Cr�e un portfolio avec les donn�es xml envoy�es
+	/**
+	 *	As a form, import xml into the database
+	 *	POST /rest/api/portfolios
+	 *	parameters:
+	 *	- model: another uuid, not sure why it's here
+	 *	- srce: sakai/null	Need to be logged in on sakai first
+	 *	- srceurl: url part of the sakai system to fetch
+	 *	- xsl: filename when using with sakai source, convert data before importing it
+	 *	- instance: true/null if as an instance, parse rights. Otherwise just write nodes
+	 *	xml: ASM format
+	 *	return:
+	 *	<portfolios>
+	 *		<portfolio id="uuid"/>
+	 *	</portfolios>
+	 **/
 	@Path("/portfolios")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces(MediaType.APPLICATION_XML)
-	public String postPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId)
+	public String postPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @QueryParam("instance") String instance )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
+		if( "sakai".equals(srceType) )
+		{
+			/// Session Sakai
+			HttpSession session = httpServletRequest.getSession(false);
+			if( session != null )
+			{
+				String sakai_session = (String) session.getAttribute("sakai_session");
+				String sakai_server = (String) session.getAttribute("sakai_server");	// Base server http://localhost:9090
+
+				HttpClient client = new HttpClient();
+
+				/// Fetch page
+				GetMethod get = new GetMethod(sakai_server+"/"+srceUrl);
+				Header header = new Header();
+				header.setName("JSESSIONID");
+				header.setValue(sakai_session);
+				get.setRequestHeader(header);
+
+				try
+				{
+					int status = client.executeMethod(get);
+					if (status != HttpStatus.SC_OK) {
+						System.err.println("Method failed: " + get.getStatusLine());
+					}
+
+					// Retrieve data
+					InputStream retrieve = get.getResponseBodyAsStream();
+					String sakaiData = IOUtils.toString(retrieve, "UTF-8");
+
+					//// Convert it via XSL
+					/// Path to XSL
+					String servletDir = sc.getServletContext().getRealPath("/");
+					int last = servletDir.lastIndexOf(File.separator);
+					last = servletDir.lastIndexOf(File.separator, last-1);
+					String baseDir = servletDir.substring(0, last);
+
+					String basepath = xsl.substring(0,xsl.indexOf(File.separator));
+					String firstStage = baseDir+File.separator+basepath+File.separator+"karuta"+File.separator+"xsl"+File.separator+"html2xml.xsl";
+					System.out.println("FIRST: "+firstStage);
+
+					/// Storing transformed data
+					StringWriter dataTransformed = new StringWriter();
+
+					/// Apply change
+					Source xsltSrc1 = new StreamSource(new File(firstStage));
+					TransformerFactory transFactory = TransformerFactory.newInstance();
+					Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
+					StreamSource stageSource = new StreamSource(new ByteArrayInputStream( sakaiData.getBytes() ) );
+					Result stageRes = new StreamResult(dataTransformed);
+					transformer1.transform(stageSource, stageRes);
+
+					/// Result as portfolio data to be imported
+					xmlPortfolio = dataTransformed.toString();
+				}
+				catch( HttpException e )
+				{
+					e.printStackTrace();
+				}
+				catch( IOException e )
+				{
+					e.printStackTrace();
+				}
+				catch( TransformerConfigurationException e )
+				{
+					e.printStackTrace();
+				}
+				catch( TransformerException e )
+				{
+					e.printStackTrace();
+				}
+			}
+		}
+
 		try
 		{
-			String returnValue = dataProvider.postPortfolio(new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId).toString();
+			boolean instantiate = false;
+			if( "true".equals(instance) )
+				instantiate = true;
+
+			String returnValue = dataProvider.postPortfolio(new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
 			logRestRequest(httpServletRequest, xmlPortfolio, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1330,17 +1783,28 @@ public class RestServicePortfolio
 		}
 	}
 
-	///	Cr�e un portfolio avec les donn�es zip envoy�es
+	/**
+	 *	As a form, import zip, extract data and put everything into the database
+	 *	POST /rest/api/portfolios
+	 *	parameters:
+	 *	zip: From a zip export of the system
+	 *	return:
+	 *	portfolio uuid
+	 **/
 	@Path("/portfolios/zip")
 	@POST
 	@Consumes("application/zip")	// Envoie donn�e brut
-	public String postPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId)
+	public String postPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try
 		{
-			String returnValue = dataProvider.postPortfolioZip(new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId).toString();
+			boolean instantiate = false;
+			if( "true".equals(instance) )
+				instantiate = true;
+
+			String returnValue = dataProvider.postPortfolioZip(new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
 			logRestRequest(httpServletRequest, returnValue, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1358,7 +1822,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	/// Efface un portfolio
+	/**
+	 *	Delete portfolio
+	 *	DELETE /rest/api/portfolios/portfolio/{portfolio-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/portfolios/portfolio/{portfolio-id}")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
@@ -1400,7 +1869,14 @@ public class RestServicePortfolio
 		}
 	}
 
-	/// R�cup�re les donn�es d'un noeud
+	/**
+	 *	Get a node, without children
+	 *	FIXME: Check if it's the case
+	 *	GET /rest/api/nodes/node/{node-id}
+	 *	parameters:
+	 *	return:
+	 *	nodes in the ASM format
+	 **/
 	@Path("/nodes/node/{node-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -1433,13 +1909,13 @@ public class RestServicePortfolio
 		catch(SQLException ex)
 		{
 			logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
-
+			ex.printStackTrace();
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node "+nodeUuid+" not found");
 		}
 		catch(NullPointerException ex)
 		{
 			logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
-
+			ex.printStackTrace();
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node "+nodeUuid+" not found");
 		}
 		catch(Exception ex)
@@ -1455,7 +1931,13 @@ public class RestServicePortfolio
 		}
 	}
 
-	// R�cup�re un noeud et ses enfants
+	/**
+	 *	Fetch nodes and childrens from node uuid
+	 *	GET /rest/api/nodes/node/{node-id}/children
+	 *	parameters:
+	 *	return:
+	 *	nodes in the ASM format
+	 **/
 	@Path("/nodes/node/{node-id}/children")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -1503,7 +1985,13 @@ public class RestServicePortfolio
 		}
 	}
 
-	/// R�cup�re les metadonn�es d'un noeud
+	/**
+	 *	Fetch nodes metdata
+	 *	GET /rest/api/nodes/node/{node-id}/metadatawad
+	 *	parameters:
+	 *	return:
+	 *	<metadata-wad/>
+	 **/
 	@Path("/nodes/node/{nodeid}/metadatawad")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -1545,6 +2033,17 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Fetch rights per role for a node
+	 *	GET /rest/api/nodes/node/{node-id}/rights
+	 *	parameters:
+	 *	return:
+	 *	<node uuid="">
+	 *		<role name="">
+	 *			<right RD="" WR="" DL="" />
+	 *		</role>
+	 *	</node>
+	 **/
 	@Path("/nodes/node/{node-id}/rights")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -1598,6 +2097,19 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Change nodes right
+	 *	POST /rest/api/nodes/node/{node-id}/rights
+	 *	parameters:
+	 *	content:
+	 *	<node uuid="">
+	 *		<role name="">
+	 *			<right RD="" WR="" DL="" />
+	 *		</role>
+	 *	</node>
+	 *
+	 *	return:
+	 **/
 	@Path("/nodes/node/{node-id}/rights")
 	@POST
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -1613,7 +2125,8 @@ public class RestServicePortfolio
 			Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes("UTF-8")));
 
 			XPath xPath = XPathFactory.newInstance().newXPath();
-			String xpathRole = "//role";
+//			String xpathRole = "//role";
+			String xpathRole = "//*[local-name()='role']";
 			XPathExpression findRole = xPath.compile(xpathRole);
 			NodeList roles = (NodeList) findRole.evaluate(doc, XPathConstants.NODESET);
 
@@ -1690,6 +2203,13 @@ public class RestServicePortfolio
 		return "";
 	}
 
+	/**
+	 *	Get the single first semantic tag node inside specified portfolio
+	 *	GET /rest/api/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag}
+	 *	parameters:
+	 *	return:
+	 *	node in ASM format
+	 **/
 	@Path("/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag}")
 	@GET
 	@Produces({MediaType.APPLICATION_XML})
@@ -1729,6 +2249,13 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Get multiple semantic tag nodes inside specified portfolio
+	 *	GET /rest/api/nodes/nodes/bysemantictag/{portfolio-uuid}/{semantictag}
+	 *	parameters:
+	 *	return:
+	 *	nodes in ASM format
+	 **/
 	@Path("/nodes/bysemantictag/{portfolio-uuid}/{semantictag}")
 	@GET
 	@Produces({MediaType.APPLICATION_XML})
@@ -1769,17 +2296,34 @@ public class RestServicePortfolio
 		}
 	}
 
-	// R��crit les donn�es d'un noeud
+	/**
+	 *	Rewrite node
+	 *	PUT /rest/api/nodes/node/{node-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{node-id}")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
+//		long t_startRest = System.nanoTime();
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+
+//		long t_checkCred = System.nanoTime();
 
 		try
 		{
 			String returnValue = dataProvider.putNode(new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
+
+//			long t_query = System.nanoTime();
+
+//			long d_cred = t_checkCred - t_startRest;
+//			long d_query = t_query - t_checkCred;
+
+//			System.out.println("Check credential: "+d_cred);
+//			System.out.println("Do query: "+d_query);
+
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -1811,7 +2355,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	// R��crit les metadonn�es d'un noeud
+	/**
+	 *	Rewrite node metadata
+	 *	PUT /rest/api/nodes/node/{node-id}/metadata
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{nodeid}/metadata")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -1853,7 +2402,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	// R��crit les metadonn�es wad d'un noeud
+	/**
+	 *	Rewrite node wad metadata
+	 *	PUT /rest/api/nodes/node/{node-id}/metadatawas
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{nodeid}/metadatawad")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -1895,7 +2449,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	// R��crit les metadonn�es epm d'un noeud
+	/**
+	 *	Rewrite node epm metadata
+	 *	PUT /rest/api/nodes/node/{node-id}/metadataepm
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{nodeid}/metadataepm")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -1940,7 +2499,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	// R��crit le nodecontext d'un noeud
+	/**
+	 *	Rewrite node nodecontext
+	 *	PUT /rest/api/nodes/node/{node-id}/nodecontext
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{nodeid}/nodecontext")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -1976,7 +2540,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	// R��crit le noderesource d'un noeud
+	/**
+	 *	Rewrite node resource
+	 *	PUT /rest/api/nodes/node/{node-id}/noderesource
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{nodeid}/noderesource")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -2016,7 +2585,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	// Instancie un noeud avec �valuation des droits selon les param�tres de filtrage � la source
+	/**
+	 *	Instanciate a node with right parsing
+	 *	POST /rest/api/nodes/node/import/{dest-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/import/{dest-id}")
 	@POST
 	public String postImportNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code)
@@ -2026,6 +2600,11 @@ public class RestServicePortfolio
 		try
 		{
 			String returnValue = dataProvider.postImportNode(new MimeType("text/xml"), parentId, semtag, code, ui.userId, groupId).toString();
+
+			if( returnValue == null )
+			{
+				returnValue = dataProvider.postImportNode(new MimeType("text/xml"), parentId, semtag, code, ui.userId, groupId).toString();
+			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -2052,12 +2631,19 @@ public class RestServicePortfolio
 		}
 	}
 
-	// Copie un noeud sans �valuation des droits selon les param�tres de filtrage � la source
+	/**
+	 *	Raw copy a node
+	 *	POST /rest/api/nodes/node/copy/{dest-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/copy/{dest-id}")
 	@POST
 	public String postCopyNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+
+		//// TODO: IF user is creator and has parameter owner -> change ownership
 
 		try
 		{
@@ -2092,6 +2678,15 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 * Fetch nodes right
+	 *	GET /rest/api/nodes
+	 *	parameters:
+	 *	- portfoliocode: mandatory
+	 *	- semtag_parent, code_parent: From a code_parent, find the children that have semtag_parent
+	 *	- semtag:	mandatory, find the semtag under portfoliocode, or the selection from semtag_parent/code_parent
+	 *	return:
+	 **/
 	@Path("/nodes")
 	@GET
 	@Produces({MediaType.APPLICATION_XML})
@@ -2133,6 +2728,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Insert XML in a node. Moslty used by admin, other people use the import/copy node
+	 *	POST /rest/api/nodes/node/{parent-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{parent-id}")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
@@ -2149,20 +2750,27 @@ public class RestServicePortfolio
 
 		try
 		{
-			String returnValue = dataProvider.postNode(new MimeType("text/xml"),parentId,xmlNode, ui.userId, groupId).toString();
-			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-			Response response;
-			if(returnValue == "faux")
+			if( ui.userId == 0 )
 			{
-				response = Response.status(event.status).entity(event.message).type(event.mediaType).build();
-				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
+				return Response.status(403).entity("Not logged in").build();
 			}
-			event.status = 200;
-			response = Response.status(event.status).entity(returnValue).type(event.mediaType).build();
-			eventbus.processEvent(event);
+			else
+			{
+				String returnValue = dataProvider.postNode(new MimeType("text/xml"),parentId,xmlNode, ui.userId, groupId).toString();
+				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
-			return response;
+				Response response;
+				if(returnValue == "faux")
+				{
+					response = Response.status(event.status).entity(event.message).type(event.mediaType).build();
+					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
+				}
+				event.status = 200;
+				response = Response.status(event.status).entity(returnValue).type(event.mediaType).build();
+				eventbus.processEvent(event);
+
+				return response;
+			}
 		}
 		catch(RestWebApplicationException ex)
 		{
@@ -2181,7 +2789,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	// Remonte un noeud dans l'ordre des enfants
+	/**
+	 *	Move a node up between siblings
+	 *	POST /rest/api/nodes/node/{node-id}/moveup
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{node-id}/moveup")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
@@ -2242,7 +2855,12 @@ public class RestServicePortfolio
 		return response;
 	}
 
-	// Change le parent d'un noeud, le met en tant que dernier enfant
+	/**
+	 *	Move a node to another parent
+	 *	POST /rest/api/nodes/node/{node-id}/parentof/{parent-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{node-id}/parentof/{parent-id}")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
@@ -2292,7 +2910,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	// Effectue une macro commande sur un noeud, concerne les changements de droits
+	/**
+	 *	Execute a macro command on a node, changing rights related
+	 *	POST /rest/api/nodes/node/{node-id}/action/{action-name}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{node-id}/action/{action-name}")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
@@ -2329,7 +2952,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	// Effacement d'un noeud
+	/**
+	 *	Delete a node
+	 *	DELETE /rest/api/nodes/node/{node-uuid}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/node/{node-uuid}")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
@@ -2525,6 +3153,15 @@ public class RestServicePortfolio
 	 **/
 	/*****************************/
 
+	/**
+	 * Fetch resource from node uuid
+	 *	GET /rest/api/resources/resource/{node-parent-id}
+	 *	parameters:
+	 *	- portfoliocode: mandatory
+	 *	- semtag_parent, code_parent: From a code_parent, find the children that have semtag_parent
+	 *	- semtag:	mandatory, find the semtag under portfoliocode, or the selection from semtag_parent/code_parent
+	 *	return:
+	 **/
 	@Path("/resources/resource/{node-parent-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -2569,6 +3206,14 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 * Fetch all resource in a portfolio
+	 * TODO: is it used?
+	 *	GET /rest/api/resources/portfolios/{portfolio-id}
+	 *	parameters:
+	 *	- portfolio-id
+	 *	return:
+	 **/
 	@Path("/resources/portfolios/{portfolio-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -2598,6 +3243,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Modify resource content
+	 *	PUT /rest/api/resources/resource/{node-parent-uuid}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/resources/resource/{node-parent-uuid}")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -2605,18 +3256,20 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
+		/*
 		KEvent event = new KEvent();
 		event.requestType = KEvent.RequestType.POST;
 		event.eventType = KEvent.EventType.NODE;
 		event.uuid = nodeParentUuid;
 		event.inputData = xmlResource;
+		//*/
 
 		try
 		{
 			String returnValue = dataProvider.putResource(new MimeType("text/xml"),nodeParentUuid,xmlResource, ui.userId, groupId).toString();
 			logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
 
-			eventbus.processEvent(event);
+//			eventbus.processEvent(event);
 
 			return returnValue;
 		}
@@ -2640,6 +3293,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Add a resource (?)
+	 *	POST /rest/api/resources/{node-parent-uuid}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/resources/{node-parent-uuid}")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -2676,6 +3335,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	(?)
+	 *	POST /rest/api/resources
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/resources")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -2712,6 +3377,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Add user to a role (?)
+	 *	POST /rest/api/roleUser
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/roleUser")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -2748,6 +3419,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Modify a role
+	 *	PUT /rest/api/roles/role/{role-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/roles/role/{role-id}")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -2784,6 +3461,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 * Fetch all role in a portfolio
+	 *	GET /rest/api/roles/portfolio/{portfolio-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/roles/portfolio/{portfolio-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -2813,6 +3496,13 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 * Fetch rights in a role
+	 * FIXME: Might be redundant
+	 *	GET /rest/api/roles/role/{role-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/roles/role/{role-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -2856,6 +3546,13 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 * Fetch all models
+	 * FIXME: Most probably useless
+	 *	GET /rest/api/models
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/models")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -2898,6 +3595,13 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 * Fetch a model
+	 * FIXME: Most probably useless
+	 *	GET /rest/api/{model-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/models/{model-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -2940,6 +3644,13 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Add a model (deprecated)
+	 *	POST /rest/api/models
+	 *	parameters:
+	 *	return:
+	 **/
+	@Deprecated
 	@Path("/models")
 	@POST
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -2983,6 +3694,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Delete a resource
+	 *	DELETE /rest/api/resources/{resource-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/resources/{resource-id}")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
@@ -3022,6 +3739,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Delete a right definition for a node
+	 *	DELETE /rest/api/groupRights
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/groupRights")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
@@ -3059,6 +3782,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Delete users
+	 *	DELETE /rest/api/users
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/users")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
@@ -3096,6 +3825,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Delete specific user
+	 *	DELETE /rest/api/users/user/{user-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/users/user/{user-id}")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
@@ -3133,6 +3868,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Get roles in a portfolio
+	 *	GET /rest/api/groups/{portfolio-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/groups/{portfolio-id}")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -3160,7 +3901,12 @@ public class RestServicePortfolio
 		}
 	}
 
-
+	/**
+	 *	Get roles in a portfolio
+	 *	GET /rest/api/credential/group/{portfolio-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/credential/group/{portfolio-id}")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -3262,6 +4008,12 @@ public class RestServicePortfolio
 	}
 	//*/
 
+	/**
+	 *	Send login information
+	 *	PUT /rest/api/credential/login
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/credential/login")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -3271,6 +4023,12 @@ public class RestServicePortfolio
 		return this.postCredentialFromXml(xmlCredential, user, token, 0, sc, httpServletRequest);
 	}
 
+	/**
+	 *	Send login information
+	 *	POST /rest/api/credential/login
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/credential/login")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -3293,7 +4051,7 @@ public class RestServicePortfolio
 			String substit = null;
 			if(credentialElement.getNodeName().equals("credential"))
 			{
-				String[] templogin = DomUtils.getInnerXml(doc.getElementsByTagName("login").item(0)).split(":");
+				String[] templogin = DomUtils.getInnerXml(doc.getElementsByTagName("login").item(0)).split("#");
 				password = DomUtils.getInnerXml(doc.getElementsByTagName("password").item(0));
 
 				if( templogin.length > 1 )
@@ -3365,34 +4123,110 @@ public class RestServicePortfolio
 		}
 	}
 
-
-	/// Fetch current user information
-		@Path("/credential/login/cas")
-		@GET
-		public Response postCredentialFromCas( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
-		{
-			initService( httpServletRequest );
-			HttpSession session = httpServletRequest.getSession(true);
-
-
-			String errorCode = null;
-
-			String errorMessage = null;
-
-			String xmlResponse = null;
-			String userId = null;
-
-			String completeURL;
-
-			StringBuffer requestURL;
-
-	try
+	/**
+	 *	Tell system you forgot your password
+	 *	POST /rest/api/credential/forgot
+	 *	parameters:
+	 *	return:
+	 **/
+	@Path("/credential/forgot")
+	@POST
+	@Consumes(MediaType.APPLICATION_XML)
+	public Response postForgotCredential(String xml, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest)
 	{
+		HttpSession session = httpServletRequest.getSession(true);
+		initService( httpServletRequest );
+		int retVal = 404;
+		String retText = "";
 
+		try
+		{
+			Document doc = DomUtils.xmlString2Document(xml, new StringBuffer());
+			Element infUser = doc.getDocumentElement();
 
+			String username = "";
+			if(infUser.getNodeName().equals("credential"))
+			{
+				NodeList children2 = infUser.getChildNodes();
+				for(int y=0;y<children2.getLength();y++)
+				{
+					if(children2.item(y).getNodeName().equals("login"))
+					{
+						username = DomUtils.getInnerXml(children2.item(y));
+						break;
+					}
+				}
+			}
+
+			// Check if we have that email somewhere
+			String email = dataProvider.emailFromLogin(username);
+			if( email != null && !"".equals(email) )
+			{
+				// Generate password
+				long base = System.currentTimeMillis();
+				MessageDigest md = MessageDigest.getInstance("SHA-1");
+				byte[] output = md.digest(Long.toString(base).getBytes());
+				String password = String.format("%032X", new BigInteger(1, output));
+				password = password.substring(0, 9);
+
+				// Write change
+				boolean result = dataProvider.changePassword(username, password);
+				String content = "Your new password: "+password;
+
+				if( result )
+				{
+					// Send email
+					MailUtils.postMail(sc, email, "", "Password change for Karuta", content, logger);
+					retVal = 200;
+					retText = "sent";
+				}
+			}
+		}
+		catch(RestWebApplicationException ex)
+		{
+			ex.printStackTrace();
+			logger.error(ex.getLocalizedMessage());
+			logRestRequest(httpServletRequest,null, "invalid Credential or invalid group member", Status.FORBIDDEN.getStatusCode());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
+		}
+		catch(Exception ex)
+		{
+			logger.error(ex.getMessage());
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			dataProvider.disconnect();
+		}
+
+		return Response.status(retVal).entity(retText).build();
+	}
+
+	/**
+	 *	Fetch current user information (CAS)
+	 *	GET /rest/api/credential/login/cas
+	 *	parameters:
+	 *	return:
+	 **/
+	@Path("/credential/login/cas")
+	@GET
+	public Response postCredentialFromCas( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	{
+		initService( httpServletRequest );
+		HttpSession session = httpServletRequest.getSession(true);
+
+		String errorCode = null;
+		String errorMessage = null;
+		String xmlResponse = null;
+		String userId = null;
+		String completeURL;
+		StringBuffer requestURL;
+
+		try
+		{
 			ServiceTicketValidator sv = new ServiceTicketValidator();
-
-
 
 			if(casUrlValidation!=null)
 				sv.setCasValidateUrl(casUrlValidation);
@@ -3400,34 +4234,16 @@ public class RestServicePortfolio
 				sv.setCasValidateUrl("https://cas-upmf.grenet.fr/serviceValidate");
 			requestURL = httpServletRequest.getRequestURL();
 			if (httpServletRequest.getQueryString() != null) {
-			    requestURL.append("?").append(httpServletRequest.getQueryString());
+				requestURL.append("?").append(httpServletRequest.getQueryString());
 			}
 			completeURL = requestURL.toString();
 			sv.setService(completeURL);
-
 			sv.setServiceTicket(ticket);
-
-
-
-
-
 			//sv.setProxyCallbackUrl(urlOfProxyCallbackServlet);
-
-
-
-
-
 			sv.validate();
 
-
-
-
-
 			xmlResponse = sv.getResponse();
-
-
 			//<cas:user>vassoilm</cas:user>
-
 			//session.setAttribute("user", sv.getUser());
 			//session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
 			userId =  dataProvider.getUserId(sv.getUser());
@@ -3443,28 +4259,21 @@ public class RestServicePortfolio
 				return Response.status(403).entity("Login "+sv.getUser()+" not found or bad CAS auth (bad ticket or bad url service : "+completeURL+") : "+sv.getErrorMessage()).build();
 			}
 
+			Response response = null;
+			try
+			{
+				// formulate the response
+				response = Response.status(201)
+						.header(
+								"Location",
+								redir
+								)
+								.entity("<script>document.location.replace('"+redir+"')</script>").build();
+			} catch (Exception e) {
+				response = Response.status(500).build();
+			}
 
-			  Response response = null;
-
-			    try {
-
-
-			        // formulate the response
-			        response = Response.status(201)
-			            .header(
-			                "Location",
-			               redir
-			                )
-
-			            .entity("<script>document.location.replace('"+redir+"')</script>").build();
-			    } catch (Exception e) {
-			        response = Response.status(500).build();
-			    }
-
-			    return response;
-
-
-
+			return response;
 			//return Response.ok(xmlResponse).build();
 		}
 		catch(Exception ex)
@@ -3473,12 +4282,14 @@ public class RestServicePortfolio
 			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :"+casUrlValidation);
 		}
-
-
 	}
 
-
-
+	/**
+	 *	Ask to logout, clear session
+	 *	POST /rest/api/credential/logout
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/credential/logout")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -3491,25 +4302,31 @@ public class RestServicePortfolio
 		return  Response.ok("logout").build();
 	}
 
-	@Path("/nodes/{node-id}/xsl/{xsl-file}")
+	/**
+	 *	Fetch node content
+	 *	GET /rest/api/nodes/{node-id}
+	 *	parameters:
+	 *	return:
+	 **/
+	@Path("/nodes/{node-id}")
 	@GET
-	@Produces(MediaType.TEXT_HTML)
 	@Consumes(MediaType.APPLICATION_XML)
-	public String getNodeWithXSL( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@PathParam("xsl-file") String xslFile, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("p1") String p1, @QueryParam("p2") String p2, @QueryParam("p3") String  p3)
+	public String getNodeWithXSL( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @QueryParam("xsl-file") String xslFile, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("lang") String lang, @QueryParam("p1") String p1, @QueryParam("p2") String p2, @QueryParam("p3") String  p3)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try
 		{
+			// When we need more parameters, arrange this with format "par1:par1val;par2:par2val;..."
+			String parameters = "lang:"+lang;
+
 			javax.servlet.http.HttpSession session = httpServletRequest.getSession(true);
 			String ppath = session.getServletContext().getRealPath(File.separator);
-			// TODO xslFile avec _ => repertoire_fichier
-			xslFile = xslFile.replace(".", "");
-			xslFile = xslFile.replace("/", "");
-			String[] tmp = xslFile.split("-");
 
-			xslFile =       ppath.substring(0,ppath.lastIndexOf(File.separator))+File.separator+"xsl"+File.separator+tmp[0]+File.separator+tmp[1]+".xsl";
-			String returnValue = dataProvider.getNodeWithXSL(new MimeType("text/xml"),nodeUuid,xslFile, ui.userId, groupId).toString();
+			/// webapps...
+			ppath = ppath.substring(0,ppath.lastIndexOf(File.separator, ppath.length()-2)+1);
+			xslFile = ppath+xslFile;
+			String returnValue = dataProvider.getNodeWithXSL(new MimeType("text/xml"),nodeUuid,xslFile, parameters, ui.userId, groupId).toString();
 			if(returnValue.length() != 0)
 			{
 				if(accept.equals(MediaType.APPLICATION_JSON))
@@ -3548,6 +4365,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *
+	 *	POST /rest/api/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
@@ -3585,18 +4408,28 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Import zip file
+	 *	POST /rest/api/portfolios/zip
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/portfolios/zip")
 	@POST
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.TEXT_PLAIN)
-	public String postPortfolioByForm( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId)
+	public String postPortfolioByForm( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		String returnValue = "";
 
 		try
 		{
-			returnValue = dataProvider.postPortfolioZip(new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId).toString();
+			boolean instantiate = false;
+			if( "true".equals(instance) )
+				instantiate = true;
+
+			returnValue = dataProvider.postPortfolioZip(new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
 		}
 		catch( Exception e )
 		{
@@ -3674,6 +4507,12 @@ public class RestServicePortfolio
 		//*/
 	}
 
+	/**
+	 *	Fetch userlist from a role and portfolio id
+	 *	GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/users
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/users/Portfolio/{portfolio-id}/Role/{role}/users")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -3701,6 +4540,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Fetch groups from a role and portfolio id
+	 *	GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/groups
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/users/Portfolio/{portfolio-id}/Role/{role}/groups")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -3728,6 +4573,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Get users by usergroup
+	 *	GET /rest/api/usersgroups
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/usersgroups")
 	@GET
 	public String getUsersByGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
@@ -3766,61 +4617,12 @@ public class RestServicePortfolio
   /** Partie utilisation des macro-commandes et gestion **/
 	/********************************************************/
 
-	@Path("/action")
-	@POST
-	@Consumes(MediaType.APPLICATION_XML+","+MediaType.TEXT_PLAIN)
-	@Produces(MediaType.TEXT_PLAIN)
-	public String postMacroManage( String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
-			@QueryParam("macro") Integer macro, @QueryParam("role") String role )
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue = "";
-		try
-		{
-			// On ajoute un droit pour un r�le
-			if( macro!=null && role!=null )
-			{
-				returnValue = dataProvider.postAddAction(ui.userId, macro, role, xmlNode);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if( returnValue=="faux" ) { throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces"); }
-
-			}
-			// On cr�e une nouvelle r�gle
-			else if( macro==null && role==null )
-			{
-				returnValue = dataProvider.postCreateMacro(ui.userId, xmlNode).toString();
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if( returnValue=="faux" ) { throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces"); }
-
-			}
-			// Erreur de requ�te
-			else
-			{
-				returnValue = "";
-			}
-
-			return returnValue;
-		}
-		catch( RestWebApplicationException ex )
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch( Exception ex )
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
+	/**
+	 *	Executing pre-defined macro command on a node
+	 *	POST /rest/api/action/{uuid}/{macro-name}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/action/{uuid}/{macro-name}")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML+","+MediaType.TEXT_PLAIN)
@@ -3870,590 +4672,16 @@ public class RestServicePortfolio
 		}
 	}
 
-	@Path("/action/{portfolio-id}")
-	@GET
-	@Produces(MediaType.APPLICATION_XML)
-	public String getAction(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String uuid,
-			@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue="";
-		try
-		{
-			// Retourne le nom des actions possible sur ce portfolio
-			// La r�solution d'o� on applique/affiche les actions se passe dans le client
-			if( uuid != null )
-			{
-				returnValue = dataProvider.getPortfolioMacro(ui.userId, uuid);
-				logRestRequest(httpServletRequest, "", returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// Erreur de requ�te
-			else
-			{
-
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, "",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
-	@Path("/action")
-	@GET
-	@Consumes(MediaType.APPLICATION_XML)
-	@Produces(MediaType.APPLICATION_XML)
-	public String getActionManager(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest,
-			@QueryParam("macro") Integer macro)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue="";
-		try
-		{
-			// Retourne la liste des actions pour la macro sp�cifi�
-			if( macro != null )
-			{
-				returnValue = dataProvider.getMacroActions(ui.userId, macro);
-				logRestRequest(httpServletRequest, "", returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// Retourne le nom de toute les actions possible, avec les identifiants
-			else if ( macro == null )
-			{
-				returnValue = dataProvider.getAllActionLabel(ui.userId);
-				logRestRequest(httpServletRequest, "", returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, "",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
-	@Path("/action")
-	@PUT
-	@Consumes(MediaType.APPLICATION_XML+","+MediaType.TEXT_PLAIN)
-	@Produces(MediaType.APPLICATION_XML)
-	public String putAction(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("macro") Integer macro, @QueryParam("role") String role)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue = "";
-		try
-		{
-			// Mise � jour d'une action
-			if ( macro != null && role != null )
-			{
-				returnValue = dataProvider.putMacroAction(ui.userId, macro, role, xmlNode);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-			}
-			// Mise � jour du nom d'une macro
-			else if( macro != null )
-			{
-				returnValue = dataProvider.putMacroName(ui.userId, macro, xmlNode);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-			}
-			// Erreur de requ�te
-			else
-			{
-
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
-	@Path("/action")
-	@DELETE
-	@Produces(MediaType.APPLICATION_XML)
-	public String deleteAction(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("macro") Integer macro, @QueryParam("role") String role)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue = "";
-		try
-		{
-			// On efface une action de la macro
-			if ( macro != null && role != null )
-			{
-				returnValue = dataProvider.deleteMacroAction(ui.userId, macro, role);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// On efface la macro au complet
-			else if( macro != null )
-			{
-				returnValue = dataProvider.deleteMacro(ui.userId, macro);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// Erreur de requ�te
-			else
-			{
-
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
-	/********************************************************/
-	/** Partie utilisation des macro-commandes et gestion **/
-	/********************************************************/
-	/*
-	@Path("/types")
-	@POST
-	@Consumes(MediaType.APPLICATION_XML+","+MediaType.TEXT_PLAIN)
-	@Produces(MediaType.TEXT_PLAIN)
-	public String postTypesManage(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest,
-			@QueryParam("type") Integer type, @QueryParam("node") Integer nodeid,
-			@QueryParam("parent") Integer parentid, @QueryParam("instance") Integer instance)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue="";
-		try
-		{
-			// Ajoute un noeud, sp�cifie l'instance que ce nouveau noeud utilise
-			if( type != null )
-			{
-				returnValue = dataProvider.postAddNodeType(ui.userId, type, nodeid, parentid, instance, xmlNode);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// Cr�e un nouveau type, pas de noeud encore
-			else if( type == null && nodeid == null && parentid == null && instance == null )
-			{
-				returnValue = dataProvider.postCreateType(ui.userId, xmlNode);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// Erreur de requ�te
-			else
-			{
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
-	@Path("/types/{uuid}/{id}")
-	@POST
-	@Consumes(MediaType.APPLICATION_XML+","+MediaType.TEXT_PLAIN)
-	@Produces(MediaType.TEXT_PLAIN)
-	public String postTypes(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("uuid") String uuid, @PathParam("id") Integer typeid,
-			@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue="";
-		try
-		{
-			// On instancie un type sous le noeud sp�cifi�. Cr�e les droits n�c�ssaire
-			if( uuid != null && typeid != null )
-			{
-				returnValue = dataProvider.postUseType(ui.userId, uuid, typeid).toString();
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-			}
-			// Erreur de requ�te
-			else
-			{
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
-	@Path("/types")
-	@GET
-	@Produces(MediaType.APPLICATION_XML)
-	public String getTypesManager( @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest,
-			@QueryParam("type") Integer type)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue="";
-		try
-		{
-			// Retourne le contenu du type
-			if( type != null )
-			{
-				returnValue = dataProvider.getTypeData(ui.userId, type);
-				logRestRequest(httpServletRequest, "getTypesManager", returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// Retourne le nom des types disponible
-			else if( type == null )
-			{
-				returnValue = dataProvider.getAllTypes(ui.userId);
-				logRestRequest(httpServletRequest, "getTypesManager", returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, "getTypesManager",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
-	@Path("/types/{portfolio-uuid}")
-	@GET
-	@Produces(MediaType.TEXT_PLAIN)
-	public String getTypes( @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-uuid") String uuid, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue="";
-		try
-		{
-			// Retourne le contenu du type
-			if( uuid == null && type != null )
-			{
-				returnValue = dataProvider.getTypeData(ui.userId, type);
-				logRestRequest(httpServletRequest, "getTypes", returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// Retourne les types disponible dans un portfolio
-			else if( uuid != null && type == null )
-			{
-				returnValue = dataProvider.getPortfolioTypes(ui.userId, uuid);
-				logRestRequest(httpServletRequest, "getTypes", returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-			}
-			// Retourne le nom des types disponible
-			else if( uuid == null && type == null )
-			{
-				returnValue = dataProvider.getAllTypes(ui.userId);
-				logRestRequest(httpServletRequest, "getTypes", returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// Erreur de requ�te
-			else
-			{
-				returnValue = "";
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, "getTypes",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
-	@Path("/types")
-	@PUT
-	@Consumes(MediaType.APPLICATION_XML+","+MediaType.TEXT_PLAIN)
-	@Produces(MediaType.TEXT_PLAIN)
-	public String putTypes(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest,
-			@QueryParam("type") Integer type, @QueryParam("node") Integer nodeid,
-			@QueryParam("parent") Integer parentid, @QueryParam("instance") Integer instance)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue="";
-		try
-		{
-			// Mise � jour d'un noeud et de son contenu
-			if( type != null && nodeid != null )
-			{
-				returnValue = dataProvider.putTypeData(ui.userId, type, nodeid, parentid, instance, xmlNode);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// Mise � jour du nom du type
-			else if( type != null && nodeid == null )
-			{
-				returnValue = dataProvider.putTypeName(ui.userId, type, xmlNode);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-			}
-			// Erreur de requ�te
-			else
-			{
-				returnValue = "";
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-
-	@Path("/types")
-	@DELETE
-	@Consumes(MediaType.APPLICATION_XML+","+MediaType.TEXT_PLAIN)
-	@Produces(MediaType.TEXT_PLAIN)
-	public String deleteTypes(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type, @QueryParam("node") Integer nodeid)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue="";
-		try
-		{
-			// On efface un noeud de la d�finition
-			if( type != null && nodeid != null )
-			{
-				returnValue = dataProvider.deleteTypeNode(ui.userId, type, nodeid);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-
-			}
-			// On efface la d�finition
-			else if( type != null && nodeid == null )
-			{
-				returnValue = dataProvider.deleteType(ui.userId, type);
-				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
-				if(returnValue == "faux")
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-			}
-			// Erreur de requ�te
-			else
-			{
-				returnValue = "";
-			}
-
-			return returnValue;
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-	}
-	//*/
-
-
 	/********************************************************/
 	/** Partie groupe de droits et utilisateurs            **/
 	/********************************************************/
 
+	/**
+	 *	Change rights
+	 *	POST /rest/api/rights
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rights")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -4495,17 +4723,21 @@ public class RestServicePortfolio
 
 			XPath xPath = XPathFactory.newInstance().newXPath();
 			ArrayList<String> portfolio = new ArrayList<String>();
-			String xpathRole = "/role";
+//			String xpathRole = "//role";
+			String xpathRole = "//*[local-name()='role']";
 			XPathExpression findRole = xPath.compile(xpathRole);
-			String xpathNodeFilter = "/xpath";
+//			String xpathNodeFilter = "//xpath";
+			String xpathNodeFilter = "//*[local-name()='xpath']";
 			XPathExpression findXpath = xPath.compile(xpathNodeFilter);
 			String nodefilter = "";
 			NodeList roles = null;
 
 			/// Fetch portfolio(s)
-			String portfolioNode = "//portfoliogroup";
+//			String portfolioNode = "//portfoliogroup";
+			String portfolioNode = "//*[local-name()='portfoliogroup']";
+			XPathExpression xpathFilter=null;
 			Node portgroupnode = (Node) xPath.compile(portfolioNode).evaluate(doc, XPathConstants.NODE);
-			if( portgroupnode == null )
+			if( portgroupnode != null )
 			{
 				String portgroupname = portgroupnode.getAttributes().getNamedItem("name").getNodeValue();
 				// Query portfolio group for list of uuid
@@ -4515,22 +4747,27 @@ public class RestServicePortfolio
 
 				Node xpathNode = (Node) findXpath.evaluate(portgroupnode, XPathConstants.NODE);
 				nodefilter = xpathNode.getNodeValue();
+				xpathFilter = xPath.compile(nodefilter);
 				roles = (NodeList) findRole.evaluate(portgroupnode, XPathConstants.NODESET);
 			}
 			else
 			{
 				// Or add the single one
-				portfolioNode = "//portfolio[@uuid]";
+//				portfolioNode = "//portfolio[@uuid]";
+				portfolioNode = "//*[local-name()='portfolio' and @*[local-name()='uuid']";
 				Node portnode = (Node) xPath.compile(portfolioNode).evaluate(doc, XPathConstants.NODE);
-				portfolio.add(portnode.getNodeValue());
+				if( portnode != null )
+				{
+					portfolio.add(portnode.getNodeValue());
 
-				Node xpathNode = (Node) findXpath.evaluate(portnode, XPathConstants.NODE);
-				nodefilter = xpathNode.getNodeValue();
-				roles = (NodeList) findRole.evaluate(portnode, XPathConstants.NODESET);
+					Node xpathNode = (Node) findXpath.evaluate(portnode, XPathConstants.NODE);
+					nodefilter = xpathNode.getNodeValue();
+					xpathFilter = xPath.compile(nodefilter);
+					roles = (NodeList) findRole.evaluate(portnode, XPathConstants.NODESET);
+				}
 			}
 
 			ArrayList<String> nodes = new ArrayList<String>();
-			XPathExpression xpathFilter = xPath.compile(nodefilter);
 			for( int i=0; i<portfolio.size(); ++i )	// For all portfolio
 			{
 				String portfolioUuid = portfolio.get(i);
@@ -4551,13 +4788,13 @@ public class RestServicePortfolio
 			/// Fetching single node
 			if( nodes.isEmpty() )
 			{
-				String singleNode = "/node";
+//				String singleNode = "//node";
+				String singleNode = "//*[local-name()='node']";
 				Node sNode = (Node) xPath.compile(singleNode).evaluate(doc, XPathConstants.NODE);
 				String uuid = sNode.getAttributes().getNamedItem("uuid").getNodeValue();
 				nodes.add(uuid);
 				roles = (NodeList) findRole.evaluate(sNode, XPathConstants.NODESET);
 			}
-
 
 			/// For all roles we have to change
 			for( int i=0; i<roles.getLength(); ++i )
@@ -4645,7 +4882,12 @@ public class RestServicePortfolio
 		}
 	}
 
-	/// Liste les rrg selon certain param�tres, portfolio, utilisateur, role
+	/**
+	 *	List roles
+	 *	GET /rest/api/rolerightsgroups
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -4684,6 +4926,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	List all users in a specified roles
+	 *	GET /rest/api/rolerightsgroups/all/users
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups/all/users")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -4726,6 +4974,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	List rights in the specified role
+	 *	GET /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -4768,6 +5022,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Change a right in role
+	 *	PUT /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
@@ -4810,6 +5070,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Add a role in the portfolio
+	 *	POST /rest/api/rolerightsgroups/{portfolio-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups/{portfolio-id}")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -4851,6 +5117,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Add user in a role
+	 *	POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -4888,6 +5160,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Add user in a role
+	 *	POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -4925,6 +5203,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Delete a role
+	 *	DELETE /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
@@ -4962,6 +5246,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Remove user from a role
+	 *	DELETE /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
@@ -4999,6 +5289,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Remove all users from a role
+	 *	DELETE /rest/api/rolerightsgroups/all/users
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/rolerightsgroups/all/users")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
@@ -5041,6 +5337,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Ning related
+	 *	GET /rest/api/ning/activities
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/ning/activities")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
@@ -5053,6 +5355,12 @@ public class RestServicePortfolio
 		return ning.getXhtmlActivites();
 	}
 
+	/**
+	 *	elgg related
+	 *	GET /rest/api/elgg/site/river_feed
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/elgg/site/river_feed")
 	@GET
 	@Produces(MediaType.TEXT_HTML)
@@ -5085,6 +5393,12 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	elgg related
+	 *	POST /rest/api/elgg/wire
+	 *	parameters:
+	 *	return:
+	 **/
 	@Path("/elgg/wire")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
