@@ -1039,6 +1039,7 @@ public class MysqlDataProvider implements DataProvider {
 		catch(Exception ex)
 		{
 			//System.out.println("root_node_uuid : "+uuid);
+			logger.error(ex.getMessage());
 			ex.printStackTrace();
 			return -1;
 		}

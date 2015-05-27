@@ -218,7 +218,7 @@ public class RestServicePortfolio
 		}
 		catch( Exception e )
 		{
-			logger.error("CAN'T INIT PROVIDER: "+e.toString());
+			logger.info("CAN'T INIT PROVIDER: "+e.toString());
 			e.printStackTrace();
 		}
 	}
@@ -3275,6 +3275,7 @@ public class RestServicePortfolio
 		}
 		catch( RestWebApplicationException ex )
 		{
+			logger.error(ex.getMessage());
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlResource, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
 
@@ -3282,6 +3283,7 @@ public class RestServicePortfolio
 		}
 		catch(Exception ex)
 		{
+			logger.error(ex.getMessage());
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlResource, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
 

@@ -60,11 +60,10 @@ public class RegisterService  extends HttpServlet {
 	final Logger logger = LoggerFactory.getLogger(RegisterService.class);
 	private static final long serialVersionUID = 9188067506635747901L;
 
-	DataProvider dataProvider;
+//	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
 	Credential credential;
-	DataSource ds;
 	int userId;
 	int groupId = -1;
 	String user = "";
@@ -87,8 +86,10 @@ public class RegisterService  extends HttpServlet {
 		}
 	}
 
-	public void initialize(HttpServletRequest httpServletRequest)
+	public DataProvider initialize(HttpServletRequest httpServletRequest)
 	{
+		DataProvider dataProvider = null;
+		DataSource ds = null;
 		try
 		{
 			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
@@ -103,6 +104,15 @@ public class RegisterService  extends HttpServlet {
 			if ( ds == null ) {
 				throw new Exception("Data  jdbc/portfolio-backend source not found!");
 			}
+		}
+		catch ( Exception e )
+		{
+			logger.info("CAN'T CREATE CONNECTION: "+e.getMessage());
+			e.printStackTrace();
+		}
+
+		try
+		{
 			Connection con = null;
 			if( ds == null )	// Case where we can't deploy context.xml
 			{
@@ -116,7 +126,7 @@ public class RegisterService  extends HttpServlet {
 			}
 //			dataProvider.setDataSource(ds);
 
-			credential = new Credential(con);
+//			credential = new Credential(con);
 
 			/// Configure session
 			/// FIXME: Oracle part might be missing
@@ -127,17 +137,18 @@ public class RegisterService  extends HttpServlet {
 				st.close();
 			}
 		}
-		catch ( Exception e )
+		catch( Exception ex )
 		{
-			logger.error("CAN'T CREATE CONNECTION: "+e.getMessage());
-			e.printStackTrace();
+			logger.error(ex.getMessage());
 		}
+
+		return dataProvider;
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
 	{
-		initialize(request);
+		DataProvider dataProvider = initialize(request);
 		response.setCharacterEncoding("UTF-8");
 		StringWriter inputdata = new StringWriter();
 		IOUtils.copy(request.getInputStream(), inputdata, "UTF-8");
@@ -236,6 +247,7 @@ public class RegisterService  extends HttpServlet {
 		}
 		finally
 		{
+
 		}
 	}
 }

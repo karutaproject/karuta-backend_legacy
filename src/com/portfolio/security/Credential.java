@@ -429,6 +429,7 @@ public class Credential
 		}
 		catch(Exception ex)
 		{
+			logger.error(ex.getMessage());
 			ex.printStackTrace();
 		}
 		finally

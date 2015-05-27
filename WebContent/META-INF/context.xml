@@ -9,7 +9,7 @@
 		url="jdbc:mysql://localhost/karuta-backend?autoReconnect=true&amp;useEncoding=true&amp;characterEncoding=UTF-8" /> 
 	<!--
 	<Resource name="jdbc/portfolio-backend" auth="Container"
-		type="javax.sql.DataSource" maxActive="1000" maxIdle="30" maxWait="10000"
+		type="javax.sql.DataSource" maxActive="1000" minIdle="10" maxWait="10000"
 		driverClassName="oracle.jdbc.driver.OracleDriver" removeAbandoned="true"
 		removeAbandonedTimeout="1000" logAbandoned="true" validationQuery="SELECT 1 FROM DUAL"
 		username="karuta" password="karuta_password"

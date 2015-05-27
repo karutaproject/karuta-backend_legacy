@@ -145,6 +145,7 @@ public class FileServlet  extends HttpServlet
 		}
 		catch( Exception e )
 		{
+			logger.error(e.getMessage());
 			e.printStackTrace();
 		}
 	}
@@ -183,6 +184,7 @@ public class FileServlet  extends HttpServlet
 		}
 		catch(Exception e)
 		{
+			logger.error("Fail to create objects for provider: '"+dataProviderName+"' ("+e.getMessage()+")");
 			e.printStackTrace();
 		}
 

@@ -209,7 +209,7 @@ public class LTIServlet extends HttpServlet {
 		StringBuffer outTrace = new StringBuffer();
 		String logFName = null;
 		Connection connexion = null;			// hors du try pour fermer dans finally
-		javax.servlet.http.HttpSession session = request.getSession(true);
+		HttpSession session = request.getSession(true);
 		String ppath = session.getServletContext().getRealPath("/");
 		String outsideDir =ppath.substring(0,ppath.lastIndexOf("/"))+"_files/";
 
@@ -268,18 +268,19 @@ public class LTIServlet extends HttpServlet {
 			outTrace.append("\nLTI Role: " + ltiRole);
 			outTrace.append("\nContext Role: " + contextRole);
 			outTrace.append("\nInput Role: " + inputRole);
-			String siteGroupId = getOrCreateGroup(connexion, contextLabel, "topUser", outTrace);
+//			String siteGroupId = getOrCreateGroup(connexion, contextLabel, "topUser", outTrace);
 
 			StringBuffer siteGroup = new StringBuffer();
 			siteGroup.append(contextLabel);
 			siteGroup.append("-");
 			siteGroup.append(inputRole);
 			String wadRole = roleMapper(application, inputRole, outTrace);
-			String siteRoleGroupId = getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
+//			String siteRoleGroupId = getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
 
 			/// We can create a group and put the user in it, but there's no link to rights
 			//See what groups the user is in
 			/// isUserMemberOfGroup
+			/*
 			boolean isInSiteGroup = dataProvider.isUserInGroup( userId, siteGroupId );
 			boolean isInSiteRoleGroup = dataProvider.isUserInGroup( userId, siteRoleGroupId );
 
@@ -290,6 +291,7 @@ public class LTIServlet extends HttpServlet {
 			if (!isInSiteRoleGroup) {
 			  dataProvider.putUserGroup(siteRoleGroupId, userId);
 			}
+			//*/
 
 			//Check for nested groups
 			// Do we have this?
@@ -314,7 +316,7 @@ public class LTIServlet extends HttpServlet {
 			session.setAttribute("uid", Integer.parseInt(userId));
 			session.setAttribute("username", userName);
 			session.setAttribute("userRole", wadRole);
-			session.setAttribute("gid", Integer.parseInt(siteRoleGroupId));
+//			session.setAttribute("gid", Integer.parseInt(siteRoleGroupId));
 			session.setAttribute("useridentifier", userName);
 
 			String link = processEncrypted(request, payload);

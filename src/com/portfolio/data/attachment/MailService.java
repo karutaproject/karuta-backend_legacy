@@ -103,6 +103,8 @@ public class MailService  extends HttpServlet {
 		if( uid == 0 )
 			return;
 
+		logger.trace("Sending mail for user: "+uid);
+
 		String sender = "";
 		String recipient = "";
 		String recipient_cc = "";
@@ -145,12 +147,13 @@ public class MailService  extends HttpServlet {
 		catch( Exception e )
 		{
 			e.printStackTrace();
+			logger.error(e.getMessage());
 			return;
 		}
 
 		ServletConfig config = getServletConfig();
 		String notification = ConfigUtils.get("notification");
-		logger.debug("Message via: "+notification);
+		logger.trace("Message via: "+notification);
 
 		try
 		{
@@ -158,7 +161,7 @@ public class MailService  extends HttpServlet {
 			{
 //				System.out.println("SENDING: "+message);
 				MailUtils.postMail(config, recipient, sender, subject, message, logger);
-				logger.debug("Mail to: "+recipient+"; from: "+sender+" by uid: "+uid);
+				logger.trace("Mail to: "+recipient+"; from: "+sender+" by uid: "+uid);
 			}
 			else if( "sakai".equals(notification) )
 			{
@@ -170,8 +173,12 @@ public class MailService  extends HttpServlet {
 				{
 					String user = recip[i];
 					int status = sendMessage(var, user, message);
-					logger.debug("Message sent to: "+user+" -> "+status);
+					logger.trace("Message sent to: "+user+" -> "+status);
 				}
+			}
+			else
+			{
+				logger.error("Unknown notification method: "+notification);
 			}
 		}
 		catch( Exception e )
@@ -222,11 +229,12 @@ public class MailService  extends HttpServlet {
 
 			ret = connect.getResponseCode();
 
-			logger.debug("Notification: "+ret);
+			logger.trace("Notification: "+ret);
 		}
 		catch( Exception e )
 		{
 			e.printStackTrace();
+			logger.error(e.getMessage());
 		}
 
 		return ret;
@@ -284,6 +292,7 @@ public class MailService  extends HttpServlet {
 		}
 		catch( Exception e )
 		{
+			logger.error(e.getMessage());
 			e.printStackTrace();
 		}
 
