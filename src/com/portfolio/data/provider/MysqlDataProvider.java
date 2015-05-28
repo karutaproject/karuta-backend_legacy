@@ -3866,6 +3866,7 @@ public class MysqlDataProvider implements DataProvider {
 		String sql = "";
 		PreparedStatement st;
 		String newPortfolioUuid = UUID.randomUUID().toString();
+		boolean setPublic = false;
 
 		try
 		{
@@ -4614,32 +4615,23 @@ public class MysqlDataProvider implements DataProvider {
 						role.setNotify(merge);
 					}
 
-					// No need to set public on multiple portoflio
-					/*
+					// Check if we have to put the portfolio as public
 					meta = res.getString("metadata");
 					nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"/>";
 					is = new InputSource(new StringReader(nodeString));
 					doc = documentBuilder.parse(is);
 					attribNode = doc.getDocumentElement();
 					attribMap = attribNode.getAttributes();
-
-					boolean isPublic = false;
-					try
-					{
-						String publicatt = attribMap.getNamedItem("public").getNodeValue();
-						if( "Y".equals(publicatt) )
-							isPublic = true;
-					}
-					catch(Exception ex) {}
-					setPublicState(userId, puuid, isPublic);
-					//*/
-
+					Node publicatt = attribMap.getNamedItem("public");
+					if( publicatt != null && "Y".equals(publicatt.getNodeValue()) )
+						setPublic = true;
 				}
 				catch( Exception e )
 				{
 					e.printStackTrace();
 				}
 			}
+
 			res.close();
 			st.close();
 
@@ -4793,6 +4785,9 @@ public class MysqlDataProvider implements DataProvider {
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(Integer.toString(groupid), Integer.toString(userId));
 
+			/// Set portfolio public if needed
+			if( setPublic )
+				setPublicState(userId, newPortfolioUuid, setPublic);
 		}
 		catch( Exception e )
 		{
