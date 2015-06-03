@@ -311,7 +311,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql += "SELECT bin2uuid(p.portfolio_id) AS portfolio_id, bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_user_id, p.modif_date, p.active, p.user_id, TO_CHAR(r.content) AS content ";
 			sql += "FROM portfolio p, node n, resource_table r " +
 					"WHERE p.root_node_uuid=n.node_uuid AND n.res_res_node_uuid=r.node_uuid ";
-			if(userId!=null) sql += "AND p.user_id = ? ";
+			if(userId!=null) sql += "AND p.modif_user_id = ? ";
 			if(portfolioActive) sql += "AND p.active = 1 "; else sql += "AND p.active = 0 ";
 
 			sql += "UNION ALL ";
