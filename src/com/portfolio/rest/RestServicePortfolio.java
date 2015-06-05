@@ -1152,7 +1152,7 @@ public class RestServicePortfolio
 				}
 				else
 				{
-					if( userId != null && credential.isAdmin(ui.userId) )
+					if( userId != null && credential.isAdmin(ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
 					{
 						returnValue = dataProvider.getPortfolios(new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId).toString();
 					}
@@ -1574,7 +1574,9 @@ public class RestServicePortfolio
 			String returnValue = dataProvider.postInstanciatePortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
 			logRestRequest(httpServletRequest, value+" to: "+returnValue, returnValue, Status.OK.getStatusCode());
 
-			if( returnValue.startsWith("erreur") )
+			if( returnValue.startsWith("no rights") )
+				throw new RestWebApplicationException(Status.FORBIDDEN, returnValue);
+			else if( returnValue.startsWith("erreur") )
 				throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, returnValue);
 
 			return returnValue;
