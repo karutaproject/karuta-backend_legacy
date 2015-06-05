@@ -316,21 +316,6 @@ public class MysqlDataProvider implements DataProvider {
 			if(portfolioActive) sql += "AND p.active = 1 "; else sql += "AND p.active = 0 ";
 
 			sql += "UNION ALL ";
-			/// XXX Portfolio by complete share (deprecated, to check)
-			if( "mysql".equals(dbserveur) )
-				sql += "SELECT bin2uuid(p.portfolio_id) AS portfolio_id, bin2uuid(p.root_node_uuid) AS root_node_uuid, p.modif_user_id, p.modif_date, p.active, p.user_id, r.content ";
-			else if( "oracle".equals(dbserveur) )
-				sql += "SELECT bin2uuid(p.portfolio_id) AS portfolio_id, bin2uuid(p.root_node_uuid) AS root_node_uuid, p.modif_user_id, p.modif_date, p.active, p.user_id, TO_CHAR(r.content) AS content ";
-			sql += "FROM resource_table r, complete_share cs " +
-					"LEFT JOIN node n ON cs.portfolio_id=n.portfolio_id " +
-					"LEFT JOIN portfolio p ON n.portfolio_id=p.portfolio_id " +
-					"WHERE n.res_res_node_uuid=r.node_uuid " +
-					"AND cs.userid=? ";	// Param 3
-
-			if(portfolioActive) sql += " AND p.active = 1";
-			else sql += " AND p.active = 0";
-
-			sql += "UNION ALL ";
 			if( substid != 0 )
 			{
 				// Cross between portfolio that current user can access and those coming from the substitution
@@ -347,7 +332,7 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN group_right_info gri2 ON gri2.grid=gi2.grid " +
 						"LEFT JOIN portfolio p2 ON gri2.portfolio_id=p2.portfolio_id " +
 						"WHERE p.root_node_uuid=n.node_uuid AND n.res_res_node_uuid=r.node_uuid AND " +
-						"p.portfolio_id=p2.portfolio_id AND gu.userid=? AND gu2.userid=? ";	// Param 4,5
+						"p.portfolio_id=p2.portfolio_id AND gu.userid=? AND gu2.userid=? ";	// Param 3,4
 			}
 			// Portfolio we have received some specific rights to it
 			else
@@ -361,7 +346,7 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN group_right_info gri ON gri.grid=gi.grid " +
 						"LEFT JOIN portfolio p ON gri.portfolio_id=p.portfolio_id " +
 						"WHERE p.root_node_uuid=n.node_uuid AND n.res_res_node_uuid=r.node_uuid " +
-						"AND gu.userid=? ";	// Param 4
+						"AND gu.userid=? ";	// Param 3
 			}
 
 			if(portfolioActive) sql += "  AND p.active = 1 "; else sql += "  AND p.active = 0 ";
@@ -380,14 +365,12 @@ public class MysqlDataProvider implements DataProvider {
 			st.setInt(2, userId);	// From rights to modify
 			if( substid == 0 )
 			{
-				st.setInt(3, userId);	// Complete share	(could be obsolete)
-				st.setInt(4, userId);	// From specific rights given
+				st.setInt(3, userId);	// From specific rights given
 			}
 			else
 			{
-				st.setInt(3, substid);	// Complete share	(could be obsolete)
-				st.setInt(4, substid);	// Portfolio that substitution and
-				st.setInt(5, userId);	// current user can acess 
+				st.setInt(3, substid);	// Portfolio that substitution and
+				st.setInt(4, userId);	// current user can acess 
 			}
 			//			  if(userId!=null) st.setInt(3, userId);
 
@@ -8694,161 +8677,6 @@ public class MysqlDataProvider implements DataProvider {
 			st.setInt(2, wr);	/// Flag to select if we write too
 			st.setString(3, portfolio);
 			st.executeUpdate();
-
-			status = 0;
-		}
-		catch( Exception e )
-		{
-			try{ connection.rollback(); }
-			catch( SQLException e1 ){ e1.printStackTrace(); }
-			e.printStackTrace();
-		}
-		finally
-		{
-			try
-			{ connection.setAutoCommit(true);
-			connection.close(); }
-			catch( SQLException e ){ e.printStackTrace(); }
-		}
-
-		return status;
-	}
-
-	@Override
-	public int postCompleteShare( String portfolio, Integer ownerId, Integer userId )
-	{
-		int status = -1;
-		String sql = "";
-		PreparedStatement st;
-
-		/// Check if portfolio is owner by the user sending this command
-		if( !credential.isOwner(ownerId, portfolio) && !credential.isAdmin(ownerId) )
-			return -2;	// Not owner
-
-		try
-		{
-			connection.setAutoCommit(false);
-
-			/// Insert owner in complete share (when the other person is adding stuff)
-			if (dbserveur.equals("mysql")){
-				sql = "INSERT IGNORE INTO complete_share(userid, portfolio_id) VALUES(?,uuid2bin(?))";
-			} else if (dbserveur.equals("oracle")){
-				sql = "INSERT /*+ ignore_row_on_dupkey_index(complete_share,complete_share_PK)*/ INTO complete_share(userid, portfolio_id) VALUES(?,uuid2bin(?))";
-			}
-			st = connection.prepareStatement(sql);
-			st.setInt(1, ownerId);
-			st.setString(2, portfolio);
-
-			st.executeUpdate();
-
-			/// Insert person we shared with
-			st.setInt(1, userId);
-
-			st.executeUpdate();
-			st.close();
-
-			status = 0;
-		}
-		catch( Exception e )
-		{
-			try{ connection.rollback(); }
-			catch( SQLException e1 ){ e1.printStackTrace(); }
-			e.printStackTrace();
-		}
-		finally
-		{
-			try
-			{ connection.setAutoCommit(true);
-			connection.close(); }
-			catch( SQLException e ){ e.printStackTrace(); }
-		}
-
-		return status;
-	}
-
-	@Override
-	public int deleteCompleteShare( String portfolio, Integer ownerId )
-	{
-		int status = -1;
-		String sql = "";
-		PreparedStatement st;
-
-		/// Check if portfolio is owner by the user sending this command
-		if( !credential.isOwner(ownerId, portfolio) && !credential.isAdmin(ownerId) )
-			return -2;	// Not owner
-
-		try
-		{
-			connection.setAutoCommit(false);
-
-			sql = "DELETE FROM complete_share WHERE portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
-			st.setString(1, portfolio);
-			st.executeUpdate();
-
-			st.close();
-
-			status = 0;
-		}
-		catch( Exception e )
-		{
-			try{ connection.rollback(); }
-			catch( SQLException e1 ){ e1.printStackTrace(); }
-			e.printStackTrace();
-		}
-		finally
-		{
-			try
-			{ connection.setAutoCommit(true);
-			connection.close(); }
-			catch( SQLException e ){ e.printStackTrace(); }
-		}
-
-		return status;
-	}
-
-	@Override
-	public int deleteCompleteShareUser( String portfolio, Integer ownerId, Integer userId )
-	{
-		int status = -1;
-		String sql = "";
-		PreparedStatement st;
-		ResultSet rs;
-
-		/// Check if portfolio is owner by the user sending this command
-		if( !credential.isOwner(ownerId, portfolio) && !credential.isAdmin(ownerId) )
-			return -2;	// Not owner
-
-		try
-		{
-			connection.setAutoCommit(false);
-
-			/// Check with how many people the portfolio is still shared with
-			sql = "SELECT COUNT(*) FROM complete_share WHERE portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
-			st.setString(1, portfolio);
-			rs = st.executeQuery();
-			int count = 0;
-			if( rs.next() )
-				count = rs.getInt(1);
-
-			if( count > 2 )
-			{
-				sql = "DELETE FROM complete_share WHERE portfolio_id=uuid2bin(?) AND userid=?";
-				st = connection.prepareStatement(sql);
-				st.setString(1, portfolio);
-				st.setInt(2, userId);
-				st.executeUpdate();
-			}
-			else
-			{	// Only owner and remaining user we have shared with
-				sql = "DELETE FROM complete_share WHERE portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
-				st.setString(1, portfolio);
-				st.executeUpdate();
-			}
-
-			st.close();
 
 			status = 0;
 		}
