@@ -205,12 +205,9 @@ public interface DataProvider {
 	public boolean postNotifyRoles(int userId, String portfolio, String uuid, String notify);
 	public boolean setPublicState(int userId, String portfolio, boolean isPublic);
 	public int postShareGroup(String portfolio, int user, Integer userId, String write);
-	public int postCompleteShare( String portfolio, Integer ownerId, Integer userId );
 
 	public int deleteShareGroup(String portfolio, Integer userId);
 	public int deleteSharePerson(String portfolio, int user, Integer userId);
-	public int deleteCompleteShare( String portfolio, Integer ownerId );
-	public int deleteCompleteShareUser( String portfolio, Integer ownerId, Integer userId );
 	public Object deleteGroupRights(Integer groupId, Integer groupRightId, Integer userId);
 
 	/// À propos des macro-commandes pour la modification des droits

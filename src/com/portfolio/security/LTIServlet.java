@@ -56,6 +56,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.SqlUtils;
 
 /**
@@ -115,7 +116,7 @@ public class LTIServlet extends HttpServlet {
 
 		//============= init servers ===============================
 	    this.sc = getServletConfig();
-        String dataProviderName  =  this.sc.getInitParameter("dataProviderClass");
+        String dataProviderName  =  ConfigUtils.get("dataProviderClass");
         dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
   			// Try to initialize Datasource

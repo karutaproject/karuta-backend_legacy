@@ -34,6 +34,7 @@ RENAME TABLE types TO types_table;
 COMMIT;
 
 //
+DROP TABLE `complete_share`;
 DROP TABLE `portfolio_group`;
 CREATE TABLE IF NOT EXISTS `portfolio_group` (
   `owner` bigint(20) NOT NULL,

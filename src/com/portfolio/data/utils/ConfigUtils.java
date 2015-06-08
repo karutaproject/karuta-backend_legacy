@@ -29,8 +29,11 @@ public class ConfigUtils
 		if( hasLoaded ) return true;
 		try
 		{
+			String servName = config.getServletContext().getContextPath();
 			String path = config.getServletContext().getRealPath("/");
-			path = path.replaceFirst(File.separator+"$", "_config"+File.separator);
+			File base = new File(path+"../..");
+			String tomcatRoot = base.getCanonicalPath();
+			path = tomcatRoot + servName +"_config"+File.separatorChar;
 
 			attributes = new HashMap<String, String>();
 			java.io.FileInputStream fichierSrce =  new java.io.FileInputStream(path+"configKaruta.properties");

@@ -371,24 +371,6 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int postCompleteShare( String portfolio, Integer ownerId, Integer userId )
-	{
-		return 0;
-	}
-
-	@Override
-	public int deleteCompleteShare( String portfolio, Integer ownerId )
-	{
-		return 0;
-	}
-
-	@Override
-	public int deleteCompleteShareUser( String portfolio, Integer ownerId, Integer userId )
-	{
-		return 0;
-	}
-
-	@Override
 	public int deleteShareGroup(String portfolio, Integer userId)
 	{
 		return 0;

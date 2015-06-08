@@ -201,7 +201,7 @@ public class RestServicePortfolio
 
 			servConfig = sc;
 			servContext = context;
-			String dataProviderName  =  sc.getInitParameter("dataProviderClass");
+			String dataProviderName  =  ConfigUtils.get("dataProviderClass");
 			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
 			// Try to initialize Datasource
@@ -1152,7 +1152,7 @@ public class RestServicePortfolio
 				}
 				else
 				{
-					if( userId != null && credential.isAdmin(ui.userId) )
+					if( userId != null && credential.isAdmin(ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
 					{
 						returnValue = dataProvider.getPortfolios(new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId).toString();
 					}
@@ -1574,7 +1574,9 @@ public class RestServicePortfolio
 			String returnValue = dataProvider.postInstanciatePortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
 			logRestRequest(httpServletRequest, value+" to: "+returnValue, returnValue, Status.OK.getStatusCode());
 
-			if( returnValue.startsWith("erreur") )
+			if( returnValue.startsWith("no rights") )
+				throw new RestWebApplicationException(Status.FORBIDDEN, returnValue);
+			else if( returnValue.startsWith("erreur") )
 				throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, returnValue);
 
 			return returnValue;
@@ -2999,144 +3001,6 @@ public class RestServicePortfolio
 		{
 			dataProvider.disconnect();
 		}
-	}
-
-	// Retrait du partage d'un portfolio
-	@Deprecated
-	@Path("/share/{portfolioid}")
-	@DELETE
-	@Produces({MediaType.APPLICATION_XML})
-	@Consumes(MediaType.APPLICATION_XML)
-	public String deleteSharePortfolio(String xmlNode, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("portfolioid") String portfolioid)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
-
-		int returnValue=-1;
-		try
-		{
-			returnValue = dataProvider.deleteCompleteShare(portfolioid, ui.userId);
-			logRestRequest(httpServletRequest, xmlNode, Integer.toString(returnValue), Status.OK.getStatusCode());
-
-			switch( returnValue )
-			{
-				case -1:
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-
-				case -2:
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'�tes pas le propri�taire");
-
-				default:
-					break;
-			}
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw ex;
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-
-		return Integer.toString(returnValue);
-	}
-
-	// Retire une personne du partage
-	@Deprecated
-	@Path("/share/{portfolioid}/{userid}")
-	@DELETE
-	@Produces({MediaType.APPLICATION_XML})
-	@Consumes(MediaType.APPLICATION_XML)
-	public String delteSharePortfolioUser(String xmlNode, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("portfolioid") String portfolioid, @PathParam("userid") int user)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
-
-		int returnValue=-1;
-		try
-		{
-			returnValue = dataProvider.deleteCompleteShareUser(portfolioid, ui.userId, user);
-			logRestRequest(httpServletRequest, xmlNode, Integer.toString(returnValue), Status.OK.getStatusCode());
-
-			switch( returnValue )
-			{
-				case -1:
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-
-				case -2:
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'�tes pas le propri�taire");
-
-				default:
-					break;
-			}
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw ex;
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-
-		return Integer.toString(returnValue);
-	}
-
-	// Met une personne dans le partage de portfolio (on rend tout disponible en lecture ou lecture/�criture)
-	@Deprecated
-	@Path("/share/{portfolioid}/{userid}")
-	@POST
-	@Produces({MediaType.APPLICATION_XML})
-	@Consumes(MediaType.APPLICATION_XML)
-	public String postSharePortfolio(String xmlNode, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("portfolioid") String portfolioid, @PathParam("userid") int user, @QueryParam("write") String write)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
-
-		int returnValue=-1;
-		try
-		{
-			returnValue = dataProvider.postCompleteShare(portfolioid, ui.userId, user);
-			logRestRequest(httpServletRequest, xmlNode, Integer.toString(returnValue), Status.OK.getStatusCode());
-
-			switch( returnValue )
-			{
-				case -1:
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-
-				case -2:
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'�tes pas le propri�taire");
-
-				default:
-					break;
-			}
-		}
-		catch(RestWebApplicationException ex)
-		{
-			throw ex;
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-
-		return Integer.toString(returnValue);
 	}
 
 	/******************************/

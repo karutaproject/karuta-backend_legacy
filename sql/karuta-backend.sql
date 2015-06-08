@@ -251,12 +251,6 @@ CREATE TABLE IF NOT EXISTS `group_info` (
   PRIMARY KEY (`gid`)
 ) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `complete_share` (
-  `userid` bigint(20) NOT NULL,
-  `portfolio_id` binary(16) NOT NULL,
-  PRIMARY KEY (`userid`,`portfolio_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
 -- Group with users
 CREATE TABLE IF NOT EXISTS `group_user` (
   `gid` bigint(20) NOT NULL,
