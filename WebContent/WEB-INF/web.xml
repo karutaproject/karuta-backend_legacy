@@ -11,10 +11,6 @@
 		<res-type>javax.sql.DataSource</res-type>
 		<res-auth>Container</res-auth>
 	</resource-ref>
-	<context-param>
-		<param-name>dataProviderClass</param-name>
-		<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
-	</context-param>
 	
 	<servlet>
 		<servlet-name>Jersey REST Service</servlet-name>
@@ -22,10 +18,6 @@
 		<init-param>
 			<param-name>com.sun.jersey.config.property.packages</param-name>
 			<param-value>com.portfolio.rest;</param-value>
-		</init-param>
-		<init-param>
-			<param-name>dataProviderClass</param-name>
-			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
 		</init-param>
 		<init-param>
 			<param-name>logRestRequests</param-name>
@@ -43,10 +35,6 @@
 		<display-name>FileServlet</display-name>
 		<servlet-name>FileServlet</servlet-name>
 		<servlet-class>com.portfolio.data.attachment.FileServlet</servlet-class>
-		<init-param>
-			<param-name>dataProviderClass</param-name>
-			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
-		</init-param>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>FileServlet</servlet-name>
@@ -58,10 +46,6 @@
 		<display-name>XSLT Servlet</display-name>
 		<servlet-name>XSLTServlet</servlet-name>
 		<servlet-class>com.portfolio.data.attachment.XSLService</servlet-class>
-		<init-param>
-			<param-name>dataProviderClass</param-name>
-			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
-		</init-param>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>XSLTServlet</servlet-name>
@@ -138,10 +122,6 @@
 	<servlet>
 		<servlet-name>LTI</servlet-name>
 		<servlet-class>com.portfolio.security.LTIServlet</servlet-class>
-		<init-param>
-			<param-name>dataProviderClass</param-name>
-			<param-value>com.portfolio.data.provider.MysqlDataProvider</param-value>
-		</init-param>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>LTI</servlet-name>

@@ -55,7 +55,7 @@ public class SqlUtils
 	public static DataProvider initProvider(ServletContext application, Logger logger) throws Exception
 	{
 	//============= init servers ===============================
-		String dataProviderName = application.getInitParameter("dataProviderClass");
+		String dataProviderName = ConfigUtils.get("dataProviderClass");
 		DataProvider dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
 		// Try to initialize Datasource

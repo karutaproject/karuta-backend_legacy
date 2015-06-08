@@ -127,7 +127,7 @@ public class XSLService  extends HttpServlet {
 
 		try
 		{
-			String dataProviderName = config.getInitParameter("dataProviderClass");
+			String dataProviderName = ConfigUtils.get("dataProviderClass");
 			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
 			InitialContext cxt = new InitialContext();

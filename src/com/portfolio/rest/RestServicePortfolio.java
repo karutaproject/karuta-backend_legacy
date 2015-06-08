@@ -201,7 +201,7 @@ public class RestServicePortfolio
 
 			servConfig = sc;
 			servContext = context;
-			String dataProviderName  =  sc.getInitParameter("dataProviderClass");
+			String dataProviderName  =  ConfigUtils.get("dataProviderClass");
 			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
 			// Try to initialize Datasource
