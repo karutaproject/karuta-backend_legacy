@@ -159,6 +159,7 @@ public class RegisterService  extends HttpServlet {
 			Element credentialElement = doc.getDocumentElement();
 			String username = "";
 			String password = "";
+			String mail = "";
 			String mailcc = "";
 			boolean hasChanged = false;
 
@@ -177,7 +178,10 @@ public class RegisterService  extends HttpServlet {
 							if(children2.item(y).getNodeName().equals("username"))
 							{
 								username = DomUtils.getInnerXml(children2.item(y));
-								break;
+							}
+							if(children2.item(y).getNodeName().equals("email"))
+							{
+								mail = DomUtils.getInnerXml(children2.item(y));
 							}
 						}
 
@@ -227,7 +231,7 @@ public class RegisterService  extends HttpServlet {
 				response.setStatus(200);
 				// Send email
 				String content = "Your account with username: "+username+" has been created with the password: "+password;
-				MailUtils.postMail(getServletConfig(), username, mailcc, "Account created for Karuta: "+username, content, logger);
+				MailUtils.postMail(getServletConfig(), mail, mailcc, "Account created for Karuta: "+username, content, logger);
 				PrintWriter output = response.getWriter();
 				output.write("created");
 				output.close();
