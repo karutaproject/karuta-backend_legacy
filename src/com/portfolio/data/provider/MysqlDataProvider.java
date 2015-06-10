@@ -295,6 +295,9 @@ public class MysqlDataProvider implements DataProvider {
 				return st.executeQuery();
 			}
 
+			if( credential.isAdmin(substid) )	// If root wants to debug user UI
+				substid = 0;
+
 			// On recupere d'abord les informations dans la table structures
 
 			/// XXX Dammit Oracle, why are you so useless?
