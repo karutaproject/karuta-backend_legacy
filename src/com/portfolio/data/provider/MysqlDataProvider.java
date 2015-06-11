@@ -13495,7 +13495,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUserId(String username) throws Exception
+	public String getUserId(String username, String email) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
@@ -13504,9 +13504,20 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			sql = "SELECT userid FROM credential WHERE login = ? ";
-			st = connection.prepareStatement(sql);
-			st.setString(1, username);
+			if( username != null )
+			{
+				sql = "SELECT userid FROM credential WHERE login = ? ";
+				st = connection.prepareStatement(sql);
+				st.setString(1, username);
+			}
+			else if( email != null )
+			{
+				sql = "SELECT userid FROM credential WHERE email = ? ";
+				st = connection.prepareStatement(sql);
+				st.setString(1, email);
+			}
+			else
+				return retval;
 			res = st.executeQuery();
 			if( res.next() )
 				retval = res.getString(1);

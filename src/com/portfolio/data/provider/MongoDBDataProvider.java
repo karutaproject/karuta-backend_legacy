@@ -824,7 +824,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUserId(String username) throws Exception
+	public String getUserId(String username, String email) throws Exception
 	{
 		return null;
 	}

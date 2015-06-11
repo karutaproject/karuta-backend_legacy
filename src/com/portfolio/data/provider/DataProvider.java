@@ -232,7 +232,7 @@ public interface DataProvider {
 	public String deletePortfolioUser( int userId, String portId );
 
 	//// LTI related
-	public String getUserId(String email) throws Exception;
+	public String getUserId(String username, String email) throws Exception;
 	public String createUser(String username) throws Exception;
 	public String getGroupByName( String name );
 	public String createGroup( String name );

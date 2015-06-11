@@ -298,7 +298,7 @@ public class LTIServletUtils {
 		outTrace.append("\nUserXML: "+userXml);
 
 		//Does the user already exist?
-		userId = dataProvider.getUserId(buildUsername(payload));
+		userId = dataProvider.getUserId(buildUsername(payload), null);
 		if ("0".equals(userId)) {
 			//create it
 			userId = dataProvider.createUser(buildUsername(payload));

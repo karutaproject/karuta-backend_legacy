@@ -4112,7 +4112,7 @@ public class RestServicePortfolio
 			//<cas:user>vassoilm</cas:user>
 			//session.setAttribute("user", sv.getUser());
 			//session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
-			userId =  dataProvider.getUserId(sv.getUser());
+			userId =  dataProvider.getUserId(sv.getUser(), null);
 			if(userId!=null)
 			{
 				session.setAttribute("user", sv.getUser());

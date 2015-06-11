@@ -198,7 +198,7 @@ public class LTIServlet extends HttpServlet {
             String key = e.nextElement();
             String value = request.getParameter(key);
             payload.put(key, value);
-            outTrace.append("\nkey: " + key + "(" + value + ")");
+            logger.trace("\nkey: " + key + "(" + value + ")");
         }
 		return payload;
 	}
@@ -206,7 +206,6 @@ public class LTIServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-
 		StringBuffer outTrace = new StringBuffer();
 		String logFName = null;
 		Connection connexion = null;			// hors du try pour fermer dans finally
@@ -228,7 +227,7 @@ public class LTIServlet extends HttpServlet {
 		ServletContext application = getServletConfig().getServletContext();
 
 		try {
-	        LoadProperties(application);
+//	        LoadProperties(application);
 	        initDB(application, outTrace);
 
 //			wadbackend.WadUtilities.setApplicationAttributes(application, session);
@@ -324,7 +323,7 @@ public class LTIServlet extends HttpServlet {
 
 			if( "".equals(link) ) // Regular old behavior (which need to be changed some time donw the road)
 				//Send along to WAD now
-				response.sendRedirect((String)application.getAttribute("lti_redirect_location"));
+				response.sendRedirect(ConfigUtils.get("lti_redirect_location"));
 			else	// Otherwise, show different service
 			{
 				response.getWriter().write(link);
@@ -370,7 +369,7 @@ public class LTIServlet extends HttpServlet {
 		ServletContext application = getServletConfig().getServletContext();
 		String oauth_consumer_key = (String) payload.get("oauth_consumer_key");
     final String configPrefix = "basiclti.provider." + oauth_consumer_key + ".";
-    final String oauth_secret = (String)application.getAttribute(configPrefix+ "secret");
+    final String oauth_secret = (String) ConfigUtils.get(configPrefix+ "secret");
 
 		/// Fetch and decode session
 		String sha1Secret = DigestUtils.sha1Hex(oauth_secret);
@@ -409,12 +408,11 @@ public class LTIServlet extends HttpServlet {
 		//// FIXME: Complete this with other info from LTI
 		//Does the user already exist?
 		String username = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
-		if( username == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
-			username = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
-		if( username == null )	/// If all fail, at least we get the context_id
-			username = (String)payload.get(BasicLTIConstants.CONTEXT_ID);
+		String email = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
+//		if( username == null )	/// If all fail, at least we get the context_id
+//			username = (String)payload.get(BasicLTIConstants.CONTEXT_ID);
 
-		userId = dataProvider.getUserId( username );
+		userId = dataProvider.getUserId( username, email );
 		if ( "0".equals(userId) ) {
 			//create it
 			userId = dataProvider.createUser(username);
@@ -531,14 +529,11 @@ public class LTIServlet extends HttpServlet {
 	 * @throws Exception
 	 */
 	private static void loadRoleMapAttributes(ServletContext application) throws Exception {
-		String appli = application.getRealPath("");
-		if (appli.indexOf("/")>-1)
-			appli = appli.substring(appli.lastIndexOf("/")+1);
-		else
-			appli = appli.substring(appli.lastIndexOf("\\")+1);	 // pour windows
-
+		String servName = application.getContextPath();
 		String path = application.getRealPath("/");
-		path = path.replaceFirst(File.separator+"$", "_config"+File.separator);
+		File base = new File(path+"../..");
+		String tomcatRoot = base.getCanonicalPath();
+		path = tomcatRoot + servName +"_config"+File.separatorChar;
 
 		String Filename = path+"roleMap.properties";
 		java.io.FileInputStream fichierSrce =  new java.io.FileInputStream(Filename);
@@ -596,7 +591,7 @@ public class LTIServlet extends HttpServlet {
         // Lookup the secret
         //TODO: Maybe put this in a db table for scalability?
         final String configPrefix = "basiclti.provider." + oauth_consumer_key + ".";
-        final String oauth_secret = (String)application.getAttribute(configPrefix+ "secret");
+        final String oauth_secret = ConfigUtils.get(configPrefix+ "secret");
         //final String oauth_secret = ServerConfigurationService.getString(configPrefix+ "secret", null);
         if (oauth_secret == null) {
             throw new LTIException( "launch.key.notfound",oauth_consumer_key, null);
