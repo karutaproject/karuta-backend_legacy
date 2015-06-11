@@ -20,17 +20,22 @@ import java.util.HashMap;
 
 import javax.servlet.ServletConfig;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ConfigUtils
 {
+	static final Logger logger = LoggerFactory.getLogger(ConfigUtils.class);
 	static boolean hasLoaded = false;
 	static HashMap<String, String> attributes = new HashMap<String, String>();
 	public static boolean loadConfigFile( ServletConfig config ) throws Exception
 	{
 		if( hasLoaded ) return true;
+		String path = "";
 		try
 		{
 			String servName = config.getServletContext().getContextPath();
-			String path = config.getServletContext().getRealPath("/");
+			path = config.getServletContext().getRealPath("/");
 			File base = new File(path+"../..");
 			String tomcatRoot = base.getCanonicalPath();
 			path = tomcatRoot + servName +"_config"+File.separatorChar;
@@ -51,6 +56,10 @@ public class ConfigUtils
 			}
 			fichierSrce.close();
 			hasLoaded = true;
+		}
+		catch(Exception e)
+		{
+			logger.error("ERROR, can't load file :"+path+"configKaruta.properties ("+e.getMessage()+")");
 		}
 		finally
 		{
