@@ -13533,9 +13533,9 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public String createUser(String username) throws Exception
 	{
-		PreparedStatement st;
+		PreparedStatement st = null;
 		String sql;
-		ResultSet res;
+		ResultSet res = null;
 		String retval = "0";
 
 		try
@@ -13559,7 +13559,15 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch(Exception ex)
 		{
+			logger.error(ex.getMessage());
 			ex.printStackTrace();
+		}
+		finally
+		{
+			if( res != null )
+				res.close();
+			if( st != null )
+				st.close();
 		}
 
 		return retval;
