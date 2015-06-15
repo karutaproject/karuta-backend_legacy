@@ -2325,7 +2325,8 @@ public class MysqlDataProvider implements DataProvider {
 		/// Reconstruct functional tree
 		t_tree root = entries.get(rootuuid);
 		StringBuilder out = new StringBuilder();
-		reconstructTree( out, root, entries );
+		if( root != null )
+			reconstructTree( out, root, entries );
 
 		time5 = System.currentTimeMillis();
 
@@ -2716,10 +2717,8 @@ public class MysqlDataProvider implements DataProvider {
 				if (dbserveur.equals("mysql")){
 					sql = "INSERT INTO t_rights(grid,id,RD,WR,DL,SB,AD) ";
 					sql += "SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
-						"FROM group_right_info gri " +
-						"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
-						"LEFT JOIN group_rights gr ON gri.grid=gr.grid " +
-						"WHERE gri.portfolio_id=uuid2bin(?) " +
+						"FROM group_right_info gri, group_info gi, group_rights gr " +
+						"WHERE gri.grid=gi.grid AND gri.grid=gr.grid AND gri.portfolio_id=uuid2bin(?) " +
 						"AND (gi.label='all' OR gi.grid=? OR gi.label=(SELECT login FROM credential WHERE userid=?)) " +
 						"ON DUPLICATE KEY " +
 						"UPDATE t_rights.RD=GREATEST(t_rights.RD,gr.RD), " +
@@ -2732,10 +2731,8 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					sql = "MERGE INTO t_rights d USING (";
 					sql += "SELECT MAX(gr.grid) AS grid, gr.id, MAX(gr.RD) AS RD, MAX(gr.WR) AS WR, MAX(gr.DL) AS DL, MAX(gr.SB) AS SB, MAX(gr.AD) AS AD " +	// FIXME MAX(gr.grid) will have unintended consequences
-							"FROM group_right_info gri " +
-							"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
-							"LEFT JOIN group_rights gr ON gri.grid=gr.grid " +
-							"WHERE gri.portfolio_id=uuid2bin(?) " +
+							"FROM group_right_info gri, group_info gi, group_rights gr " +
+							"WHERE gri.grid=gi.grid AND gri.grid=gr.grid AND gri.portfolio_id=uuid2bin(?) " +
 							"AND (gi.label='all' OR gi.grid=? OR gi.label=(SELECT login FROM credential WHERE userid=?)) ";
 					sql += " GROUP BY gr.id) s ON (d.grid = s.grid AND d.id = s.id) WHEN MATCHED THEN UPDATE SET " +
 							"d.RD=GREATEST(d.RD,s.RD), " +
