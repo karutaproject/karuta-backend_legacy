@@ -3850,7 +3850,7 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object postInstanciatePortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception
 	{
-		if( !credential.isAdmin(userId) || !credential.isCreator(userId) ) return "no ights";
+		if( !credential.isAdmin(userId) && !credential.isCreator(userId) ) return "no rights";
 		
 		String sql = "";
 		PreparedStatement st;
