@@ -42,3 +42,6 @@ CREATE TABLE IF NOT EXISTS `portfolio_group` (
   `group_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`portfolio_id`,`group_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+// 16/06/2015
+ALTER TABLE credential_group ADD COLUMN `label` varchar(255) COLLATE utf8_unicode_ci NOT NULL;

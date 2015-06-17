@@ -620,7 +620,7 @@ public class RestServicePortfolio
 
 		try
 		{
-			String xmlgroupsUser = dataProvider.getGroupsUser(ui.userId, useridCible);
+			String xmlgroupsUser = dataProvider.getRoleUser(ui.userId, useridCible);
 			logRestRequest(httpServletRequest, "", xmlgroupsUser, Status.OK.getStatusCode());
 
 			return xmlgroupsUser;
@@ -4452,13 +4452,13 @@ public class RestServicePortfolio
 	 **/
 	@Path("/usersgroups")
 	@GET
-	public String getUsersByGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public String getUsersByUserGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") int group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try
 		{
-			String xmlUsers = dataProvider.getUsersByGroup(ui.userId);
+			String xmlUsers = dataProvider.getUsersByUserGroup(group, ui.userId);
 			logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
 
 			return xmlUsers;

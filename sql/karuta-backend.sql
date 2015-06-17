@@ -197,6 +197,7 @@ CREATE TABLE IF NOT EXISTS `credential_substitution` (
 -- credential_group
 CREATE TABLE IF NOT EXISTS `credential_group` (
   `cg` bigint(20) NOT NULL,
+  `label` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   PRIMARY KEY (`cg`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

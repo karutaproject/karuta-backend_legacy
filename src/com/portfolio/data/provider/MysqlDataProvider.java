@@ -9606,7 +9606,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getGroupsUser(int userId, int userid)
+	public String getRoleUser(int userId, int userid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -10676,25 +10676,32 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUsersByGroup(int userId, int groupId) throws SQLException
+	public String getUserGroupList(int userGroupId, int userId)
+	{
+		return null;
+	}
+	
+	@Override
+	public String getUsersByUserGroup(int userId, int groupId)
 	{
 		String sql = "";
 		PreparedStatement st;
 		ResultSet res = null;
 
-		sql = "SELECT * FROM credential_group";
-		st = connection.prepareStatement(sql);
-		st.setInt(1, groupId);
-		res = st.executeQuery();
-
 		String result = "<groups>";
-		try {
+		try
+		{
+			sql = "SELECT * FROM credential_group";
+			st = connection.prepareStatement(sql);
+			st.setInt(1, groupId);
+			res = st.executeQuery();
+
 			while(res.next())
 			{
 				result +="<group ";
-				//result += DomUtils.getXmlAttributeOutput("id", res.getString("userid"))+" ";
+				result += DomUtils.getXmlAttributeOutput("cg", res.getString("cg"))+" ";
 				result += ">";
-				result += DomUtils.getXmlElementOutput("cg", res.getString("cg"));
+				result += DomUtils.getXmlElementOutput("label", res.getString("label"));
 				result += "</group>";
 			}
 		} catch (SQLException e) {
@@ -12958,12 +12965,11 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUsersByGroup(int userId)
+	public Integer putUserInUserGroup(String siteGroupId, String userId)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		return 0;
 	}
-
+	
 	@Override
 	public String deleteUsersGroups(int userId, int usersgroup)
 	{
@@ -12972,7 +12978,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deleteUsersGroupsUser(int userId, int usersgroup, int userid2)
+	public String deleteUsersFromUserGroups(int userId, int usersgroup, int userid2)
 	{
 		// TODO Auto-generated method stub
 		return null;
