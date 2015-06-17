@@ -847,8 +847,6 @@ public class RestServicePortfolio
 							filterName = "//*[local-name()='filename' and @lang and text()]";
 						}
 
-						logger.error("MARKER 3a");
-
 						Node p = res.getParentNode();	// resource -> container
 						Node gp = p.getParentNode();	// container -> context
 						Node uuidNode = gp.getAttributes().getNamedItem("id");
@@ -863,8 +861,6 @@ public class RestServicePortfolio
 							lang = fileNode.getAttribute("lang");	// In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
 							if( "".equals(lang) ) lang = "fr";
 						}
-
-						logger.error("MARKER 3b");
 
 						String servlet = httpServletRequest.getRequestURI();
 						servlet = servlet.substring(0, servlet.indexOf("/", 7));
@@ -899,8 +895,6 @@ public class RestServicePortfolio
 						InputStream content = entity.getContent();
 
 //						BufferedInputStream bis = new BufferedInputStream(entity.getContent());
-
-						logger.error("MARKER 3c");
 
 						ze = new ZipEntry(filenameext);
 						try
@@ -4439,6 +4433,17 @@ public class RestServicePortfolio
 		}
 	}
 
+	/********************************************************/
+	/**
+	 * ##   ##  #####  ####### #####     ###   ######
+	 * ##   ## ##   ## ##      ##   ## ##   ## ##   ##
+	 * ##   ## ##      ##      ##   ## ##      ##   ##
+	 * ##   ##  #####  ####    #####   ##  ### ######
+	 * ##   ##      ## ##      ##   ## ##   ## ##   ##
+	 * ##   ## ##   ## ##      ##   ## ##   ## ##   ##
+	 *  #####   #####  ####### ##   ##   ###   ##   ##
+  /** Managing and listing user groups
+	/********************************************************/
 	/**
 	 *	Get users by usergroup
 	 *	GET /rest/api/usersgroups
@@ -4539,6 +4544,14 @@ public class RestServicePortfolio
 	}
 
 	/********************************************************/
+	/**
+	 * ######  #######   ###   ##   ## #######  #####
+	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
+	 * ##   ##    #    ##      ##   ##    #    ##
+	 * ######     #    ##  ### #######    #     #####
+	 * ##   ##    #    ##   ## ##   ##    #         ##
+	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
+	 * ##   ## #######   ###   ##   ##    #     #####
 	/** Partie groupe de droits et utilisateurs            **/
 	/********************************************************/
 
