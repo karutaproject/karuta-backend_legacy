@@ -176,18 +176,18 @@ public interface DataProvider {
 	/// Relatif aux groupe d'utilisateurs
 	public boolean isUserMemberOfGroup(int userId, int groupId);
 	public String getRoleUser(int userId, int userid2);
-	public String getUserGroupList(int userGroupId, int userId);
+	public String getUserGroupList(int userId);
 	public String getUsersByUserGroup(int userGroupId, int userId);
 	public String getGroupsByRole(int userId, String portfolioUuid, String role);
 	public String getGroupsPortfolio(String portfolioUuid, int userId);
 	public Integer getRoleByNode( int userId, String nodeUuid, String role );
 
 	public Integer putUserGroup(String siteGroupId, String userId);
-	public Integer putUserInUserGroup(String siteGroupId, String userId);
+	public Integer putUserInUserGroup(int user, int siteGroupId, int currentUid);
 
 	public Object postGroup(String xmlgroup, int userId) throws Exception ;
 	public boolean postGroupsUsers(int user, int userId, int groupId);
-	public String postUsersGroupsUser(int userId, int usersgroup, int userid2);
+	public String postUserGroup(String label, int userid);
 
 	public String deleteUsersGroups(int userId, int usersgroup);
 	public String deleteUsersFromUserGroups(int userId, int usersgroup, int currentUid);

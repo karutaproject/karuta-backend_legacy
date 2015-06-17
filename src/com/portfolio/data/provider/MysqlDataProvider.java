@@ -10676,51 +10676,6 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUserGroupList(int userGroupId, int userId)
-	{
-		return null;
-	}
-	
-	@Override
-	public String getUsersByUserGroup(int userId, int groupId)
-	{
-		String sql = "";
-		PreparedStatement st;
-		ResultSet res = null;
-
-		String result = "<groups>";
-		try
-		{
-			sql = "SELECT * FROM credential_group";
-			st = connection.prepareStatement(sql);
-			st.setInt(1, groupId);
-			res = st.executeQuery();
-
-			while(res.next())
-			{
-				result +="<group ";
-				result += DomUtils.getXmlAttributeOutput("cg", res.getString("cg"))+" ";
-				result += ">";
-				result += DomUtils.getXmlElementOutput("label", res.getString("label"));
-				result += "</group>";
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		result += "</groups>";
-
-		return result;
-	}
-
-	@Override
-	public String postUsersGroupsUser(int userId, int usersgroup, int userid2)
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public Object getNodeMetadataWad(MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
@@ -12964,8 +12919,89 @@ public class MysqlDataProvider implements DataProvider {
 		return retval;
 	}
 
+	/********************************************************/
+	/**
+	 * ##   ##  #####  ####### #####     ###   ######
+	 * ##   ## ##   ## ##      ##   ## ##   ## ##   ##
+	 * ##   ## ##      ##      ##   ## ##      ##   ##
+	 * ##   ##  #####  ####    #####   ##  ### ######
+	 * ##   ##      ## ##      ##   ## ##   ## ##   ##
+	 * ##   ## ##   ## ##      ##   ## ##   ## ##   ##
+	 *  #####   #####  ####### ##   ##   ###   ##   ##
+  /** Managing and listing user groups
+	/********************************************************/
 	@Override
-	public Integer putUserInUserGroup(String siteGroupId, String userId)
+	public String postUserGroup(String label, int userid)
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String getUserGroupList( int userId )
+	{
+		String sql = "";
+		PreparedStatement st;
+		ResultSet res = null;
+
+		String result = "<groups>";
+		try
+		{
+			sql = "SELECT * FROM credential_group";
+			st = connection.prepareStatement(sql);
+			res = st.executeQuery();
+
+			while(res.next())
+			{
+				result +="<group ";
+				result += DomUtils.getXmlAttributeOutput("cg", res.getString("cg"))+" ";
+				result += ">";
+				result += DomUtils.getXmlElementOutput("label", res.getString("label"));
+				result += "</group>";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		result += "</groups>";
+
+		return result;
+	}
+	
+	@Override
+	public String getUsersByUserGroup(int userId, int groupId)
+	{
+		String sql = "";
+		PreparedStatement st;
+		ResultSet res = null;
+
+		String result = "<groups>";
+		try
+		{
+			sql = "SELECT * FROM credential_group";
+			st = connection.prepareStatement(sql);
+			st.setInt(1, groupId);
+			res = st.executeQuery();
+
+			while(res.next())
+			{
+				result +="<group ";
+				result += DomUtils.getXmlAttributeOutput("cg", res.getString("cg"))+" ";
+				result += ">";
+				result += DomUtils.getXmlElementOutput("label", res.getString("label"));
+				result += "</group>";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		result += "</groups>";
+
+		return result;
+	}
+
+	@Override
+	public Integer putUserInUserGroup(int user, int siteGroupId, int currentUid)
 	{
 		return 0;
 	}

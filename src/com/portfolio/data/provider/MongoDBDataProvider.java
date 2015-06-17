@@ -585,14 +585,14 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Integer putUserInUserGroup(String siteGroupId, String userId)
+	public Integer putUserInUserGroup(int user, int siteGroupId, int currentUid)
 	{
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
-	public String getUserGroupList(int userGroupId, int userId)
+	public String getUserGroupList(int userId)
 	{
 		// TODO Auto-generated method stub
 		return null;
@@ -617,7 +617,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postUsersGroupsUser(int userId, int usersgroup, int userid2) {
+	public String postUserGroup(String label, int userid) {
 		// TODO Auto-generated method stub
 		return null;
 	}
