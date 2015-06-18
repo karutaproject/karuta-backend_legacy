@@ -470,7 +470,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 
 	@Override
-	public String getGroupsUser(int userId, int userid2) {
+	public String getRoleUser(int userId, int userid2) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -552,13 +552,6 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUsersByGroup(int userId, int groupId)
-			throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public String postMacroOnNode( int userId, String nodeUuid, String macroName )
 	{
 		// TODO Auto-generated method stub
@@ -592,27 +585,41 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUsersByGroup(int userId) {
+	public Integer putUserInUserGroup(int user, int siteGroupId, int currentUid)
+	{
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public String getUserGroupList(int userId)
+	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String deleteUsersGroups(int userId, int usersgroup) {
+	public String getUsersByUserGroup(int userId, int groupId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String deleteUsersGroupsUser(int userId, int usersgroup, int userid2) {
+	public String deleteUsersGroups(int userId, int usersgroup, int currentUid) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String postUsersGroupsUser(int userId, int usersgroup, int userid2) {
+	public String deleteUsersFromUserGroups(int userId, int usersgroup, int currentUid) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public int postUserGroup(String label, int userid) {
+		// TODO Auto-generated method stub
+		return -1;
 	}
 
 	@Override

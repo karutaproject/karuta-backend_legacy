@@ -620,7 +620,7 @@ public class RestServicePortfolio
 
 		try
 		{
-			String xmlgroupsUser = dataProvider.getGroupsUser(ui.userId, useridCible);
+			String xmlgroupsUser = dataProvider.getRoleUser(ui.userId, useridCible);
 			logRestRequest(httpServletRequest, "", xmlgroupsUser, Status.OK.getStatusCode());
 
 			return xmlgroupsUser;
@@ -847,8 +847,6 @@ public class RestServicePortfolio
 							filterName = "//*[local-name()='filename' and @lang and text()]";
 						}
 
-						logger.error("MARKER 3a");
-
 						Node p = res.getParentNode();	// resource -> container
 						Node gp = p.getParentNode();	// container -> context
 						Node uuidNode = gp.getAttributes().getNamedItem("id");
@@ -863,8 +861,6 @@ public class RestServicePortfolio
 							lang = fileNode.getAttribute("lang");	// In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
 							if( "".equals(lang) ) lang = "fr";
 						}
-
-						logger.error("MARKER 3b");
 
 						String servlet = httpServletRequest.getRequestURI();
 						servlet = servlet.substring(0, servlet.indexOf("/", 7));
@@ -899,8 +895,6 @@ public class RestServicePortfolio
 						InputStream content = entity.getContent();
 
 //						BufferedInputStream bis = new BufferedInputStream(entity.getContent());
-
-						logger.error("MARKER 3c");
 
 						ze = new ZipEntry(filenameext);
 						try
@@ -4439,6 +4433,17 @@ public class RestServicePortfolio
 		}
 	}
 
+	/********************************************************/
+	/**
+	 * ##   ##  #####  ####### #####     ###   ######
+	 * ##   ## ##   ## ##      ##   ## ##   ## ##   ##
+	 * ##   ## ##      ##      ##   ## ##      ##   ##
+	 * ##   ##  #####  ####    #####   ##  ### ######
+	 * ##   ##      ## ##      ##   ## ##   ## ##   ##
+	 * ##   ## ##   ## ##      ##   ## ##   ## ##   ##
+	 *  #####   #####  ####### ##   ##   ###   ##   ##
+  /** Managing and listing user groups
+	/********************************************************/
 	/**
 	 *	Get users by usergroup
 	 *	GET /rest/api/usersgroups
@@ -4446,17 +4451,18 @@ public class RestServicePortfolio
 	 *	return:
 	 **/
 	@Path("/usersgroups")
-	@GET
-	public String getUsersByGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	@POST
+	public String postUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname)
 	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
 		try
 		{
-			String xmlUsers = dataProvider.getUsersByGroup(ui.userId);
-			logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
+			int response = -1;
+			response = dataProvider.postUserGroup(groupname, ui.userId);
+			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
 
-			return xmlUsers;
+			return "";
 		}
 		catch(Exception ex)
 		{
@@ -4469,6 +4475,111 @@ public class RestServicePortfolio
 		{
 			dataProvider.disconnect();
 		}
+	}
+
+	/**
+	 *	Get users by usergroup
+	 *	GET /rest/api/usersgroups
+	 *	parameters:
+	 *	return:
+	 **/
+	@Path("/usersgroups")
+	@PUT
+	public String putUserInUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user)
+	{
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+
+		try
+		{
+			int response = -1;
+			response = dataProvider.putUserInUserGroup(user, group, ui.userId);
+			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
+
+			return "";
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			dataProvider.disconnect();
+		}
+	}
+
+	/**
+	 *	Get users by usergroup
+	 *	GET /rest/api/usersgroups
+	 *	parameters:
+	 *	return:
+	 **/
+	@Path("/usersgroups")
+	@GET
+	public String getUsersByUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group)
+	{
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+
+		String xmlUsers = "";
+		try
+		{
+			if( group == null )
+				xmlUsers = dataProvider.getUserGroupList(ui.userId);
+			else
+				xmlUsers = dataProvider.getUsersByUserGroup(group, ui.userId);
+			logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			dataProvider.disconnect();
+		}
+
+		return xmlUsers;
+	}
+
+	/**
+	 *	Get users by usergroup
+	 *	GET /rest/api/usersgroups
+	 *	parameters:
+	 *	return:
+	 **/
+	@Path("/usersgroups")
+	@DELETE
+	public String deleteUsersByUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") int group, @QueryParam("user") Integer user)
+	{
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		String response = "";
+
+		try
+		{
+			if( user == null )
+				response = dataProvider.deleteUsersGroups(group, ui.userId);
+			else
+				response = dataProvider.deleteUsersFromUserGroups(user, group, ui.userId);
+			logRestRequest(httpServletRequest, "", response, Status.OK.getStatusCode());
+
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			dataProvider.disconnect();
+		}
+		return response;
 	}
 
 	/********************************************************/
@@ -4539,6 +4650,14 @@ public class RestServicePortfolio
 	}
 
 	/********************************************************/
+	/**
+	 * ######  #######   ###   ##   ## #######  #####
+	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
+	 * ##   ##    #    ##      ##   ##    #    ##
+	 * ######     #    ##  ### #######    #     #####
+	 * ##   ##    #    ##   ## ##   ##    #         ##
+	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
+	 * ##   ## #######   ###   ##   ##    #     #####
 	/** Partie groupe de droits et utilisateurs            **/
 	/********************************************************/
 
