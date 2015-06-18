@@ -154,7 +154,6 @@ public interface DataProvider {
 	public String getUserGroupByPortfolio(String portfolioUuid, int userId);
 	public Object getUsers(int userId) throws Exception;
 	public String getUsersByRole(int userId, String portfolioUuid, String role) throws SQLException;
-	public String getUsersByGroup(int userId, int groupId) throws SQLException;
 
 	public Object putUser(int userId,String oAuthToken,String oAuthSecret) throws Exception;
 	public String putInfUser(int userId, int userid2, String xmlPortfolio) throws SQLException;
@@ -176,20 +175,22 @@ public interface DataProvider {
 
 	/// Relatif aux groupe d'utilisateurs
 	public boolean isUserMemberOfGroup(int userId, int groupId);
-	public String getGroupsUser(int userId, int userid2);
-	public String getUsersByGroup(int userId);
+	public String getRoleUser(int userId, int userid2);
+	public String getUserGroupList(int userId);
+	public String getUsersByUserGroup(int userGroupId, int userId);
 	public String getGroupsByRole(int userId, String portfolioUuid, String role);
 	public String getGroupsPortfolio(String portfolioUuid, int userId);
 	public Integer getRoleByNode( int userId, String nodeUuid, String role );
 
 	public Integer putUserGroup(String siteGroupId, String userId);
+	public Integer putUserInUserGroup(int user, int siteGroupId, int currentUid);
 
 	public Object postGroup(String xmlgroup, int userId) throws Exception ;
 	public boolean postGroupsUsers(int user, int userId, int groupId);
-	public String postUsersGroupsUser(int userId, int usersgroup, int userid2);
+	public int postUserGroup(String label, int userid);
 
-	public String deleteUsersGroups(int userId, int usersgroup);
-	public String deleteUsersGroupsUser(int userId, int usersgroup, int userid2);
+	public String deleteUsersGroups(int usersgroup, int currentUid);
+	public String deleteUsersFromUserGroups(int userId, int usersgroup, int currentUid);
 
 	/// Relatif aux groupe de droits
 	public Object getGroupRights(int userId, int groupId) throws Exception;
