@@ -187,9 +187,9 @@ public interface DataProvider {
 
 	public Object postGroup(String xmlgroup, int userId) throws Exception ;
 	public boolean postGroupsUsers(int user, int userId, int groupId);
-	public String postUserGroup(String label, int userid);
+	public int postUserGroup(String label, int userid);
 
-	public String deleteUsersGroups(int userId, int usersgroup);
+	public String deleteUsersGroups(int usersgroup, int currentUid);
 	public String deleteUsersFromUserGroups(int userId, int usersgroup, int currentUid);
 
 	/// Relatif aux groupe de droits

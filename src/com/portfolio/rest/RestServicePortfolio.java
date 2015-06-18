@@ -4452,14 +4452,14 @@ public class RestServicePortfolio
 	 **/
 	@Path("/usersgroups")
 	@POST
-	public String postUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user)
+	public String postUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
 		try
 		{
 			int response = -1;
-			response = dataProvider.putUserInUserGroup(user, group, ui.userId);
+			response = dataProvider.postUserGroup(groupname, ui.userId);
 			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
 
 			return "";

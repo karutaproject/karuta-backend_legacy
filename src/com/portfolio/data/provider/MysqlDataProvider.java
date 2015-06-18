@@ -12931,17 +12931,43 @@ public class MysqlDataProvider implements DataProvider {
   /** Managing and listing user groups
 	/********************************************************/
 	@Override
-	public String postUserGroup(String label, int userid)
+	public int postUserGroup(String label, int userid)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		try
+		{
+			sql = "INSERT INTO  * FROM credential_group(label) VALUE(?)";
+			st = connection.prepareStatement(sql);
+			st.setString(1, label);
+			res = st.executeQuery();
+		} catch (SQLException e)
+		{
+			logger.error(e.getMessage());
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
+		return 0;
 	}
 
 	@Override
 	public String getUserGroupList( int userId )
 	{
 		String sql = "";
-		PreparedStatement st;
+		PreparedStatement st = null;
 		ResultSet res = null;
 
 		String result = "<groups>";
@@ -12961,6 +12987,17 @@ public class MysqlDataProvider implements DataProvider {
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
 		}
 
 		result += "</groups>";
@@ -12969,33 +13006,43 @@ public class MysqlDataProvider implements DataProvider {
 	}
 	
 	@Override
-	public String getUsersByUserGroup(int userId, int groupId)
+	public String getUsersByUserGroup(int userGroupId, int userId)
 	{
 		String sql = "";
-		PreparedStatement st;
+		PreparedStatement st = null;
 		ResultSet res = null;
 
-		String result = "<groups>";
+		String result = "<group id=\""+userGroupId+"\">";
 		try
 		{
-			sql = "SELECT * FROM credential_group";
+			sql = "SELECT * FROM credential_group_members WHERE cg=?";
 			st = connection.prepareStatement(sql);
-			st.setInt(1, groupId);
+			st.setInt(1, userGroupId);
 			res = st.executeQuery();
 
 			while(res.next())
 			{
-				result +="<group ";
-				result += DomUtils.getXmlAttributeOutput("cg", res.getString("cg"))+" ";
+				result +="<user";
+				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("userid"))+" ";
 				result += ">";
-				result += DomUtils.getXmlElementOutput("label", res.getString("label"));
-				result += "</group>";
+				result += "</user>";
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
 
-		result += "</groups>";
+		result += "</group>";
 
 		return result;
 	}
@@ -13003,20 +13050,104 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Integer putUserInUserGroup(int user, int siteGroupId, int currentUid)
 	{
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		try
+		{
+			sql = "INSERT INTO credential_group_members(cg, userid) VALUES(?, ?)";
+			st = connection.prepareStatement(sql);
+			st.setInt(1, siteGroupId);
+			st.setInt(2, user);
+			res = st.executeQuery();
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
 		return 0;
 	}
 	
 	@Override
-	public String deleteUsersGroups(int userId, int usersgroup)
+	public String deleteUsersGroups(int usersgroup, int currentUid)
 	{
-		// TODO Auto-generated method stub
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		try
+		{
+			connection.setAutoCommit(false);
+			
+			sql = "DELETE FROM credential_group WHERE cg=?";
+			st = connection.prepareStatement(sql);
+			st.setInt(1, usersgroup);
+			res = st.executeQuery();
+			
+			sql = "DELETE FROM credential_group_members WHERE cg=?";
+			st = connection.prepareStatement(sql);
+			st.setInt(1, usersgroup);
+			res = st.executeQuery();
+			
+			connection.setAutoCommit(true);
+
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
 		return null;
 	}
 
 	@Override
-	public String deleteUsersFromUserGroups(int userId, int usersgroup, int userid2)
+	public String deleteUsersFromUserGroups(int userId, int usersgroup, int currentUid)
 	{
-		// TODO Auto-generated method stub
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		try
+		{
+			sql = "DELETE FROM credential_group_members WHERE cg=? AND userid=?";
+			st = connection.prepareStatement(sql);
+			st.setInt(1, usersgroup);
+			st.setInt(2, userId);
+			res = st.executeQuery();
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
 		return null;
 	}
 

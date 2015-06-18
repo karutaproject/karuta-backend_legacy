@@ -605,21 +605,21 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deleteUsersGroups(int userId, int usersgroup) {
+	public String deleteUsersGroups(int userId, int usersgroup, int currentUid) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String deleteUsersFromUserGroups(int userId, int usersgroup, int userid2) {
+	public String deleteUsersFromUserGroups(int userId, int usersgroup, int currentUid) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String postUserGroup(String label, int userid) {
+	public int postUserGroup(String label, int userid) {
 		// TODO Auto-generated method stub
-		return null;
+		return -1;
 	}
 
 	@Override
