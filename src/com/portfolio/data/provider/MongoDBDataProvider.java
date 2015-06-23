@@ -605,7 +605,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deleteUsersGroups(int userId, int usersgroup, int currentUid) {
+	public String deleteUsersGroups(int usersgroup, int currentUid) {
 		// TODO Auto-generated method stub
 		return null;
 	}
