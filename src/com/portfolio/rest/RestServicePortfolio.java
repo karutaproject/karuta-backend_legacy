@@ -4445,24 +4445,27 @@ public class RestServicePortfolio
   /** Managing and listing user groups
 	/********************************************************/
 	/**
-	 *	Get users by usergroup
-	 *	GET /rest/api/usersgroups
+	 *	Create a new user group
+	 *	POST /rest/api/usersgroups
 	 *	parameters:
+	 *	 - name: Name of the group we are creating
 	 *	return:
+	 *   - groupid
 	 **/
 	@Path("/usersgroups")
 	@POST
-	public String postUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname)
+	public int postUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		int response = -1;
 
 		try
 		{
-			int response = -1;
 			response = dataProvider.postUserGroup(groupname, ui.userId);
 			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
-
-			return "";
+			
+			if( response == -1 )
+				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Error in creation");
 		}
 		catch(Exception ex)
 		{
@@ -4475,13 +4478,18 @@ public class RestServicePortfolio
 		{
 			dataProvider.disconnect();
 		}
+
+		return response;
 	}
 
 	/**
-	 *	Get users by usergroup
-	 *	GET /rest/api/usersgroups
+	 *	Put a user in user group
+	 *	PUT /rest/api/usersgroups
 	 *	parameters:
+	 *	 - group: group id
+	 *	 - user: user id
 	 *	return:
+	 *	 Code 200
 	 **/
 	@Path("/usersgroups")
 	@PUT
@@ -4511,10 +4519,24 @@ public class RestServicePortfolio
 	}
 
 	/**
-	 *	Get users by usergroup
+	 *	Get users by usergroup, or if there's no group id give, give the list of user group
 	 *	GET /rest/api/usersgroups
 	 *	parameters:
+	 *	 - group: group id
 	 *	return:
+	 *	 - Without group id
+	 *		<groups>
+	 *			<group id={groupid}>
+	 *				<label>{group name}</label>
+	 *			</group>
+	 *			...
+	 *		</groups>
+	 *
+	 *	 - With group id
+	 *		<group id={groupid}>
+	 *			<user id={userid}></user>
+	 *			...
+	 *		</group>
 	 **/
 	@Path("/usersgroups")
 	@GET
@@ -4547,10 +4569,13 @@ public class RestServicePortfolio
 	}
 
 	/**
-	 *	Get users by usergroup
-	 *	GET /rest/api/usersgroups
+	 *	Remote a user from a user group, or remove a usergroup
+	 *	DELETE /rest/api/usersgroups
 	 *	parameters:
+	 *	 - group: group id
+	 *	 - user: user id
 	 *	return:
+	 *	 Code 200
 	 **/
 	@Path("/usersgroups")
 	@DELETE

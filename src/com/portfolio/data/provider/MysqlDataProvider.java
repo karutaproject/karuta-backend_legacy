@@ -12935,13 +12935,21 @@ public class MysqlDataProvider implements DataProvider {
 		String sql = "";
 		PreparedStatement st = null;
 		ResultSet res = null;
+		int groupid = -1;
 
 		try
 		{
 			sql = "INSERT INTO  * FROM credential_group(label) VALUE(?)";
-			st = connection.prepareStatement(sql);
+			if (dbserveur.equals("oracle"))
+				st = connection.prepareStatement(sql, new String[]{"cg"});
+			else
+				st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			st.setString(1, label);
-			res = st.executeQuery();
+			st.executeUpdate();
+			res = st.getGeneratedKeys();
+			if( res.next() )
+				groupid = res.getInt(1);
+			
 		} catch (SQLException e)
 		{
 			logger.error(e.getMessage());
@@ -12959,7 +12967,7 @@ public class MysqlDataProvider implements DataProvider {
       catch( SQLException e ){ e.printStackTrace(); }
 		}
 		
-		return 0;
+		return groupid;
 	}
 
 	@Override
