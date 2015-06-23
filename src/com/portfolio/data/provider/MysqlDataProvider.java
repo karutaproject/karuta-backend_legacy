@@ -315,7 +315,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql += "SELECT bin2uuid(p.portfolio_id) AS portfolio_id, bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_user_id, p.modif_date, p.active, p.user_id, TO_CHAR(r.content) AS content ";
 			sql += "FROM portfolio p, node n, resource_table r " +
 					"WHERE p.root_node_uuid=n.node_uuid AND n.res_res_node_uuid=r.node_uuid ";
-			sql += "AND (p.user_id = ? OR p.modif_user_id = ?)";	// Param 1,2
+			sql += "AND (p.modif_user_id = ?)";	// Param 1
 			if(portfolioActive) sql += "AND p.active = 1 "; else sql += "AND p.active = 0 ";
 
 			sql += "UNION ALL ";
@@ -335,7 +335,7 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN group_right_info gri2 ON gri2.grid=gi2.grid " +
 						"LEFT JOIN portfolio p2 ON gri2.portfolio_id=p2.portfolio_id " +
 						"WHERE p.root_node_uuid=n.node_uuid AND n.res_res_node_uuid=r.node_uuid AND " +
-						"p.portfolio_id=p2.portfolio_id AND gu.userid=? AND gu2.userid=? ";	// Param 3,4
+						"p.portfolio_id=p2.portfolio_id AND gu.userid=? AND gu2.userid=? ";	// Param 2,3
 			}
 			// Portfolio we have received some specific rights to it
 			else
@@ -349,7 +349,7 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN group_right_info gri ON gri.grid=gi.grid " +
 						"LEFT JOIN portfolio p ON gri.portfolio_id=p.portfolio_id " +
 						"WHERE p.root_node_uuid=n.node_uuid AND n.res_res_node_uuid=r.node_uuid " +
-						"AND gu.userid=? ";	// Param 3
+						"AND gu.userid=? ";	// Param 2
 			}
 
 			if(portfolioActive) sql += "  AND p.active = 1 "; else sql += "  AND p.active = 0 ";
@@ -365,15 +365,14 @@ public class MysqlDataProvider implements DataProvider {
 
 			st = connection.prepareStatement(sql);
 			st.setInt(1, userId);	// From ownership
-			st.setInt(2, userId);	// From rights to modify
 			if( substid == 0 )
 			{
-				st.setInt(3, userId);	// From specific rights given
+				st.setInt(2, userId);	// From specific rights given
 			}
 			else
 			{
-				st.setInt(3, substid);	// Portfolio that substitution and
-				st.setInt(4, userId);	// current user can acess 
+				st.setInt(2, substid);	// Portfolio that substitution and
+				st.setInt(3, userId);	// current user can acess 
 			}
 			//			  if(userId!=null) st.setInt(3, userId);
 
