@@ -120,6 +120,17 @@
 
 
 	<servlet>
+		<description></description>
+		<display-name>Logging service</display-name>
+		<servlet-name>LogginService</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.LoggingService</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LogginService</servlet-name>
+		<url-pattern>/logging</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<servlet-name>LTI</servlet-name>
 		<servlet-class>com.portfolio.security.LTIServlet</servlet-class>
 	</servlet>
