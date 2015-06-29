@@ -10364,7 +10364,7 @@ public class MysqlDataProvider implements DataProvider {
 					st.setString(2, role);
 					st.executeUpdate();
 					rs = st.getGeneratedKeys();
-					if( rs.next() ){ retval = rs.getInt(1); }
+					if( rs.next() ){ group = rs.getInt(1); }
 				}
 			}
 		}
