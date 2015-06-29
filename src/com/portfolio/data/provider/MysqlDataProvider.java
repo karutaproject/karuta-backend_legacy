@@ -5222,7 +5222,7 @@ public class MysqlDataProvider implements DataProvider {
 	//					"node_children_uuid varchar(10000), " +	/// FIXME Will break if we try to import a really wide tree
 						"node_order int(12) NOT NULL, " +
 	//					"metadata varchar(255) NOT NULL, " +
-	//					"metadata_wad varchar(255) NOT NULL, " +
+						"metadata_wad varchar(2048) NOT NULL, " +
 	//					"metadata_epm varchar(255) NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
@@ -5255,7 +5255,7 @@ public class MysqlDataProvider implements DataProvider {
 //						"node_children_uuid CLOB, " +
 						"node_order NUMBER(12) NOT NULL, " +
 //						"metadata CLOB DEFAULT NULL, " +
-//						"metadata_wad CLOB DEFAULT NULL, " +
+						"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
 //						"metadata_epm CLOB DEFAULT NULL, " +
 						"res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_res_node_uuid RAW(16) DEFAULT NULL, " +
@@ -5293,7 +5293,7 @@ public class MysqlDataProvider implements DataProvider {
 //						"node_children_uuid varchar(10000), " +	/// FIXME Will break if we try to import a really wide tree
 						"node_order int(12) NOT NULL, " +
 //						"metadata varchar(255) NOT NULL, " +
-//						"metadata_wad varchar(255) NOT NULL, " +
+						"metadata_wad varchar(2048) NOT NULL, " +
 //						"metadata_epm varchar(255) NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
@@ -5326,7 +5326,7 @@ public class MysqlDataProvider implements DataProvider {
 //						"node_children_uuid CLOB, " +
 						"node_order NUMBER(12) NOT NULL, " +
 //						"metadata CLOB DEFAULT NULL, " +
-//						"metadata_wad CLOB DEFAULT NULL, " +
+						"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
 //						"metadata_epm CLOB DEFAULT NULL, " +
 						"res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_res_node_uuid RAW(16) DEFAULT NULL, " +
@@ -5421,7 +5421,7 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")){
 					sql = "INSERT /*+ ignore_row_on_dupkey_index(node_uuid)*/ INTO t_node_cache ";
 				}
-				sql += "SELECT n.node_uuid, n.node_parent_uuid, n.node_order, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
+				sql += "SELECT n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
 						"FROM node n, portfolio p " +
 						"WHERE n.portfolio_id=p.portfolio_id AND n.portfolio_id=(" +
 						"SELECT n1.portfolio_id " +
@@ -5451,7 +5451,7 @@ public class MysqlDataProvider implements DataProvider {
 			t1d = System.currentTimeMillis();
 
 			sql = "INSERT INTO t_data_node " +
-					"SELECT uuid2bin(UUID()), node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+					"SELECT uuid2bin(UUID()), node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 					"FROM t_node_cache n " +
 					"WHERE n.portfolio_id=uuid2bin(?)";
 			st = connection.prepareStatement(sql);
