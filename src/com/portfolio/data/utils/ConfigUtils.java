@@ -36,7 +36,7 @@ public class ConfigUtils
 		{
 			String servName = config.getServletContext().getContextPath();
 			path = config.getServletContext().getRealPath("/");
-			File base = new File(path+"../..");
+			File base = new File(path+".."+File.separatorChar+"..");
 			String tomcatRoot = base.getCanonicalPath();
 			path = tomcatRoot + servName +"_config"+File.separatorChar;
 
