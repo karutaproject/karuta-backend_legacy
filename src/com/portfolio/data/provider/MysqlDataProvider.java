@@ -11682,6 +11682,16 @@ public class MysqlDataProvider implements DataProvider {
 //					Node isPriv = metaAttr.getNamedItem("private");
 //					isPriv.setNodeValue("Y");
 				}
+				
+				/// We then update the metadata notifying it was submitted
+				rootMeta.setAttribute("submitted", "Y");
+				String updatedMeta = DomUtils.getNodeAttributesString(rootMeta);
+				sql = "UPDATE node SET metadata_wad=? WHERE node_uuid=uuid2bin(?)";
+				st = connection.prepareStatement(sql);
+				st.setString(1, updatedMeta);
+				st.setString(2, nodeUuid);
+				st.executeUpdate();
+				st.close();
 			}
 
 			val = "OK";
@@ -11979,6 +11989,15 @@ public class MysqlDataProvider implements DataProvider {
 						role.setNotify(merge);
 					}
 
+					/// Now remove mention to being submitted
+					attribNode.removeAttribute("submitted");
+					String resetMeta = DomUtils.getNodeAttributesString(attribNode);
+					sql = "UPDATE node SET metadata_wad=? WHERE node_uuid=uuid2bin(?)";
+					PreparedStatement stu = connection.prepareStatement(sql);
+					stu.setString(1, resetMeta);
+					stu.setString(2, uuid);
+					stu.executeUpdate();
+					stu.close();
 				}
 				catch( Exception e )
 				{
