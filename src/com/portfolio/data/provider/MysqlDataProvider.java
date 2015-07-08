@@ -9025,8 +9025,9 @@ public class MysqlDataProvider implements DataProvider {
 		for(int i=0;i<allFiles.length;i++)
 		{
 			String fullPath = allFiles[i];
-			String tmpFileName = allFiles[i].substring(allFiles[i].lastIndexOf(File.separator)+1);
+			String tmpFileName = fullPath.substring(fullPath.lastIndexOf(File.separator)+1);
 
+			if( !tmpFileName.contains("_") ) continue;	// We want ressources now, they have '_' in their name
 			int index = tmpFileName.indexOf("_");
 			if( index == -1 )
 				index =  tmpFileName.indexOf(".");
