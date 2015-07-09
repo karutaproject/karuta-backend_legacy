@@ -15,10 +15,8 @@
 
 package com.portfolio.data.utils;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Properties;
 
@@ -27,7 +25,6 @@ import javax.servlet.ServletContext;
 import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +32,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 import com.portfolio.data.provider.DataProvider;
 
@@ -58,6 +54,14 @@ public class SqlUtils
 		String dataProviderName = ConfigUtils.get("dataProviderClass");
 		DataProvider dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
+		Connection connection = getConnection(application);
+		dataProvider.setConnection(connection);
+		
+		return dataProvider;
+	}
+
+	public static Connection getConnection( ServletContext servContext ) throws Exception
+	{
 		// Try to initialize Datasource
 		InitialContext cxt = new InitialContext();
 		if ( cxt == null ) {
@@ -70,19 +74,10 @@ public class SqlUtils
 			throw new Exception("Data  jdbc/portfolio-backend source not found!");
 		}
 
-		if( ds == null )	// Case where we can't deploy context.xml
-		{
-			Connection con = SqlUtils.getConnection(application);
-			dataProvider.setConnection(con);
-		}
-		else
-			dataProvider.setConnection(ds.getConnection());
-
-		return dataProvider;
-	}
-
-	public static Connection getConnection( ServletContext servContext ) throws ParserConfigurationException, SAXException, IOException, SQLException, ClassNotFoundException
-	{
+		if( ds != null )	// Return the connection direction
+			return ds.getConnection();
+		
+		//// Case where we can't deploy context.xml
 		// Open META-INF/context.xml
 		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
