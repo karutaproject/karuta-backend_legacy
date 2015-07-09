@@ -13585,6 +13585,55 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
+	
+	/********************************************************/
+	/**
+	 * ######   #####  ######  #######   ###   ######
+	 * ##   ## ##   ## ##   ##    #    ##   ## ##   ##
+	 * ##   ## ##   ## ##   ##    #    ##      ##   ##
+	 * ######  ##   ## ######     #    ##  ### ######
+	 * ##      ##   ## ## ##      #    ##   ## ##   ##
+	 * ##      ##   ## ##  ##     #    ##   ## ##   ##
+	 * ##       #####  ##   ##    #      ###   ##   ##
+  /** Managing and listing portfolios
+	/********************************************************/
+	@Override
+	public int postPortfolioGroup( Connection c, String groupname, int userId )
+	{
+		return 0;
+	}
+	
+	@Override
+	public String getPortfolioGroupList( Connection c, int userId )
+	{
+		return null;
+	}
+
+	@Override
+	public String getPortfolioByPortfolioGroup( Connection c, Integer group, int userId )
+	{
+		return null;
+	}
+
+	@Override
+	public String deletePortfolioGroups( Connection c, int group, int userId )
+	{
+		return null;
+	}
+
+	@Override
+	public int putPortfolioInGroup( Connection c, Integer uuid, Integer group, int userId )
+	{
+		return 0;
+	}
+
+	@Override
+	public String deletePortfolioFromPortfolioGroups( Connection c, Integer uuid, int group, int userId )
+	{
+		return null;
+	}
+
+
 	@Override
 	public String getRessource(Connection c, String nodeUuid, int userId, int groupId, String type) throws SQLException
 	{
