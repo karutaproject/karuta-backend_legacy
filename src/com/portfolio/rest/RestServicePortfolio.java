@@ -125,7 +125,7 @@ public class RestServicePortfolio
 //		int groupId = -1;
 	}
 
-	DataSource ds;
+//	DataSource ds;
 	DataProvider dataProvider;
 	Credential credential = null;
 	int logRestRequests = 0;
@@ -201,10 +201,12 @@ public class RestServicePortfolio
 
 			servConfig = sc;
 			servContext = context;
-			String dataProviderName  =  ConfigUtils.get("dataProviderClass");
-			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
+			dataProvider = SqlUtils.initProvider(context, null);
+//			String dataProviderName  =  ConfigUtils.get("dataProviderClass");
+//			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
 			// Try to initialize Datasource
+			/*
 			InitialContext cxt = new InitialContext();
 			if ( cxt == null ) {
 				throw new Exception("no context found!");
@@ -215,6 +217,12 @@ public class RestServicePortfolio
 			if ( ds == null ) {
 				throw new Exception("Data  jdbc/portfolio-backend source not found!");
 			}
+			//*/
+		}
+		catch( NullPointerException e )
+		{
+//			e.printStackTrace();
+//			logger.error("COULDN'T LOAD CONFIGURATION FILE AT: "+ConfigUtils.getFilepath());
 		}
 		catch( Exception e )
 		{
@@ -258,7 +266,8 @@ public class RestServicePortfolio
 	{
 		try
 		{
-			Connection con = null;
+			Connection con = SqlUtils.getConnection(servContext);
+			/*
 			if( ds == null )	// Case where we can't deploy context.xml
 			{
 				con = SqlUtils.getConnection(servContext);
@@ -269,6 +278,8 @@ public class RestServicePortfolio
 				con = ds.getConnection();
 				dataProvider.setConnection(con);
 			}
+			//*/
+			dataProvider.setConnection(con);
 //			dataProvider.setDataSource(ds);
 
 			credential = new Credential(con);
@@ -294,7 +305,7 @@ public class RestServicePortfolio
 		catch ( Exception e )
 		{
 			logger.error("CAN'T CREATE CONNECTION: "+e.getMessage());
-			e.printStackTrace();
+//			e.printStackTrace();
 		}
 	}
 
@@ -3901,6 +3912,7 @@ public class RestServicePortfolio
 		event.eventType = KEvent.EventType.LOGIN;
 		event.inputData = xmlCredential;
 		String retVal = "";
+		int status = 0;
 
 		try
 		{
@@ -3972,15 +3984,20 @@ public class RestServicePortfolio
 		}
 		catch(Exception ex)
 		{
+			status = 500;
+			retVal = ex.getMessage();
 			logger.error(ex.getMessage());
-			ex.printStackTrace();
+//			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlCredential, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+//			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			if( dataProvider != null )
+				dataProvider.disconnect();
 		}
+		
+		return Response.status(status).entity(retVal).type(MediaType.APPLICATION_XML).build();
 	}
 
 	/**

@@ -54,8 +54,8 @@ public class SqlUtils
 		String dataProviderName = ConfigUtils.get("dataProviderClass");
 		DataProvider dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
-		Connection connection = getConnection(application);
-		dataProvider.setConnection(connection);
+//		Connection connection = getConnection(application);
+//		dataProvider.setConnection(connection);
 		
 		return dataProvider;
 	}
@@ -68,13 +68,18 @@ public class SqlUtils
 			throw new Exception("no context found!");
 		}
 
+		DataSource ds = null;
 		/// Init this here, might fail depending on server hosting
-		DataSource ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
-		if ( ds == null ) {
-			throw new Exception("Data  jdbc/portfolio-backend source not found!");
+		try
+		{
+			ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
 		}
-
-		if( ds != null )	// Return the connection direction
+		catch( Exception e )
+		{
+			logger.info("Might not be possible to load context.xml: "+e.getMessage());
+		}
+		
+		if( ds != null )	// Return the connection directly
 			return ds.getConnection();
 		
 		//// Case where we can't deploy context.xml
