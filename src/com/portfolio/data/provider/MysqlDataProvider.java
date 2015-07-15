@@ -2644,7 +2644,7 @@ public class MysqlDataProvider implements DataProvider {
 			time1 = System.currentTimeMillis();
 
 			// Cas admin ou partage totale
-			if(credential.isAdmin(userId) || credential.isCompleteShare(userId, rootNodeUuid) || credential.isDesigner(userId, rootNodeUuid))
+			if(credential.isAdmin(userId) || credential.isDesigner(userId, rootNodeUuid))
 			{
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
