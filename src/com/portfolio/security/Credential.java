@@ -1377,41 +1377,5 @@ public class Credential
 		return false;
 	}
 
-
-	public boolean isCompleteShare( Integer userId, String uuid )
-	{
-		boolean status = false;
-		if( userId == null )
-			return status;
-
-		ResultSet rs=null;
-		PreparedStatement stmt=null;
-		try
-		{
-			String query = "SELECT cs.userid " +
-					"FROM complete_share cs " +
-					"LEFT JOIN node n ON cs.portfolio_id=n.portfolio_id " +
-					"WHERE cs.userid=? " +
-					"AND n.node_uuid=uuid2bin(?)";
-			stmt=connection.prepareStatement(query);
-			stmt.setInt(1, userId);
-			stmt.setString(2, uuid);
-			rs = stmt.executeQuery();
-
-			if( rs.next() )
-				status = true;
-		}
-		catch( SQLException e )
-		{
-			e.printStackTrace();
-		}
-		finally
-		{
-			if( stmt != null ) try{ stmt.close(); }catch( SQLException e ){ e.printStackTrace(); }
-			if( rs != null ) try{ rs.close(); }catch( SQLException e ){ e.printStackTrace(); }
-		}
-
-		return status;
-	}
 }
 

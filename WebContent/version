@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <versions>
 	<version id='backend'>
-		<number>1.1.0.1</number>
-		<date>2015-07-08</date>
+		<number>1.1.0.2</number>
+		<date>2015-07-15</date>
 	</version>
 	<version id='fileserver'>
-		<number>1.1.0.0</number>
-		<date>2015-04-22</date>
+		<number>1.1.0.1</number>
+		<date>2015-07-14</date>
 	</version>
 </versions>
