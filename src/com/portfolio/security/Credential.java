@@ -307,7 +307,7 @@ public class Credential
 				nodeRight.submit = true;
 				nodeRight.delete = true;
 			}
-			else if( isCompleteShare(userId, node_uuid) || isDesigner(userId, node_uuid) )	/// Droits via le partage totale (obsolète) ou si c'est designer
+			else if( isDesigner(userId, node_uuid) )	/// Droits via le partage totale (obsolète) ou si c'est designer
 			{
 				nodeRight.read = true;
 				nodeRight.write = true;
