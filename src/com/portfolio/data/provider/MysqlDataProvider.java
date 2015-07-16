@@ -3629,6 +3629,7 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object deleteNode(String nodeUuid, int userId, int groupId)
 	{
+		/// FIXME: This method is taking time
 		NodeRight nodeRight = credential.getNodeRight(userId,groupId,nodeUuid, Credential.DELETE);
 
 		if(!nodeRight.delete)
@@ -5190,6 +5191,183 @@ public class MysqlDataProvider implements DataProvider {
 		return newPortfolioUuid;
 	}
 
+	private String checkCache( String code ) throws SQLException
+	{
+		String sql = "";
+		PreparedStatement st;
+		
+		long t1=0, t1a=0; long t1b=0; long t1c=0; long t1d=0; 
+		
+		t1 = System.currentTimeMillis();
+		
+		/// Cache
+		if (dbserveur.equals("mysql")){
+			sql = "CREATE TABLE IF NOT EXISTS t_node_cache(" +
+					"node_uuid binary(16)  NOT NULL, " +
+					"node_parent_uuid binary(16) DEFAULT NULL, " +
+//					"node_children_uuid varchar(10000), " +	/// FIXME Will break if we try to import a really wide tree
+					"node_order int(12) NOT NULL, " +
+//					"metadata varchar(255) NOT NULL, " +
+					"metadata_wad varchar(2048) NOT NULL, " +
+//					"metadata_epm varchar(255) NOT NULL, " +
+					"res_node_uuid binary(16) DEFAULT NULL, " +
+					"res_res_node_uuid binary(16) DEFAULT NULL, " +
+					"res_context_node_uuid binary(16)  DEFAULT NULL, " +
+					"shared_res int(1) NOT NULL, " +
+					"shared_node int(1) NOT NULL, " +
+					"shared_node_res int(1) NOT NULL, " +
+					"shared_res_uuid BINARY(16)  NULL, " +
+					"shared_node_uuid BINARY(16) NULL, " +
+					"shared_node_res_uuid BINARY(16) NULL, " +
+					"asm_type varchar(50) DEFAULT NULL, " +
+					"xsi_type varchar(50)  DEFAULT NULL, " +
+					"semtag varchar(250) DEFAULT NULL, " +
+					"semantictag varchar(250) DEFAULT NULL, " +
+					"label varchar(250)  DEFAULT NULL, " +
+					"code varchar(250)  DEFAULT NULL, " +
+					"descr varchar(250)  DEFAULT NULL, " +
+					"format varchar(30) DEFAULT NULL, " +
+					"modif_user_id int(12) NOT NULL, " +
+					"modif_date timestamp NULL DEFAULT NULL, " +
+					"portfolio_id binary(16) DEFAULT NULL, " +
+					"PRIMARY KEY (`node_uuid`)) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+			st = connection.prepareStatement(sql);
+			st.execute();
+			st.close();
+		} else if (dbserveur.equals("oracle")){
+			String v_sql = "CREATE GLOBAL TABLE t_node_cache(" +
+					"node_uuid RAW(16)  NOT NULL, " +
+					"node_parent_uuid RAW(16) DEFAULT NULL, " +
+//					"node_children_uuid CLOB, " +
+					"node_order NUMBER(12) NOT NULL, " +
+//					"metadata CLOB DEFAULT NULL, " +
+					"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
+//					"metadata_epm CLOB DEFAULT NULL, " +
+					"res_node_uuid RAW(16) DEFAULT NULL, " +
+					"res_res_node_uuid RAW(16) DEFAULT NULL, " +
+					"res_context_node_uuid RAW(16)  DEFAULT NULL, " +
+					"shared_res NUMBER(1) NOT NULL, " +
+					"shared_node NUMBER(1) NOT NULL, " +
+					"shared_node_res NUMBER(1) NOT NULL, " +
+					"shared_res_uuid RAW(16) DEFAULT NULL, " +
+					"shared_node_uuid RAW(16) DEFAULT NULL, " +
+					"shared_node_res_uuid RAW(16) DEFAULT NULL, " +
+					"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
+					"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
+					"semtag VARCHAR2(250 CHAR) DEFAULT NULL, " +
+					"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
+					"label VARCHAR2(250 CHAR)  DEFAULT NULL, " +
+					"code VARCHAR2(250 CHAR)  DEFAULT NULL, " +
+					"descr VARCHAR2(250 CHAR)  DEFAULT NULL, " +
+					"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
+					"modif_user_id NUMBER(12) NOT NULL, " +
+					"modif_date timestamp DEFAULT NULL, " +
+					"portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
+			sql = "{call create_or_empty_table('t_node_cache','"+v_sql+"')}";
+			CallableStatement ocs = connection.prepareCall(sql) ;
+			ocs.execute();
+			ocs.close();
+		}
+		
+		/// Check if we already have the portfolio in cache
+		sql = "SELECT bin2uuid(portfolio_id) FROM t_node_cache WHERE code=?";
+		st = connection.prepareStatement(sql);
+		st.setString(1, code);
+		ResultSet res = st.executeQuery();
+		String portfolioCode = "";
+
+		t1a = System.currentTimeMillis();
+
+		boolean getCache = false;
+		boolean updateCache = false;
+
+		if( res.next() )	/// Cache hit
+		{
+			portfolioCode = res.getString(1);
+			System.out.println("CACHE HIT FOR CODE: "+code+" -> "+portfolioCode);
+			res.close();
+			st.close();
+
+			/// Checking date
+			sql = "SELECT c.modif_date " +
+					"FROM t_node_cache c, portfolio p " +
+					"WHERE c.modif_date = p.modif_date " +
+					"AND c.portfolio_id=p.portfolio_id " +
+					"AND code=?";
+			st = connection.prepareStatement(sql);
+			st.setString(1, code);
+			res = st.executeQuery();
+			if( !res.next() )
+				updateCache = true;
+			res.close();
+			st.close();
+		}
+		else
+		{
+			res.close();
+			st.close();
+			getCache=true;
+		}
+
+		t1b = System.currentTimeMillis();
+
+		if( updateCache )	/// FIXME: Sync problems
+		{
+			System.out.println("FLUSH CACHE FOR CODE: "+code+" -> "+portfolioCode);
+			sql = "DELETE FROM t_node_cache WHERE portfolio_id=uuid2bin(?)";
+			st = connection.prepareStatement(sql);
+			st.setString(1, portfolioCode);
+			st.execute();
+			st.close();
+			getCache=true;
+		}
+
+		t1c = System.currentTimeMillis();
+
+		if( getCache ) 	/// Cache miss, load it
+		{
+			System.out.println("CACHE MISS FOR CODE: "+code);
+
+			/// Also force last date from the portfolio list to all nodes
+			if (dbserveur.equals("mysql")){
+				sql = "INSERT IGNORE INTO t_node_cache ";
+			} else if (dbserveur.equals("oracle")){
+				sql = "INSERT /*+ ignore_row_on_dupkey_index(node_uuid)*/ INTO t_node_cache ";
+			}
+			sql += "SELECT n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
+					"FROM node n, portfolio p " +
+					"WHERE n.portfolio_id=p.portfolio_id AND n.portfolio_id=(" +
+					"SELECT n1.portfolio_id " +
+					"FROM node n1 LEFT JOIN portfolio p ON n1.portfolio_id=p.portfolio_id " +
+					"WHERE n1.code=? AND p.active=1)";
+
+			st = connection.prepareStatement(sql);
+			st.setString(1, code);
+			int insertData = st.executeUpdate();
+			st.close();
+
+			if( insertData == 0 )	// Code isn't found, no need to go further
+				return null;
+
+			sql = "SELECT bin2uuid(portfolio_id) FROM t_node_cache WHERE code=?";
+			st = connection.prepareStatement(sql);
+			st.setString(1, code);
+			res = st.executeQuery();
+
+			res.next();
+			portfolioCode = res.getString(1);
+
+			res.close();
+			st.close();
+		}
+
+		t1d = System.currentTimeMillis();
+
+		System.out.println((t1a-t1)+","+(t1b-t1a)+","+(t1c-t1b)+","+(t1d-t1c));
+		
+		return portfolioCode;
+	}
+	
 	/// FIXME: Oracle part missing
 	@Override
 	public Object postImportNode( MimeType inMimeType, String destUuid, String tag, String code, int userId, int groupId ) throws Exception
@@ -5203,7 +5381,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //		/*
 		long start = System.currentTimeMillis();
-		long t1=0; long t1a=0; long t1b=0; long t1c=0; long t1d=0; long t1e=0; long t2=0; long t3=0; long t4=0; long t5=0;
+		long t1=0; long t1e=0; long t2=0; long t3=0; long t4=0; long t5=0;
 		long t6=0; long t7=0; long t8=0; long t9=0; long t10=0;
 		long t11=0; long t12=0; long t13=0; long t14=0; long t15=0;
 		long t16=0; long t17=0; long t18=0; long t19=0; long t20=0;
@@ -5213,75 +5391,11 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			/// Cache
-			/// TODO: Need to flush if edit date is more recent
-			if (dbserveur.equals("mysql")){
-				sql = "CREATE TABLE IF NOT EXISTS t_node_cache(" +
-						"node_uuid binary(16)  NOT NULL, " +
-						"node_parent_uuid binary(16) DEFAULT NULL, " +
-	//					"node_children_uuid varchar(10000), " +	/// FIXME Will break if we try to import a really wide tree
-						"node_order int(12) NOT NULL, " +
-	//					"metadata varchar(255) NOT NULL, " +
-						"metadata_wad varchar(2048) NOT NULL, " +
-	//					"metadata_epm varchar(255) NOT NULL, " +
-						"res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
-						"shared_res int(1) NOT NULL, " +
-						"shared_node int(1) NOT NULL, " +
-						"shared_node_res int(1) NOT NULL, " +
-						"shared_res_uuid BINARY(16)  NULL, " +
-						"shared_node_uuid BINARY(16) NULL, " +
-						"shared_node_res_uuid BINARY(16) NULL, " +
-						"asm_type varchar(50) DEFAULT NULL, " +
-						"xsi_type varchar(50)  DEFAULT NULL, " +
-						"semtag varchar(250) DEFAULT NULL, " +
-						"semantictag varchar(250) DEFAULT NULL, " +
-						"label varchar(250)  DEFAULT NULL, " +
-						"code varchar(250)  DEFAULT NULL, " +
-						"descr varchar(250)  DEFAULT NULL, " +
-						"format varchar(30) DEFAULT NULL, " +
-						"modif_user_id int(12) NOT NULL, " +
-						"modif_date timestamp NULL DEFAULT NULL, " +
-						"portfolio_id binary(16) DEFAULT NULL, " +
-						"PRIMARY KEY (`node_uuid`)) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
-				st.execute();
-				st.close();
-			} else if (dbserveur.equals("oracle")){
-				String v_sql = "CREATE GLOBAL TABLE t_node_cache(" +
-						"node_uuid RAW(16)  NOT NULL, " +
-						"node_parent_uuid RAW(16) DEFAULT NULL, " +
-//						"node_children_uuid CLOB, " +
-						"node_order NUMBER(12) NOT NULL, " +
-//						"metadata CLOB DEFAULT NULL, " +
-						"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
-//						"metadata_epm CLOB DEFAULT NULL, " +
-						"res_node_uuid RAW(16) DEFAULT NULL, " +
-						"res_res_node_uuid RAW(16) DEFAULT NULL, " +
-						"res_context_node_uuid RAW(16)  DEFAULT NULL, " +
-						"shared_res NUMBER(1) NOT NULL, " +
-						"shared_node NUMBER(1) NOT NULL, " +
-						"shared_node_res NUMBER(1) NOT NULL, " +
-						"shared_res_uuid RAW(16) DEFAULT NULL, " +
-						"shared_node_uuid RAW(16) DEFAULT NULL, " +
-						"shared_node_res_uuid RAW(16) DEFAULT NULL, " +
-						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
-						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
-						"semtag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"label VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"code VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"descr VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
-						"modif_user_id NUMBER(12) NOT NULL, " +
-						"modif_date timestamp DEFAULT NULL, " +
-						"portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
-				sql = "{call create_or_empty_table('t_node_cache','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
-				ocs.execute();
-				ocs.close();
-			}
+			/// Check/update cache
+			String portfolioCode = checkCache(code);
+			
+			if( portfolioCode == null )
+				return "Inexistent selection";
 
 			///// Création des tables temporaires
 			/// Pour la copie de la structure
@@ -5355,103 +5469,15 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			t1 = System.currentTimeMillis();
-
-			/// Check if we already have the portfolio in cache
-			sql = "SELECT bin2uuid(portfolio_id) FROM t_node_cache WHERE code=?";
-			st = connection.prepareStatement(sql);
-			st.setString(1, code);
-			ResultSet res = st.executeQuery();
-			String portfolioCode = "";
-
-			t1a = System.currentTimeMillis();
-
-			boolean getCache = false;
-			boolean updateCache = false;
-
-			if( res.next() )	/// Cache hit
-			{
-				portfolioCode = res.getString(1);
-				System.out.println("CACHE HIT FOR CODE: "+code+" -> "+portfolioCode);
-				res.close();
-				st.close();
-
-				/// Checking date
-				sql = "SELECT c.modif_date " +
-						"FROM t_node_cache c, portfolio p " +
-						"WHERE c.modif_date = p.modif_date " +
-						"AND c.portfolio_id=p.portfolio_id " +
-						"AND code=?";
-				st = connection.prepareStatement(sql);
-				st.setString(1, code);
-				res = st.executeQuery();
-				if( !res.next() )
-					updateCache = true;
-				res.close();
-				st.close();
+			
+			// Copie the whole portfolio from shared cache to local cache
+			sql = "INSERT INTO t_data_node ";
+			if (dbserveur.equals("mysql")){
+				sql += "SELECT uuid2bin(UUID()), ";
+			} else if (dbserveur.equals("oracle")){
+				sql += "SELECT sys_guid(), ";
 			}
-			else
-			{
-				res.close();
-				st.close();
-				getCache=true;
-			}
-
-			t1b = System.currentTimeMillis();
-
-			if( updateCache )	/// FIXME: Sync problems
-			{
-				System.out.println("FLUSH CACHE FOR CODE: "+code+" -> "+portfolioCode);
-				sql = "DELETE FROM t_node_cache WHERE portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
-				st.setString(1, portfolioCode);
-				st.execute();
-				st.close();
-				getCache=true;
-			}
-
-			t1c = System.currentTimeMillis();
-
-			if( getCache ) 	/// Cache miss, load it
-			{
-				System.out.println("CACHE MISS FOR CODE: "+code);
-
-				/// Also force last date from the portfolio list to all nodes
-				if (dbserveur.equals("mysql")){
-					sql = "INSERT IGNORE INTO t_node_cache ";
-				} else if (dbserveur.equals("oracle")){
-					sql = "INSERT /*+ ignore_row_on_dupkey_index(node_uuid)*/ INTO t_node_cache ";
-				}
-				sql += "SELECT n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
-						"FROM node n, portfolio p " +
-						"WHERE n.portfolio_id=p.portfolio_id AND n.portfolio_id=(" +
-						"SELECT n1.portfolio_id " +
-						"FROM node n1 LEFT JOIN portfolio p ON n1.portfolio_id=p.portfolio_id " +
-						"WHERE n1.code=? AND p.active=1)";
-
-				st = connection.prepareStatement(sql);
-				st.setString(1, code);
-				int insertData = st.executeUpdate();
-				st.close();
-
-				if( insertData == 0 )	// Code isn't found, no need to go further
-					return createdUuid;
-
-				sql = "SELECT bin2uuid(portfolio_id) FROM t_node_cache WHERE code=?";
-				st = connection.prepareStatement(sql);
-				st.setString(1, code);
-				res = st.executeQuery();
-
-				res.next();
-				portfolioCode = res.getString(1);
-
-				res.close();
-				st.close();
-			}
-
-			t1d = System.currentTimeMillis();
-
-			sql = "INSERT INTO t_data_node " +
-					"SELECT uuid2bin(UUID()), node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+			sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 					"FROM t_node_cache n " +
 					"WHERE n.portfolio_id=uuid2bin(?)";
 			st = connection.prepareStatement(sql);
@@ -5469,7 +5495,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.setString(1, tag);
 			st.setString(2, portfolioCode);
 
-			res = st.executeQuery();
+			ResultSet res = st.executeQuery();
 			String baseUuid="";
 			String pUuid="";
 			if( res.next() )	// Take the first one declared
@@ -6204,7 +6230,7 @@ public class MysqlDataProvider implements DataProvider {
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
-		System.out.println((t1-start)+","+(t1a-t1)+","+(t1b-t1a)+","+(t1c-t1b)+","+(t1d-t1c)+","+(t1e-t1d)+","+(t2-t1e)+","+(t3-t2)+","+(t4-t3)+","+(t5-t4)+","+(t6-t5)+","+(t7-t6)+","+(t8-t7)+","+(t9-t8)+","+(t10-t9)+","+(t11-t10)+","+(t12-t11)+","+(t13-t12)+","+(t14-t13)+","+(t15-t14)+","+(t16-t15)+","+(t17-t16)+","+(t18-t17)+","+(t19-t18)+","+(t20-t19)+","+(t21-t20)+","+(t22-t21)+","+(t23-t22)+","+(end-t23));
+		System.out.println((t1-start)+","+(t1e-t1)+","+(t2-t1e)+","+(t3-t2)+","+(t4-t3)+","+(t5-t4)+","+(t6-t5)+","+(t7-t6)+","+(t8-t7)+","+(t9-t8)+","+(t10-t9)+","+(t11-t10)+","+(t12-t11)+","+(t13-t12)+","+(t14-t13)+","+(t15-t14)+","+(t16-t15)+","+(t17-t16)+","+(t18-t17)+","+(t19-t18)+","+(t20-t19)+","+(t21-t20)+","+(t22-t21)+","+(t23-t22)+","+(end-t23));
 		/*
 		System.out.println("---- Import ---");
 		System.out.println("d0-1: "+(t1-start));
@@ -6252,7 +6278,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		/*
 		long start = System.currentTimeMillis();
-		long t1=0; long t2=0; long t3=0; long t4=0; long t5=0;
+		long t1=0; long t1a=0; long t2=0; long t3=0; long t4=0; long t5=0;
 		long t6=0; long t7=0; long t8=0; long t9=0; long t10=0;
 		long t11=0; long t12=0; long t13=0; long t14=0; long t15=0;
 		long t16=0; long t17=0; long t18=0; long t19=0; long t20=0;
@@ -6262,27 +6288,12 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			/// On retrouve le uuid du noeud de base dont le tag est inclus dans le code et est actif
-			sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
-					"FROM node n1 " +
-					"LEFT JOIN node n2 ON n1.portfolio_id=n2.portfolio_id " +
-					"LEFT JOIN portfolio p ON p.portfolio_id=n2.portfolio_id " +
-					"WHERE n2.semantictag=? AND n1.code=? " +
-					"AND p.active =1";
-			st = connection.prepareStatement(sql);
-			st.setString(1, tag);
-			st.setString(2, code);
-			ResultSet res = st.executeQuery();
-			String baseUuid="";
-			String pUuid="";
-			if( res.next() )	// On prend le premier, très chic pour l'utilisateur...
-			{
-				baseUuid = res.getString("nUuid");
-				pUuid = res.getString("pUuid");
-			}
-			else
-				return "Selection non existante.";
+			/// Check/update cache
+			String portfolioCode = checkCache(code);
 
+			if( portfolioCode == null )
+				return "Inexistant selection";
+			
 //			t1 = System.currentTimeMillis();
 
 			///// Création des tables temporaires
@@ -6295,7 +6306,7 @@ public class MysqlDataProvider implements DataProvider {
 //						"node_children_uuid blob, " +
 						"node_order int(12) NOT NULL, " +
 //						"metadata text NOT NULL, " +
-//						"metadata_wad text NOT NULL, " +
+						"metadata_wad varchar(2048) NOT NULL, " +
 //						"metadata_epm text NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
@@ -6326,6 +6337,9 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid RAW(16)  NOT NULL, " +
 						"node_parent_uuid RAW(16) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
+//					"metadata CLOB DEFAULT NULL, " +
+						"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
+//					"metadata_epm CLOB DEFAULT NULL, " +
 						"res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_context_node_uuid RAW(16)  DEFAULT NULL, " +
@@ -6352,6 +6366,49 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
+			// Copie the whole portfolio from shared cache to local cache
+			/// Copie de la structure
+			sql = "INSERT INTO t_data_node ";
+			if (dbserveur.equals("mysql")){
+				sql += "SELECT uuid2bin(UUID()), ";
+			} else if (dbserveur.equals("oracle")){
+				sql += "SELECT sys_guid(), ";
+			}
+			sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+					"FROM t_node_cache n " +
+					"WHERE portfolio_id=uuid2bin(?)";
+			st = connection.prepareStatement(sql);
+			st.setString(1, portfolioCode);
+			st.executeUpdate();
+			st.close();
+
+//			t1a = System.currentTimeMillis();
+
+			/// Find the right starting node we want
+			sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
+					"FROM t_data_node n2 " +
+					"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
+			st = connection.prepareStatement(sql);
+			st.setString(1, tag);
+			st.setString(2, portfolioCode);
+
+			ResultSet res = st.executeQuery();
+			String baseUuid="";
+			String pUuid="";
+			if( res.next() )	// Take the first one declared
+			{
+				baseUuid = res.getString("nUuid");
+				pUuid = res.getString("pUuid");
+				res.close();
+				st.close();
+			}
+			else
+			{
+				res.close();
+				st.close();
+				return "Selection non existante.";
+			}
+			
 //			t2 = System.currentTimeMillis();
 
 			/// Pour la copie des données
@@ -6438,20 +6495,6 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t5 = System.currentTimeMillis();
 
-			/// Copie de la structure
-			sql = "INSERT INTO t_data_node(new_uuid, node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid , shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) ";
-			if (dbserveur.equals("mysql")){
-				sql += "SELECT uuid2bin(UUID()), ";
-			} else if (dbserveur.equals("oracle")){
-				sql += "SELECT sys_guid(), ";
-			}
-			sql += "node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid , shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
-					"FROM node n " +
-					"WHERE portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
-			st.setString(1, pUuid);
-			st.executeUpdate();
-			st.close();
 
 //			t6 = System.currentTimeMillis();
 
@@ -6757,7 +6800,8 @@ public class MysqlDataProvider implements DataProvider {
 		/*
 		System.out.println("---- Portfolio ---");
 		System.out.println("d0-1: "+(t1-start));
-		System.out.println("d1-2: "+(t2-t1));
+		System.out.println("d1-1a: "+(t1a-t1));
+		System.out.println("d1a-2: "+(t2-t1a));
 		System.out.println("d2-3: "+(t3-t2));
 		System.out.println("d3-4: "+(t4-t3));
 		System.out.println("d4-5: "+(t5-t4));
