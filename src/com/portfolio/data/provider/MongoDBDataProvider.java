@@ -637,25 +637,25 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getPortfolioByPortfolioGroup( Connection c, Integer group, int userId )
+	public String getPortfolioByPortfolioGroup( Connection c, Integer portfolioGroupId, int userId )
 	{
 		return null;
 	}
 
 	@Override
-	public String deletePortfolioGroups( Connection c, int group, int userId )
+	public String deletePortfolioGroups( Connection c, int portfolioGroupId, int userId )
 	{
 		return null;
 	}
 
 	@Override
-	public int putPortfolioInGroup( Connection c, Integer uuid, Integer group, int userId )
+	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, int userId )
 	{
 		return 0;
 	}
 
 	@Override
-	public String deletePortfolioFromPortfolioGroups( Connection c, Integer uuid, int group, int userId )
+	public String deletePortfolioFromPortfolioGroups( Connection c, String uuid, int portfolioGroupId, int userId )
 	{
 		return null;
 	}

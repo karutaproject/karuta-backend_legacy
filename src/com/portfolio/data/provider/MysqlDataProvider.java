@@ -13602,36 +13602,229 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public int postPortfolioGroup( Connection c, String groupname, int userId )
 	{
-		return 0;
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+		int groupid = -1;
+
+		try
+		{
+			sql = "INSERT INTO  * FROM portfolio_group(label) VALUE(?)";
+			if (dbserveur.equals("oracle"))
+				st = c.prepareStatement(sql, new String[]{"pg"});
+			else
+				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+			st.setString(1, groupname);
+			st.executeUpdate();
+			res = st.getGeneratedKeys();
+			if( res.next() )
+				groupid = res.getInt(1);
+			
+		} catch (SQLException e)
+		{
+			logger.error(e.getMessage());
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
+		return groupid;
 	}
 	
 	@Override
 	public String getPortfolioGroupList( Connection c, int userId )
 	{
-		return null;
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		String result = "<groups>";
+		try
+		{
+			sql = "SELECT * FROM portfolio_group";
+			st = c.prepareStatement(sql);
+			res = st.executeQuery();
+
+			while(res.next())
+			{
+				result +="<group ";
+				result += DomUtils.getXmlAttributeOutput("pg", res.getString("pg"))+" ";
+				result += ">";
+				result += DomUtils.getXmlElementOutput("label", res.getString("label"));
+				result += "</group>";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		result += "</groups>";
+
+		return result;
 	}
 
 	@Override
-	public String getPortfolioByPortfolioGroup( Connection c, Integer group, int userId )
+	public String getPortfolioByPortfolioGroup( Connection c, Integer portfolioGroupId, int userId )
 	{
-		return null;
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		String result = "<group id=\""+portfolioGroupId+"\">";
+		try
+		{
+			sql = "SELECT * FROM portfolio_group_members WHERE pg=?";
+			st = c.prepareStatement(sql);
+			st.setInt(1, portfolioGroupId);
+			res = st.executeQuery();
+
+			while(res.next())
+			{
+				result +="<portfolio";
+				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("userid"))+" ";
+				result += ">";
+				result += "</portfolio>";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		result += "</group>";
+
+		return result;
 	}
 
 	@Override
-	public String deletePortfolioGroups( Connection c, int group, int userId )
+	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, int userId )
 	{
-		return null;
-	}
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
 
-	@Override
-	public int putPortfolioInGroup( Connection c, Integer uuid, Integer group, int userId )
-	{
+		try
+		{
+			sql = "INSERT INTO portfolio_group_members(pg, portfolio_id) VALUES(?, uuid2bin(?))";
+			st = c.prepareStatement(sql);
+			st.setInt(1, portfolioGroupId);
+			st.setString(2, uuid);
+			res = st.executeQuery();
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
 		return 0;
 	}
 
 	@Override
-	public String deletePortfolioFromPortfolioGroups( Connection c, Integer uuid, int group, int userId )
+	public String deletePortfolioGroups( Connection c, int portfolioGroupId, int userId )
 	{
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		try
+		{
+			c.setAutoCommit(false);
+			
+			sql = "DELETE FROM portfolio_group WHERE pg=?";
+			st = c.prepareStatement(sql);
+			st.setInt(1, portfolioGroupId);
+			res = st.executeQuery();
+			
+			sql = "DELETE FROM portfolio_group_members WHERE pg=?";
+			st = c.prepareStatement(sql);
+			st.setInt(1, portfolioGroupId);
+			res = st.executeQuery();
+			
+			c.setAutoCommit(true);
+
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
+		return null;
+	}
+
+	@Override
+	public String deletePortfolioFromPortfolioGroups( Connection c, String uuid, int portfolioGroupId, int userId )
+	{
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		try
+		{
+			sql = "DELETE FROM portfolio_group_members WHERE pg=? AND portfolio_id=uuid2bin(?)";
+			st = c.prepareStatement(sql);
+			st.setInt(1, portfolioGroupId);
+			st.setString(2, uuid);
+			res = st.executeQuery();
+		}
+		catch (SQLException e)
+		{
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
 		return null;
 	}
 

@@ -5226,7 +5226,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@PUT
-	public String putPortfolioInPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") Integer uuid)
+	public String putPortfolioInPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String uuid)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
@@ -5324,7 +5324,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@DELETE
-	public String deletePortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") int group, @QueryParam("uuid") Integer uuid)
+	public String deletePortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") int group, @QueryParam("uuid") String uuid)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		String response = "";
