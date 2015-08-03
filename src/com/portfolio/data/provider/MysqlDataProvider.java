@@ -5050,6 +5050,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
+			/*
 			/// Ajout du portfolio dans le groupe de portfolio
 			if( null == portfGroupName || "".equals(portfGroupName) )
 				portfGroupName = "default";
@@ -5062,6 +5063,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.setString(3, portfGroupName);
 			st.executeUpdate();
 			st.close();
+			//*/
 
 			/// Finalement on crée un rôle designer
 			int groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);

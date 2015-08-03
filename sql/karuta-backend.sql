@@ -208,6 +208,14 @@ CREATE TABLE IF NOT EXISTS `credential_group_members` (
   PRIMARY KEY (`cg`,`userid`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+-- Portfolio group
+CREATE TABLE IF NOT EXISTS `portfolio_group` (
+  `pg` bigint(20) NOT NULL AUTO_INCREMENT,
+  `label` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  PRIMARY KEY (`pg`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+--
+
 -- portfolio_group_members
 CREATE TABLE IF NOT EXISTS `portfolio_group_members` (
   `pg` bigint(20) NOT NULL,
@@ -275,15 +283,6 @@ CREATE TABLE IF NOT EXISTS `annotation` (
   `a_user` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `wad_identifier` varchar(45) COLLATE utf8_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`nodeid`,`rank`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
---
-
--- Portfolio group
-CREATE TABLE IF NOT EXISTS `portfolio_group` (
-  `owner` bigint(20) NOT NULL,
-  `portfolio_id` binary(16) NOT NULL,
-  `group_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  PRIMARY KEY (`portfolio_id`,`group_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 --
 
