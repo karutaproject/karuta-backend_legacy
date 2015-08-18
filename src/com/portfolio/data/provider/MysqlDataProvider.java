@@ -5895,7 +5895,7 @@ public class MysqlDataProvider implements DataProvider {
 					meta = meta.replaceAll("user", login);
 
 					/// Replace metadata with actual username
-					sql = "UPDATE t_data_node t SET t.metadata_wad=? WHERE t.node_uuid=uuid2bin(?)";
+					sql = "UPDATE t_data_node t SET t.metadata_wad=? WHERE t.new_uuid=uuid2bin(?)";
 					st = connection.prepareStatement(sql);
 					st.setString(1, meta);
 					st.setString(2, uuid);
