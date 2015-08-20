@@ -5368,7 +5368,6 @@ public class MysqlDataProvider implements DataProvider {
 		return portfolioCode;
 	}
 	
-	/// FIXME: Oracle part missing
 	@Override
 	public Object postImportNode( MimeType inMimeType, String destUuid, String tag, String code, int userId, int groupId ) throws Exception
 	{
@@ -5788,7 +5787,8 @@ public class MysqlDataProvider implements DataProvider {
 						"`owner` bigint(20) NOT NULL, " +
 						"`label` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'Nouveau groupe', " +
 						"`change_rights` tinyint(1) NOT NULL DEFAULT '0', " +
-						"`portfolio_id` binary(16) DEFAULT NULL " +
+						"`portfolio_id` binary(16) DEFAULT NULL ," +
+						"PRIMARY KEY (`grid`)" +
 						") ENGINE=MEMORY AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 				st = connection.prepareStatement(sql);
 				st.execute();
@@ -5800,7 +5800,7 @@ public class MysqlDataProvider implements DataProvider {
 						"label VARCHAR2(255 CHAR) DEFAULT NULL, " +
 						"change_rights NUMBER(1) NOT NULL, " +
 						"portfolio_id RAW(16) NOT NULL, " +
-						"CONSTRAINT t_group_right_info_UK_id UNIQUE (id)) ON COMMIT PRESERVE ROWS";
+						"CONSTRAINT t_group_right_info_UK_id UNIQUE (grid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_group_right_info','"+v_sql+"')}";
 				CallableStatement ocs = connection.prepareCall(sql) ;
 				ocs.execute();
@@ -5902,8 +5902,21 @@ public class MysqlDataProvider implements DataProvider {
 					st.executeUpdate();
 					st.close();
 
-					/// Ensure specific user group exist
-					getRoleByNode(1, destUuid, login);
+					/// Ensure specific user group exist in final tables, and add user in it
+					int ngid = getRoleByNode(1, destUuid, login);
+					postGroupsUsers(1, userId, ngid);
+					
+					/// Ensure entry is there in temp table, just need a skeleton info
+					sql = "REPLACE INTO t_group_right_info(grid, owner, label) VALUES((SELECT grid FROM group_info gi WHERE gid=?), 1, ?)";
+					if (dbserveur.equals("oracle")){
+						// FIXME Unsure about this, might need testing
+						sql = "MERGE INTO group_info d using (SELECT ? grid,1 ,? label from dual) s ON (1=2) WHEN NOT MATCHED THEN INSERT (d.grid, d.owner, d.label) values (s.grid, s.owner, s.label)";
+					}
+					st = connection.prepareStatement(sql);
+					st.setInt(1, ngid);
+					st.setString(2, login);
+
+					
 				}
 
 				String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"></transfer>";
@@ -10261,7 +10274,7 @@ public class MysqlDataProvider implements DataProvider {
 			xml = getNodeXmlOutput(nodeUuid,true,null,userId, groupId, null,true).toString();
 			return DomUtils.processXSLTfile2String( DomUtils.xmlString2Document(xml, new StringBuffer()), xslFile, param, paramVal, new StringBuffer());
 		} catch (Exception e) {
-			e.printStackTrace();
+//			e.printStackTrace();
 			return null;
 		}
 	}
@@ -11702,7 +11715,7 @@ public class MysqlDataProvider implements DataProvider {
 							"WHERE gri.label IN "+showto+" " +
 							"AND gri.portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?)) " +
 							"AND gr.id IN (SELECT uuid FROM t_struc_nodeid) " +
-							"ON DUPLICATE KEY UPDATE RD=1, WR=gr.WR, DL=gr.DL, AD=gr.AD, types_id=gr.types_id, rules_id=gr.rules_id";
+							"ON DUPLICATE KEY UPDATE RD=1, WR=0, DL=0, AD=0, types_id=NULL, rules_id=NULL";
 
 					if (dbserveur.equals("oracle")){
 						sql = "MERGE INTO group_rights d USING (" +
