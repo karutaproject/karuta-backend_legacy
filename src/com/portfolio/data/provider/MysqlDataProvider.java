@@ -11844,9 +11844,9 @@ public class MysqlDataProvider implements DataProvider {
 
 			resolver resolve = new resolver();
 
-			/// t_struc is already populated with the uuid we have to reset
+			/// t_struc_nodeid is already populated with the uuid we have to reset
 			String sql = "SELECT bin2uuid(n.node_uuid) AS uuid, bin2uuid(n.portfolio_id) AS puuid, n.metadata, n.metadata_wad, n.metadata_epm " +
-					"FROM t_struc t, node n WHERE t.uuid=n.node_uuid";
+					"FROM t_struc_nodeid t, node n WHERE t.uuid=n.node_uuid";
 			PreparedStatement st = connection.prepareStatement(sql);
 			ResultSet res = st.executeQuery();
 
@@ -12089,17 +12089,17 @@ public class MysqlDataProvider implements DataProvider {
 					Entry<String, right> rightelem = rightiter.next();
 					String group = rightelem.getKey();
 
-					/// I hate you Oracle
 					String sqlgrid = "SELECT gr.grid " +
 							"FROM group_rights gr, group_right_info gri " +
 							"WHERE gri.grid=gr.grid AND gri.label=? AND gr.id=uuid2bin(?)";
-					st = connection.prepareStatement(sqlgrid);
-					st.setString(1, group);
-					st.setString(2, uuid);
-					res = st.executeQuery();
+					PreparedStatement st2 = connection.prepareStatement(sqlgrid);
+					st2.setString(1, group);
+					st2.setString(2, uuid);
+					res = st2.executeQuery();
 					int grid = -1;
 					if( res.next() )
 						grid = res.getInt("grid");
+					st2.close();
 
 //					int grid = resolve.groups.get(group);
 					right rightval = rightelem.getValue();
