@@ -2386,6 +2386,8 @@ public class MysqlDataProvider implements DataProvider {
 
 	private void reconstructTree( StringBuilder data, t_tree node, HashMap<String, t_tree> entries )
 	{
+		if( node.childString == null ) return;
+		
 		String[] childsId = node.childString.split(",");
 		data.append(node.data);
 //		String data = node.data;
@@ -5915,8 +5917,8 @@ public class MysqlDataProvider implements DataProvider {
 					st = connection.prepareStatement(sql);
 					st.setInt(1, ngid);
 					st.setString(2, login);
-
-					
+					st.executeUpdate();
+					st.close();
 				}
 
 				String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"></transfer>";
