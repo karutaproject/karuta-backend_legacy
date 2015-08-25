@@ -11130,10 +11130,12 @@ public class MysqlDataProvider implements DataProvider {
 		st.setString(1, metadataepm);
 		st.setString(2, nodeUuid);
 
-		if (st.executeUpdate() == 1){
+		if (st.executeUpdate() == 1)
+		{
+			touchPortfolio( nodeUuid, null );
 			return "editer";
 		}
-
+		
 		return "erreur";
 	}
 
