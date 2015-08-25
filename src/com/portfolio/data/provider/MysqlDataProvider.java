@@ -7769,7 +7769,7 @@ public class MysqlDataProvider implements DataProvider {
 					catch(Exception ex) {}
 					try
 					{
-						if(metadataWadNode.getAttributes().getNamedItem("submitnoderoles")!=null)
+						if(metadataWadNode.getAttributes().getNamedItem("submitnoderoles")!=null)	// TODO submitnoderoles deprecated fro submitroles
 						{
 							StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("submitnoderoles").getNodeValue(), " ");
 							while (tokens.hasMoreElements())
@@ -7825,7 +7825,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					try
 					{
-						if(metadataWadNode.getAttributes().getNamedItem("submitresroles")!=null)
+						if(metadataWadNode.getAttributes().getNamedItem("submitresroles")!=null)	// TODO submitresroles deprecated fro submitroles
 						{
 							StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("submitresroles").getNodeValue(), " ");
 							while (tokens.hasMoreElements())
@@ -11692,8 +11692,11 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				st = connection.prepareStatement(sql);
 				st.setInt(1, grid);
-				st.executeUpdate();
+				int rows = st.executeUpdate();
 				st.close();
+				
+				if( rows == 0 )
+					return "unchanged";
 
 				/// Vérifie le showtoroles
 				Node showtonode = metaAttr.getNamedItem("showtoroles");
@@ -11935,7 +11938,7 @@ public class MysqlDataProvider implements DataProvider {
 							resolve.groups.put(nodeRole, 0);
 						}
 					}
-					att = attribMap.getNamedItem("submitnoderoles");
+					att = attribMap.getNamedItem("submitroles");
 					if(att != null)
 					{
 						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
