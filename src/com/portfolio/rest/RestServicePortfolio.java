@@ -1308,7 +1308,7 @@ public class RestServicePortfolio
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces(MediaType.APPLICATION_XML)
-	public String  postUser(String xmluser, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public Response postUser(String xmluser, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
@@ -1317,7 +1317,12 @@ public class RestServicePortfolio
 			String xmlUser = dataProvider.postUsers(xmluser, ui.userId);
 			logRestRequest(httpServletRequest, "", xmlUser, Status.OK.getStatusCode());
 
-			return xmlUser;
+			if( xmlUser == null )
+			{
+				return Response.status(Status.CONFLICT).entity("Existing user or invalid input").build();
+			}
+			
+			return Response.ok(xmlUser).build();
 		}
 		catch(Exception ex)
 		{

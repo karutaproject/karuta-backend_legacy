@@ -10107,10 +10107,9 @@ public class MysqlDataProvider implements DataProvider {
 			result += "</users>";
 
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			logger.error(e.getMessage());
-			e.printStackTrace();
-			result = "";
+//			e.printStackTrace();
+			result = null;
 		}
 
 		return result;
