@@ -2645,7 +2645,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			time1 = System.currentTimeMillis();
 
-			// Cas admin ou partage totale
+			// Cas admin, designer
 			if(credential.isAdmin(userId) || credential.isDesigner(userId, rootNodeUuid))
 			{
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
@@ -2655,6 +2655,23 @@ public class MysqlDataProvider implements DataProvider {
 						"r2.content AS r2_content, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
 						"r3.content AS r3_content, n.asm_type, n.xsi_type, " +
 						"1 AS RD, 1 AS WR, 1 AS SB, 1 AS DL, NULL AS types_id, NULL AS rules_id " +
+						"FROM node n " +
+						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +
+						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
+						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +
+						"WHERE portfolio_id=uuid2bin(?)";
+				st = connection.prepareStatement(sql);
+				st.setString(1, portfolioUuid);
+			}
+			else if(credential.isPublic(null, portfolioUuid))	// Public case, looks like previous query, but with different rights
+			{
+				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
+						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
+						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, " +
+						"r1.xsi_type AS r1_type, r1.content AS r1_content, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
+						"r2.content AS r2_content, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
+						"r3.content AS r3_content, n.asm_type, n.xsi_type, " +
+						"1 AS RD, 0 AS WR, 0 AS SB, 0 AS DL, NULL AS types_id, NULL AS rules_id " +
 						"FROM node n " +
 						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +
 						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
