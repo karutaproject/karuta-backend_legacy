@@ -3301,6 +3301,13 @@ public class MysqlDataProvider implements DataProvider {
 						"FROM t_struc_parentid ts";
 				st = connection.prepareStatement(sql);
 			}
+			else if ( credential.isPublic(nodeUuid, null) )
+			{
+				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD, types_id, rules_id) " +
+						"SELECT 0, ts.uuid, 1, 0, 0, 0, 0, NULL, NULL " +
+						"FROM t_struc_parentid ts";
+				st = connection.prepareStatement(sql);
+			}
 			else
 			{
 				/*
