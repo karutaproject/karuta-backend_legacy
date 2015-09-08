@@ -82,9 +82,11 @@ public class LTIServlet extends HttpServlet {
 	@Override
   public void init()
 	{
+		sc = getServletConfig();
 	  ServletContext application = getServletConfig().getServletContext();
 	  try
 	  {
+	  	ConfigUtils.loadConfigFile(sc);
 	    loadRoleMapAttributes(application);
 	  }
 	  catch( Exception e ){ e.printStackTrace(); }
@@ -115,7 +117,7 @@ public class LTIServlet extends HttpServlet {
 //		Connection connexion = null;			// hors du try pour fermer dans finally
 
 		//============= init servers ===============================
-	    this.sc = getServletConfig();
+//	    this.sc = getServletConfig();
         String dataProviderName  =  ConfigUtils.get("dataProviderClass");
         dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
@@ -331,7 +333,7 @@ public class LTIServlet extends HttpServlet {
 		}
 		catch (Exception e) {
 			outTrace.append("\nSOMETHING BAD JUST HAPPENED!!!: " + e);
-			response.sendError(404, e.getLocalizedMessage());
+			response.sendError(500, e.getLocalizedMessage());
 		}
 		finally {
 			destroyDB(connexion);
