@@ -168,6 +168,9 @@ public class FileServlet  extends HttpServlet
 		// =====================================================================================
 		initialize(request);
 
+		String useragent = request.getHeader("User-Agent");
+		logger.error("Agent: "+useragent);
+
 		DataProvider dataProvider = null;
 		Credential credential = null;
 		Connection c = null;
@@ -353,24 +356,39 @@ public class FileServlet  extends HttpServlet
 			}
 			else
 			{
-				List<FileItem> items = upload.parseRequest(request);
-				// Process the uploaded items
-				Iterator<FileItem> iter = items.iterator();
-				while (iter.hasNext())
+//				if( ServletFileUpload.isMultipartContent(request) )
+				if( true )
 				{
-					FileItem item = iter.next();
-
-					if ("uploadfile".equals(item.getFieldName()))
+					List<FileItem> items = upload.parseRequest(request);
+					// Process the uploaded items
+					Iterator<FileItem> iter = items.iterator();
+					while (iter.hasNext())
 					{
-						// Send raw data
-						inputData = item.getInputStream();
+						FileItem item = iter.next();
 
-						fileName = item.getName();
-						filesize = item.getSize();
-						contentType = item.getContentType();
+						if ("uploadfile".equals(item.getFieldName()))
+						{
+							// Send raw data
+							inputData = item.getInputStream();
 
-						break;
+							fileName = item.getName();
+							filesize = item.getSize();
+							contentType = item.getContentType();
+
+							break;
+						}
 					}
+				}
+				else
+				{
+					// List headers
+					Enumeration attributes = request.getAttributeNames();
+					while( attributes.hasMoreElements() )
+					{
+						Object elem = attributes.nextElement();
+						logger.error("Object: "+elem.toString());
+					}
+					logger.error("Not multipart");
 				}
 			}
 
@@ -430,7 +448,10 @@ public class FileServlet  extends HttpServlet
 
 		connection.disconnect();
 		/// Renvoie le JSON au client
-		response.setContentType("application/json");
+		if( useragent.contains("MSIE 9.0") || useragent.contains("MSIE 8.0") || useragent.contains("MSIE 7.0") )
+			response.setContentType("text/html");
+		else	// The normal type
+			response.setContentType("application/json");
 		PrintWriter respWriter = response.getWriter();
 		respWriter.write(json);
 
@@ -551,7 +572,7 @@ public class FileServlet  extends HttpServlet
 			//====================================================
 			String size = request.getParameter("size");
 			if(size == null)
-				size = "S";
+				size = "";
 
 			String lang = request.getParameter("lang");
 			if (lang==null){
@@ -635,6 +656,9 @@ public class FileServlet  extends HttpServlet
 			// http://localhost:8080/MiniRestFileServer/user/claudecoulombe/file/a8e0f07f-671c-4f6a-be6c-9dba12c519cf/ptype/sql
 			/// TODO: Ne plus avoir besoin du switch
 			String urlTarget = "http://"+ server + "/" + resolve;
+			
+			if( "T".equals(size) )
+				urlTarget = urlTarget + "/thumb";
 //			String urlTarget = "http://"+ server + "/user/" + resolve +"/"+ lang + "/ptype/fs";
 
 			HttpURLConnection connection = CreateConnection( urlTarget, request );
