@@ -1784,7 +1784,8 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			result += "] } }";
 		}
-//		res.close();
+		res.close();
+		st.close();
 
 		return out.toString();
 	}
