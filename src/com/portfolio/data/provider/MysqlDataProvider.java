@@ -1049,7 +1049,7 @@ public class MysqlDataProvider implements DataProvider {
 			if(xsiType.equals("nodeRes"))
 			{
 				sql = " UPDATE resource_table SET content=?,user_id=?,modif_user_id=?,modif_date=? ";
-				sql += " WHERE node_uuid IN (SELECT res_res_node_uuid FROM node ";
+				sql += " WHERE node_uuid = (SELECT res_res_node_uuid FROM node ";
 				sql += " WHERE node_uuid=uuid2bin(?))  ";
 
 				/// Interpétation du code (vive le hack... Non)
@@ -1075,13 +1075,13 @@ public class MysqlDataProvider implements DataProvider {
 			else if(xsiType.equals("context"))
 			{
 				sql = " UPDATE resource_table SET content=?,user_id=?,modif_user_id=?,modif_date=? ";
-				sql += " WHERE node_uuid IN (SELECT res_context_node_uuid FROM node ";
+				sql += " WHERE node_uuid = (SELECT res_context_node_uuid FROM node ";
 				sql += " WHERE node_uuid=uuid2bin(?))  ";
 			}
 			else
 			{
 				sql = " UPDATE resource_table SET content=?,user_id=?,modif_user_id=?,modif_date=? ";
-				sql += " WHERE node_uuid IN (SELECT res_node_uuid FROM node ";
+				sql += " WHERE node_uuid = (SELECT res_node_uuid FROM node ";
 				sql += " WHERE node_uuid=uuid2bin(?))  ";
 			}
 			st = connection.prepareStatement(sql);
