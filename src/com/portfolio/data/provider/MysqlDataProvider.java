@@ -3238,6 +3238,38 @@ public class MysqlDataProvider implements DataProvider {
 				st = connection.prepareStatement(sql);
 				st.execute();
 				st.close();
+				
+				// Filtrage avec droits
+				sql = "CREATE TEMPORARY TABLE t_rights_22(" +
+						"grid BIGINT NOT NULL, " +
+						"id binary(16) UNIQUE NOT NULL, " +
+						"RD TINYINT(1) NOT NULL, " +
+						"WR TINYINT(1) NOT NULL, " +
+						"DL TINYINT(1) NOT NULL, " +
+						"SB TINYINT(1) NOT NULL, " +
+						"AD TINYINT(1) NOT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+				st = connection.prepareStatement(sql);
+				st.execute();
+				st.close();
+				
+				/// Pour le filtrage de la structure
+				sql = "CREATE TEMPORARY TABLE t_struc_parentid(" +
+						"uuid binary(16) UNIQUE NOT NULL, " +
+						"node_parent_uuid binary(16), " +
+						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+				st = connection.prepareStatement(sql);
+				st.execute();
+				st.close();
+				
+				// En double car on ne peut pas faire d'update/select d'une même table temporaire
+				sql = "CREATE TEMPORARY TABLE t_struc_parentid_2(" +
+						"uuid binary(16) UNIQUE NOT NULL, " +
+						"node_parent_uuid binary(16), " +
+						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+				st = connection.prepareStatement(sql);
+				st.execute();
+				st.close();
+
 			} else if (dbserveur.equals("oracle")){
 				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_node(" +
 						"node_uuid RAW(16)  NOT NULL, " +
@@ -3271,92 +3303,63 @@ public class MysqlDataProvider implements DataProvider {
 				CallableStatement ocs = connection.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
-			}
-
-			// Filtrage avec droits
-			if (dbserveur.equals("mysql")){
-				sql = "CREATE TEMPORARY TABLE t_rights_22(" +
-						"grid BIGINT NOT NULL, " +
-						"id binary(16) UNIQUE NOT NULL, " +
-						"RD TINYINT(1) NOT NULL, " +
-						"WR TINYINT(1) NOT NULL, " +
-						"DL TINYINT(1) NOT NULL, " +
-						"SB TINYINT(1) NOT NULL, " +
-						"AD TINYINT(1) NOT NULL," +
-						"types_id TEXT, " +
-						"rules_id TEXT) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
-				st.execute();
-				st.close();
-			} else if (dbserveur.equals("oracle")){
+				
 				// XXX 22, because oracle can't clean up correctly after itself
-				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_rights_22(" +
+				v_sql = "CREATE GLOBAL TEMPORARY TABLE t_rights_22(" +
 						"grid NUMBER(19,0) NOT NULL, " +
 						"id RAW(16) NOT NULL, " +
 						"RD NUMBER(1) NOT NULL, " +
 						"WR NUMBER(1) NOT NULL, " +
 						"DL NUMBER(1) NOT NULL, " +
 						"SB NUMBER(1) NOT NULL, " +
-						"AD NUMBER(1) NOT NULL, " +
-						"types_id VARCHAR2(2000 CHAR), " +
-						"rules_id VARCHAR2(2000 CHAR), CONSTRAINT t_rights_22_UK_id UNIQUE (id)) ON COMMIT PRESERVE ROWS";
+						"AD NUMBER(1) NOT NULL, CONSTRAINT t_rights_22_UK_id UNIQUE (id)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_rights_22','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				ocs = connection.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
-			}
 
-			/// Pour le filtrage de la structure
-			if (dbserveur.equals("mysql")){
-				sql = "CREATE TEMPORARY TABLE t_struc_parentid(" +
-						"uuid binary(16) UNIQUE NOT NULL, " +
-						"node_parent_uuid binary(16), " +
-						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
-				st.execute();
-				st.close();
-			} else if (dbserveur.equals("oracle")){
-				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_parentid(" +
+				/// Pour le filtrage de la structure
+				v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_parentid(" +
 						"uuid RAW(16) NOT NULL, " +
 						"node_parent_uuid RAW(16), " +
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_parentid_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_parentid','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				ocs = connection.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
-			}
 
-			// En double car on ne peut pas faire d'update/select d'une même table temporaire
-			if (dbserveur.equals("mysql")){
-				sql = "CREATE TEMPORARY TABLE t_struc_parentid_2(" +
-						"uuid binary(16) UNIQUE NOT NULL, " +
-						"node_parent_uuid binary(16), " +
-						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
-				st.execute();
-				st.close();
-			} else if (dbserveur.equals("oracle")){
-				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_parentid_2(" +
+				// En double car on ne peut pas faire d'update/select d'une même table temporaire
+				v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_parentid_2(" +
 						"uuid RAW(16) NOT NULL, " +
 						"node_parent_uuid RAW(16), " +
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_parentid_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_parentid_2','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				ocs = connection.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
 
 			long t_tempTable = System.currentTimeMillis();
 
+			/// Portfolio id, gonna need that later
+			sql = "SELECT bin2uuid(portfolio_id) AS portfolio_id FROM node WHERE node_uuid=uuid2bin(?)";
+			st = connection.prepareStatement(sql);
+			st.setString(1, nodeUuid);
+			res = st.executeQuery();
+			res.next();
+			String portfolioid = res.getString("portfolio_id");
+			res.close();
+			st.close();
+			
 			/// Init temp data table
 			sql = "INSERT INTO t_node " +
 					"SELECT node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 					"FROM node n " +
-					"WHERE n.portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
+					"WHERE n.portfolio_id=uuid2bin(?)";
 			st = connection.prepareStatement(sql);
-			st.setString(1, nodeUuid);
+			st.setString(1, portfolioid);
 			st.executeUpdate();
 			st.close();
 
@@ -3412,57 +3415,28 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_endLoop = System.currentTimeMillis();
 
-			/*// Redondant, pourquoi c'est là?
-			sql = "INSERT INTO t_rights(grid,id,RD,WR,DL,SB,AD) " +
-					"SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
-					"FROM group_info gi, group_right_info gri, group_rights gr " +
-					"WHERE gi.grid=gri.grid AND gri.grid=gr.grid AND gi.gid=? AND gr.RD=1";
-			st = connection.prepareStatement(sql);
-			st.setInt(1, groupId);
-			st.executeUpdate();
-			st.close();
-			//*/
-
 			if( credential.isDesigner(userId, nodeUuid) || credential.isAdmin(userId) )
 			{
-				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD, types_id, rules_id) " +
-						"SELECT 0, ts.uuid, 1, 1, 1, 0, 0, NULL, NULL " +
+				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD) " +
+						"SELECT 0, ts.uuid, 1, 1, 1, 0, 0 " +
 						"FROM t_struc_parentid ts";
 				st = connection.prepareStatement(sql);
 			}
 			else if ( credential.isPublic(nodeUuid, null) )
 			{
-				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD, types_id, rules_id) " +
-						"SELECT 0, ts.uuid, 1, 0, 0, 0, 0, NULL, NULL " +
+				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD) " +
+						"SELECT 0, ts.uuid, 1, 0, 0, 0, 0 " +
 						"FROM t_struc_parentid ts";
 				st = connection.prepareStatement(sql);
 			}
 			else
 			{
-				/*
-				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD, types_id, rules_id) " +
-						"SELECT gr.grid, gr.id, MAX(gr.RD), MAX(gr.WR), MAX(gr.DL), MAX(gr.SB), MAX(gr.AD), types_id, rules_id " +
-						"FROM group_right_info gri, group_rights gr, t_struc_parentid ts " +
-						"WHERE gri.grid=gr.grid AND ts.uuid=gr.id " +
-						"AND (gri.label='all' OR gri.grid=? OR " +
-						"gri.grid=(SELECT grid FROM credential c, group_right_info gri, t_node n WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND c.login=gri.label AND c.userid=?)) ";
-				if (dbserveur.equals("mysql")){
-					sql += "GROUP BY gr.id";
-				} else if (dbserveur.equals("oracle")){
-					sql += "GROUP BY gr.id, gr.grid, types_id, rules_id";
-				}
-				st = connection.prepareStatement(sql);
-				st.setInt(1, rrgId);
-				st.setString(2, nodeUuid);
-				st.setInt(3, userId);
-				//*/
-
 				// Aggrégation des droits avec 'all', l'appartenance du groupe de l'utilisateur, et les droits propres à l'utilisateur
 				if (dbserveur.equals("mysql")){
-					sql = "INSERT INTO t_rights_22(grid,id,RD,WR,DL,SB,AD, types_id, rules_id) ";
-					sql += "SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD, types_id, rules_id " +
+					sql = "INSERT INTO t_rights_22(grid,id,RD,WR,DL,SB,AD) ";
+					sql += "SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
 						"FROM group_right_info gri, group_rights gr, t_struc_parentid ts " +
-						"WHERE gri.grid=gr.grid AND ts.uuid=gr.id " +
+						"WHERE gri.grid=gr.grid AND ts.uuid=gr.id AND gri.portfolio_id=uuid2bin(?) " +
 						"AND (gri.label='all' OR gri.grid=? OR " +
 						"gri.grid=(SELECT grid FROM credential c, group_right_info gri, t_node n WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND c.login=gri.label AND c.userid=?)) " +
 						"ON DUPLICATE KEY " +
@@ -3477,7 +3451,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql = "MERGE INTO t_rights_22 d USING (";
 					sql += "SELECT MAX(gr.grid) AS grid, gr.id, MAX(gr.RD) AS RD, MAX(gr.WR) AS WR, MAX(gr.DL) AS DL, MAX(gr.SB) AS SB, MAX(gr.AD) AS AD " +	// FIXME MAX(gr.grid) will have unintended consequences
 							"FROM group_right_info gri, group_rights gr, t_struc_parentid ts " +
-							"WHERE gri.grid=gr.grid AND ts.uuid=gr.id " +
+							"WHERE gri.grid=gr.grid AND ts.uuid=gr.id AND gri.portfolio_id=uuid2bin(?) " +
 							"AND (gri.label='all' OR gri.grid=? OR " +
 						"gri.grid=(SELECT grid FROM credential c, group_right_info gri, t_node n WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND c.login=gri.label AND c.userid=?)) ";
 					sql += " GROUP BY gr.id) s " +
@@ -3491,9 +3465,11 @@ public class MysqlDataProvider implements DataProvider {
 					sql += " WHEN NOT MATCHED THEN INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.SB, d.AD) VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.SB, s.AD)";
 				}
 				st = connection.prepareStatement(sql);
-				st.setInt(1, rrgId);
-				st.setString(2, nodeUuid);
-				st.setInt(3, userId);
+				st.setString(1, portfolioid);
+				st.setInt(2, rrgId);
+				st.setString(3, nodeUuid);
+				st.setInt(4, userId);
+//				System.out.println("VALUES: "+portfolioid+" "+rrgId+" "+nodeUuid+" "+userId);
 			}
 			st.executeUpdate();
 			st.close();
@@ -3514,7 +3490,7 @@ public class MysqlDataProvider implements DataProvider {
 					" bin2uuid(n.res_context_node_uuid) as res_context_node_uuid," +
 					" r3.content AS r3_content," +     // donnée res_context
 					" n.asm_type, n.xsi_type," +
-					" tr.RD, tr.WR, tr.SB, tr.DL, tr.types_id, tr.rules_id," +   // info sur les droits
+					" tr.RD, tr.WR, tr.SB, tr.DL, NULL AS types_id, NULL AS rules_id," +   // info sur les droits
 					" bin2uuid(n.portfolio_id) AS portfolio_id" +
 					" FROM node n" +	// Going back to original table, mainly for list of child nodes
 					" LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid" +         // Récupération des données res_node
@@ -3537,9 +3513,7 @@ public class MysqlDataProvider implements DataProvider {
 			long d_endLoop = t_endLoop - t_initLoop;
 			long d_fetchRights = t_allRights - t_endLoop;
 			long d_aggregateInfo = t_aggregate - t_allRights;
-			//*/
 
-			/*
 			System.out.println("Temp table creation: "+d_tempTable);
 			System.out.println("Init data: "+d_initData);
 			System.out.println("Init node recursion: "+d_initRecusion);
@@ -3665,11 +3639,11 @@ public class MysqlDataProvider implements DataProvider {
 	{
 		StringBuffer nodexml = new StringBuffer();
 
-//		long t_start = System.currentTimeMillis();
+		long t_start = System.currentTimeMillis();
 
 		NodeRight nodeRight = credential.getNodeRight(userId,groupId,nodeUuid, label);
 
-//		long t_nodeRight = System.currentTimeMillis();
+		long t_nodeRight = System.currentTimeMillis();
 
 		if(!nodeRight.read)
 		{
@@ -3685,7 +3659,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			ResultSet result = getNodePerLevel(nodeUuid, userId, nodeRight.rrgId);
 
-//			long t_nodePerLevel = System.currentTimeMillis();
+			long t_nodePerLevel = System.currentTimeMillis();
 
 			/// Préparation du XML que l'on va renvoyer
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
@@ -3699,12 +3673,12 @@ public class MysqlDataProvider implements DataProvider {
 			/// Node -> parent
 			HashMap<String, t_tree> entries = new HashMap<String, t_tree>();
 
-//			long t_initContruction = System.currentTimeMillis();
+			long t_initContruction = System.currentTimeMillis();
 
 			processQuery(result, resolve, entries, document, documentBuilder, nodeRight.groupLabel);
 			result.close();
 
-//			long t_processQuery = System.currentTimeMillis();
+			long t_processQuery = System.currentTimeMillis();
 
 			/// Reconstruct functional tree
 			t_tree root = entries.get(nodeUuid);
@@ -3734,7 +3708,7 @@ public class MysqlDataProvider implements DataProvider {
 			//*/
 
 			nodexml.append(out.toString());
-//			long t_buildXML = System.currentTimeMillis();
+			long t_buildXML = System.currentTimeMillis();
 
 			/*
 			Node root = resolve.get(nodeUuid);
@@ -3748,7 +3722,7 @@ public class MysqlDataProvider implements DataProvider {
 			nodexml.append(stw.toString());
 			//*/
 
-//			long t_convertString = System.currentTimeMillis();
+			long t_convertString = System.currentTimeMillis();
 
 			/*
 			long d_right = t_nodeRight - t_start;
@@ -3757,9 +3731,7 @@ public class MysqlDataProvider implements DataProvider {
 			long d_processQuery = t_processQuery - t_initContruction;
 			long d_buildXML = t_buildXML - t_processQuery;
 			long d_convertString = t_convertString - t_buildXML;
-			//*/
 
-			/*
 			System.out.println("Query Rights: "+d_right);
 			System.out.println("Query Nodes: "+d_queryNodes);
 			System.out.println("Init build: "+d_initConstruct);
