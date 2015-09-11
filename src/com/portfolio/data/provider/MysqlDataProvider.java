@@ -10397,7 +10397,10 @@ public class MysqlDataProvider implements DataProvider {
 				paramVal[i] = line.substring(var+1);
 			}
 
-			xml = getNodeXmlOutput(nodeUuid,true,null,userId, groupId, null,true).toString();
+			/// TODO: Test this more, should use getNode rather than having another output
+			xml = getNode(new MimeType("text/xml"),nodeUuid,true, userId, groupId, null).toString();
+
+//			xml = getNodeXmlOutput(nodeUuid,true,null,userId, groupId, null,true).toString();
 			return DomUtils.processXSLTfile2String( DomUtils.xmlString2Document(xml, new StringBuffer()), xslFile, param, paramVal, new StringBuffer());
 		} catch (Exception e) {
 //			e.printStackTrace();
