@@ -22,6 +22,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 import javax.naming.InitialContext;
 import javax.servlet.ServletConfig;
@@ -63,13 +64,14 @@ public class RegisterService  extends HttpServlet {
 //	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	Credential credential;
+	final Credential credential = new Credential();
 	int userId;
 	int groupId = -1;
 	String user = "";
 	String context = "";
 	HttpSession session;
 	String dataProviderName;
+	DataProvider dataProvider = null;
 
 	@Override
 	public void init( ServletConfig config ) throws ServletException
@@ -79,6 +81,7 @@ public class RegisterService  extends HttpServlet {
 		{
 			ConfigUtils.loadConfigFile(config);
 			dataProviderName = ConfigUtils.get("dataProviderClass");
+			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 		}
 		catch( Exception e )
 		{
@@ -88,11 +91,10 @@ public class RegisterService  extends HttpServlet {
 
 	public DataProvider initialize(HttpServletRequest httpServletRequest)
 	{
-		DataProvider dataProvider = null;
+		/*
 		DataSource ds = null;
 		try
 		{
-			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 			// Try to initialize Datasource
 			InitialContext cxt = new InitialContext();
 			if ( cxt == null ) {
@@ -110,7 +112,9 @@ public class RegisterService  extends HttpServlet {
 			logger.info("CAN'T CREATE CONNECTION: "+e.getMessage());
 			e.printStackTrace();
 		}
+		//*/
 
+		/*
 		try
 		{
 			Connection con = null;
@@ -141,6 +145,7 @@ public class RegisterService  extends HttpServlet {
 		{
 			logger.error(ex.getMessage());
 		}
+		//*/
 
 		return dataProvider;
 	}
@@ -148,7 +153,17 @@ public class RegisterService  extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
 	{
-		DataProvider dataProvider = initialize(request);
+//		DataProvider dataProvider = initialize(request);
+		Connection connection = null;
+		try
+		{
+			connection = SqlUtils.getConnection(getServletConfig().getServletContext());
+		}
+		catch( Exception e1 )
+		{
+			e1.printStackTrace();
+		}
+		
 		response.setCharacterEncoding("UTF-8");
 		StringWriter inputdata = new StringWriter();
 		IOUtils.copy(request.getInputStream(), inputdata, "UTF-8");
@@ -215,7 +230,7 @@ public class RegisterService  extends HttpServlet {
 
 			if( !"".equals(username) )
 			{
-				String val = dataProvider.postUsers(converted, 1);
+				String val = dataProvider.postUsers(connection, credential, converted, 1);
 				if( !"".equals(val) )
 				{
 					logger.debug("Account create: "+val);
@@ -251,7 +266,11 @@ public class RegisterService  extends HttpServlet {
 		}
 		finally
 		{
-
+			try
+			{
+				if( connection != null ) connection.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
 		}
 	}
 }

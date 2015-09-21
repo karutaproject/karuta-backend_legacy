@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,6 +42,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.SqlUtils;
 
 public class LTIServletUtils {
 
@@ -151,6 +153,7 @@ public class LTIServletUtils {
 	protected static void handleLaunch(Map<String, Object> payload, ServletContext application, HttpServletResponse response,
 			HttpSession session, StringBuffer outTrace) throws ServletException, IOException {
 		Connection connexion = null;
+		Connection connection = null;
 
 		try {
 			LTIServletUtils.loadRoleMapAttributes(application, session);
@@ -176,16 +179,18 @@ public class LTIServletUtils {
 			String wadRole = LTIServletUtils.roleMapper(application, inputRole, outTrace);
 			String siteRoleGroupId = LTIServletUtils.getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
 
+			connection = SqlUtils.getConnection(application);
+			
 			//See what groups the user is in
-			boolean isInSiteGroup = dataProvider.isUserInGroup(userId, siteGroupId);
-			boolean isInSiteRoleGroup = dataProvider.isUserInGroup(userId, siteRoleGroupId);
+			boolean isInSiteGroup = dataProvider.isUserInGroup(connection, userId, siteGroupId);
+			boolean isInSiteRoleGroup = dataProvider.isUserInGroup(connection, userId, siteRoleGroupId);
 
 			if (!isInSiteGroup) {
-				dataProvider.putUserGroup(siteGroupId, userId);
+				dataProvider.putUserGroup(connection, siteGroupId, userId);
 			}
 
 			if (!isInSiteRoleGroup) {
-				dataProvider.putUserGroup(siteRoleGroupId, userId);
+				dataProvider.putUserGroup(connection, siteRoleGroupId, userId);
 			}
 
 			//Check for nested groups
@@ -221,6 +226,14 @@ public class LTIServletUtils {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
+			try
+			{
+				connection.close();
+			}
+			catch( SQLException e )
+			{
+				e.printStackTrace();
+			}
 			LTIServletUtils.destroyDB(connexion);
 		}
 	}
@@ -298,10 +311,10 @@ public class LTIServletUtils {
 		outTrace.append("\nUserXML: "+userXml);
 
 		//Does the user already exist?
-		userId = dataProvider.getUserId(buildUsername(payload), null);
+		userId = dataProvider.getUserId(connexion, buildUsername(payload), null);
 		if ("0".equals(userId)) {
 			//create it
-			userId = dataProvider.createUser(buildUsername(payload));
+			userId = dataProvider.createUser(connexion, buildUsername(payload));
 			outTrace.append("\nCreate User (self) results: " + userId);
 		}
 		else {
@@ -335,12 +348,12 @@ public class LTIServletUtils {
 	 */
 	protected static String getOrCreateGroup(Connection connexion, String groupTitle, String role, StringBuffer outTrace) throws Exception {
 		//Does the site group already exist?
-		String group = dataProvider.getGroupByName(role);
+		String group = dataProvider.getGroupByName(connexion, role);
 //		String groupId = "";
 		if ("0".equals(group)) {
 			//create it
 			StringBuffer groupXml = buildGroupXml(groupTitle, role);
-			group = dataProvider.createGroup(role);
+			group = dataProvider.createGroup(connexion, role);
 //			group = dataProvider.createGroup(groupXml.toString()).toString();
 //			groupId = wadbackend.WadUtilities.getAttribute(group,  "id");
 			outTrace.append("\nCreate Group (self) results: " + group);

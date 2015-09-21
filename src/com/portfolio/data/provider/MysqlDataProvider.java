@@ -108,8 +108,8 @@ public class MysqlDataProvider implements DataProvider {
 
 	final Logger logger = LoggerFactory.getLogger(MysqlDataProvider.class);
 
-	private Connection connection = null;
-	private Credential credential = null;
+//	private Connection connection = null;
+//	private Credential credential = null;
 	private String portfolioUuidPreliminaire = null; // Sert pour generer un uuid avant import du portfolio
 //	private final ArrayList<String> portfolioRessourcesImportUuid = new ArrayList();
 //	private final ArrayList<String> portfolioRessourcesImportPath = new ArrayList();
@@ -138,10 +138,11 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public void setConnection( Connection c )
 	{
-		this.connection = c;
-		credential = new Credential(connection);
+//		this.connection = c;
+//		credential = new Credential(connection);
 	}
 
+	/*
 	@Override
 	public void disconnect(){
 
@@ -151,15 +152,16 @@ public class MysqlDataProvider implements DataProvider {
 			e.printStackTrace();
 		}
 	}
+		//*/
 
-	public Integer getMysqlNodeNextOrderChildren(String nodeUuid)  throws Exception
+	public Integer getMysqlNodeNextOrderChildren(Connection c, String nodeUuid)  throws Exception
 	{
 		PreparedStatement st;
 		String sql;
 
 		// On recupere d'abord les informations dans la table structures
 		sql = "SELECT COUNT(*) as node_order FROM node WHERE node_parent_uuid = uuid2bin(?) GROUP BY node_parent_uuid";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setString(1, nodeUuid);
 
 		java.sql.ResultSet res = st.executeQuery();
@@ -175,7 +177,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 
-	public ResultSet getMysqlNode(String nodeUuid, int userId,  int groupId) throws SQLException
+	public ResultSet getMysqlNode(Connection c, String nodeUuid, int userId,  int groupId) throws SQLException
 	{
 		PreparedStatement st;
 		String sql;
@@ -184,7 +186,7 @@ public class MysqlDataProvider implements DataProvider {
 		//{
 		// On recupere d'abord les informations dans la table structures
 		sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid,  node_children_uuid as node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid,  bin2uuid(res_res_node_uuid) as res_res_node_uuid,  bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, shared_node_res,bin2uuid(shared_res_uuid) AS shared_res_uuid, bin2uuid(shared_node_uuid) AS shared_node_uuid, bin2uuid(shared_node_res_uuid) AS shared_node_res_uuid,asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date,  bin2uuid(portfolio_id) as portfolio_id FROM node WHERE node_uuid = uuid2bin(?) ";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setString(1, nodeUuid);
 
 		// On doit vérifier le droit d'accès en lecture avant de retourner le noeud
@@ -194,7 +196,7 @@ public class MysqlDataProvider implements DataProvider {
 		return st.executeQuery();
 	}
 
-	public ResultSet getMysqlResource(String nodeUuid)
+	public ResultSet getMysqlResource(Connection c, String nodeUuid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -204,7 +206,7 @@ public class MysqlDataProvider implements DataProvider {
 			// On recupere d'abord les informations dans la table structures
 			sql  = "SELECT bin2uuid(node_uuid) AS node_uuid, xsi_type, content, user_id, modif_user_id, modif_date FROM resource_table WHERE node_uuid = uuid2bin(?) ";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 
 			return st.executeQuery();
@@ -217,7 +219,7 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
-	public String[] getMysqlResourceByNodeParentUuid(String nodeParentUuid)
+	public String[] getMysqlResourceByNodeParentUuid(Connection c, String nodeParentUuid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -231,7 +233,7 @@ public class MysqlDataProvider implements DataProvider {
 					"FROM resource_table r, node n " +
 					"WHERE r.node_uuid=n.res_node_uuid AND " +
 					"n.node_uuid = uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeParentUuid);
 
 			ResultSet res = st.executeQuery();
@@ -250,7 +252,7 @@ public class MysqlDataProvider implements DataProvider {
 		return data;
 	}
 
-	public ResultSet getMysqlResources(String portfolioUuid) throws SQLException
+	public ResultSet getMysqlResources(Connection c, String portfolioUuid) throws SQLException
 	{
 		PreparedStatement st;
 		String sql;
@@ -262,13 +264,13 @@ public class MysqlDataProvider implements DataProvider {
 		if (dbserveur.equals("oracle")){
 			sql = "SELECT bin2uuid(res_node_uuid) AS res_node_uuid  FROM node WHERE portfolio_id= uuid2bin(?) AND res_node_uuid IS NOT NULL ";
 		}
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setString(1, portfolioUuid);
 
 		return st.executeQuery();
 	}
 
-	public ResultSet getMysqlPortfolios(Integer userId, int substid, Boolean portfolioActive)
+	public ResultSet getMysqlPortfolios(Connection c, Credential cred, Integer userId, int substid, Boolean portfolioActive)
 	{
 		if( userId == null && substid == 0 ) return null;
 		PreparedStatement st;
@@ -278,7 +280,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			// Ordering by code. A bit hackish but it work as intended
 			// Si on est admin, on récupère la liste complête
-			if( credential.isAdmin(userId) )
+			if( cred.isAdmin(c, userId) )
 			{
 				sql = "SELECT bin2uuid(p.portfolio_id) AS portfolio_id, bin2uuid(p.root_node_uuid) AS root_node_uuid, p.modif_user_id, p.modif_date, p.active, p.user_id " +
 						"FROM portfolio p, node n, resource_table r " +
@@ -291,11 +293,11 @@ public class MysqlDataProvider implements DataProvider {
 				if( "oracle".equals(dbserveur) )
 					sql += " ORDER BY dbms_lob.substr(content, 0, 4000)";
 
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				return st.executeQuery();
 			}
 
-			if( credential.isAdmin(substid) )	// If root wants to debug user UI
+			if( cred.isAdmin(c, substid) )	// If root wants to debug user UI
 				substid = 0;
 
 			// On recupere d'abord les informations dans la table structures
@@ -363,7 +365,7 @@ public class MysqlDataProvider implements DataProvider {
 			else if( "oracle".equals(dbserveur) )
 				sql += ") t GROUP BY portfolio_id, root_node_uuid, modif_user_id, modif_date, active, user_id, content ORDER BY content";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);	// From ownership
 			if( substid == 0 )
 			{
@@ -386,7 +388,7 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
-	public ResultSet getMysqlUserGroups(Integer userId)
+	public ResultSet getMysqlUserGroups(Connection c, Integer userId)
 	{
 		PreparedStatement st;
 		String sql;
@@ -398,7 +400,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT * FROM group_user gu, credential cr, group_info gi  WHERE gu.userid=cr.userid  AND gi.gid=gu.gid ";
 			if(userId!=null) sql += "  AND cr.userid = ? ";
 			sql += " ORDER BY label ASC ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			if(userId!=null) st.setInt(1, userId);
 
 			return st.executeQuery();
@@ -411,7 +413,7 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
-	public ResultSet getMysqlUsers(Integer userId)
+	public ResultSet getMysqlUsers(Connection c, Integer userId)
 	{
 		PreparedStatement st;
 		String sql;
@@ -426,7 +428,7 @@ public class MysqlDataProvider implements DataProvider {
 					"ORDER BY c.userid";
 			//if(userId!=null) sql += "  AND cr.userid = ? ";
 			//sql += " ORDER BY display_name ASC ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			// if(userId!=null) st.setInt(1, userId);
 
 			return st.executeQuery();
@@ -439,7 +441,7 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
-	public ResultSet getMysqlGroupRights(Integer userId, Integer groupId)
+	public ResultSet getMysqlGroupRights(Connection c, Integer userId, Integer groupId)
 	{
 		PreparedStatement st;
 		String sql;
@@ -451,7 +453,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT bin2uuid(id) as id,RD,WR,DL,SB,AD,types_id,gid,gr.grid,gi.owner,gi.label FROM group_rights gr, group_info gi WHERE  gr.grid = gi.grid AND gi.gid = ?";
 			//if(userId!=null) sql += "  AND cr.userid = ? ";
 			//sql += " ORDER BY display_name ASC ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, groupId);
 
 			return st.executeQuery();
@@ -464,7 +466,7 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
-	private ResultSet getMysqlNodeResultset(String nodeUuid)
+	private ResultSet getMysqlNodeResultset(Connection c, String nodeUuid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -472,7 +474,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid,  node_children_uuid as node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid,  bin2uuid(res_res_node_uuid) as res_res_node_uuid,  bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, asm_type, xsi_type, semtag, label, code, descr, format, modif_user_id, modif_date,  bin2uuid(portfolio_id) as portfolio_id FROM node WHERE node_uuid = uuid2bin(?) ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			return st.executeQuery();
 		}
@@ -483,7 +485,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private ResultSet getMysqlPortfolioResultset(String portfolioUuid)
+	private ResultSet getMysqlPortfolioResultset(Connection c, String portfolioUuid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -491,7 +493,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT bin2uuid(portfolio_id) AS portfolio_id,bin2uuid(model_id) AS model_id,bin2uuid(root_node_uuid) as root_node_uuid,modif_user_id,modif_date,active user_id FROM portfolio WHERE portfolio_id = uuid2bin(?) ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 			return st.executeQuery();
 		}
@@ -503,7 +505,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 
-	private int insertMysqlPortfolio(String portfolioUuid,String rootNodeUuid,int modelId,int userId)
+	private int insertMysqlPortfolio(Connection c, String portfolioUuid,String rootNodeUuid,int modelId,int userId)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -516,7 +518,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql  = "MERGE INTO portfolio d USING (SELECT uuid2bin(?) portfolio_id,uuid2bin(?) root_node_uuid,? user_id,? model_id,? modif_user_id,? modif_date FROM DUAL) s ON (d.portfolio_id = s.portfolio_id) WHEN MATCHED THEN UPDATE SET d.root_node_uuid = s.root_node_uuid, d.user_id = s.user_id,d.model_id = s.model_id, d.modif_user_id = s.modif_user_id, d.modif_date = s.modif_date WHEN NOT MATCHED THEN INSERT (d.portfolio_id, d.root_node_uuid, d.user_id, d.model_id, d.modif_user_id, d.modif_date) VALUES (s.portfolio_id, s.root_node_uuid, s.user_id, s.model_id, s.modif_user_id, s.modif_date)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1,portfolioUuid);
 			st.setString(2, rootNodeUuid);
 			st.setInt(3, userId);
@@ -543,7 +545,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private int updateMysqlPortfolioActive(String portfolioUuid, Boolean active)
+	private int updateMysqlPortfolioActive(Connection c, String portfolioUuid, Boolean active)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -554,7 +556,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			Integer iActive = (active) ? 1 : 0;
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 
 			st.setInt(1, iActive);
 			st.setString(2, portfolioUuid);
@@ -569,7 +571,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private int updateMysqlPortfolioModelId(String portfolioUuid, String portfolioModelId)
+	private int updateMysqlPortfolioModelId(Connection c, String portfolioUuid, String portfolioModelId)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -577,7 +579,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql  = "UPDATE  portfolio SET model_id = uuid2bin(?)  WHERE portfolio_id = uuid2bin(?) ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 
 			st.setString(1, portfolioModelId);
 			st.setString(2, portfolioUuid);
@@ -592,15 +594,15 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private int deleteMySqlPortfolio(String portfolioUuid, int userId, int groupId) throws SQLException
+	private int deleteMySqlPortfolio(Connection c, Credential cred, String portfolioUuid, int userId, int groupId) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
 		int status = 0;
 		boolean hasRights = false;
 
-		NodeRight right = credential.getPortfolioRight(userId, groupId, portfolioUuid, Credential.DELETE);
-		if( right.delete || credential.isAdmin(userId) )
+		NodeRight right = cred.getPortfolioRight(c, userId, groupId, portfolioUuid, Credential.DELETE);
+		if( right.delete || cred.isAdmin(c, userId) )
 			hasRights = true;
 
 		if(hasRights)
@@ -608,17 +610,17 @@ public class MysqlDataProvider implements DataProvider {
 			/// Si il y a quelque chose de particulier, on s'assure que tout soit bien nettoyé de façon séparé
 			try
 			{
-				connection.setAutoCommit(false);
+				c.setAutoCommit(false);
 
 				/// Portfolio
 				sql = "DELETE FROM portfolio WHERE portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolioUuid);
 				st.executeUpdate();
 
 				/// Nodes
 				sql = "DELETE FROM node WHERE portfolio_id=uuid2bin(?)";	/// On garde les resources, c'est ce qu'il faut?
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolioUuid);
 				st.executeUpdate();
 
@@ -632,41 +634,41 @@ public class MysqlDataProvider implements DataProvider {
 				if (dbserveur.equals("oracle")){
 					sql = "DELETE FROM group_right_info gri WHERE gri.portfolio_id=uuid2bin(?)";
 				}
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolioUuid);
 				st.executeUpdate();
 			}
 			catch( Exception e )
 			{
-				try{ connection.rollback(); }
+				try{ c.rollback(); }
 				catch( SQLException e1 ){ e1.printStackTrace(); }
 				e.printStackTrace();
 			}
 			finally
 			{
-				connection.commit();
-				connection.setAutoCommit(true);
-				connection.close();
+				c.commit();
+				c.setAutoCommit(true);
+				c.close();
 				status = 1;
 			}
 		}
 		return status;
 	}
 
-	private int deleteMySqlNode(String nodeUuid, String nodeParentUuid,int userId, int groupId) throws SQLException
+	private int deleteMySqlNode(Connection c, Credential cred, String nodeUuid, String nodeParentUuid,int userId, int groupId) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
 
-		if(credential.hasNodeRight(userId,groupId,nodeUuid,Credential.DELETE))
+		if(cred.hasNodeRight(c, userId,groupId,nodeUuid,Credential.DELETE))
 		{
 			sql  = " DELETE FROM node WHERE node_uuid=uuid2bin(?) ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			Integer nbDeletedNodes = st.executeUpdate();
 
 			// On met à jour les enfants du parent
-			updateMysqlNodeChildren(nodeParentUuid);
+			updateMysqlNodeChildren(c, nodeParentUuid);
 
 			return nbDeletedNodes;
 		}
@@ -676,7 +678,7 @@ public class MysqlDataProvider implements DataProvider {
 	/*
 	 *  Ecrit le noeud dans la base MySQL
 	 */
-	private int insertMySqlNode(String nodeUuid,String nodeParentUuid,String nodeChildrenUuid,
+	private int insertMySqlNode(Connection c, String nodeUuid,String nodeParentUuid,String nodeChildrenUuid,
 			String asmType,String xsiType,
 			int sharedRes, int sharedNode, int sharedNodeRes, String sharedResUuid, String sharedNodeUuid,String sharedNodeResUuid, String metadata, String metadataWad, String metadataEpm,
 			String semtag, String semanticTag,
@@ -689,7 +691,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			if(nodeChildrenUuid==null)
 			{
-				nodeChildrenUuid = getMysqlNodeResultset(nodeUuid).getString("node_children_uuid");
+				nodeChildrenUuid = getMysqlNodeResultset(c, nodeUuid).getString("node_children_uuid");
 			}
 		}
 		catch(Exception ex)
@@ -712,7 +714,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "MERGE INTO node d USING (SELECT uuid2bin(?) node_uuid,uuid2bin(?) node_parent_uuid,? node_children_uuid,? node_order,? asm_type,? xsi_type,? shared_res,? shared_node,? shared_node_res,uuid2bin(?) shared_res_uuid,uuid2bin(?) shared_node_uuid,uuid2bin(?) shared_node_res_uuid,? metadata,? metadata_wad,? metadata_epm,? semtag,? semantictag,? label,? code,? descr,? format,? modif_user_id,? modif_date,uuid2bin(?) portfolio_id FROM DUAL) s ON (d.node_uuid = s.node_uuid) WHEN MATCHED THEN UPDATE SET d.node_parent_uuid=s.node_parent_uuid,d.node_children_uuid=s.node_children_uuid,d.node_order=s.node_order,d.asm_type=s.asm_type,d.xsi_type=s.xsi_type,d.shared_res=s.shared_res,d.shared_node=s.shared_node,d.shared_node_res=s.shared_node_res,d.shared_res_uuid=s.shared_res_uuid,d.shared_node_uuid=s.shared_node_uuid,d.shared_node_res_uuid=s.shared_node_res_uuid,d.metadata=s.metadata,d.metadata_wad=s.metadata_wad,d.metadata_epm=s.metadata_epm,d.semtag=s.semtag,d.semantictag=s.semantictag,d.label=s.label,d.code=s.code,d.descr=s.descr,d.format=s.format,d.modif_user_id=s.modif_user_id,d.modif_date=s.modif_date,d.portfolio_id=s.portfolio_id WHEN NOT MATCHED THEN INSERT (d.node_uuid,d.node_parent_uuid,d.node_children_uuid,d.node_order,d.asm_type,d.xsi_type,d.shared_res,d.shared_node,d.shared_node_res,d.shared_res_uuid,d.shared_node_uuid,d.shared_node_res_uuid,d.metadata,d.metadata_wad,d.metadata_epm,d.semtag,d.semantictag,d.label,d.code,d.descr,d.format,d.modif_user_id,d.modif_date,d.portfolio_id) VALUES (s.node_uuid,s.node_parent_uuid,s.node_children_uuid,s.node_order,s.asm_type,s.xsi_type,s.shared_res,s.shared_node,s.shared_node_res,s.shared_res_uuid,s.shared_node_uuid,s.shared_node_res_uuid,s.metadata,s.metadata_wad,s.metadata_epm,s.semtag,s.semantictag,s.label,s.code,s.descr,s.format,s.modif_user_id,s.modif_date,s.portfolio_id)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			st.setString(2, nodeParentUuid);
 			st.setString(3, nodeChildrenUuid);
@@ -751,7 +753,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private int updatetMySqlNode(String nodeUuid, String asmType,String xsiType,String semantictag, String label, String code, String descr,String format, String metadata,String metadataWad,String metadataEpm, int sharedRes, int sharedNode, int sharedNodeRes,int modifUserId) throws Exception
+	private int updatetMySqlNode(Connection c, String nodeUuid, String asmType,String xsiType,String semantictag, String label, String code, String descr,String format, String metadata,String metadataWad,String metadataEpm, int sharedRes, int sharedNode, int sharedNodeRes,int modifUserId) throws Exception
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -759,7 +761,7 @@ public class MysqlDataProvider implements DataProvider {
 		sql  = "UPDATE node SET ";
 		sql += "asm_type = ?,xsi_type = ?,semantictag = ?,label = ?,code = ?,descr = ?,format = ? ,metadata = ?,metadata_wad = ?, metadata_epm = ?,shared_res = ?,shared_node = ?,shared_node_res = ?, modif_user_id = ?,modif_date = ? ";
 		sql += " WHERE node_uuid = uuid2bin(?) ";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 
 		st.setString(1, asmType);
 		st.setString(2, xsiType);
@@ -790,7 +792,7 @@ public class MysqlDataProvider implements DataProvider {
 		return val;
 	}
 
-	private int updatetMySqlNodeOrder(String nodeUuid, int order) throws Exception
+	private int updatetMySqlNodeOrder(Connection c, String nodeUuid, int order) throws Exception
 	{
 		String sql = "";
 		PreparedStatement st=null;
@@ -798,7 +800,7 @@ public class MysqlDataProvider implements DataProvider {
 		sql  = "UPDATE node SET ";
 		sql += " node_order = ? ";
 		sql += " WHERE node_uuid = uuid2bin(?) ";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 
 		st.setInt(1, order);
 		st.setString(2, nodeUuid);
@@ -810,7 +812,7 @@ public class MysqlDataProvider implements DataProvider {
 	/*
 	 *  Ecrit le noeud dans la base MySQL
 	 */
-	private int updateMysqlNodeChildren(String nodeUuid)
+	private int updateMysqlNodeChildren(Connection c, String nodeUuid)
 	{
 		PreparedStatement st=null;
 		String sql;
@@ -831,7 +833,7 @@ public class MysqlDataProvider implements DataProvider {
 						"WHERE n1.node_uuid= n2.node_uuid) " +
 						"WHERE n1.node_parent_uuid=uuid2bin(?)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			if (dbserveur.equals("oracle")){
 				st.setString(2, nodeUuid);
@@ -851,7 +853,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 		          sql = "UPDATE node SET node_children_uuid=(SELECT LISTAGG(bin2uuid(COALESCE(n2.shared_node_uuid,n2.node_uuid)), ',') WITHIN GROUP (ORDER BY n2.node_order) AS value FROM node n2 WHERE n2.node_parent_uuid=uuid2bin(?) GROUP BY n2.node_parent_uuid) WHERE node_uuid=uuid2bin(?)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			st.setString(2, nodeUuid);
 			st.executeUpdate();
@@ -863,7 +865,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "UPDATE node n "
 						+ "SET n.node_children_uuid=NULL "
 						+ "WHERE n.node_uuid=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, nodeUuid);
 				st.executeUpdate();
 				changes = st.getUpdateCount();
@@ -883,7 +885,7 @@ public class MysqlDataProvider implements DataProvider {
 		return status;
 	}
 
-	private int insertMysqlResource(String uuid,String parentUuid, String xsiType,String content,String portfolioModelId, int sharedNodeRes,int sharedRes, int userId)
+	private int insertMysqlResource(Connection c, String uuid,String parentUuid, String xsiType,String content,String portfolioModelId, int sharedNodeRes,int sharedRes, int userId)
 	{
 		String sql = "";
 		PreparedStatement st=null;
@@ -908,7 +910,7 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")){
 					sql = "MERGE INTO resource_table d USING (SELECT uuid2bin(?) node_uuid,? xsi_type,? content,? user_id,? modif_user_id,? modif_date FROM DUAL) s ON (d.node_uuid = s.node_uuid) WHEN MATCHED THEN UPDATE SET d.xsi_type = s.xsi_type, d.content = s.content, d.user_id = s.user_id, d.modif_user_id = s.modif_user_id, d.modif_date = s.modif_date WHEN NOT MATCHED THEN INSERT (d.node_uuid, d.xsi_type, d.content, d.user_id, d.modif_user_id, d.modif_date) VALUES (s.node_uuid, s.xsi_type, s.content, s.user_id, s.modif_user_id, s.modif_date)";
 				}
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1,uuid);
 				st.setString(2,xsiType);
 				st.setString(3, content);
@@ -928,7 +930,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				sql = " UPDATE node SET res_res_node_uuid =uuid2bin(?), shared_node_res_uuid=uuid2bin(?) ";
 				sql += " WHERE node_uuid = uuid2bin(?) ";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, uuid);
 				if(sharedNodeRes==1 && portfolioModelId!=null)
 					st.setString(2,uuid);
@@ -940,7 +942,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				sql = " UPDATE node SET res_context_node_uuid=uuid2bin(?)";
 				sql += " WHERE node_uuid = uuid2bin(?) ";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, uuid);
 				st.setString(2,parentUuid);
 			}
@@ -948,7 +950,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				sql = " UPDATE node SET res_node_uuid=uuid2bin(?), shared_res_uuid=uuid2bin(?) ";
 				sql += " WHERE node_uuid = uuid2bin(?) ";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, uuid);
 				if(sharedRes==1 && portfolioModelId!=null)
 					st.setString(2,uuid);
@@ -974,7 +976,7 @@ public class MysqlDataProvider implements DataProvider {
 		return status;
 	}
 
-	private int updateMysqlResource(String uuid,String xsiType, String content,int userId)
+	private int updateMysqlResource(Connection c, String uuid,String xsiType, String content,int userId)
 	{
 		String sql = "";
 		PreparedStatement st = null;
@@ -989,7 +991,7 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")){
 					sql = "MERGE INTO resource_table d USING (SELECT uuid2bin(?) node_uuid,? xsi_type,? content,? user_id,? modif_user_id,? modif_date FROM DUAL) s ON (d.node_uuid = s.node_uuid) WHEN MATCHED THEN UPDATE SET d.xsi_type = s.xsi_type, d.content = s.content, d.user_id = s.user_id, d.modif_user_id = s.modif_user_id, d.modif_date = s.modif_date WHEN NOT MATCHED THEN INSERT (d.node_uuid, d.xsi_type, d.content, d.user_id, d.modif_user_id, d.modif_date) VALUES (s.node_uuid, s.xsi_type, s.content, s.user_id, s.modif_user_id, s.modif_date)";
 				}
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1,uuid);
 				st.setString(2,xsiType);
 				st.setString(3, content);
@@ -1007,7 +1009,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				sql  = "UPDATE  resource_table SET content = ?,user_id = ?,modif_user_id = ?,modif_date = ? WHERE node_uuid = uuid2bin(?) ";
 
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 
 				st.setString(1, content);
 				st.setInt(2,userId);
@@ -1039,7 +1041,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private int updateMysqlResourceByXsiType(String nodeUuid, String xsiType,String content,int userId)
+	private int updateMysqlResourceByXsiType(Connection c, String nodeUuid, String xsiType,String content,int userId)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -1064,7 +1066,7 @@ public class MysqlDataProvider implements DataProvider {
 					{
 						codeVal = codeContent.getNodeValue();
 						String sq = "UPDATE node SET code=? WHERE node_uuid=uuid2bin(?)";
-						st = connection.prepareStatement(sq);
+						st = c.prepareStatement(sq);
 						st.setString(1, codeVal);
 						st.setString(2, nodeUuid);
 						st.executeUpdate();
@@ -1084,7 +1086,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql += " WHERE node_uuid = (SELECT res_node_uuid FROM node ";
 				sql += " WHERE node_uuid=uuid2bin(?))  ";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, content);
 
 			st.setInt(2,userId);
@@ -1107,15 +1109,15 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private int deleteMySqlResource(String resourceUuid, int userId, int groupId) throws SQLException
+	private int deleteMySqlResource(Connection c, Credential cred, String resourceUuid, int userId, int groupId) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
 
-		if(credential.hasNodeRight(userId,groupId,resourceUuid,Credential.DELETE))
+		if(cred.hasNodeRight(c, userId,groupId,resourceUuid,Credential.DELETE))
 		{
 			sql  = " DELETE FROM resource_table WHERE node_uuid=uuid2bin(?) ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, resourceUuid);
 			return st.executeUpdate();
 		}
@@ -1123,14 +1125,14 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putUser(int userId,String oAuthToken, String oAuthSecret)
+	public Object putUser(Connection c, int userId,String oAuthToken, String oAuthSecret)
 	{
-		return insertMysqlUser(userId, oAuthToken,oAuthSecret);
+		return insertMysqlUser(c, userId, oAuthToken,oAuthSecret);
 	}
 
 	@Override
-	public Object getUserGroups(int userId) throws Exception {
-		ResultSet res = getMysqlUserGroups(userId);
+	public Object getUserGroups(Connection c, int userId) throws Exception {
+		ResultSet res = getMysqlUserGroups(c, userId);
 
 		String result = "<groups>";
 		while(res.next())
@@ -1150,17 +1152,17 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isUserMemberOfGroup(int userId,int groupId)
+	public boolean isUserMemberOfGroup(Connection c, Credential cred, int userId,int groupId)
 	{
-		return this.credential.isUserMemberOfGroup(userId,groupId);
+		return cred.isUserMemberOfGroup(c, userId,groupId);
 	}
 
 	@Override
-	public Object getUser(int userId)
+	public Object getUser(Connection c, int userId)
 	{
 		try
 		{
-			return getMySqlUser(userId);
+			return getMySqlUser(c, userId);
 		}
 		catch(Exception ex)
 		{
@@ -1168,7 +1170,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	public ResultSet getMySqlUser(int userId) throws Exception
+	public ResultSet getMySqlUser(Connection c, int userId) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
@@ -1177,7 +1179,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT * FROM user WHERE user_id = ? ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			res = st.executeQuery();
 			res.next();
@@ -1192,7 +1194,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Deprecated
-	private int insertMysqlUser(int userId, String oAuthToken,String oAuthSecret)
+	private int insertMysqlUser(Connection c, int userId, String oAuthToken,String oAuthSecret)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -1202,7 +1204,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql  = "REPLACE INTO user(user_id,oauth_token,oauth_secret) ";
 
 			sql += "VALUES(?,?,?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1,userId);
 			st.setString(2, oAuthToken);
 			st.setString(3, oAuthSecret);
@@ -1217,7 +1219,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private boolean insertMySqlLog(String url,String method,String headers,String inBody, String outBody, int code)
+	private boolean insertMySqlLog(Connection c, String url,String method,String headers,String inBody, String outBody, int code)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -1230,7 +1232,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql += "VALUES(CURRENT_TIMESTAMP,?,?,?,?,?,?)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1,url);
 			st.setString(2, method);
 			st.setString(3, headers);
@@ -1248,14 +1250,14 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	public String getPortfolioRootNode(String portfolioUuid) throws SQLException
+	public String getPortfolioRootNode(Connection c, String portfolioUuid) throws SQLException
 	{
 		PreparedStatement st;
 		String sql;
 		ResultSet res;
 
 		sql = "SELECT bin2uuid(root_node_uuid) AS root_node_uuid FROM portfolio WHERE portfolio_id = uuid2bin(?) ";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setString(1, portfolioUuid);
 		res = st.executeQuery();
 		res.next();
@@ -1267,14 +1269,14 @@ public class MysqlDataProvider implements DataProvider {
 		return root_node;
 	}
 
-	public String getPortfolioModelUuid(String portfolioUuid) throws SQLException
+	public String getPortfolioModelUuid(Connection c, String portfolioUuid) throws SQLException
 	{
 		PreparedStatement st;
 		String sql;
 		ResultSet res;
 
 		sql = "SELECT bin2uuid(model_id) AS model_id FROM portfolio WHERE portfolio_id = uuid2bin(?) ";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setString(1, portfolioUuid);
 		res = st.executeQuery();
 		res.next();
@@ -1283,21 +1285,21 @@ public class MysqlDataProvider implements DataProvider {
 
 
 
-	public int getPortfolioUserId(String portfolioUuid) throws SQLException
+	public int getPortfolioUserId(Connection c, String portfolioUuid) throws SQLException
 	{
 		PreparedStatement st;
 		String sql;
 		ResultSet res;
 
 		sql = "SELECT user_id FROM portfolio WHERE portfolio_id = uuid2bin(?) ";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setString(1, portfolioUuid);
 		res = st.executeQuery();
 		res.next();
 		return res.getInt("user_id");
 	}
 
-	public String getNodeParentUuidByNodeUuid(String nodeUuid)
+	public String getNodeParentUuidByNodeUuid(Connection c, String nodeUuid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -1306,7 +1308,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT bin2uuid(node_parent_uuid) AS node_parent_uuid FROM node WHERE node_uuid = uuid2bin(?) ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			res = st.executeQuery();
 			res.next();
@@ -1320,7 +1322,7 @@ public class MysqlDataProvider implements DataProvider {
 
 	}
 
-	public String getPortfolioUuidByPortfolioCode(String portfolioCode)
+	public String getPortfolioUuidByPortfolioCode(Connection c, String portfolioCode)
 	{
 		PreparedStatement st;
 		String sql;
@@ -1331,7 +1333,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT bin2uuid(p.portfolio_id) AS portfolio_id " +
 					"FROM portfolio p, node n " +
 					"WHERE p.active=1 AND p.portfolio_id=n.portfolio_id AND n.code = ? AND n.asm_type='asmRoot'";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioCode);
 			res = st.executeQuery();
 /*
@@ -1355,7 +1357,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getResourceNodeUuidByParentNodeUuid(String nodeParentUuid)
+	public String getResourceNodeUuidByParentNodeUuid(Connection c, String nodeParentUuid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -1364,7 +1366,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT bin2uuid(res_node_uuid)AS res_node_uuid FROM node WHERE node_uuid = uuid2bin(?) ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeParentUuid);
 			res = st.executeQuery();
 			res.next();
@@ -1377,7 +1379,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	public Integer getNodeOrderByNodeUuid(String nodeUuid)
+	public Integer getNodeOrderByNodeUuid(Connection c, String nodeUuid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -1386,7 +1388,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT node_order FROM node WHERE node_uuid = uuid2bin(?) ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			res = st.executeQuery();
 			res.next();
@@ -1401,7 +1403,7 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public String getPortfolioUuidByNodeUuid(String nodeUuid) throws Exception
+	public String getPortfolioUuidByNodeUuid(Connection c, String nodeUuid) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
@@ -1409,7 +1411,7 @@ public class MysqlDataProvider implements DataProvider {
 		String result = null;
 
 		sql = "SELECT bin2uuid(portfolio_id) AS portfolio_id FROM node WHERE node_uuid = uuid2bin(?) ";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setString(1, nodeUuid);
 		res = st.executeQuery();
 		res.next();
@@ -1425,18 +1427,18 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public Object getPortfolio(MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception
+	public Object getPortfolio(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception
 	{
-		String rootNodeUuid = getPortfolioRootNode(portfolioUuid);
+		String rootNodeUuid = getPortfolioRootNode(c, portfolioUuid);
 		String header = "";
 		String footer = "";
-		NodeRight nodeRight = credential.getPortfolioRight(userId,groupId, portfolioUuid, Credential.READ);
+		NodeRight nodeRight = cred.getPortfolioRight(c, userId,groupId, portfolioUuid, Credential.READ);
 		if(!nodeRight.read)
 		{
-			userId = credential.getPublicUid();
+			userId = cred.getPublicUid(c);
 //			NodeRight nodeRight = new NodeRight(false,false,false,false,false,false);
 			/// Vérifie les droits avec le compte publique (dernière chance)
-			nodeRight = credential.getPublicRight(userId, 123, rootNodeUuid, "dummy");
+			nodeRight = cred.getPublicRight(c, userId, 123, rootNodeUuid, "dummy");
 			if( !nodeRight.read )
 				return "faux";
 		}
@@ -1476,7 +1478,7 @@ public class MysqlDataProvider implements DataProvider {
 //			metawad.setAttribute("owner", "N");
 //			root.appendChild(metawad);
 			//*/
-			int owner = credential.getOwner(userId, portfolioUuid);
+			int owner = cred.getOwner(c, userId, portfolioUuid);
 			String isOwner = "N";
 			if( owner == userId )
 				isOwner = "Y";
@@ -1487,7 +1489,7 @@ public class MysqlDataProvider implements DataProvider {
 			//          root.setAttribute("schemaVersion", "1.0");
 //			document.appendChild(root);
 
-			String data = getLinearXml(portfolioUuid, rootNodeUuid, null, true, null, userId, nodeRight.rrgId, nodeRight.groupLabel);
+			String data = getLinearXml(c, cred, portfolioUuid, rootNodeUuid, null, true, null, userId, nodeRight.rrgId, nodeRight.groupLabel);
 
 			StringWriter stw = new StringWriter();
 			stw.append(headerXML+data+"</portfolio>");
@@ -1558,18 +1560,18 @@ public class MysqlDataProvider implements DataProvider {
 			footer = "}}";
 		}
 
-		return header+getNode(outMimeType, rootNodeUuid,true, userId, groupId, label).toString()+footer;
+		return header+getNode(c, cred, outMimeType, rootNodeUuid,true, userId, groupId, label).toString()+footer;
 	}
 
 	@Override
-	public Object getPortfolioByCode(MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception
+	public Object getPortfolioByCode(Connection c, Credential cred, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception
 	{
 		//return this.getPortfolio(mimeType, this.getPortfolioUuidByPortfolioCode(portfolioCode), userId, groupId, null);
 
 		PreparedStatement st = null;
 		String sql;
 		ResultSet res = null;
-		String pid = this.getPortfolioUuidByPortfolioCode(portfolioCode);
+		String pid = this.getPortfolioUuidByPortfolioCode(c, portfolioCode);
 		Boolean withResources = false;
 		String result = "";
 
@@ -1581,7 +1583,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(withResources)
 		{
-			return this.getPortfolio(new MimeType("text/xml"),pid,userId, groupId, null, null, null, substid).toString();
+			return this.getPortfolio(c, cred, new MimeType("text/xml"),pid,userId, groupId, null, null, null, substid).toString();
 		}
 		else
 		{
@@ -1590,7 +1592,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "SELECT  bin2uuid(portfolio_id) AS portfolio_id,bin2uuid(root_node_uuid) as root_node_uuid, modif_user_id,modif_date, active, user_id "
 						+ "FROM portfolio "
 						+ "WHERE portfolio_id = uuid2bin(?) ";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, pid);
 				res = st.executeQuery();
 			}
@@ -1605,7 +1607,7 @@ public class MysqlDataProvider implements DataProvider {
 				result += DomUtils.getXmlAttributeOutput("id", res.getString("portfolio_id"))+" ";
 				result += DomUtils.getXmlAttributeOutput("root_node_id", res.getString("root_node_uuid"))+" ";
 				result += ">";
-				result += getNodeXmlOutput(res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId, null,false);
+				result += getNodeXmlOutput(c, cred, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId, null,false);
 				result += "</portfolio>";
 			}
 		}
@@ -1614,13 +1616,13 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getPortfolios(MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid) throws SQLException
+	public Object getPortfolios(Connection c, Credential cred, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid) throws SQLException
 	{
 		PreparedStatement st = null;
 		ResultSet res = null;
 		
 		String sql = "";
-		if( credential.isAdmin(userId) )
+		if( cred.isAdmin(c, userId) )
 		{
 			sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.res_node_uuid) as res_node_uuid,  bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, r1.content, r1.xsi_type, r2.content, r2.xsi_type, r3.content, r3.xsi_type " +
 					"FROM portfolio p, node n " +
@@ -1632,7 +1634,7 @@ public class MysqlDataProvider implements DataProvider {
 			else sql += "AND p.active=0 ";
 			sql += "ORDER BY r1.content;";
 			
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			res = st.executeQuery();
 		}
 		else
@@ -1648,7 +1650,7 @@ public class MysqlDataProvider implements DataProvider {
 			else sql += "AND p.active=0 ";
 			sql += "ORDER BY r1.content;";
 			
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			st.setInt(2, userId);
 			res = st.executeQuery();
@@ -1675,7 +1677,7 @@ public class MysqlDataProvider implements DataProvider {
 				
 				if(res.getString("shared_node_uuid")!=null)	// FIXME, add to query
 				{
-					out.append(getNodeXmlOutput(res.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
+					out.append(getNodeXmlOutput(c, cred, res.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
 				}
 				else
 				{
@@ -1778,7 +1780,7 @@ public class MysqlDataProvider implements DataProvider {
 				result += "{ ";
 				result += DomUtils.getJsonAttributeOutput("id", res.getString("portfolio_id"))+", ";
 				result += DomUtils.getJsonAttributeOutput("root_node_id", res.getString("root_node_uuid"))+", ";
-				result += getNodeJsonOutput(res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId,null,false);
+				result += getNodeJsonOutput(c, cred, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId,null,false);
 				result += "} ";
 				firstPass = true;
 			}
@@ -1791,31 +1793,31 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNodeBySemanticTag(MimeType outMimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception
+	public Object getNodeBySemanticTag(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception
 	{
 		ResultSet res;
 		String nodeUuid;
 
 		// On recupere d'abord l'uuid du premier noeud trouvé correspondant au semantictag
-		res = this.getMysqlNodeUuidBySemanticTag(portfolioUuid, semantictag);
+		res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semantictag);
 		res.next();
 		nodeUuid = res.getString("node_uuid");
 
-		if(!credential.hasNodeRight(userId,groupId,nodeUuid, Credential.READ))
+		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.READ))
 			return null;
 
 		if(outMimeType.getSubType().equals("xml"))
-			return getNodeXmlOutput(nodeUuid,true,null,userId, groupId, null,true);
+			return getNodeXmlOutput(c, cred, nodeUuid,true,null,userId, groupId, null,true);
 		else if(outMimeType.getSubType().equals("json"))
-			return "{"+getNodeJsonOutput(nodeUuid,true,null,userId, groupId,null,true)+"}";
+			return "{"+getNodeJsonOutput(c, cred, nodeUuid,true,null,userId, groupId,null,true)+"}";
 		else
 			return null;
 	}
 
 	@Override
-	public Object getNodesBySemanticTag(MimeType outMimeType, int userId,int groupId, String portfolioUuid, String semanticTag) throws SQLException
+	public Object getNodesBySemanticTag(Connection c, Credential cred, MimeType outMimeType, int userId,int groupId, String portfolioUuid, String semanticTag) throws SQLException
 	{
-		ResultSet res = this.getMysqlNodeUuidBySemanticTag(portfolioUuid, semanticTag);
+		ResultSet res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semanticTag);
 		String result = "";
 		if(outMimeType.getSubType().equals("xml"))
 		{
@@ -1823,7 +1825,7 @@ public class MysqlDataProvider implements DataProvider {
 			while(res.next())
 			{
 				String nodeUuid = res.getString("node_uuid");
-				if(!credential.hasNodeRight(userId,groupId,nodeUuid, Credential.READ))
+				if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.READ))
 					return null;
 
 				result += "<node ";
@@ -1859,9 +1861,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postPortfolio(MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String portfolioModelId, int substid, boolean parseRights) throws Exception
+	public Object postPortfolio(Connection c, Credential cred, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String portfolioModelId, int substid, boolean parseRights) throws Exception
 	{
-		if(!credential.isAdmin(userId) && !credential.isCreator(userId) )
+		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		StringBuffer outTrace = new StringBuffer();
@@ -1870,7 +1872,7 @@ public class MysqlDataProvider implements DataProvider {
 		// Si le modele est renseigné, on ignore le XML posté et on récupere le contenu du modele
 		// à la place
 		if(portfolioModelId!=null)
-			in = getPortfolio(inMimeType,portfolioModelId,userId, groupId, null, null, null, substid).toString();
+			in = getPortfolio(c, cred, inMimeType,portfolioModelId,userId, groupId, null, null, null, substid).toString();
 
 		// On génère un nouvel uuid
 		if(this.portfolioUuidPreliminaire!=null)
@@ -1903,7 +1905,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				String code = nodelist.item(0).getTextContent();
 				// Simple query
-				if( isCodeExist(code) )
+				if( isCodeExist(c, code) )
 					throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
 			}
 
@@ -1917,27 +1919,27 @@ public class MysqlDataProvider implements DataProvider {
 
 				String uuid = UUID.randomUUID().toString();
 
-				insertMysqlPortfolio(portfolioUuid,uuid,0,userId);
+				insertMysqlPortfolio(c, portfolioUuid,uuid,0,userId);
 
-				writeNode(rootNode, portfolioUuid, portfolioModelId, userId,0, uuid,null,0,0,false, null, parseRights);
+				writeNode(c, cred, rootNode, portfolioUuid, portfolioModelId, userId,0, uuid,null,0,0,false, null, parseRights);
 			}
 		}
-		updateMysqlPortfolioActive(portfolioUuid,true);
+		updateMysqlPortfolioActive(c, portfolioUuid,true);
 
-		updateMysqlPortfolioModelId(portfolioUuid,portfolioModelId);
+		updateMysqlPortfolioModelId(c, portfolioUuid,portfolioModelId);
 
 		/// If we instanciate, don't need the designer role
 //		if( !parseRights )
 		{
 			/// Créer groupe 'designer', 'all' est mis avec ce qui est spécifié dans le xml reçu
-			int groupid = postCreateRole(portfolioUuid, "designer", userId);
+			int groupid = postCreateRole(c, cred, portfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
-			putUserGroup(Integer.toString(groupid), Integer.toString(userId));
+			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
 		}
 
 		/// S'assure que la date est bonne
-		touchPortfolio(null, portfolioUuid);
+		touchPortfolio(c, null, portfolioUuid);
 
 		String result = "<portfolios>";
 		result += "<portfolio ";
@@ -1948,7 +1950,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isCodeExist( String code )
+	public boolean isCodeExist( Connection c, String code )
 	{
 		boolean response = false;
 		String sql;
@@ -1958,7 +1960,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			// Retire la personne du rôle
 			sql = "SELECT bin2uuid(portfolio_id) FROM node WHERE code=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, code);
 			rs = st.executeQuery();
 
@@ -1988,14 +1990,14 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putPortfolio(MimeType inMimeType, MimeType outMimeType, String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String portfolioModelId) throws Exception
+	public Object putPortfolio(Connection c, Credential cred, MimeType inMimeType, MimeType outMimeType, String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String portfolioModelId) throws Exception
 	{
 		StringBuffer outTrace = new StringBuffer();
 
 		//		if(!credential.isAdmin(userId))
 		//			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		ResultSet resPortfolio = getMysqlPortfolioResultset(portfolioUuid);
+		ResultSet resPortfolio = getMysqlPortfolioResultset(c, portfolioUuid);
 		if(resPortfolio!=null)
 		{
 			resPortfolio.next();
@@ -2039,45 +2041,45 @@ public class MysqlDataProvider implements DataProvider {
 						uuid = tempId;
 					}
 				}
-				insertMysqlPortfolio(portfolioUuid,uuid,0,userId);
+				insertMysqlPortfolio(c, portfolioUuid,uuid,0,userId);
 
-				writeNode(rootNode, portfolioUuid, portfolioModelId, userId,0, null,null,0,0,true, null, false);
+				writeNode(c, cred, rootNode, portfolioUuid, portfolioModelId, userId,0, null,null,0,0,true, null, false);
 			}
 		}
 
-		updateMysqlPortfolioActive(portfolioUuid,portfolioActive);
+		updateMysqlPortfolioActive(c, portfolioUuid,portfolioActive);
 
 		return true;
 	}
 
 	@Override
-	public Object deletePortfolio(String portfolioUuid, int userId, int groupId) throws SQLException
+	public Object deletePortfolio(Connection c, Credential cred, String portfolioUuid, int userId, int groupId) throws SQLException
 	{
 		/*
 		if(!credential.isAdmin(userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 		//*/
 
-		return this.deleteMySqlPortfolio(portfolioUuid, userId, groupId);
+		return this.deleteMySqlPortfolio(c, cred, portfolioUuid, userId, groupId);
 	}
 
 	@Override
-	public Object getNodes(MimeType outMimeType, String portfolioUuid,
+	public Object getNodes(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid,
 			int userId,int groupId, String semtag, String parentUuid, String filterId,
 			String filterParameters, String sortId) throws SQLException
 	{
-		return getNodeXmlListOutput(parentUuid, true, userId, groupId);
+		return getNodeXmlListOutput(c, cred, parentUuid, true, userId, groupId);
 	}
 
-	private  StringBuffer getNodeJsonOutput(String nodeUuid,boolean withChildren, String withChildrenOfXsiType,int userId,int groupId,String label, boolean checkSecurity) throws SQLException
+	private  StringBuffer getNodeJsonOutput(Connection c, Credential cred, String nodeUuid,boolean withChildren, String withChildrenOfXsiType,int userId,int groupId,String label, boolean checkSecurity) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
-		ResultSet resNode = getMysqlNode(nodeUuid,userId,groupId);
+		ResultSet resNode = getMysqlNode(c, nodeUuid,userId,groupId);
 		ResultSet resResource;
 
 		if(checkSecurity)
 		{
-			NodeRight nodeRight = credential.getNodeRight(userId,groupId,nodeUuid, label);
+			NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, label);
 			//
 			if(!nodeRight.read)
 				return result;
@@ -2122,7 +2124,7 @@ public class MysqlDataProvider implements DataProvider {
 				// si asmResource
 				try
 				{
-					resResource = getMysqlResource(nodeUuid);
+					resResource = getMysqlResource(c, nodeUuid);
 					if(resResource.next())
 						result.append("\"#cdata-section\": \""+JSONObject.escape(resResource.getString("content"))+"\"");
 				}
@@ -2143,7 +2145,7 @@ public class MysqlDataProvider implements DataProvider {
 						arrayChild = resNode.getString("node_children_uuid").split(",");
 						for(int i =0;i<(arrayChild.length);i++)
 						{
-							ResultSet resChildNode = this.getMysqlNodeResultset(arrayChild[i]);
+							ResultSet resChildNode = this.getMysqlNodeResultset(c, arrayChild[i]);
 							String tmpXsiType = "";
 							try
 							{
@@ -2154,7 +2156,7 @@ public class MysqlDataProvider implements DataProvider {
 
 							}
 							if(withChildrenOfXsiType==null || withChildrenOfXsiType.equals(tmpXsiType))
-								result.append(getNodeJsonOutput(arrayChild[i],true,null,userId,groupId,label,true));
+								result.append(getNodeJsonOutput(c, cred, arrayChild[i],true,null,userId,groupId,label,true));
 
 							if(withChildrenOfXsiType==null)
 								if(arrayChild.length>1)
@@ -2179,62 +2181,45 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
-	private  StringBuffer getNodeXmlOutput(String nodeUuid,boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String label,boolean checkSecurity) throws SQLException
+	private  StringBuffer getNodeXmlOutput(Connection c, Credential cred, String nodeUuid,boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String label,boolean checkSecurity) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
 		// Verification securité
 		if(checkSecurity)
 		{
-			NodeRight nodeRight = credential.getNodeRight(userId,groupId,nodeUuid, label);
+			NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, label);
 			if(!nodeRight.read)
 			{
-				userId = credential.getPublicUid();
+				userId = cred.getPublicUid(c);
 //			NodeRight nodeRight = new NodeRight(false,false,false,false,false,false);
 			/// Vérifie les droits avec le compte publique (dernière chance)
-				nodeRight = credential.getPublicRight(userId, 123, nodeUuid, "dummy");
+				nodeRight = cred.getPublicRight(c, userId, 123, nodeUuid, "dummy");
 				if( !nodeRight.read )
 					return result;
 			}
 		}
 
-		ResultSet resNode = getMysqlNode(nodeUuid,userId, groupId);
+		ResultSet resNode = getMysqlNode(c, nodeUuid,userId, groupId);
 		ResultSet resResource;
 
 		String indentation = " ";
 
-		//try
-		//{
-		//			resNode.next();
-
+		long start = 0;
+		long metaxml = 0;
+		long resource = 0;
+		long children = 0;
+		long end = 0;
+		
+		start = System.currentTimeMillis();
 		if(resNode.next())
 		{
 			if(resNode.getString("shared_node_uuid")!=null)
 			{
-				result.append(getNodeXmlOutput(resNode.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
+				result.append(getNodeXmlOutput(c, cred, resNode.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
 			}
 			else
 			{
 				result.append(indentation+"<"+resNode.getString("asm_type")+" "+DomUtils.getXmlAttributeOutput("id",resNode.getString("node_uuid"))+" ");
-				//if(resNodes.getString("node_parent_uuid").length()>0)
-				//	result.append(getXmlAttributeOutput("parent-uuid",resNodes.getString("node_parent_uuid"))+" ");
-				//		result.append(DomUtils.getXmlAttributeOutput("semantictag",resNode.getString("semtag"))+" ");
-				//					String readRight= (nodeRight.read) ? "Y" : "N";
-				//					String writeRight= (nodeRight.write) ? "Y" : "N";
-				//					String submitRight= (nodeRight.submit) ? "Y" : "N";
-				//					String deleteRight= (nodeRight.delete) ? "Y" : "N";
-
-
-				//					result.append(DomUtils.getXmlAttributeOutput("read",readRight)+" ");
-				//					result.append(DomUtils.getXmlAttributeOutput("write",writeRight)+" ");
-				//					result.append(DomUtils.getXmlAttributeOutput("submit",submitRight)+" ");
-				//					result.append(DomUtils.getXmlAttributeOutput("delete",deleteRight)+" ");
-				//
-				//
-				//							result.append(DomUtils.getXmlAttributeOutput("xsi_type",resNode.getString("xsi_type"))+" ");
-
-				//		result.append(DomUtils.getXmlAttributeOutput("format",resNode.getString("format"))+" ");
-
-				//		result.append(DomUtils.getXmlAttributeOutput("modified",resNode.getTimestamp("modif_date").toGMTString())+" ");
 
 				result.append(">");
 
@@ -2253,6 +2238,8 @@ public class MysqlDataProvider implements DataProvider {
 						e.printStackTrace();
 					}
 
+					metaxml = System.currentTimeMillis();
+					
 //					if(!resNode.getString("metadata_wad").equals("") )
 					if(resNode.getString("metadata_wad")!=null && !resNode.getString("metadata_wad").equals("") )
 					{
@@ -2318,11 +2305,12 @@ public class MysqlDataProvider implements DataProvider {
 
 				}
 
+				resource = System.currentTimeMillis();
 				if(resNode.getString("res_res_node_uuid")!=null)
 					if(resNode.getString("res_res_node_uuid").length()>0)
 					{
 						result.append("<asmResource id='"+resNode.getString("res_res_node_uuid")+"'  contextid='"+nodeUuid+"' xsi_type='nodeRes'>");
-						resResource = getMysqlResource(resNode.getString("res_res_node_uuid"));
+						resResource = getMysqlResource(c, resNode.getString("res_res_node_uuid"));
 						if(resResource.next())
 							result.append(resResource.getString("content"));
 						result.append("</asmResource>");
@@ -2332,7 +2320,7 @@ public class MysqlDataProvider implements DataProvider {
 					if(resNode.getString("res_context_node_uuid").length()>0)
 					{
 						result.append("<asmResource id='"+resNode.getString("res_context_node_uuid")+"' contextid='"+nodeUuid+"' xsi_type='context'>");
-						resResource = getMysqlResource(resNode.getString("res_context_node_uuid"));
+						resResource = getMysqlResource(c, resNode.getString("res_context_node_uuid"));
 						if(resResource.next())
 							result.append(resResource.getString("content"));
 						result.append("</asmResource>");
@@ -2341,7 +2329,7 @@ public class MysqlDataProvider implements DataProvider {
 				if(resNode.getString("res_node_uuid")!=null)
 					if(resNode.getString("res_node_uuid").length()>0)
 					{
-						resResource = getMysqlResource(resNode.getString("res_node_uuid"));
+						resResource = getMysqlResource(c, resNode.getString("res_node_uuid"));
 						if(resResource.next())
 						{
 							result.append("<asmResource id='"+resNode.getString("res_node_uuid")+"' contextid='"+nodeUuid+"' xsi_type='"+resResource.getString("xsi_type")+"'>");
@@ -2352,6 +2340,7 @@ public class MysqlDataProvider implements DataProvider {
 						resResource.close();
 					}
 
+				children = System.currentTimeMillis();
 				if(withChildren || withChildrenOfXsiType!=null)
 				{
 					String[] arrayChild;
@@ -2362,7 +2351,7 @@ public class MysqlDataProvider implements DataProvider {
 							arrayChild = resNode.getString("node_children_uuid").split(",");
 							for(int i =0;i<(arrayChild.length);i++)
 							{
-								ResultSet resChildNode = this.getMysqlNodeResultset(arrayChild[i]);
+								ResultSet resChildNode = this.getMysqlNodeResultset(c, arrayChild[i]);
 
 								String tmpXsiType = "";
 								try
@@ -2375,7 +2364,7 @@ public class MysqlDataProvider implements DataProvider {
 
 								}
 								if(withChildrenOfXsiType==null || withChildrenOfXsiType.equals(tmpXsiType))
-									result.append(getNodeXmlOutput(arrayChild[i],true,null,userId,groupId, null,true));
+									result.append(getNodeXmlOutput(c, cred, arrayChild[i],true,null,userId,groupId, null,true));
 
 								resChildNode.close();
 							}
@@ -2389,8 +2378,17 @@ public class MysqlDataProvider implements DataProvider {
 
 				result.append("</"+resNode.getString("asm_type")+">");
 			}
+			end = System.currentTimeMillis();
 
+			long d_start = metaxml - start;
+			long d_metaxml = resource - metaxml;
+			long d_resource = children - resource;
+			long d_children = end -children;
 
+			System.out.println("START: "+d_start);
+			System.out.println("METAXML: "+d_metaxml);
+			System.out.println("RESOURCE: "+d_resource);
+			System.out.println("CHILDREN: "+d_children);
 		}
 
 		resNode.close();
@@ -2405,7 +2403,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 
-	private String getLinearXml(String portfolioUuid, String rootuuid, Node portfolio, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role) throws SQLException, SAXException, IOException, ParserConfigurationException
+	private String getLinearXml(Connection c, Credential cred, String portfolioUuid, String rootuuid, Node portfolio, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role) throws SQLException, SAXException, IOException, ParserConfigurationException
 //	private String getLinearXml(String portfolioUuid, String rootuuid, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role) throws SQLException, SAXException, IOException, ParserConfigurationException
 	{
 		DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
@@ -2423,7 +2421,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		time0 = System.currentTimeMillis();
 
-		ResultSet resNode = getMysqlStructure(portfolioUuid,userId, groupId);
+		ResultSet resNode = getMysqlStructure(c, cred, portfolioUuid,userId, groupId);
 
 		time1= System.currentTimeMillis();
 
@@ -2438,7 +2436,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		time2 = System.currentTimeMillis();
 
-		resNode = getSharedMysqlStructure(portfolioUuid,userId, groupId);
+		resNode = getSharedMysqlStructure(c, portfolioUuid,userId, groupId);
 
 		time3 = System.currentTimeMillis();
 
@@ -2752,7 +2750,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private ResultSet getMysqlStructure(String portfolioUuid, int userId,  int groupId) throws SQLException
+	private ResultSet getMysqlStructure(Connection c, Credential cred, String portfolioUuid, int userId,  int groupId) throws SQLException
 	{
 		PreparedStatement st=null;
 		String sql = "";
@@ -2770,12 +2768,12 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			time0 = System.currentTimeMillis();
 
-			String rootNodeUuid = getPortfolioRootNode(portfolioUuid);
+			String rootNodeUuid = getPortfolioRootNode(c, portfolioUuid);
 
 			time1 = System.currentTimeMillis();
 
 			// Cas admin, designer
-			if(credential.isAdmin(userId) || credential.isDesigner(userId, rootNodeUuid))
+			if(cred.isAdmin(c, userId) || cred.isDesigner(c, userId, rootNodeUuid))
 			{
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
@@ -2789,10 +2787,10 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
 						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +
 						"WHERE portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolioUuid);
 			}
-			else if(credential.isPublic(null, portfolioUuid))	// Public case, looks like previous query, but with different rights
+			else if(cred.isPublic(c, null, portfolioUuid))	// Public case, looks like previous query, but with different rights
 			{
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
@@ -2806,7 +2804,7 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
 						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +
 						"WHERE portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolioUuid);
 			}
 			else
@@ -2825,7 +2823,7 @@ public class MysqlDataProvider implements DataProvider {
 							"DL TINYINT(1) NOT NULL, " +
 							"SB TINYINT(1) NOT NULL, " +
 							"AD TINYINT(1) NOT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				} else if (dbserveur.equals("oracle")){
@@ -2838,7 +2836,7 @@ public class MysqlDataProvider implements DataProvider {
 							"SB NUMBER(1) NOT NULL, " +
 							"AD NUMBER(1) NOT NULL, CONSTRAINT t_rights_UK_id UNIQUE (id)) ON COMMIT PRESERVE ROWS";
 					sql = "{call create_or_empty_table('t_rights','"+v_sql+"')}";
-					CallableStatement ocs = connection.prepareCall(sql) ;
+					CallableStatement ocs = c.prepareCall(sql) ;
 					ocs.execute();
 					ocs.close();
 				}
@@ -2889,7 +2887,7 @@ public class MysqlDataProvider implements DataProvider {
 							"d.AD=GREATEST(d.AD,s.AD)";
 					sql += " WHEN NOT MATCHED THEN INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.SB, d.AD) VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.SB, s.AD)";
 				}
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolioUuid);
 				st.setInt(2, groupId);
 				st.setInt(3, userId);
@@ -2986,7 +2984,7 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
 						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +
 						"WHERE n.modif_user_id=? AND portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setInt(1, userId);
 				st.setString(2, portfolioUuid);
 			}
@@ -3005,7 +3003,7 @@ public class MysqlDataProvider implements DataProvider {
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_rights";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
@@ -3031,7 +3029,7 @@ public class MysqlDataProvider implements DataProvider {
 	/// C'est séparé car les noeud ne provenant pas d'un même portfolio, on ne peut pas les sélectionner rapidement
 	/// Autre possibilité serait de garder ce même type de fonctionnement pour une sélection par niveau d'un portfolio.
 	/// TODO: A faire un 'benchmark' dessus
-	private ResultSet getSharedMysqlStructure(String portfolioUuid, int userId,  int groupId) throws SQLException
+	private ResultSet getSharedMysqlStructure(Connection c, String portfolioUuid, int userId,  int groupId) throws SQLException
 	{
 		PreparedStatement st = null;
 		String sql;
@@ -3043,7 +3041,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = 	"SELECT bin2uuid(n.shared_node_uuid) AS shared_node_uuid " +
 					"FROM node n " +
 					"WHERE n.portfolio_id=uuid2bin(?) AND shared_node=1";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 			res = st.executeQuery();
 			if( res.next() )
@@ -3061,7 +3059,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -3071,7 +3069,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_parentid_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_parentid','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -3082,7 +3080,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -3092,7 +3090,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_parentid_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_parentid_2','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -3102,7 +3100,7 @@ public class MysqlDataProvider implements DataProvider {
 					"SELECT n.shared_node_uuid, n.node_parent_uuid, 0 " +
 					"FROM node n " +
 					"WHERE n.portfolio_id=uuid2bin(?) AND shared_node=1";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 			st.executeUpdate();
 			st.close();
@@ -3125,9 +3123,9 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_parentid,t_struc_parentid_UK_uuid)*/ INTO t_struc_parentid SELECT * FROM t_struc_parentid_2";
 			}
-	        PreparedStatement stTemp = connection.prepareStatement(sqlTemp);
+	        PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			while( added != 0 )
 			{
 				st.setInt(1, level+1);
@@ -3166,7 +3164,7 @@ public class MysqlDataProvider implements DataProvider {
 					" WHERE gu.userid=? AND gr.RD=1" +  // On doit au moins avoir le droit de lecture
 					" AND n.node_uuid IN (SELECT uuid FROM t_struc_parentid)";   // Selon note filtrage, prendre les noeud nécéssaire
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			res = st.executeQuery();
 		}
@@ -3181,7 +3179,7 @@ public class MysqlDataProvider implements DataProvider {
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_struc_parentid, t_struc_parentid_2";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
@@ -3195,7 +3193,7 @@ public class MysqlDataProvider implements DataProvider {
 	/// TODO: A faire un 'benchmark' dessus
 	/// Récupère les noeuds en dessous par niveau. Pour faciliter le traitement des shared_node
 	/// Mais ça serait beaucoup plus simple de faire un objet a traiter dans le client
-	private ResultSet getNodePerLevel(String nodeUuid, int userId,  int rrgId) throws SQLException
+	private ResultSet getNodePerLevel(Connection c, Credential cred, String nodeUuid, int userId,  int rrgId) throws SQLException
 	{
 		PreparedStatement st = null;
 		String sql="";
@@ -3235,7 +3233,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
 						"portfolio_id binary(16) DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 				
@@ -3248,7 +3246,7 @@ public class MysqlDataProvider implements DataProvider {
 						"DL TINYINT(1) NOT NULL, " +
 						"SB TINYINT(1) NOT NULL, " +
 						"AD TINYINT(1) NOT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 				
@@ -3257,7 +3255,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 				
@@ -3266,7 +3264,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 
@@ -3300,7 +3298,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_date timestamp DEFAULT NULL, " +
 						"portfolio_id RAW(16) DEFAULT NULL, CONSTRAINT t_node_UK_id UNIQUE (node_uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_node','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 				
@@ -3314,7 +3312,7 @@ public class MysqlDataProvider implements DataProvider {
 						"SB NUMBER(1) NOT NULL, " +
 						"AD NUMBER(1) NOT NULL, CONSTRAINT t_rights_22_UK_id UNIQUE (id)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_rights_22','"+v_sql+"')}";
-				ocs = connection.prepareCall(sql) ;
+				ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 
@@ -3325,7 +3323,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_parentid_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_parentid','"+v_sql+"')}";
-				ocs = connection.prepareCall(sql) ;
+				ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 
@@ -3336,7 +3334,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_parentid_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_parentid_2','"+v_sql+"')}";
-				ocs = connection.prepareCall(sql) ;
+				ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -3345,7 +3343,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// Portfolio id, gonna need that later
 			sql = "SELECT bin2uuid(portfolio_id) AS portfolio_id FROM node WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			res = st.executeQuery();
 			res.next();
@@ -3358,7 +3356,7 @@ public class MysqlDataProvider implements DataProvider {
 					"SELECT node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 					"FROM node n " +
 					"WHERE n.portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioid);
 			st.executeUpdate();
 			st.close();
@@ -3371,7 +3369,7 @@ public class MysqlDataProvider implements DataProvider {
 					"SELECT COALESCE(n.shared_node_uuid, n.node_uuid), n.node_parent_uuid, 0 " +
 					"FROM t_node n " +
 					"WHERE n.node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			st.executeUpdate();
 			st.close();
@@ -3397,11 +3395,11 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_parentid,t_struc_parentid_UK_uuid)*/ INTO t_struc_parentid SELECT * FROM t_struc_parentid_2";
 			}
-			PreparedStatement stTemp = connection.prepareStatement(sqlTemp);
+			PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
 			long t_initLoop = System.currentTimeMillis();
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			while( added != 0 )
 			{
 				st.setInt(1, level+1);
@@ -3415,19 +3413,19 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_endLoop = System.currentTimeMillis();
 
-			if( credential.isDesigner(userId, nodeUuid) || credential.isAdmin(userId) )
+			if( cred.isDesigner(c, userId, nodeUuid) || cred.isAdmin(c, userId) )
 			{
 				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD) " +
 						"SELECT 0, ts.uuid, 1, 1, 1, 0, 0 " +
 						"FROM t_struc_parentid ts";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 			}
-			else if ( credential.isPublic(nodeUuid, null) )
+			else if ( cred.isPublic(c, nodeUuid, null) )
 			{
 				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD) " +
 						"SELECT 0, ts.uuid, 1, 0, 0, 0, 0 " +
 						"FROM t_struc_parentid ts";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 			}
 			else
 			{
@@ -3464,7 +3462,7 @@ public class MysqlDataProvider implements DataProvider {
 							"d.AD=GREATEST(d.AD,s.AD)";
 					sql += " WHEN NOT MATCHED THEN INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.SB, d.AD) VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.SB, s.AD)";
 				}
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolioid);
 				st.setInt(2, rrgId);
 				st.setString(3, nodeUuid);
@@ -3500,7 +3498,7 @@ public class MysqlDataProvider implements DataProvider {
 					" ON n.node_uuid=tr.id" +   // On doit au moins avoir le droit de lecture
 					" WHERE tr.RD=1 AND n.node_uuid IN (SELECT uuid FROM t_struc_parentid)";   // Selon note filtrage, prendre les noeud nécéssaire
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			res = st.executeQuery();
 
 			long t_aggregate = System.currentTimeMillis();
@@ -3535,7 +3533,7 @@ public class MysqlDataProvider implements DataProvider {
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_node, t_rights_22, t_struc_parentid, t_struc_parentid_2";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
@@ -3546,14 +3544,14 @@ public class MysqlDataProvider implements DataProvider {
 		return res;
 	}
 
-	private  StringBuffer getNodeXmlListOutput(String nodeUuid,boolean withChildren,int userId, int groupId) throws SQLException
+	private  StringBuffer getNodeXmlListOutput(Connection c, Credential cred, String nodeUuid,boolean withChildren,int userId, int groupId) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
 
-		if(!credential.hasNodeRight(userId,groupId,nodeUuid, Credential.READ))
+		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.READ))
 			return result;
 
-		ResultSet resNode = getMysqlNode(nodeUuid,userId, groupId);
+		ResultSet resNode = getMysqlNode(c, nodeUuid,userId, groupId);
 
 		String indentation = "";
 
@@ -3613,7 +3611,7 @@ public class MysqlDataProvider implements DataProvider {
 							arrayChild = resNode.getString("node_children_uuid").split(",");
 							for(int i =0;i<(arrayChild.length);i++)
 							{
-								result.append(getNodeXmlListOutput(arrayChild[i],true, userId, groupId));
+								result.append(getNodeXmlListOutput(c, cred, arrayChild[i],true, userId, groupId));
 							}
 						}
 					}
@@ -3635,21 +3633,21 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public Object getNode(MimeType outMimeType, String nodeUuid,boolean withChildren, int userId,int groupId, String label) throws SQLException, TransformerFactoryConfigurationError, ParserConfigurationException, UnsupportedEncodingException, DOMException, SAXException, IOException, TransformerException
+	public Object getNode(Connection c, Credential cred, MimeType outMimeType, String nodeUuid,boolean withChildren, int userId,int groupId, String label) throws SQLException, TransformerFactoryConfigurationError, ParserConfigurationException, UnsupportedEncodingException, DOMException, SAXException, IOException, TransformerException
 	{
 		StringBuffer nodexml = new StringBuffer();
 
 		long t_start = System.currentTimeMillis();
 
-		NodeRight nodeRight = credential.getNodeRight(userId,groupId,nodeUuid, label);
+		NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, label);
 
 		long t_nodeRight = System.currentTimeMillis();
 
 		if(!nodeRight.read)
 		{
-			userId = credential.getPublicUid();
+			userId = cred.getPublicUid(c);
 			/// Vérifie les droits avec le compte publique (dernière chance)
-			credential.getPublicRight(userId, 123, nodeUuid, "dummy");
+			cred.getPublicRight(c, userId, 123, nodeUuid, "dummy");
 
 			if( !nodeRight.read )
 				return nodexml;
@@ -3657,7 +3655,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(outMimeType.getSubType().equals("xml"))
 		{
-			ResultSet result = getNodePerLevel(nodeUuid, userId, nodeRight.rrgId);
+			ResultSet result = getNodePerLevel(c, cred, nodeUuid, userId, nodeRight.rrgId);
 
 			long t_nodePerLevel = System.currentTimeMillis();
 
@@ -3748,19 +3746,19 @@ public class MysqlDataProvider implements DataProvider {
 			return nodexml;
 		}
 		else if(outMimeType.getSubType().equals("json"))
-			return "{"+getNodeJsonOutput(nodeUuid,withChildren,null,userId, groupId,label,true)+"}";
+			return "{"+getNodeJsonOutput(c, cred, nodeUuid,withChildren,null,userId, groupId,label,true)+"}";
 		else
 			return null;
 	}
 
 	@Override
-	public Object deleteNode(String nodeUuid, int userId, int groupId)
+	public Object deleteNode(Connection c, Credential cred, String nodeUuid, int userId, int groupId)
 	{
 		/// FIXME: This method is taking time
-		NodeRight nodeRight = credential.getNodeRight(userId,groupId,nodeUuid, Credential.DELETE);
+		NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, Credential.DELETE);
 
 		if(!nodeRight.delete)
-			if(!credential.isAdmin(userId) && !credential.isDesigner(userId, nodeUuid))
+			if(!cred.isAdmin(c, userId) && !cred.isDesigner(c, userId, nodeUuid))
 				throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		PreparedStatement st;
@@ -3771,7 +3769,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			/// On trouve le parent, pour ré-ordonner la numérotation
 			sql = "SELECT bin2uuid(node_parent_uuid) FROM node WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			ResultSet res = st.executeQuery();
 			if( res.next() )
@@ -3788,7 +3786,7 @@ public class MysqlDataProvider implements DataProvider {
 						"res_res_node_uuid binary(16), " +
 						"res_context_node_uuid binary(16), " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -3801,7 +3799,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_node_resids_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_node_resids','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -3814,7 +3812,7 @@ public class MysqlDataProvider implements DataProvider {
 						"res_res_node_uuid binary(16), " +
 						"res_context_node_uuid binary(16), " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -3827,7 +3825,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_node_resids_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_node_resids_2','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -3836,7 +3834,7 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_res_uuid(" +
 						"uuid binary(16) UNIQUE NOT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -3844,7 +3842,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid RAW(16) NOT NULL, " +
 						"  CONSTRAINT t_res_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_res_uuid','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -3854,7 +3852,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "INSERT INTO t_struc_node_resids(uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) " +
 					"SELECT node_uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, 0 " +
 					"FROM node WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			st.executeUpdate();
 			st.close();
@@ -3870,7 +3868,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql += "SELECT node_uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, ? " +
 					"FROM node WHERE node_parent_uuid IN (SELECT uuid FROM t_struc_node_resids t " +
 					"WHERE t.t_level=?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 
 			String sqlTemp=null;
 			if (dbserveur.equals("mysql")){
@@ -3878,7 +3876,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_node_resids,t_struc_node_resids_UK_uuid)*/ INTO t_struc_node_resids SELECT * FROM t_struc_node_resids_2";
 			}
-			PreparedStatement stTemp = connection.prepareStatement(sqlTemp);
+			PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
 			while( added != 0 )
 			{
@@ -3898,7 +3896,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "INSERT INTO t_res_uuid(uuid) SELECT res_node_uuid FROM t_struc_node_resids WHERE res_node_uuid <> '00000000000000000000000000000000'";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -3907,7 +3905,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "INSERT INTO t_res_uuid(uuid) SELECT res_res_node_uuid FROM t_struc_node_resids WHERE res_res_node_uuid <> '00000000000000000000000000000000'";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -3919,21 +3917,21 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("mysql")){
 			} else if (dbserveur.equals("oracle")){
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 			/// On efface
 			// Les ressources
 			sql = "DELETE FROM resource_table WHERE node_uuid IN (SELECT uuid FROM t_res_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
 			// Les noeuds
 			sql = "DELETE FROM node WHERE node_uuid IN (SELECT uuid FROM t_struc_node_resids)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			result = st.executeUpdate();
 			st.close();
 		}
@@ -3941,8 +3939,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				if( connection.getAutoCommit() == false )
-					connection.rollback();
+				if( c.getAutoCommit() == false )
+					c.rollback();
 			}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
@@ -3951,17 +3949,17 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
+				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_struc_node_resids, t_struc_node_resids_2, t_res_uuid";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
-				updateMysqlNodeChildren(parentid);
+				updateMysqlNodeChildren(c, parentid);
 
-				connection.close();
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -3972,9 +3970,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postInstanciatePortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception
+	public Object postInstanciatePortfolio(Connection c, Credential cred, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception
 	{
-		if( !credential.isAdmin(userId) && !credential.isCreator(userId) ) return "no rights";
+		if( !cred.isAdmin(c, userId) && !cred.isCreator(c, userId) ) return "no rights";
 		
 		String sql = "";
 		PreparedStatement st;
@@ -3988,7 +3986,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				/// Find back portfolio uuid from source code
 				sql = "SELECT bin2uuid(portfolio_id) AS uuid FROM node WHERE code=?";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, srcCode);
 				ResultSet res = st.executeQuery();
 				if( res.next() )
@@ -4030,7 +4028,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
 						"portfolio_id binary(16) DEFAULT NULL) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -4064,7 +4062,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_date timestamp DEFAULT NULL, " +
 						"portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_data','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -4079,7 +4077,7 @@ public class MysqlDataProvider implements DataProvider {
 						"user_id int(11) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -4092,7 +4090,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_res','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -4105,7 +4103,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
 						"t_level INT) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -4117,7 +4115,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -4130,7 +4128,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
 						"t_level INT) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -4142,7 +4140,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_2','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -4159,7 +4157,7 @@ public class MysqlDataProvider implements DataProvider {
 						"AD BOOL NOT NULL, " +
 						"types_id TEXT, " +
 						"rules_id TEXT) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -4174,7 +4172,7 @@ public class MysqlDataProvider implements DataProvider {
 						"types_id VARCHAR2(2000 CHAR), " +
 						"rules_id VARCHAR2(2000 CHAR)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_rights','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -4189,7 +4187,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql += "node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid , shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, ?, modif_date, portfolio_id " +
 					"FROM node n " +
 					"WHERE portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);	// User asking to instanciate a portfolio will always have the right to modify it
 			st.setString(2, portfolioUuid);
 
@@ -4201,7 +4199,7 @@ public class MysqlDataProvider implements DataProvider {
 				/// Liste les noeud a filtrer
 				sql = "INSERT INTO t_struc(node_order, new_uuid, uuid, node_parent_uuid, t_level) " +
 						"SELECT node_order, new_uuid, node_uuid, node_parent_uuid, 0 FROM t_data WHERE shared_node=1";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.executeUpdate();
 				st.close();
 
@@ -4222,9 +4220,9 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")){
 					sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc,t_struc_UK_uuid)*/ INTO t_struc SELECT * FROM t_struc_2";
 				}
-				PreparedStatement stTemp = connection.prepareStatement(sqlTemp);
+				PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				while( added != 0 )
 				{
 					st.setInt(1, level+1);
@@ -4238,17 +4236,17 @@ public class MysqlDataProvider implements DataProvider {
 
 				// Retire les noeuds en dessous du shared
 				sql = "DELETE FROM t_struc WHERE uuid IN (SELECT node_uuid FROM t_data WHERE shared_node=1)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.executeUpdate();
 				st.close();
 
 				sql = "DELETE FROM t_data WHERE node_uuid IN (SELECT uuid FROM t_struc)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.executeUpdate();
 				st.close();
 
 				sql = "DELETE FROM t_struc";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.executeUpdate();
 				st.close();
 
@@ -4257,7 +4255,7 @@ public class MysqlDataProvider implements DataProvider {
 			/// Copie les uuid pour la résolution des parents/enfants
 			sql = "INSERT INTO t_struc(node_order, new_uuid, uuid, node_parent_uuid) " +
 					"SELECT node_order, new_uuid, node_uuid, node_parent_uuid FROM t_data";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4266,7 +4264,7 @@ public class MysqlDataProvider implements DataProvider {
 				/// Cas spécial pour shared_node=1
 				// Le temps qu'on refasse la liste des enfants, on va enlever le noeud plus tard
 				sql = "UPDATE t_data SET shared_node_uuid=node_uuid WHERE shared_node=1";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.executeUpdate();
 				st.close();
 
@@ -4278,7 +4276,7 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")){
 					sql = "UPDATE t_struc s SET s.new_uuid=(SELECT d.node_uuid FROM t_struc s2 INNER JOIN t_data d ON s2.uuid=d.node_uuid WHERE d.shared_node=1) WHERE EXISTS (SELECT 1 FROM t_struc s2 INNER JOIN t_data d ON s2.uuid=d.node_uuid WHERE d.shared_node=1)";
 				}
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.executeUpdate();
 				st.close();
 			}
@@ -4302,7 +4300,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql += "d.res_node_uuid <> '00000000000000000000000000000000'"; // Binaire non null
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4323,7 +4321,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql += "d.res_context_node_uuid <> '00000000000000000000000000000000'";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4345,13 +4343,13 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql += "d.res_res_node_uuid <> '00000000000000000000000000000000'";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
 			/// Changement du uuid du portfolio
 			sql = "UPDATE t_data t SET t.portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, newPortfolioUuid);
 			st.executeUpdate();
 			st.close();
@@ -4363,13 +4361,13 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_rights ri SET ri.id=(SELECT new_uuid FROM t_data d WHERE ri.id=d.node_uuid AND d.shared_node=0) WHERE EXISTS (SELECT 1 FROM t_data d WHERE ri.id=d.node_uuid AND d.shared_node=0)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
 			sql = "UPDATE t_data t " +
 					"SET t.node_parent_uuid = (SELECT new_uuid FROM t_struc s WHERE s.uuid=t.node_parent_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4379,7 +4377,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_rights ri SET ri.id=(SELECT new_uuid FROM t_res re WHERE re.node_uuid=ri.id) WHERE EXISTS (SELECT 1 FROM t_res re WHERE re.node_uuid=ri.id)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4389,7 +4387,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_data d SET d.res_node_uuid=(SELECT r.new_uuid FROM t_res r WHERE d.res_node_uuid=r.node_uuid) WHERE EXISTS (SELECT 1 FROM t_res r WHERE d.res_node_uuid=r.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4399,7 +4397,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_data d SET d.res_res_node_uuid=(SELECT r.new_uuid FROM t_res r WHERE d.res_res_node_uuid=r.node_uuid) WHERE EXISTS (SELECT 1 FROM t_res r WHERE d.res_res_node_uuid=r.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4409,7 +4407,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_data d SET d.res_context_node_uuid=(SELECT r.new_uuid FROM t_res r WHERE d.res_context_node_uuid=r.node_uuid) WHERE EXISTS (SELECT 1 FROM t_res r WHERE d.res_context_node_uuid=r.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4424,7 +4422,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_data d SET d.node_children_uuid=(SELECT value FROM (SELECT node_parent_uuid, LISTAGG(bin2uuid(s.new_uuid), ',') WITHIN GROUP (ORDER BY s.node_order) AS value FROM t_struc s GROUP BY s.node_parent_uuid) tmp WHERE tmp.node_parent_uuid=d.node_uuid) WHERE EXISTS (SELECT 1 FROM t_struc WHERE node_parent_uuid=d.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4437,14 +4435,14 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_res r SET r.content=(SELECT REPLACE(r2.content, d.code, ?) FROM t_data d LEFT JOIN t_res r2 ON d.res_res_node_uuid=r2.new_uuid WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d WHERE d.res_res_node_uuid=r.new_uuid AND d.asm_type='asmRoot')";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, newCode);
 			st.executeUpdate();
 			st.close();
 
 			// Mise à jour du code dans le code interne de la BD
 			sql = "UPDATE t_data d SET d.code=? WHERE d.asm_type='asmRoot'";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, newCode);
 			st.executeUpdate();
 			st.close();
@@ -4523,7 +4521,7 @@ public class MysqlDataProvider implements DataProvider {
 			// Selection des metadonnées
 			sql = "SELECT bin2uuid(t.new_uuid) AS uuid, bin2uuid(t.portfolio_id) AS puuid, t.metadata, t.metadata_wad, t.metadata_epm " +
 					"FROM t_data t";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			ResultSet res = st.executeQuery();
 
 			DocumentBuilder documentBuilder;
@@ -4777,7 +4775,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.close();
 			//*/
 
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			/// On insère les données pré-compilé
 			Iterator<String> entries = resolve.groups.keySet().iterator();
@@ -4785,13 +4783,13 @@ public class MysqlDataProvider implements DataProvider {
 			// Créé les groupes, ils n'existent pas
 			String grquery = "INSERT INTO group_info(grid,owner,label) " +
 					"VALUES(?,?,?)";
-			PreparedStatement st2 = connection.prepareStatement(grquery);
+			PreparedStatement st2 = c.prepareStatement(grquery);
 			String gri = "INSERT INTO group_right_info(owner, label, change_rights, portfolio_id) " +
 					"VALUES(?,?,?,uuid2bin(?))";
 			if( "mysql".equals(dbserveur) )
-				st = connection.prepareStatement(gri, Statement.RETURN_GENERATED_KEYS);
+				st = c.prepareStatement(gri, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle"))
-				st = connection.prepareStatement(gri, new String[]{"grid"});
+				st = c.prepareStatement(gri, new String[]{"grid"});
 
 			while( entries.hasNext() )
 			{
@@ -4818,7 +4816,7 @@ public class MysqlDataProvider implements DataProvider {
 			/// Ajout des droits des noeuds
 			String insertRight = "INSERT INTO group_rights(grid, id, RD, WR, DL, SB, AD, types_id, rules_id, notify_roles) " +
 					"VALUES(?,uuid2bin(?),?,?,?,?,?,?,?,?)";
-			st = connection.prepareStatement(insertRight);
+			st = c.prepareStatement(insertRight);
 
 			Iterator<Entry<String, groupright>> rights = resolve.resolve.entrySet().iterator();
 			while( rights.hasNext() )
@@ -4854,7 +4852,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
 					"SELECT new_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 					"FROM t_data";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4862,7 +4860,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "INSERT INTO resource_table(node_uuid, xsi_type, content, user_id, modif_user_id, modif_date) " +
 					"SELECT new_uuid, xsi_type, content, user_id, modif_user_id, modif_date " +
 					"FROM t_res";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4877,7 +4875,7 @@ public class MysqlDataProvider implements DataProvider {
 					"FROM t_data d INNER JOIN portfolio p " +
 					"ON d.node_uuid=p.root_node_uuid";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -4887,7 +4885,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			sql = "INSERT INTO portfolio_group(owner, portfolio_id, group_name) VALUES(?,uuid2bin(?),?)";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			st.setString(2, newPortfolioUuid);
 			st.setString(3, portfGroupName);
@@ -4895,14 +4893,14 @@ public class MysqlDataProvider implements DataProvider {
 			st.close();
 
 			/// Finalement on crée un rôle designer
-			int groupid = postCreateRole(newPortfolioUuid, "designer", userId);
+			int groupid = postCreateRole(c, cred, newPortfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
-			putUserGroup(Integer.toString(groupid), Integer.toString(userId));
+			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
 
 			/// Set portfolio public if needed
 			if( setPublic )
-				setPublicState(userId, newPortfolioUuid, setPublic);
+				setPublicState(c, cred, userId, newPortfolioUuid, setPublic);
 		}
 		catch( Exception e )
 		{
@@ -4911,8 +4909,8 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				newPortfolioUuid = "erreur: "+e.getMessage();
-				if( connection.getAutoCommit() == false )
-					connection.rollback();
+				if( c.getAutoCommit() == false )
+					c.rollback();
 			}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
@@ -4921,16 +4919,16 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
+				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_data, t_res, t_struc, t_struc_2, t_rights";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
 
-				connection.close();
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -4939,7 +4937,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postCopyPortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception
+	public Object postCopyPortfolio(Connection c, Credential cred, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -4952,7 +4950,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				/// Find back portfolio uuid from source code
 				sql = "SELECT bin2uuid(portfolio_id) AS uuid FROM node WHERE code=?";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, srcCode);
 				ResultSet res = st.executeQuery();
 				if( res.next() )
@@ -4994,7 +4992,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
 						"portfolio_id binary(16) DEFAULT NULL) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -5028,7 +5026,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_date timestamp DEFAULT NULL, " +
 						"portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_data','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -5043,7 +5041,7 @@ public class MysqlDataProvider implements DataProvider {
 						"user_id int(11) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -5056,7 +5054,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_res','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -5069,7 +5067,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
 						"t_level INT) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -5081,7 +5079,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -5097,7 +5095,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql += "node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid , shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, ?, modif_date, portfolio_id " +
 					"FROM node n " +
 					"WHERE portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			if( setOwner )
 				st.setInt(1, userId);
 			else
@@ -5109,7 +5107,7 @@ public class MysqlDataProvider implements DataProvider {
 			/// Copie les uuid pour la résolution des parents/enfants
 			sql = "INSERT INTO t_struc(node_order, new_uuid, uuid, node_parent_uuid) " +
 					"SELECT node_order, new_uuid, node_uuid, node_parent_uuid FROM t_data";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5128,7 +5126,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql += "WHERE d.res_node_uuid <> '00000000000000000000000000000000'"; // Binaire non null
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5146,7 +5144,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql += "WHERE d.res_context_node_uuid <> '00000000000000000000000000000000'"; // Binaire non null
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5165,13 +5163,13 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql += "WHERE d.res_res_node_uuid <> '00000000000000000000000000000000'"; // Binaire non null
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
 			/// Changement du uuid du portfolio
 			sql = "UPDATE t_data t SET t.portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, newPortfolioUuid);
 			st.executeUpdate();
 			st.close();
@@ -5180,7 +5178,7 @@ public class MysqlDataProvider implements DataProvider {
 			// Avec la structure
 			sql = "UPDATE t_data t " +
 					"SET t.node_parent_uuid = (SELECT new_uuid FROM t_struc s WHERE s.uuid=t.node_parent_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5191,7 +5189,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_data d SET d.res_node_uuid=(SELECT r.new_uuid FROM t_res r WHERE d.res_node_uuid=r.node_uuid) WHERE EXISTS (SELECT 1 FROM t_res r WHERE d.res_node_uuid=r.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5201,7 +5199,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_data d SET d.res_res_node_uuid=(SELECT r.new_uuid FROM t_res r WHERE d.res_res_node_uuid=r.node_uuid) WHERE EXISTS (SELECT 1 FROM t_res r WHERE d.res_res_node_uuid=r.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5211,7 +5209,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_data d SET d.res_context_node_uuid=(SELECT r.new_uuid FROM t_res r WHERE d.res_context_node_uuid=r.node_uuid) WHERE EXISTS (SELECT 1 FROM t_res r WHERE d.res_context_node_uuid=r.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5226,7 +5224,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_data d SET d.node_children_uuid=(SELECT value FROM (SELECT node_parent_uuid, LISTAGG(bin2uuid(s.new_uuid), ',') WITHIN GROUP (ORDER BY s.node_order) AS value FROM t_struc s GROUP BY s.node_parent_uuid) tmp WHERE tmp.node_parent_uuid=d.node_uuid) WHERE EXISTS (SELECT 1 FROM t_struc WHERE node_parent_uuid=d.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5239,26 +5237,26 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_res r SET r.content=(SELECT REPLACE(r2.content, d.code, ?) FROM t_data d LEFT JOIN t_res r2 ON d.res_res_node_uuid=r2.new_uuid WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d WHERE d.res_res_node_uuid=r.new_uuid AND d.asm_type='asmRoot')";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, newCode);
 			st.executeUpdate();
 			st.close();
 
 			// Mise à jour du code dans le code interne de la BD
 			sql = "UPDATE t_data d SET d.code=? WHERE d.asm_type='asmRoot'";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, newCode);
 			st.executeUpdate();
 			st.close();
 
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			/// On copie tout dans les vrai tables
 			/// Structure
 			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
 					"SELECT new_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 					"FROM t_data";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5266,7 +5264,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "INSERT INTO resource_table(node_uuid, xsi_type, content, user_id, modif_user_id, modif_date) " +
 					"SELECT new_uuid, xsi_type, content, user_id, modif_user_id, modif_date " +
 					"FROM t_res";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5276,23 +5274,23 @@ public class MysqlDataProvider implements DataProvider {
 					"FROM t_data d INNER JOIN portfolio p " +
 					"ON d.node_uuid=p.root_node_uuid";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
 			/// Finalement on crée un rôle designer
-			int groupid = postCreateRole(newPortfolioUuid, "designer", userId);
+			int groupid = postCreateRole(c, cred, newPortfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
-			putUserGroup(Integer.toString(groupid), Integer.toString(userId));
+			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
 		}
 		catch( Exception e )
 		{
 			try
 			{
 				newPortfolioUuid = "erreur: "+e.getMessage();
-				if( connection.getAutoCommit() == false )
-					connection.rollback();
+				if( c.getAutoCommit() == false )
+					c.rollback();
 			}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
@@ -5301,16 +5299,16 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
+				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_data, t_res, t_struc";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
 
-				connection.close();
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -5318,7 +5316,7 @@ public class MysqlDataProvider implements DataProvider {
 		return newPortfolioUuid;
 	}
 
-	private String checkCache( String code ) throws SQLException
+	private String checkCache( Connection c, String code ) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -5358,7 +5356,7 @@ public class MysqlDataProvider implements DataProvider {
 					"modif_date timestamp NULL DEFAULT NULL, " +
 					"portfolio_id binary(16) DEFAULT NULL, " +
 					"PRIMARY KEY (`node_uuid`)) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.execute();
 			st.close();
 		} else if (dbserveur.equals("oracle")){
@@ -5391,14 +5389,14 @@ public class MysqlDataProvider implements DataProvider {
 					"modif_date timestamp DEFAULT NULL, " +
 					"portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 			sql = "{call create_or_empty_table('t_node_cache','"+v_sql+"')}";
-			CallableStatement ocs = connection.prepareCall(sql) ;
+			CallableStatement ocs = c.prepareCall(sql) ;
 			ocs.execute();
 			ocs.close();
 		}
 		
 		/// Check if we already have the portfolio in cache
 		sql = "SELECT bin2uuid(portfolio_id) FROM t_node_cache WHERE code=?";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setString(1, code);
 		ResultSet res = st.executeQuery();
 		String portfolioCode = "";
@@ -5421,7 +5419,7 @@ public class MysqlDataProvider implements DataProvider {
 					"WHERE c.modif_date = p.modif_date " +
 					"AND c.portfolio_id=p.portfolio_id " +
 					"AND code=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, code);
 			res = st.executeQuery();
 			if( !res.next() )
@@ -5442,7 +5440,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			System.out.println("FLUSH CACHE FOR CODE: "+code+" -> "+portfolioCode);
 			sql = "DELETE FROM t_node_cache WHERE portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioCode);
 			st.execute();
 			st.close();
@@ -5468,7 +5466,7 @@ public class MysqlDataProvider implements DataProvider {
 					"FROM node n1 LEFT JOIN portfolio p ON n1.portfolio_id=p.portfolio_id " +
 					"WHERE n1.code=? AND p.active=1)";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, code);
 			int insertData = st.executeUpdate();
 			st.close();
@@ -5477,7 +5475,7 @@ public class MysqlDataProvider implements DataProvider {
 				return null;
 
 			sql = "SELECT bin2uuid(portfolio_id) FROM t_node_cache WHERE code=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, code);
 			res = st.executeQuery();
 
@@ -5496,7 +5494,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 	
 	@Override
-	public Object postImportNode( MimeType inMimeType, String destUuid, String tag, String code, int userId, int groupId ) throws Exception
+	public Object postImportNode( Connection c, Credential cred, MimeType inMimeType, String destUuid, String tag, String code, int userId, int groupId ) throws Exception
 	{
 		if( "".equals(tag) || tag == null || "".equals(code) || code == null )
 			return "erreur";
@@ -5518,7 +5516,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			/// Check/update cache
-			String portfolioCode = checkCache(code);
+			String portfolioCode = checkCache(c, code);
 			
 			if( portfolioCode == null )
 				return "Inexistent selection";
@@ -5555,7 +5553,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
 						"portfolio_id binary(16) DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -5589,7 +5587,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_date timestamp DEFAULT NULL, " +
 						"portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_data_node','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -5606,7 +5604,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 					"FROM t_node_cache n " +
 					"WHERE n.portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioCode);
 			st.executeUpdate();
 			st.close();
@@ -5617,7 +5615,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
 					"FROM t_data_node n2 " +
 					"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, tag);
 			st.setString(2, portfolioCode);
 
@@ -5650,7 +5648,7 @@ public class MysqlDataProvider implements DataProvider {
 						"user_id int(11) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -5663,7 +5661,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_res_node','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -5678,7 +5676,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16) NOT NULL, " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -5690,7 +5688,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -5705,7 +5703,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16) NOT NULL, " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -5717,7 +5715,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_2','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -5750,7 +5748,7 @@ public class MysqlDataProvider implements DataProvider {
 					"SELECT d.node_order, d.new_uuid, d.node_uuid, uuid2bin(?), 0 " +
 					"FROM t_data_node d " +
 					"WHERE d.node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);  // Pour le branchement avec la structure de destination
 			st.setString(2, baseUuid);
 			st.executeUpdate();
@@ -5776,9 +5774,9 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc,t_struc_UK_uuid)*/ INTO t_struc SELECT * FROM t_struc_2";
 			}
-			PreparedStatement stTemp = connection.prepareStatement(sqlTemp);
+			PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			while( added != 0 )
 			{
 				st.setInt(1, level+1);
@@ -5798,7 +5796,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 		        sql = "DELETE FROM t_struc WHERE new_uuid='00000000000000000000000000000000'";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5806,7 +5804,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// On filtre les données dont on a pas besoin
 			sql = "DELETE FROM t_data_node WHERE node_uuid NOT IN (SELECT uuid FROM t_struc)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5827,7 +5825,7 @@ public class MysqlDataProvider implements DataProvider {
 					"OR res_res_node_uuid=r.node_uuid " +
 					"OR res_context_node_uuid=r.node_uuid) " +
 					"AND (shared_res=0 OR shared_node=0 OR shared_node_res=0)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5837,7 +5835,7 @@ public class MysqlDataProvider implements DataProvider {
 			// Avec la structure
 			sql = "UPDATE t_data_node t " +
 					"SET t.node_parent_uuid = (SELECT new_uuid FROM t_struc s WHERE s.uuid=t.node_parent_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5846,7 +5844,7 @@ public class MysqlDataProvider implements DataProvider {
 			// Avec les ressources
 			sql = "UPDATE t_data_node t " +
 					"SET t.res_node_uuid = (SELECT new_uuid FROM t_res_node r WHERE r.node_uuid= t.res_node_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5854,7 +5852,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			sql = "UPDATE t_data_node t " +
 					"SET t.res_res_node_uuid = (SELECT new_uuid FROM t_res_node r WHERE r.node_uuid= t.res_res_node_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5862,7 +5860,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			sql = "UPDATE t_data_node t " +
 					"SET t.res_context_node_uuid = (SELECT new_uuid FROM t_res_node r WHERE r.node_uuid=t.res_context_node_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -5873,7 +5871,7 @@ public class MysqlDataProvider implements DataProvider {
 					"SET node_parent_uuid=uuid2bin(?), " +
 					"node_order=(SELECT COUNT(node_parent_uuid) FROM node WHERE node_parent_uuid=uuid2bin(?)) " +
 					"WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);
 			st.setString(2, destUuid);
 			st.setString(3, baseUuid);
@@ -5885,7 +5883,7 @@ public class MysqlDataProvider implements DataProvider {
 			// Mise à jour de l'appartenance au portfolio de destination
 			sql = "UPDATE t_data_node " +
 					"SET portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);
 			st.executeUpdate();
 			st.close();
@@ -5895,7 +5893,7 @@ public class MysqlDataProvider implements DataProvider {
 			/// Parsage des droits des noeuds et initialisation dans la BD
 			// Login
 			sql = "SELECT login FROM credential c WHERE c.userid=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			res = st.executeQuery();
 
@@ -5917,7 +5915,7 @@ public class MysqlDataProvider implements DataProvider {
 						"`portfolio_id` binary(16) DEFAULT NULL ," +
 						"PRIMARY KEY (`grid`)" +
 						") ENGINE=MEMORY AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -5929,7 +5927,7 @@ public class MysqlDataProvider implements DataProvider {
 						"portfolio_id RAW(16) NOT NULL, " +
 						"CONSTRAINT t_group_right_info_UK_id UNIQUE (grid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_group_right_info','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -5939,7 +5937,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "INSERT INTO `t_group_right_info` " +
 					"SELECT * FROM group_right_info WHERE portfolio_id=(" +
 					"SELECT n.portfolio_id FROM node n WHERE n.node_uuid=uuid2bin(?))";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);	/// TODO: Might want to have the destination portfolio id
 			st.execute();
 			st.close();
@@ -5958,7 +5956,7 @@ public class MysqlDataProvider implements DataProvider {
 						"`notify_roles` varchar(10000) COLLATE utf8_unicode_ci, " +
 						"PRIMARY KEY (`grid`,`id`) " +
 						") ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -5975,7 +5973,7 @@ public class MysqlDataProvider implements DataProvider {
 						"notify_roles VARCHAR2(10000 CHAR) DEFAULT NULL, " +
 						"CONSTRAINT t_group_rights_UK_id UNIQUE (id)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_group_rights','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -5985,27 +5983,27 @@ public class MysqlDataProvider implements DataProvider {
 			String sqlUpdateRD = "INSERT INTO t_group_rights(grid,id, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1) ON DUPLICATE KEY UPDATE RD = 1 ";
 			if( dbserveur.equals("oracle") )
 				sqlUpdateRD = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.RD=1 WHEN NOT MATCHED THEN INSERT (grid, id, RD) VALUES (t.grid, t.id, t.RD)";
-			PreparedStatement stRD = connection.prepareStatement(sqlUpdateRD);
+			PreparedStatement stRD = c.prepareStatement(sqlUpdateRD);
 
 			String sqlUpdateWR = "INSERT INTO t_group_rights(grid,id, WR, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1, 0) ON DUPLICATE KEY UPDATE WR = 1";
 			if( dbserveur.equals("oracle") )
 				sqlUpdateWR = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS WR, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.WR=1 WHEN NOT MATCHED THEN INSERT (grid, id, WR, RD) VALUES (t.grid, t.id, t.WR, t.RD)";
-			PreparedStatement stWR = connection.prepareStatement(sqlUpdateWR);
+			PreparedStatement stWR = c.prepareStatement(sqlUpdateWR);
 
 			String sqlUpdateDL = "INSERT INTO t_group_rights(grid,id, DL, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1, 0) ON DUPLICATE KEY UPDATE DL = 1";
 			if( dbserveur.equals("oracle") )
 				sqlUpdateDL = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS DL, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.DL=1 WHEN NOT MATCHED THEN INSERT (grid, id, DL, RD) VALUES (t.grid, t.id, t.DL, t.RD)";
-			PreparedStatement stDL = connection.prepareStatement(sqlUpdateDL);
+			PreparedStatement stDL = c.prepareStatement(sqlUpdateDL);
 
 			String sqlUpdateSB = "INSERT INTO t_group_rights(grid,id, SB, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1, 0) ON DUPLICATE KEY UPDATE SB = 1";
 			if( dbserveur.equals("oracle") )
 				sqlUpdateSB = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS SB, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.SB=1 WHEN NOT MATCHED THEN INSERT (grid, id, SB, RD) VALUES (t.grid, t.id, t.SB, t.RD)";
-			PreparedStatement stSB = connection.prepareStatement(sqlUpdateSB);
+			PreparedStatement stSB = c.prepareStatement(sqlUpdateSB);
 
 			// Selection des metadonnées
 			sql = "SELECT bin2uuid(t.new_uuid) AS uuid, bin2uuid(t.portfolio_id) AS puuid, n.metadata, n.metadata_wad, n.metadata_epm " +
 					"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			res = st.executeQuery();
 
 			t18 = System.currentTimeMillis();
@@ -6023,15 +6021,15 @@ public class MysqlDataProvider implements DataProvider {
 
 					/// Replace metadata with actual username
 					sql = "UPDATE t_data_node t SET t.metadata_wad=? WHERE t.new_uuid=uuid2bin(?)";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, meta);
 					st.setString(2, uuid);
 					st.executeUpdate();
 					st.close();
 
 					/// Ensure specific user group exist in final tables, and add user in it
-					int ngid = getRoleByNode(1, destUuid, login);
-					postGroupsUsers(1, userId, ngid);
+					int ngid = getRoleByNode(c, cred, 1, destUuid, login);
+					postGroupsUsers(c, cred, 1, userId, ngid);
 					
 					/// Ensure entry is there in temp table, just need a skeleton info
 					sql = "REPLACE INTO t_group_right_info(grid, owner, label) VALUES((SELECT grid FROM group_info gi WHERE gid=?), 1, ?)";
@@ -6039,7 +6037,7 @@ public class MysqlDataProvider implements DataProvider {
 						// FIXME Unsure about this, might need testing
 						sql = "MERGE INTO group_info d using (SELECT ? grid,1 ,? label from dual) s ON (1=2) WHEN NOT MATCHED THEN INSERT (d.grid, d.owner, d.label) values (s.grid, s.owner, s.label)";
 					}
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setInt(1, ngid);
 					st.setString(2, login);
 					st.executeUpdate();
@@ -6133,7 +6131,7 @@ public class MysqlDataProvider implements DataProvider {
 						while (tokens.hasMoreElements())
 						{
 							nodeRole = tokens.nextElement().toString();
-							credential.postGroupRight(nodeRole,uuid,Credential.READ,portfolioUuid,userId);
+							cred.postGroupRight(c, nodeRole,uuid,Credential.READ,portfolioUuid,userId);
 						}
 					}
 					att = attribMap.getNamedItem("delresroles");
@@ -6143,7 +6141,7 @@ public class MysqlDataProvider implements DataProvider {
 						while (tokens.hasMoreElements())
 						{
 							nodeRole = tokens.nextElement().toString();
-							credential.postGroupRight(nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
+							cred.postGroupRight(c, nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
 						}
 					}
 					att = attribMap.getNamedItem("editresroles");
@@ -6167,7 +6165,7 @@ public class MysqlDataProvider implements DataProvider {
 						while (tokens.hasMoreElements())
 						{
 							nodeRole = tokens.nextElement().toString();
-							credential.postGroupRight(nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
+							cred.postGroupRight(c, nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
 						}
 					}
 					//*/
@@ -6185,7 +6183,7 @@ public class MysqlDataProvider implements DataProvider {
 							StringTokenizer data = new StringTokenizer(nodeRole, ":");
 							String role = data.nextElement().toString();
 							String actions = data.nextElement().toString();
-							credential.postGroupRight(role,uuid,actions,portfolioUuid,userId);
+							cred.postGroupRight(c, role,uuid,actions,portfolioUuid,userId);
 						}
 					}
 
@@ -6199,7 +6197,7 @@ public class MysqlDataProvider implements DataProvider {
 							merge = tokens.nextElement().toString();
 						while (tokens.hasMoreElements())
 							merge += ","+tokens.nextElement().toString();
-						postNotifyRoles(userId, portfolioUuid, uuid, merge);
+						postNotifyRoles(c, cred, userId, portfolioUuid, uuid, merge);
 					}
 
 					meta = res.getString("metadata");
@@ -6213,9 +6211,9 @@ public class MysqlDataProvider implements DataProvider {
 					{
 						Node publicatt = attribMap.getNamedItem("public");
 						if( publicatt != null && "Y".equals(publicatt.getNodeValue()) )
-							setPublicState(userId, portfolioUuid, true);
+							setPublicState(c, cred, userId, portfolioUuid, true);
 						else if ( "N".equals(publicatt) )
-							setPublicState(userId, portfolioUuid, false);
+							setPublicState(c, cred, userId, portfolioUuid, false);
 					}
 					catch(Exception ex)
 					{
@@ -6238,7 +6236,7 @@ public class MysqlDataProvider implements DataProvider {
 			t19 = System.currentTimeMillis();
 
 			/// On copie tout dans les vrai tables
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			/*
 			/// Ajout des droits des noeuds
@@ -6262,27 +6260,30 @@ public class MysqlDataProvider implements DataProvider {
 			//*/
 
 			/// Structure, Join because the TEXT fields are copied from the base nodes
+			// FIXME possibly move TEXT as bigger VARCHAR, but might want more mem
 			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
 					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, n.metadata, t.metadata_wad, n.metadata_epm, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id " +
 					"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
 			t20 = System.currentTimeMillis();
 
+			// FIXME, might want to add the portfolio condition?
 			/// Resources
 			sql = "INSERT INTO resource_table(node_uuid, xsi_type, content, user_id, modif_user_id, modif_date) " +
 					"SELECT t.new_uuid, r.xsi_type, r.content, r.user_id, r.modif_user_id, r.modif_date " +
 					"FROM t_res_node t LEFT JOIN resource_table r ON t.node_uuid=r.node_uuid";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
 	//		/*
+			/// FIXME: Will have to transfer date limit one day
 			/// Ajout des droits des resources
-			sql = "INSERT INTO group_rights SELECT * FROM t_group_rights";
-			st = connection.prepareStatement(sql);
+			sql = "INSERT INTO group_rights(grid, id, RD, WR, DL, SB, AD, types_id, rules_id, notify_roles) SELECT grid, id, RD, WR, DL, SB, AD, types_id, rules_id, notify_roles FROM t_group_rights";
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 			//*/
@@ -6301,7 +6302,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 		        sql = "UPDATE node d SET d.node_children_uuid=(SELECT value FROM (SELECT p.node_parent_uuid, LISTAGG(bin2uuid(p.new_uuid), ',') WITHIN GROUP (ORDER BY p.node_order) AS value FROM t_data_node p GROUP BY p.node_parent_uuid) tmp WHERE tmp.node_parent_uuid=d.node_uuid) WHERE EXISTS (SELECT 1 FROM t_data_node WHERE node_parent_uuid=d.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.execute();
 			st.close();
 
@@ -6319,7 +6320,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 		        sql = "UPDATE node SET node_children_uuid=(SELECT LISTAGG(bin2uuid(n2.node_uuid), ',') WITHIN GROUP (ORDER BY n2.node_order) AS value FROM node n2 WHERE n2.node_parent_uuid=uuid2bin(?) GROUP BY n2.node_parent_uuid) WHERE node_uuid=uuid2bin(?)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);
 			st.setString(2, destUuid);
 			st.executeUpdate();
@@ -6331,7 +6332,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// On récupère le uuid créé
 			sql = "SELECT bin2uuid(new_uuid) FROM t_data_node WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, baseUuid);
 			res = st.executeQuery();
 			if( res.next() )
@@ -6344,8 +6345,8 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				createdUuid = "erreur: "+e.getMessage();
-				if(connection.getAutoCommit() == false)
-					connection.rollback();
+				if(c.getAutoCommit() == false)
+					c.rollback();
 			}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
@@ -6354,18 +6355,18 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
+				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_data_node, t_group_right_info, t_group_rights, t_res_node, t_struc, t_struc_2";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
 
-				touchPortfolio(destUuid, null);
+				touchPortfolio(c, destUuid, null);
 
-				connection.close();
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -6407,7 +6408,7 @@ public class MysqlDataProvider implements DataProvider {
 
 	// Même chose que postImportNode, mais on ne prend pas en compte le parsage des droits
 	@Override
-	public Object postCopyNode( MimeType inMimeType, String destUuid, String tag, String code, int userId, int groupId ) throws Exception
+	public Object postCopyNode( Connection c, MimeType inMimeType, String destUuid, String tag, String code, int userId, int groupId ) throws Exception
 	{
 		if( "".equals(tag) || tag == null || "".equals(code) || code == null )
 			return "erreur";
@@ -6429,7 +6430,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			/// Check/update cache
-			String portfolioCode = checkCache(code);
+			String portfolioCode = checkCache(c, code);
 
 			if( portfolioCode == null )
 				return "Inexistant selection";
@@ -6468,7 +6469,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
 						"portfolio_id binary(16) DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -6501,7 +6502,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_date timestamp DEFAULT NULL, " +
 						"portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_data_node','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -6517,7 +6518,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 					"FROM t_node_cache n " +
 					"WHERE portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioCode);
 			st.executeUpdate();
 			st.close();
@@ -6528,7 +6529,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
 					"FROM t_data_node n2 " +
 					"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, tag);
 			st.setString(2, portfolioCode);
 
@@ -6561,7 +6562,7 @@ public class MysqlDataProvider implements DataProvider {
 						"user_id int(11) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -6574,7 +6575,7 @@ public class MysqlDataProvider implements DataProvider {
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_res_node','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -6589,7 +6590,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16) NOT NULL, " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -6601,7 +6602,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -6616,7 +6617,7 @@ public class MysqlDataProvider implements DataProvider {
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16) NOT NULL, " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -6628,7 +6629,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_2','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -6645,7 +6646,7 @@ public class MysqlDataProvider implements DataProvider {
 					"SELECT d.node_order, d.new_uuid, d.node_uuid, uuid2bin(?), 0 " +
 					"FROM t_data_node d " +
 					"WHERE d.node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);  // Pour le branchement avec la structure de destination
 			st.setString(2, baseUuid);
 			st.executeUpdate();
@@ -6671,9 +6672,9 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc,t_struc_UK_uuid)*/ INTO t_struc SELECT * FROM t_struc_2";
 			}
-			PreparedStatement stTemp = connection.prepareStatement(sqlTemp);
+			PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			while( added != 0 )
 			{
 				st.setInt(1, level+1);
@@ -6693,7 +6694,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 		        sql = "DELETE FROM t_struc WHERE new_uuid='00000000000000000000000000000000'";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -6701,7 +6702,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// On filtre les données dont on a pas besoin
 			sql = "DELETE FROM t_data_node WHERE node_uuid NOT IN (SELECT uuid FROM t_struc)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -6722,7 +6723,7 @@ public class MysqlDataProvider implements DataProvider {
 					"OR res_res_node_uuid=r.node_uuid " +
 					"OR res_context_node_uuid=r.node_uuid) " +
 					"AND (shared_res=0 OR shared_node=0 OR shared_node_res=0)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -6732,7 +6733,7 @@ public class MysqlDataProvider implements DataProvider {
 			// Avec la structure
 			sql = "UPDATE t_data_node t " +
 					"SET t.node_parent_uuid = (SELECT new_uuid FROM t_struc s WHERE s.uuid=t.node_parent_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -6741,7 +6742,7 @@ public class MysqlDataProvider implements DataProvider {
 			// Avec les ressources
 			sql = "UPDATE t_data_node t " +
 					"SET t.res_node_uuid = (SELECT new_uuid FROM t_res_node r WHERE r.node_uuid= t.res_node_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -6749,7 +6750,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			sql = "UPDATE t_data_node t " +
 					"SET t.res_res_node_uuid = (SELECT new_uuid FROM t_res_node r WHERE r.node_uuid= t.res_res_node_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -6757,7 +6758,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			sql = "UPDATE t_data_node t " +
 					"SET t.res_context_node_uuid = (SELECT new_uuid FROM t_res_node r WHERE r.node_uuid=t.res_context_node_uuid)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -6768,7 +6769,7 @@ public class MysqlDataProvider implements DataProvider {
 					"SET node_parent_uuid=uuid2bin(?), " +
 					"node_order=(SELECT COUNT(node_parent_uuid) FROM node WHERE node_parent_uuid=uuid2bin(?)) " +
 					"WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);
 			st.setString(2, destUuid);
 			st.setString(3, baseUuid);
@@ -6780,7 +6781,7 @@ public class MysqlDataProvider implements DataProvider {
 			// Mise à jour de l'appartenance au portfolio de destination
 			sql = "UPDATE t_data_node " +
 					"SET portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);
 			st.executeUpdate();
 			st.close();
@@ -6788,14 +6789,14 @@ public class MysqlDataProvider implements DataProvider {
 			/// Mise à jour de l'appartenance des données
 			sql = "UPDATE t_data_node " +
 					"SET modif_user_id=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			st.executeUpdate();
 			st.close();
 
 			sql = "UPDATE t_res_node " +
 					"SET modif_user_id=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			st.executeUpdate();
 			st.close();
@@ -6803,13 +6804,13 @@ public class MysqlDataProvider implements DataProvider {
 //			t17 = System.currentTimeMillis();
 
 			/// On copie tout dans les vrai tables
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			/// Structure
 			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
 					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, n.metadata, n.metadata_wad, n.metadata_epm, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id " +
 					"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -6819,7 +6820,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "INSERT INTO resource_table(node_uuid, xsi_type, content, user_id, modif_user_id, modif_date) " +
 					"SELECT t.new_uuid, r.xsi_type, r.content, r.user_id, r.modif_user_id, r.modif_date " +
 					"FROM t_res_node t LEFT JOIN resource_table r ON t.node_uuid=r.node_uuid";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
@@ -6836,7 +6837,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 		        sql = "UPDATE node d SET d.node_children_uuid=(SELECT value FROM (SELECT p.node_parent_uuid, LISTAGG(bin2uuid(p.new_uuid), ',') WITHIN GROUP (ORDER BY p.node_order) AS value FROM t_data_node p GROUP BY p.node_parent_uuid) tmp WHERE tmp.node_parent_uuid=d.node_uuid) WHERE EXISTS (SELECT 1 FROM t_data_node WHERE node_parent_uuid=d.node_uuid)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.execute();
 			st.close();
 
@@ -6854,7 +6855,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 		        sql = "UPDATE node SET node_children_uuid=(SELECT LISTAGG(bin2uuid(n2.node_uuid), ',') WITHIN GROUP (ORDER BY n2.node_order) AS value FROM node n2 WHERE n2.node_parent_uuid=uuid2bin(?) GROUP BY n2.node_parent_uuid) WHERE node_uuid=uuid2bin(?)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);
 			st.setString(2, destUuid);
 			st.executeUpdate();
@@ -6874,7 +6875,7 @@ public class MysqlDataProvider implements DataProvider {
 					"FROM t_struc s, group_rights gr, group_right_info gri " +
 					"WHERE s.uuid=gr.id AND gr.grid=gri.grid) r " + // Prend la liste des droits actuel des noeuds dupliqués
 					"WHERE g.label=r.label"; // On croise le nouveau 'grid' avec le 'grid' d'origine via le label
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);
 			st.executeUpdate();
 			st.close();
@@ -6889,7 +6890,7 @@ public class MysqlDataProvider implements DataProvider {
 					"LEFT JOIN group_rights gr ON r.node_uuid=gr.id " +
 					"LEFT JOIN group_info gi ON gr.grid=gi.grid " +
 					"WHERE gi.gid=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, groupId);
 			st.executeUpdate();
 			st.close();
@@ -6898,7 +6899,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// On récupère le uuid créé
 			sql = "SELECT bin2uuid(new_uuid) FROM t_data_node WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, baseUuid);
 			res = st.executeQuery();
 			if( res.next() )
@@ -6911,8 +6912,8 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				createdUuid = "erreur: "+e.getMessage();
-				if(connection.getAutoCommit() == false)
-					connection.rollback();
+				if(c.getAutoCommit() == false)
+					c.rollback();
 			}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
@@ -6921,18 +6922,18 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
+				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_data_node, t_res_node, t_struc, t_struc_2";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
 
-				touchPortfolio(destUuid, null);
+				touchPortfolio(c, destUuid, null);
 
-				connection.close();
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -6970,9 +6971,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int postMoveNodeUp( int userid, String uuid )
+	public int postMoveNodeUp( Connection c, Credential cred, int userid, String uuid )
 	{
-		if(!credential.isAdmin(userid) && !credential.isDesigner(userid, uuid) )
+		if(!cred.isAdmin(c, userid) && !cred.isDesigner(c, userid, uuid) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String sql = "";
@@ -6984,7 +6985,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT bin2uuid(node_parent_uuid) AS puuid, node_order " +
 					"FROM node " +
 					"WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, uuid);
 			ResultSet res = st.executeQuery();
 
@@ -7003,7 +7004,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			else if( order > 0 )
 			{
-				connection.setAutoCommit(false);
+				c.setAutoCommit(false);
 
 				/// Swap node order
 				sql = "UPDATE node SET node_order=";
@@ -7014,7 +7015,7 @@ public class MysqlDataProvider implements DataProvider {
 
 				sql += "WHERE node_order IN ( ?, ? ) " +
 						"AND node_parent_uuid=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setInt(1, order);
 				st.setInt(2, order-1);
 				st.setInt(3, order);
@@ -7025,7 +7026,7 @@ public class MysqlDataProvider implements DataProvider {
 				st.close();
 
 				/// Update children list
-				updateMysqlNodeChildren(puuid);
+				updateMysqlNodeChildren(c, puuid);
 
 				status = 0;
 			}
@@ -7034,7 +7035,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.rollback();
+				c.rollback();
 			}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
@@ -7043,8 +7044,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
-				connection.close();
+				c.setAutoCommit(true);
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -7053,10 +7054,10 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean postChangeNodeParent( int userid, String uuid, String uuidParent)
+	public boolean postChangeNodeParent( Connection c, Credential cred, int userid, String uuid, String uuidParent)
 	{
 		/// FIXME something with parent uuid too
-		if(!credential.isAdmin(userid) && !credential.isDesigner(userid, uuid) )
+		if(!cred.isAdmin(c, userid) && !cred.isDesigner(c, userid, uuid) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		if( uuid == uuidParent ) // Ajouter un noeud à lui-même
@@ -7071,7 +7072,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT bin2uuid(node_parent_uuid) AS puuid " +
 					"FROM node " +
 					"WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, uuid);
 			ResultSet res = st.executeQuery();
 
@@ -7081,22 +7082,22 @@ public class MysqlDataProvider implements DataProvider {
 				puuid = res.getString("puuid");
 			}
 
-			int next = getMysqlNodeNextOrderChildren(uuidParent);
+			int next = getMysqlNodeNextOrderChildren(c, uuidParent);
 
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			sql = "UPDATE node " +
 					"SET node_parent_uuid=uuid2bin(?), node_order=? " +
 					"WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, uuidParent);
 			st.setInt(2, next);
 			st.setString(3, uuid);
 			st.executeUpdate();
 
 			/// Update children list, origin and destination
-			updateMysqlNodeChildren(puuid);
-			updateMysqlNodeChildren(uuidParent);
+			updateMysqlNodeChildren(c, puuid);
+			updateMysqlNodeChildren(c, uuidParent);
 
 			status = true;
 		}
@@ -7104,7 +7105,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.rollback();
+				c.rollback();
 			}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
@@ -7113,8 +7114,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
-				connection.close();
+				c.setAutoCommit(true);
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -7123,7 +7124,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postNode(MimeType inMimeType, String parentNodeUuid, String in,int userId, int groupId) throws Exception {
+	public Object postNode(Connection c, Credential cred, MimeType inMimeType, String parentNodeUuid, String in,int userId, int groupId) throws Exception {
 
 		/// FIXME On devrait vérifier le droit d'ajouter.
 		/// Mais dans WAD il n'y a pas ce type de droit
@@ -7137,11 +7138,11 @@ public class MysqlDataProvider implements DataProvider {
 
 		//TODO Optimiser le nombre de requetes (3 => 1)
 
-		int nodeOrder = getMysqlNodeNextOrderChildren(parentNodeUuid);
-		String portfolioUid = getPortfolioUuidByNodeUuid(parentNodeUuid);
+		int nodeOrder = getMysqlNodeNextOrderChildren(c, parentNodeUuid);
+		String portfolioUid = getPortfolioUuidByNodeUuid(c, parentNodeUuid);
 
 		String result = null;
-		String portfolioModelId = getPortfolioModelUuid(portfolioUid);
+		String portfolioModelId = getPortfolioModelUuid(c, portfolioUid);
 
 		//TODO getNodeRight postNode
 
@@ -7182,7 +7183,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		 */
 
-		String nodeUuid = writeNode(rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, false);
+		String nodeUuid = writeNode(c, cred, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, false);
 
 		result = "<nodes>";
 		result += "<"+nodeType+" ";
@@ -7190,13 +7191,13 @@ public class MysqlDataProvider implements DataProvider {
 		result += "/>";
 		result += "</nodes>";
 
-		touchPortfolio(parentNodeUuid, null);
+		touchPortfolio(c, parentNodeUuid, null);
 
 		return result;
 	}
 
 	@Override
-	public Object putNode(MimeType inMimeType, String nodeUuid, String in,int userId, int groupId) throws Exception
+	public Object putNode(Connection c, Credential cred, MimeType inMimeType, String nodeUuid, String in,int userId, int groupId) throws Exception
 	{
 		String asmType = null;
 		String xsiType = null;
@@ -7217,7 +7218,7 @@ public class MysqlDataProvider implements DataProvider {
 		long t_start = System.currentTimeMillis();
 
 		//TODO putNode getNodeRight
-		if(!credential.hasNodeRight(userId,groupId,nodeUuid, Credential.WRITE))
+		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 		//return "faux";
 
@@ -7298,7 +7299,7 @@ public class MysqlDataProvider implements DataProvider {
 				else if(children.item(i).getNodeName().equals("asmResource"))
 				{
 					// Si le noeud est de type asmResource, on stocke le innerXML du noeud
-					updateMysqlResourceByXsiType(nodeUuid,children.item(i).getAttributes().getNamedItem("xsi_type").getNodeValue().toString(),DomUtils.getInnerXml(children.item(i)),userId);
+					updateMysqlResourceByXsiType(c, nodeUuid,children.item(i).getAttributes().getNamedItem("xsi_type").getNodeValue().toString(),DomUtils.getInnerXml(children.item(i)),userId);
 				}
 				else if(children.item(i).getNodeName().equals("metadata-wad"))
 				{
@@ -7347,7 +7348,7 @@ public class MysqlDataProvider implements DataProvider {
 						if(nodeChildrenUuid==null) nodeChildrenUuid = "";
 						if(j>0) nodeChildrenUuid += ",";
 						nodeChildrenUuid += children.item(i).getAttributes().getNamedItem("id").getNodeValue().toString();
-						updatetMySqlNodeOrder(children.item(i).getAttributes().getNamedItem("id").getNodeValue().toString(),j);
+						updatetMySqlNodeOrder(c, children.item(i).getAttributes().getNamedItem("id").getNodeValue().toString(),j);
 						System.out.println("UPDATE NODE ORDER");
 						j++;
 					}
@@ -7360,21 +7361,21 @@ public class MysqlDataProvider implements DataProvider {
 		// Si le noeud est de type asmResource, on stocke le innerXML du noeud
 		if(node.getNodeName().equals("asmResource"))
 		{
-			updateMysqlResource(nodeUuid,xsiType, DomUtils.getInnerXml(node),userId);
+			updateMysqlResource(c, nodeUuid,xsiType, DomUtils.getInnerXml(node),userId);
 		}
 
 		long t_udpateRes = System.currentTimeMillis();
 
-		if(nodeChildrenUuid!=null) updateMysqlNodeChildren(nodeUuid);
+		if(nodeChildrenUuid!=null) updateMysqlNodeChildren(c, nodeUuid);
 		//TODO UpdateNode different selon creation de modele ou instantiation copie
 
 		long t_updateNodeChildren = System.currentTimeMillis();
 
-		touchPortfolio(nodeUuid, null);
+		touchPortfolio(c, nodeUuid, null);
 
 		long t_touchPortfolio = System.currentTimeMillis();
 
-		int retval = updatetMySqlNode(nodeUuid, asmType, xsiType, semtag, label, code, descr, format, metadata,metadataWad,metadataEpm,sharedRes,sharedNode,sharedNodeRes, userId);
+		int retval = updatetMySqlNode(c, nodeUuid, asmType, xsiType, semtag, label, code, descr, format, metadata,metadataWad,metadataEpm,sharedRes,sharedNode,sharedNodeRes, userId);
 
 		long t_udpateNode = System.currentTimeMillis();
 
@@ -7398,22 +7399,22 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object deleteResource(String resourceUuid,int userId, int groupId) throws Exception
+	public Object deleteResource(Connection c, Credential cred, String resourceUuid,int userId, int groupId) throws Exception
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		return deleteMySqlResource(resourceUuid, userId, groupId);
+		return deleteMySqlResource(c, cred, resourceUuid, userId, groupId);
 		//TODO asmResource(s) dans table Node et parentNode children a mettre à jour
 	}
 
 	@Override
-	public Object getResource(MimeType outMimeType, String nodeParentUuid, int userId, int groupId) throws Exception
+	public Object getResource(Connection c, Credential cred, MimeType outMimeType, String nodeParentUuid, int userId, int groupId) throws Exception
 	{
-		String[] data = getMysqlResourceByNodeParentUuid(nodeParentUuid);
+		String[] data = getMysqlResourceByNodeParentUuid(c, nodeParentUuid);
 //		java.sql.ResultSet res =
 //		res.next();
-		if(!credential.hasNodeRight(userId,groupId, nodeParentUuid, Credential.READ))
+		if(!cred.hasNodeRight(c, userId,groupId, nodeParentUuid, Credential.READ))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No READ credential ");
 		//return "faux";
 		String result = "<asmResource id=\""+data[0]+"\" contextid=\""+nodeParentUuid+"\"  >"+data[1]+"</asmResource>";
@@ -7422,20 +7423,20 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int postCreateRole(String portfolioUuid, String role, int userId)
+	public int postCreateRole(Connection c, Credential cred, String portfolioUuid, String role, int userId)
 	{
 		int groupid = 0;
 		String rootNodeUuid = "";
 		try
 		{
-			rootNodeUuid = getPortfolioRootNode(portfolioUuid);
+			rootNodeUuid = getPortfolioRootNode(c, portfolioUuid);
 		}
 		catch( SQLException e2 )
 		{
 			e2.printStackTrace();
 		}
 
-		if(!credential.isAdmin(userId) && !credential.isDesigner(userId, rootNodeUuid) && !credential.isCreator(userId))
+		if(!cred.isAdmin(c, userId) && !cred.isDesigner(c, userId, rootNodeUuid) && !cred.isCreator(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String sql;
@@ -7448,7 +7449,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT gi.gid FROM group_right_info gri " +
 					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"WHERE portfolio_id=uuid2bin(?) AND gri.label=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 			st.setString(2, role);
 			rs = st.executeQuery();
@@ -7459,13 +7460,13 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			else
 			{
-				connection.setAutoCommit(false);
+				c.setAutoCommit(false);
 
 				// Crée le rôle
 				sql = "INSERT INTO group_right_info(portfolio_id, label, owner) VALUES(uuid2bin(?),?,?)";
-				st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 				if (dbserveur.equals("oracle")){
-					  st = connection.prepareStatement(sql, new String[]{"grid"});
+					  st = c.prepareStatement(sql, new String[]{"grid"});
 				}
 				st.setString(1, portfolioUuid);
 				st.setString(2, role);
@@ -7480,9 +7481,9 @@ public class MysqlDataProvider implements DataProvider {
 
 					st.close();
 					sql = "INSERT INTO group_info(grid, owner, label) VALUES(?,?,?)";
-					st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+					st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 					if (dbserveur.equals("oracle")){
-						  st = connection.prepareStatement(sql, new String[]{"gid"});
+						  st = c.prepareStatement(sql, new String[]{"gid"});
 					}
 					st.setInt(1, grid);
 					st.setInt(2, 1);
@@ -7497,14 +7498,14 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				else
 				{
-					connection.rollback();
+					c.rollback();
 				}
 			}
 		}
 		catch(Exception ex)
 		{
 			try
-			{	connection.rollback();	}
+			{	c.rollback();	}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			ex.printStackTrace();
 		}
@@ -7512,7 +7513,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
+				c.setAutoCommit(true);
 				if( rs != null )
 					rs.close();
 				if( st != null )
@@ -7528,9 +7529,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deletePersonRole(String portfolioUuid, String role, int userId, int uid)
+	public String deletePersonRole(Connection c, Credential cred, String portfolioUuid, String role, int userId, int uid)
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String sql;
@@ -7545,7 +7546,7 @@ public class MysqlDataProvider implements DataProvider {
 					"FROM group_right_info gri " +
 					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"WHERE gri.portfolio_id=uuid2bin(?) AND gri.label=?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, uid);
 			st.setString(2, portfolioUuid);
 			st.setString(3, role);
@@ -7554,8 +7555,8 @@ public class MysqlDataProvider implements DataProvider {
 		catch(Exception ex)
 		{
 			try
-			{	connection.rollback();
-				connection.setAutoCommit(true);	}
+			{	c.rollback();
+				c.setAutoCommit(true);	}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			ex.printStackTrace();
 		}
@@ -7578,16 +7579,16 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getResources(MimeType outMimeType, String portfolioUuid, int userId, int groupId) throws Exception
+	public Object getResources(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid, int userId, int groupId) throws Exception
 	{
-		java.sql.ResultSet res = getMysqlResources(portfolioUuid);
+		java.sql.ResultSet res = getMysqlResources(c, portfolioUuid);
 		String returnValue = "";
 		if(outMimeType.getSubType().equals("xml"))
 		{
 			returnValue += "<resources>";
 			while(res.next())
 			{
-				if(!credential.hasNodeRight(userId,groupId, res.getString("res_node_uuid"),Credential.READ ))
+				if(!cred.hasNodeRight(c, userId,groupId, res.getString("res_node_uuid"),Credential.READ ))
 				{
 					//returnValue += null;
 				}
@@ -7603,7 +7604,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				if(firstNode) firstNode = false;
 				else returnValue +=" , ";
-				if(!credential.hasNodeRight(userId,groupId, res.getString("res_node_uuid"), Credential.READ))
+				if(!cred.hasNodeRight(c, userId,groupId, res.getString("res_node_uuid"), Credential.READ))
 				{
 					//returnValue += null;
 				}
@@ -7618,9 +7619,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postResource(MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId) throws Exception
+	public Object postResource(Connection c, Credential cred, MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId) throws Exception
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		//TODO GENERER Uuid
@@ -7642,18 +7643,18 @@ public class MysqlDataProvider implements DataProvider {
 
 //		java.sql.ResultSet res = getMysqlResourceByNodeParentUuid(nodeParentUuid);
 //		res.next();
-		if(!credential.hasNodeRight(userId,groupId, nodeParentUuid, Credential.WRITE))
+		if(!cred.hasNodeRight(c, userId,groupId, nodeParentUuid, Credential.WRITE))
 		{
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 			//return "faux";
 		}
-		else postNode(inMimeType, nodeParentUuid, in, userId, groupId);
+		else postNode(c, cred, inMimeType, nodeParentUuid, in, userId, groupId);
 		//else throw new Exception("le noeud contient déjà un enfant de type asmResource !");
 		return "";
 	}
 
 	@Override
-	public Object putResource(MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId) throws Exception
+	public Object putResource(Connection c, Credential cred, MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId) throws Exception
 	{
 		// TODO userId ???
 //		long t_start = System.currentTimeMillis();
@@ -7663,7 +7664,7 @@ public class MysqlDataProvider implements DataProvider {
 //		long t_filtRes = System.currentTimeMillis();
 
 		int retVal = -1;
-		String[] data = getMysqlResourceByNodeParentUuid(nodeParentUuid);
+		String[] data = getMysqlResourceByNodeParentUuid(c, nodeParentUuid);
 		String nodeUuid = "";
 		if( data != null )	// Asking to change a non existng node
 		{
@@ -7680,18 +7681,18 @@ public class MysqlDataProvider implements DataProvider {
 		//	nodeType = rootNode.getNodeName();
 			node = (doc.getElementsByTagName("asmResource")).item(0);
 
-			if(!credential.hasNodeRight(userId,groupId, nodeParentUuid, Credential.WRITE))
+			if(!cred.hasNodeRight(c, userId,groupId, nodeParentUuid, Credential.WRITE))
 				throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 		//return "faux";
 
 //		long t_checkRights = System.currentTimeMillis();
 
-			touchPortfolio(nodeParentUuid, null);
+			touchPortfolio(c, nodeParentUuid, null);
 
 //		long t_upddatePortTime = System.currentTimeMillis();
 
 		//putNode(inMimeType, nodeUuid, in, userId);
-			retVal = updateMysqlResource(nodeUuid,null,DomUtils.getInnerXml(node),userId);
+			retVal = updateMysqlResource(c, nodeUuid,null,DomUtils.getInnerXml(node),userId);
 		}
 //		int retVal = updateMysqlResource(nodeParentUuid,null,DomUtils.getInnerXml(node),userId);
 
@@ -7721,7 +7722,7 @@ public class MysqlDataProvider implements DataProvider {
 	/*
 	 * forcedParentUuid permet de forcer l'uuid parent, indépendamment de l'attribut du noeud fourni
 	 */
-	private String writeNode(Node node, String portfolioUuid, String portfolioModelId, int userId, int ordrer, String forcedUuid, String forcedUuidParent,int sharedResParent,int sharedNodeResParent, boolean rewriteId, HashMap<String,String> resolve, boolean parseRights ) throws Exception
+	private String writeNode(Connection c, Credential cred, Node node, String portfolioUuid, String portfolioModelId, int userId, int ordrer, String forcedUuid, String forcedUuidParent,int sharedResParent,int sharedNodeResParent, boolean rewriteId, HashMap<String,String> resolve, boolean parseRights ) throws Exception
 	{
 		String uuid = "";
 		String originUuid = null;
@@ -7861,7 +7862,7 @@ public class MysqlDataProvider implements DataProvider {
 							{
 
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.READ,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.READ,portfolioUuid,userId);
 							}
 						}
 					}
@@ -7875,7 +7876,7 @@ public class MysqlDataProvider implements DataProvider {
 							{
 
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
 							}
 						}
 					}
@@ -7889,7 +7890,7 @@ public class MysqlDataProvider implements DataProvider {
 							{
 
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
 							}
 						}
 					}
@@ -7902,7 +7903,7 @@ public class MysqlDataProvider implements DataProvider {
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
 							}
 						}
 					}
@@ -7916,7 +7917,7 @@ public class MysqlDataProvider implements DataProvider {
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.READ,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.READ,portfolioUuid,userId);
 							}
 						}
 					}
@@ -7930,7 +7931,7 @@ public class MysqlDataProvider implements DataProvider {
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
 							}
 						}
 					}
@@ -7944,7 +7945,7 @@ public class MysqlDataProvider implements DataProvider {
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
 							}
 						}
 					}
@@ -7958,7 +7959,7 @@ public class MysqlDataProvider implements DataProvider {
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
 							}
 						}
 					}
@@ -7972,7 +7973,7 @@ public class MysqlDataProvider implements DataProvider {
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
 							}
 						}
 					}
@@ -7986,7 +7987,7 @@ public class MysqlDataProvider implements DataProvider {
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
-								credential.postGroupRight(nodeRole,uuid,Credential.NONE,portfolioUuid,userId);
+								cred.postGroupRight(c, nodeRole,uuid,Credential.NONE,portfolioUuid,userId);
 							}
 						}
 					}
@@ -8005,7 +8006,7 @@ public class MysqlDataProvider implements DataProvider {
 								StringTokenizer data = new StringTokenizer(nodeRole, ":");
 								String role = data.nextElement().toString();
 								String actions = data.nextElement().toString();
-								credential.postGroupRight(role,uuid,actions,portfolioUuid,userId);
+								cred.postGroupRight(c, role,uuid,actions,portfolioUuid,userId);
 							}
 						}
 					}
@@ -8024,7 +8025,7 @@ public class MysqlDataProvider implements DataProvider {
 							while (tokens.hasMoreElements())
 								merge += ","+tokens.nextElement().toString();
 
-							postNotifyRoles(userId, portfolioUuid, uuid, merge);
+							postNotifyRoles(c, cred, userId, portfolioUuid, uuid, merge);
 						}
 					}
 					catch(Exception ex) {}
@@ -8042,9 +8043,9 @@ public class MysqlDataProvider implements DataProvider {
 					{
 						String publicatt = children.item(i).getAttributes().getNamedItem("public").getNodeValue();
 						if( "Y".equals(publicatt) )
-							setPublicState(userId, portfolioUuid, true);
+							setPublicState(c, cred, userId, portfolioUuid, true);
 						else if( "N".equals(publicatt) )
-							setPublicState(userId, portfolioUuid, false);
+							setPublicState(c, cred, userId, portfolioUuid, false);
 					}
 					catch(Exception ex) {}
 
@@ -8170,7 +8171,7 @@ public class MysqlDataProvider implements DataProvider {
 		else modelNodeUuid = null;
 
 		if(uuid!=null && !node.getNodeName().equals("portfolio") && !node.getNodeName().equals("asmResource"))
-			returnValue = insertMySqlNode(uuid, parentUuid, "", asmType, xsiType,
+			returnValue = insertMySqlNode(c, uuid, parentUuid, "", asmType, xsiType,
 					sharedRes, sharedNode, sharedNodeRes, sharedResUuid, sharedNodeUuid,sharedNodeResUuid, metadata, metadataWad, metadataEpm,
 					semtag, semanticTag,
 					label, code, descr, format, ordrer ,userId, portfolioUuid);
@@ -8188,20 +8189,20 @@ public class MysqlDataProvider implements DataProvider {
 				if(xsiType.equals("nodeRes") && sharedNodeResParent==1)
 				{
 					sharedNodeResUuid = originUuid;
-					insertMysqlResource(sharedNodeResUuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
+					insertMysqlResource(c, sharedNodeResUuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
 				}
 				else if(!xsiType.equals("context") && !xsiType.equals("nodeRes") && sharedResParent==1)
 				{
 
 					sharedResUuid = originUuid;
-					insertMysqlResource(sharedResUuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
+					insertMysqlResource(c, sharedResUuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
 				}
 				else
 				{
-					insertMysqlResource(uuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
+					insertMysqlResource(c, uuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
 				}
 			}
-			else insertMysqlResource(uuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
+			else insertMysqlResource(c, uuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
 
 		}
 
@@ -8248,38 +8249,38 @@ public class MysqlDataProvider implements DataProvider {
 							"asmContext".equals(nodeName) )
 					{
 						//System.out.println("uid="+uuid+":"+",enfant_uuid="+children.item(i).getAttributes().getNamedItem("id")+",ordre="+k);
-						writeNode(child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
+						writeNode(c, cred, child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
 						k++;
 					}
 					else if( "asmResource".equals(nodeName) ) // Les asmResource pose problême dans l'ordre des noeuds
 					{
-						writeNode(child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
+						writeNode(c, cred, child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
 					}
 				}
 			}
 		}
 
-		updateMysqlNodeChildren(forcedUuidParent);
+		updateMysqlNodeChildren(c, forcedUuidParent);
 
 		return uuid;
 	}
 
 	@Override
-	public void writeLog(String url, String method, String headers, String inBody, String outBody, int code)
+	public void writeLog(Connection c, String url, String method, String headers, String inBody, String outBody, int code)
 	{
-		insertMySqlLog(url,method,headers,inBody, outBody, code);
+		insertMySqlLog(c, url,method,headers,inBody, outBody, code);
 	}
 
 	@Override
-	public Object putPortfolioConfiguration(String portfolioUuid, Boolean portfolioActive, Integer userId)
+	public Object putPortfolioConfiguration(Connection c, Credential cred, String portfolioUuid, Boolean portfolioActive, Integer userId)
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		return updateMysqlPortfolioConfiguration(portfolioUuid, portfolioActive);
+		return updateMysqlPortfolioConfiguration(c, portfolioUuid, portfolioActive);
 	}
 
-	private Object updateMysqlPortfolioConfiguration(String portfolioUuid, Boolean portfolioActive)
+	private Object updateMysqlPortfolioConfiguration(Connection c, String portfolioUuid, Boolean portfolioActive)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -8288,7 +8289,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			sql  = "UPDATE  portfolio SET active = ? WHERE portfolio_id  = uuid2bin(?) ";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			Integer active = portfolioActive ? 1 : 0;
 			st.setInt(1,active);
 			st.setString(2,portfolioUuid);
@@ -8303,7 +8304,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getMysqlUserUid(String login) throws Exception
+	public String getMysqlUserUid(Connection c, String login) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
@@ -8312,7 +8313,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT userid FROM credential WHERE login = ? ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, login);
 			res = st.executeQuery();
 			res.next();
@@ -8326,10 +8327,10 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String[] postCredential(String login, String password, Integer UserId) throws ServletException, IOException
+	public String[] postCredential(Credential cred, String login, String password, Integer UserId) throws ServletException, IOException
 	{
 		try{
-			return credential.doPost(login, password);
+			return cred.doPost(login, password);
 		}catch (ServletException e) {
 			e.printStackTrace();
 			return null;
@@ -8337,20 +8338,20 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public void getCredential(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	public void getCredential(HttpServletRequest request, HttpServletResponse response, Credential cred) throws ServletException, IOException
 	{
 		try{
-			credential.doGet(request, response);
+			cred.doGet(request, response);
 		}catch (ServletException e) {
 			e.printStackTrace();
 		}
 	}
 
 	@Override
-	public String getUserUidByTokenAndLogin(String login, String token) throws Exception
+	public String getUserUidByTokenAndLogin(Connection c, Credential cred, String login, String token) throws Exception
 	{
 		try{
-			return credential.getMysqlUserUidByTokenAndLogin(login, token);
+			return cred.getMysqlUserUidByTokenAndLogin(c, login, token);
 		}catch (ServletException e) {
 			e.printStackTrace();
 			return null;
@@ -8365,9 +8366,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postGroup(String in, int userId) throws Exception
+	public Object postGroup(Connection c, Credential cred, String in, int userId) throws Exception
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String result = null;
@@ -8427,7 +8428,7 @@ public class MysqlDataProvider implements DataProvider {
 		if (dbserveur.equals("oracle")){
 			sqlInsert = "MERGE INTO group_info d using (SELECT ? grid,? owner,? label from dual) s ON (1=2) WHEN NOT MATCHED THEN INSERT (d.grid, d.owner, d.label) values (s.grid, s.owner, s.label)";
 		}
-		stInsert = connection.prepareStatement(sqlInsert);
+		stInsert = c.prepareStatement(sqlInsert);
 		stInsert.setInt(1, grid);
 		stInsert.setInt(2, owner);
 		stInsert.setString(3, label);
@@ -8445,9 +8446,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getUsers(int userId) throws Exception
+	public Object getUsers(Connection c, int userId) throws Exception
 	{
-		ResultSet res = getMysqlUsers(userId);
+		ResultSet res = getMysqlUsers(c, userId);
 
 		String result = "<users>";
 		int curUser = 0;
@@ -8483,12 +8484,12 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getGroupRights(int userId, int groupId) throws Exception
+	public Object getGroupRights(Connection c, Credential cred, int userId, int groupId) throws Exception
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		ResultSet res = getMysqlGroupRights(userId, groupId);
+		ResultSet res = getMysqlGroupRights(c, userId, groupId);
 		String AD = "1";
 		String SB = "1";
 		String WR = "1";
@@ -8563,12 +8564,12 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean postGroupsUsers(int user, int userId, int groupId)
+	public boolean postGroupsUsers(Connection c, Credential cred, int user, int userId, int groupId)
 	{
 		PreparedStatement stInsert;
 		String sqlInsert;
 
-		if(!credential.isAdmin(user))
+		if(!cred.isAdmin(c, user))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		try
@@ -8577,7 +8578,7 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("oracle")){
 				sqlInsert = "MERGE INTO group_user d using (SELECT ? gid,? userid FROM DUAL) s ON (d.gid=s.gid AND d.userid=s.userid) WHEN NOT MATCHED THEN INSERT (d.gid, d.userid) VALUES (s.gid, s.userid)";
 			}
-			stInsert = connection.prepareStatement(sqlInsert);
+			stInsert = c.prepareStatement(sqlInsert);
 			stInsert.setInt(1, groupId);
 			stInsert.setInt(2, userId);
 			stInsert.executeUpdate();
@@ -8591,18 +8592,18 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean postRightGroup(int groupRightId, int groupId, Integer userId)
+	public boolean postRightGroup(Connection c, Credential cred, int groupRightId, int groupId, Integer userId)
 	{
 		PreparedStatement stUpdate;
 		String sqlUpdate;
 
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		try
 		{
 			sqlUpdate = "UPDATE group_info SET grid=? WHERE gid=?";
-			stUpdate = connection.prepareStatement(sqlUpdate);
+			stUpdate = c.prepareStatement(sqlUpdate);
 			stUpdate.setInt(1, groupRightId);
 			stUpdate.setInt(2, groupId);
 			stUpdate.executeUpdate();
@@ -8616,10 +8617,10 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean postNotifyRoles(int userId, String portfolio, String uuid, String notify)
+	public boolean postNotifyRoles(Connection c, Credential cred, int userId, String portfolio, String uuid, String notify)
 	{
 		boolean ret = false;
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String sql = "";
@@ -8629,7 +8630,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql  = "UPDATE group_rights SET notify_roles=? " +
 					"WHERE id=uuid2bin(?) AND grid IN " +
 					"(SELECT grid FROM group_right_info WHERE portfolio_id=uuid2bin(?))";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, notify);
 			st.setString(2, uuid);
 			st.setString(3, portfolio);
@@ -8644,10 +8645,10 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean setPublicState(int userId, String portfolio, boolean isPublic)
+	public boolean setPublicState(Connection c, Credential cred, int userId, String portfolio, boolean isPublic)
 	{
 		boolean ret = false;
-		if( !credential.isAdmin(userId) && !credential.isOwner(userId, portfolio) && !credential.isDesigner(userId, portfolio) && !credential.isCreator(userId) )
+		if( !cred.isAdmin(c, userId) && !cred.isOwner(c, userId, portfolio) && !cred.isDesigner(c, userId, portfolio) && !cred.isCreator(c, userId) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String sql = "";
@@ -8658,7 +8659,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT gi.gid " +
 					"FROM group_right_info gri LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"WHERE gri.portfolio_id=uuid2bin(?) AND gri.label='all'";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolio);
 			ResultSet rs = st.executeQuery();
 
@@ -8670,12 +8671,12 @@ public class MysqlDataProvider implements DataProvider {
 
 			if( gid == 0 )	//  If not exist, create 'all' groups
 			{
-				connection.setAutoCommit(false);
+				c.setAutoCommit(false);
 				sql = "INSERT INTO group_right_info(owner, label, portfolio_id) " +
 						"VALUES(?,'all',uuid2bin(?))";
-				st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 				if (dbserveur.equals("oracle")){
-					  st = connection.prepareStatement(sql, new String[]{"grid"});
+					  st = c.prepareStatement(sql, new String[]{"grid"});
 				}
 				st.setInt(1, userId);
 				st.setString(2, portfolio);
@@ -8692,16 +8693,16 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "INSERT INTO group_rights(grid,id) " +
 						"(SELECT ?, node_uuid " +
 						"FROM node WHERE portfolio_id=uuid2bin(?))";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setInt(1, grid);
 				st.setString(2, portfolio);
 				st.executeUpdate();
 				st.close();
 
 				sql = "INSERT INTO group_info(grid, owner, label) VALUES(?,?,'all')";
-				st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 				if (dbserveur.equals("oracle")){
-					  st = connection.prepareStatement(sql, new String[]{"gid"});
+					  st = c.prepareStatement(sql, new String[]{"gid"});
 				}
 				st.setInt(1, grid);
 				st.setInt(2, userId);
@@ -8712,7 +8713,7 @@ public class MysqlDataProvider implements DataProvider {
 					gid = key.getInt(1);
 				key.close();
 				st.close();
-				connection.commit();
+				c.commit();
 			}
 
 			if( isPublic )	// Insère ou retire 'public' dans le groupe 'all' du portfolio
@@ -8731,7 +8732,7 @@ public class MysqlDataProvider implements DataProvider {
 						"AND gid=?";
 			}
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, gid);
 			st.executeUpdate();
 
@@ -8740,8 +8741,8 @@ public class MysqlDataProvider implements DataProvider {
 		catch (SQLException e)
 		{
 			try
-			{	connection.rollback();
-				connection.setAutoCommit(true);	}
+			{	c.rollback();
+				c.setAutoCommit(true);	}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
@@ -8749,7 +8750,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
+				c.setAutoCommit(true);
 				if( st != null )
 					st.close();
 			}
@@ -8760,7 +8761,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int postShareGroup(String portfolio, int user, Integer userId, String write)
+	public int postShareGroup(Connection c, Credential cred, String portfolio, int user, Integer userId, String write)
 	{
 		int status = -1;
 		String sql = "";
@@ -8774,12 +8775,12 @@ public class MysqlDataProvider implements DataProvider {
 			wr=1;
 
 		/// Check if portfolio is owner by the user sending this command
-		if( !credential.isOwner(userId, portfolio) && !credential.isAdmin(userId) )
+		if( !cred.isOwner(c, userId, portfolio) && !cred.isAdmin(c, userId) )
 			return -2;	// Not owner
 
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			// Check if shared group exist
 			sql = "SELECT gi.gid, gri.grid " +
@@ -8787,7 +8788,7 @@ public class MysqlDataProvider implements DataProvider {
 					"WHERE gi.grid=gri.grid " +
 					"AND gri.label=? " +
 					"AND gri.portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, "shared");
 			st.setString(2, portfolio);
 			rs = st.executeQuery();
@@ -8803,9 +8804,9 @@ public class MysqlDataProvider implements DataProvider {
 				st.close();
 				/// Create shared group if not exist
 				sql = "INSERT INTO group_right_info(owner, label, portfolio_id) VALUES(?,?,uuid2bin(?))";
-				st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 				if (dbserveur.equals("oracle")){
-					  st = connection.prepareStatement(sql, new String[]{"grid"});
+					  st = c.prepareStatement(sql, new String[]{"grid"});
 				}
 				st.setInt(1, userId);
 				st.setString(2, "shared");
@@ -8818,9 +8819,9 @@ public class MysqlDataProvider implements DataProvider {
 
 				st.close();
 				sql = "INSERT INTO group_info(grid, owner, label) VALUES(?,?,?)";
-				st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 				if (dbserveur.equals("oracle")){
-					  st = connection.prepareStatement(sql, new String[]{"gid"});
+					  st = c.prepareStatement(sql, new String[]{"gid"});
 				}
 				st.setInt(1, grid);
 				st.setInt(2, userId);
@@ -8838,7 +8839,7 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("oracle")){
 				sql = "INSERT /*+ ignore_row_on_dupkey_index(group_user,group_user_PK)*/ INTO group_user(gid, userid) VALUES(?,?)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, gid);
 			st.setInt(2, user);
 
@@ -8847,14 +8848,14 @@ public class MysqlDataProvider implements DataProvider {
 			st.close();
 			/// Flush and insert all rights info in created group
 			sql = "DELETE FROM group_rights WHERE grid=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, grid);
 			st.executeUpdate();
 			st.close();
 
 			sql = "INSERT INTO group_rights(grid, id, RD, WR) " +
 					"SELECT ?, node_uuid, 1, ? FROM node WHERE portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			/// With parameter, add default WR, DL
 			st.setInt(1, grid);
 			st.setInt(2, wr);	/// Flag to select if we write too
@@ -8865,15 +8866,15 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch( Exception e )
 		{
-			try{ connection.rollback(); }
+			try{ c.rollback(); }
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
 		finally
 		{
 			try
-			{ connection.setAutoCommit(true);
-			connection.close(); }
+			{ c.setAutoCommit(true);
+			c.close(); }
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
@@ -8881,19 +8882,19 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int deleteShareGroup(String portfolio, Integer userId)
+	public int deleteShareGroup(Connection c, Credential cred, String portfolio, Integer userId)
 	{
 		int status = -1;
 		String sql = "";
 		PreparedStatement st;
 
 		/// Check if portfolio is owner by the user sending this command
-		if( !credential.isOwner(userId, portfolio) && !credential.isAdmin(userId) )
+		if( !cred.isOwner(c, userId, portfolio) && !cred.isAdmin(c, userId) )
 			return -2;	// Not owner
 
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			// Delete and cleanup
 			sql = "DELETE gri, gr, gi, gu " +
@@ -8907,7 +8908,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "DELETE FROM group_right_info gri WHERE gri.label=? " +
 						"AND gri.portfolio_id=uuid2bin(?)";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, "shared");
 			st.setString(2, portfolio);
 			st.executeUpdate();
@@ -8916,15 +8917,15 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch( Exception e )
 		{
-			try{ connection.rollback(); }
+			try{ c.rollback(); }
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
 		finally
 		{
 			try
-			{ connection.setAutoCommit(true);
-			connection.close(); }
+			{ c.setAutoCommit(true);
+			c.close(); }
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
@@ -8932,19 +8933,19 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int deleteSharePerson(String portfolio, int user, Integer userId)
+	public int deleteSharePerson(Connection c, Credential cred, String portfolio, int user, Integer userId)
 	{
 		int status = -1;
 		String sql = "";
 		PreparedStatement st;
 
 		/// Check if portfolio is owner by the user sending this command
-		if( !credential.isOwner(userId, portfolio) && !credential.isAdmin(userId) )
+		if( !cred.isOwner(c, userId, portfolio) && !cred.isAdmin(c, userId) )
 			return -2;	// Not owner
 
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			sql = "DELETE FROM group_user " +
 					"WHERE userid=? " +
@@ -8954,7 +8955,7 @@ public class MysqlDataProvider implements DataProvider {
 					"WHERE gri.grid=gi.grid " +
 					"AND gri.label=? " +
 					"AND gri.portfolio_id=uuid2bin(?))";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, user);
 			st.setString(2, "shared");
 			st.setString(3, portfolio);
@@ -8964,15 +8965,15 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch( Exception e )
 		{
-			try{ connection.rollback(); }
+			try{ c.rollback(); }
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
 		finally
 		{
 			try
-			{ connection.setAutoCommit(true);
-			connection.close(); }
+			{ c.setAutoCommit(true);
+			c.close(); }
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
@@ -8980,17 +8981,18 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object deleteUsers(Integer userId,Integer userId2)
+	public Object deleteUsers(Connection c, Credential cred, Integer userId,Integer userId2)
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		int res = deleteMysqlUsers(userId2);
+		/// Looks like it should be merged since not used anywhere else
+		int res = deleteMysqlUsers(c, userId2);
 
 		return res;
 	}
 
-	private int deleteMysqlUsers(Integer userId)
+	private int deleteMysqlUsers(Connection c, Integer userId)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -9002,12 +9004,12 @@ public class MysqlDataProvider implements DataProvider {
 		try {
 
 			sql  = " DELETE FROM credential WHERE userid=? ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			st.executeUpdate();
 
 			sql  = " DELETE FROM group_user WHERE userid=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 
 			return 0;
@@ -9019,17 +9021,17 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object deleteGroupRights(Integer groupId, Integer groupRightId, Integer userId)
+	public Object deleteGroupRights(Connection c, Credential cred, Integer groupId, Integer groupRightId, Integer userId)
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		int res = deleteMysqlGroupRights(groupId, groupRightId);
+		int res = deleteMysqlGroupRights(c, groupId, groupRightId);
 
 		return res;
 	}
 
-	private Integer deleteMysqlGroupRights(Integer groupId, Integer groupRightId)
+	private Integer deleteMysqlGroupRights(Connection c, Integer groupId, Integer groupRightId)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -9045,7 +9047,7 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("oracle")){
 				sql  = " DELETE FROM group_info gi WHERE gid=?";
 			}
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, groupId);
 			st.executeUpdate();
 
@@ -9057,9 +9059,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postPortfolioZip(MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws IOException
+	public Object postPortfolioZip(Connection c, Credential cred, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws IOException
 	{
-		if(!credential.isAdmin(userId) && !credential.isCreator(userId))
+		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		boolean isMultipart = ServletFileUpload.isMultipartContent(httpServletRequest);
@@ -9184,17 +9186,17 @@ public class MysqlDataProvider implements DataProvider {
 
 						String uuid = UUID.randomUUID().toString();
 
-						insertMysqlPortfolio(portfolioUuid,uuid,0,userId);
+						insertMysqlPortfolio(c, portfolioUuid,uuid,0,userId);
 
-						writeNode(rootNode, portfolioUuid, null, userId,0, uuid,null,0,0,false, resolve, parseRights);
+						writeNode(c, cred, rootNode, portfolioUuid, null, userId,0, uuid,null,0,0,false, resolve, parseRights);
 					}
-					updateMysqlPortfolioActive(portfolioUuid,true);
+					updateMysqlPortfolioActive(c, portfolioUuid,true);
 
 					/// Finalement on crée un rôle designer
-					int groupid = postCreateRole(portfolioUuid, "designer", userId);
+					int groupid = postCreateRole(c, cred, portfolioUuid, "designer", userId);
 
 					/// Ajoute la personne dans ce groupe
-					putUserGroup(Integer.toString(groupid), Integer.toString(userId));
+					putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
 
 					hasLoaded = true;
 				}
@@ -9403,9 +9405,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postUser(String in, int userId) throws Exception
+	public Object postUser(Connection c, Credential cred, String in, int userId) throws Exception
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String result = null;
@@ -9436,9 +9438,10 @@ public class MysqlDataProvider implements DataProvider {
 				if(etu.getAttributes().getNamedItem("uid")!=null)
 				{
 					login = etu.getAttributes().getNamedItem("uid").getNodeValue();
-
-					if (getMysqlUserUid(login) != null){
-						uuid = Integer.parseInt(getMysqlUserUid(login));
+					String uid = getMysqlUserUid(c, login);
+					
+					if ( uid != null){
+						uuid = Integer.parseInt(uid);
 					}
 				}
 			}catch(Exception ex) {}
@@ -9497,10 +9500,10 @@ public class MysqlDataProvider implements DataProvider {
 		if (etu.getAttributes().getNamedItem("firstname")!=null && etu.getAttributes().getNamedItem("lastname")!=null && etu.getAttributes().getNamedItem("label")==null){
 
 			sqlInsert = "REPLACE INTO credential(userid, login, display_firstname, display_lastname, email, password, active) VALUES (?, ?, ?, ?, ?, UNHEX(SHA1(?)),?)";
-			stInsert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+			stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
 				sqlInsert = "MERGE INTO credential d USING (SELECT ? userid,? login,? display_firstname,? display_lastname, ? email, crypt(?) password,? active FROM DUAL) s ON (d.userid=s.userid) WHEN MATCHED THEN UPDATE SET d.login=s.login, d.display_firstname = s.display_firstname, d.display_lastname = s.display_lastname, d.email = s.email, d.password = s.password, d.active = s.active WHEN NOT MATCHED THEN INSERT (d.userid, d.login, d.display_firstname, d.display_lastname, d.password, d.active) VALUES (s.userid, s.login, s.display_firstname, s.display_lastname, s.password, s.active)";
-				stInsert = connection.prepareStatement(sqlInsert, new String[]{"userid"});
+				stInsert = c.prepareStatement(sqlInsert, new String[]{"userid"});
 			}
 			stInsert.setInt(1, uuid);
 			stInsert.setString(2, login);
@@ -9513,10 +9516,10 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		else {
 			sqlInsert = "REPLACE INTO credential(userid, login, display_firstname, display_lastname, email, password, active) VALUES (?, ?, ?, ?, ?, UNHEX(SHA1(?)),?)";
-			stInsert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+			stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
 				sqlInsert = "MERGE INTO credential d USING (SELECT ? userid,? login,? display_firstname,? display_lastname, ? email, crypt(?) password,? active FROM DUAL) s ON (d.userid=s.userid) WHEN MATCHED THEN UPDATE SET d.login=s.login, d.display_firstname = s.display_firstname, d.display_lastname = s.display_lastname, d.email = s.email, d.password = s.password, d.active = s.active WHEN NOT MATCHED THEN INSERT (d.userid, d.login, d.display_firstname, d.display_lastname, d.password, d.active) VALUES (s.userid, s.login, s.display_firstname, s.display_lastname, s.password, s.active)";
-				stInsert = connection.prepareStatement(sqlInsert, new String[]{"userid"});
+				stInsert = c.prepareStatement(sqlInsert, new String[]{"userid"});
 			}
 			stInsert.setInt(1, uuid);
 			stInsert.setString(2, login);
@@ -9541,14 +9544,14 @@ public class MysqlDataProvider implements DataProvider {
 		if( "1".equals(substitute) )
 		{	// id=0, don't check who this person can substitute (except root)
 			String sql = "INSERT IGNORE INTO credential_substitution(userid, id, type) VALUES(?,0,'USER')";
-			subst = connection.prepareStatement(sql);
+			subst = c.prepareStatement(sql);
 			subst.setInt(1, uuid);
 			subst.execute();
 		}
 		else if( "0".equals(substitute) )
 		{
 			String sql = "DELETE FROM credential_substitution WHERE userid=? AND id=0";
-			subst = connection.prepareStatement(sql);
+			subst = c.prepareStatement(sql);
 			subst.setInt(1, uuid);
 			subst.execute();
 		}
@@ -9571,7 +9574,7 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
-	private ResultSet getMysqlNodeUuidBySemanticTag(String portfolioUuid, String semantictag) throws SQLException
+	private ResultSet getMysqlNodeUuidBySemanticTag(Connection c, String portfolioUuid, String semantictag) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -9584,7 +9587,7 @@ public class MysqlDataProvider implements DataProvider {
 					"FROM node WHERE portfolio_id = uuid2bin(?) AND " +
 					"semantictag LIKE ? ORDER BY code, node_order";
 			//sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, node_children_uuid, code, asm_type, label FROM node WHERE portfolio_id = uuid2bin('c884bdcd-2165-469b-9939-14376f7f3500') AND metadata LIKE '%semantictag=%competence%'";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 
 			st.setString(1, portfolioUuid);
 			st.setString(2, text);
@@ -9600,12 +9603,12 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public String getGroupRightsInfos(int userId, String portfolioId) throws SQLException
+	public String getGroupRightsInfos(Connection c, Credential cred, int userId, String portfolioId) throws SQLException
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		ResultSet res = getMysqlGroupRightsInfos(userId, portfolioId);
+		ResultSet res = getMysqlGroupRightsInfos(c, userId, portfolioId);
 
 		String result = "<groupRightsInfos>";
 		while(res.next())
@@ -9624,7 +9627,7 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
-	private ResultSet getMysqlGroupRightsInfos(int userId, String portfolioId)
+	private ResultSet getMysqlGroupRightsInfos(Connection c, int userId, String portfolioId)
 	{
 		PreparedStatement st;
 		String sql;
@@ -9636,7 +9639,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT grid,owner,label FROM group_right_info WHERE  portfolio_id = uuid2bin(?) ";
 			//if(userId!=null) sql += "  AND cr.userid = ? ";
 			//sql += " ORDER BY display_name ASC ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioId);
 
 			return st.executeQuery();
@@ -9650,9 +9653,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getListUsers(int userId)
+	public String getListUsers(Connection c, int userId)
 	{
-		ResultSet res = getMysqlUsers(userId);
+		ResultSet res = getMysqlUsers(c, userId);
 
 		String result = "<users>";
 		try {
@@ -9699,7 +9702,7 @@ public class MysqlDataProvider implements DataProvider {
 	/// Retrouve le uid du username
 	/// currentUser est là au cas où on voudrait limiter l'accès
 	@Override
-	public String getUserID(int currentUser, String username)
+	public String getUserID(Connection c, int currentUser, String username)
 	{
 		PreparedStatement st;
 		ResultSet res = null;
@@ -9707,7 +9710,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			String sql = "SELECT userid FROM credential WHERE login=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, username);
 			res = st.executeQuery();
 			if( res.next())
@@ -9726,7 +9729,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getInfUser(int userId, int userid)
+	public String getInfUser(Connection c, int userId, int userid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -9741,7 +9744,7 @@ public class MysqlDataProvider implements DataProvider {
 					"LEFT JOIN credential_substitution cs " +
 					"ON c.userid=cs.userid " +
 					"WHERE c.userid = ?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userid);
 			res = st.executeQuery();
 		}
@@ -9790,7 +9793,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getRoleUser(int userId, int userid)
+	public String getRoleUser(Connection c, int userId, int userid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -9799,7 +9802,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT * FROM group_user gu, group_info gi, group_right_info gri WHERE userid = ? and gi.gid = gu.gid and gi.grid = gri.grid";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userid);
 			res = st.executeQuery();
 		}
@@ -9831,7 +9834,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String putInfUser(int userId, int userid2, String in) throws SQLException
+	public String putInfUser(Connection c, int userId, int userid2, String in) throws SQLException
 	{
 		String result1 = null;
 		Integer  id = 0;
@@ -9886,7 +9889,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					sql = "UPDATE credential SET login = ? WHERE  userid = ?";
 
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, username);
 					st.setInt(2, userid2);
 					st.executeUpdate();
@@ -9900,7 +9903,7 @@ public class MysqlDataProvider implements DataProvider {
 						sql = "UPDATE credential SET password = crypt(?) WHERE  userid = ?";
 					}
 
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, password);
 					st.setInt(2, userid2);
 					st.executeUpdate();
@@ -9911,7 +9914,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					sql = "UPDATE credential SET display_firstname = ? WHERE  userid = ?";
 
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, firstname);
 					st.setInt(2, userid2);
 					st.executeUpdate();
@@ -9922,7 +9925,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					sql = "UPDATE credential SET display_lastname = ? WHERE  userid = ?";
 
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, lastname);
 					st.setInt(2, userid2);
 					st.executeUpdate();
@@ -9933,7 +9936,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					sql = "UPDATE credential SET email = ? WHERE  userid = ?";
 
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, email);
 					st.setInt(2, userid2);
 					st.executeUpdate();
@@ -9946,7 +9949,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					sql = "UPDATE credential SET is_admin = ? WHERE  userid = ?";
 
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setInt(1, is_adminInt);
 					st.setInt(2, userid2);
 					st.executeUpdate();
@@ -9960,7 +9963,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					sql = "UPDATE credential SET is_designer = ? WHERE  userid = ?";
 
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setInt(1, is_designerInt);
 					st.setInt(2, userid2);
 					st.executeUpdate();
@@ -9974,7 +9977,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					sql = "UPDATE credential SET active = ? WHERE  userid = ?";
 
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setInt(1, activeInt);
 					st.setInt(2, userid2);
 					st.executeUpdate();
@@ -9990,14 +9993,14 @@ public class MysqlDataProvider implements DataProvider {
 					if( "1".equals(hasSubstitute) )
 					{	// id=0, don't check who this person can substitute (except root)
 						sql = "INSERT IGNORE INTO credential_substitution(userid, id, type) VALUES(?,0,'USER')";
-						subst = connection.prepareStatement(sql);
+						subst = c.prepareStatement(sql);
 						subst.setInt(1, userid2);
 						subst.execute();
 					}
 					else if( "0".equals(hasSubstitute) )
 					{
 						sql = "DELETE FROM credential_substitution WHERE userid=? AND id=0";
-						subst = connection.prepareStatement(sql);
+						subst = c.prepareStatement(sql);
 						subst.setInt(1, userid2);
 						subst.execute();
 					}
@@ -10047,9 +10050,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postUsers(String in, int userId) throws Exception
+	public String postUsers(Connection c, Credential cred, String in, int userId) throws Exception
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String result = null;
@@ -10133,10 +10136,10 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)),?,?)";
-			stInsert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+			stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
 				  sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer) VALUES (?, ?, ?, ?, crypt(?),?,?)";
-				  stInsert = connection.prepareStatement(sqlInsert, new String[]{"userid"});
+				  stInsert = c.prepareStatement(sqlInsert, new String[]{"userid"});
 			}
 
 			stInsert.setString(1, username);
@@ -10198,14 +10201,14 @@ public class MysqlDataProvider implements DataProvider {
 				if( "1".equals(substitute) )
 				{	// id=0, don't check who this person can substitute (except root)
 					String sql = "INSERT IGNORE INTO credential_substitution(userid, id, type) VALUES(?,0,'USER')";
-					subst = connection.prepareStatement(sql);
+					subst = c.prepareStatement(sql);
 					subst.setInt(1, id);
 					subst.execute();
 				}
 				else if( "0".equals(substitute) )
 				{
 					String sql = "DELETE FROM credential_substitution WHERE userid=? AND id=0";
-					subst = connection.prepareStatement(sql);
+					subst = c.prepareStatement(sql);
 					subst.setInt(1, id);
 					subst.execute();
 				}
@@ -10241,7 +10244,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String[] postCredentialFromXml(Integer userId, String username, String password, String substitute) throws ServletException, IOException
+	public String[] postCredentialFromXml(Connection c, Integer userId, String username, String password, String substitute) throws ServletException, IOException
 	{
 		String sql = null;
 		ResultSet rs=null;
@@ -10256,7 +10259,7 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("oracle")){
 				sql = "SELECT userid, login FROM credential WHERE login=? AND password=crypt(?)";
 			}
-			stmt=connection.prepareStatement(sql);
+			stmt=c.prepareStatement(sql);
 			stmt.setString(1, username);
 			stmt.setString(2, password);
 			rs = stmt.executeQuery();
@@ -10272,7 +10275,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "SELECT cs.id " +
 						"FROM credential_substitution cs " +
 						"WHERE cs.userid=? AND cs.id=? AND cs.type=?";
-				stmt=connection.prepareStatement(sql);
+				stmt=c.prepareStatement(sql);
 				stmt.setInt(1, uid);
 				stmt.setInt(2, 0);		// 0 -> Any account, specific otherwise
 				stmt.setString(3, "USER");
@@ -10283,7 +10286,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql = "SELECT c.userid " +
 							"FROM credential c " +
 							"WHERE c.login=? AND is_admin=0";
-					stmt=connection.prepareStatement(sql);
+					stmt=c.prepareStatement(sql);
 					stmt.setString(1, substitute);
 					rs = stmt.executeQuery();
 
@@ -10300,7 +10303,7 @@ public class MysqlDataProvider implements DataProvider {
 							"SELECT c.userid " +
 							"FROM credential c, credential_substitution cs, group_user gu " +
 							"WHERE c.userid=gu.userid AND gu.gid=cs.id AND c.login=? AND cs.userid=? AND cs.type='GROUP'";	// Anybody in group
-					stmt=connection.prepareStatement(sql);
+					stmt=c.prepareStatement(sql);
 					stmt.setString(1, substitute);
 					stmt.setInt(2, uid);
 					stmt.setString(3, substitute);
@@ -10321,12 +10324,12 @@ public class MysqlDataProvider implements DataProvider {
 			if( subuid != 0 )
 			{
 				returnValue[3] = substitute;
-				res = getMySqlUserByLogin(substitute);
+				res = getMySqlUserByLogin(c, substitute);
 			}
 			else
 			{
 				returnValue[3] = "";
-				res = getMySqlUserByLogin(username);
+				res = getMySqlUserByLogin(c, username);
 			}
 
 			returnValue[0] ="<credential>";
@@ -10344,7 +10347,7 @@ public class MysqlDataProvider implements DataProvider {
 		return returnValue;
 	}
 
-	public ResultSet getMySqlUserByLogin(String login) throws Exception
+	public ResultSet getMySqlUserByLogin(Connection c, String login) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
@@ -10354,7 +10357,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 
 			sql = "SELECT * FROM credential WHERE login = ? ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, login);
 			res = st.executeQuery();
 			res.next();
@@ -10369,18 +10372,18 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int deleteCredential(int userId)
+	public int deleteCredential(Connection c, Credential cred, int userId)
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		int res = updateMysqlCredentialToken(userId, null);
+		int res = updateMysqlCredentialToken(c, userId, null);
 
 		return res;
 	}
 
 	@Override
-	public Object getNodeWithXSL(MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId)
+	public Object getNodeWithXSL(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId)
 	{
 		String xml;
 		try {
@@ -10398,7 +10401,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// TODO: Test this more, should use getNode rather than having another output
-			xml = getNode(new MimeType("text/xml"),nodeUuid,true, userId, groupId, null).toString();
+			xml = getNode(c, cred, new MimeType("text/xml"),nodeUuid,true, userId, groupId, null).toString();
 
 //			xml = getNodeXmlOutput(nodeUuid,true,null,userId, groupId, null,true).toString();
 			return DomUtils.processXSLTfile2String( DomUtils.xmlString2Document(xml, new StringBuffer()), xslFile, param, paramVal, new StringBuffer());
@@ -10416,24 +10419,24 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postNodeFromModelBySemanticTag(MimeType inMimeType, String parentNodeUuid, String semanticTag,int userId, int groupId) throws Exception
+	public Object postNodeFromModelBySemanticTag(Connection c, Credential cred, MimeType inMimeType, String parentNodeUuid, String semanticTag,int userId, int groupId) throws Exception
 	{
-		String portfolioUid = getPortfolioUuidByNodeUuid(parentNodeUuid);
+		String portfolioUid = getPortfolioUuidByNodeUuid(c, parentNodeUuid);
 
-		String portfolioModelId = getPortfolioModelUuid(portfolioUid);
+		String portfolioModelId = getPortfolioModelUuid(c, portfolioUid);
 
-		String xml = getNodeBySemanticTag(inMimeType, portfolioModelId,
+		String xml = getNodeBySemanticTag(c, cred, inMimeType, portfolioModelId,
 				semanticTag,userId, groupId).toString();
 
-		ResultSet res = getMysqlOtherNodeUuidByPortfolioModelUuidBySemanticTag(portfolioModelId, semanticTag);
+		ResultSet res = getMysqlOtherNodeUuidByPortfolioModelUuidBySemanticTag(c, portfolioModelId, semanticTag);
 		res.next();
 		// C'est le noeud obtenu dans le modele indiqué par la table de correspondance
 		String otherParentNodeUuid = res.getString("node_uuid");
 
-		return postNode(inMimeType, otherParentNodeUuid, xml,userId, groupId);
+		return postNode(c, cred, inMimeType, otherParentNodeUuid, xml,userId, groupId);
 	}
 
-	public ResultSet getMysqlGroupsPortfolio(String portfolioUuid)
+	public ResultSet getMysqlGroupsPortfolio(Connection c, String portfolioUuid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -10444,7 +10447,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT gi.gid, gi.grid,gi.label as g_label, gri.label as gri_label  FROM  group_right_info gri , group_info gi  WHERE   gri.grid = gi.grid  AND gri.portfolio_id = uuid2bin(?) ";
 
 			sql += "  ORDER BY g_label ASC ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 
 			return st.executeQuery();
@@ -10458,13 +10461,13 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getGroupsPortfolio(String portfolioUuid, int userId)
+	public String getGroupsPortfolio(Connection c, Credential cred, String portfolioUuid, int userId)
 	{
-		NodeRight right = credential.getPortfolioRight(userId,0, portfolioUuid, Credential.READ);
+		NodeRight right = cred.getPortfolioRight(c, userId,0, portfolioUuid, Credential.READ);
 		if(!right.read)
 			return null;
 
-		ResultSet res = getMysqlGroupsPortfolio(portfolioUuid);
+		ResultSet res = getMysqlGroupsPortfolio(c, portfolioUuid);
 
 		String result = "<groups>";
 		try {
@@ -10494,9 +10497,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Integer getRoleByNode( int userId, String nodeUuid, String role )
+	public Integer getRoleByNode( Connection c, Credential cred, int userId, String nodeUuid, String role )
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String sql = "";
@@ -10512,7 +10515,7 @@ public class MysqlDataProvider implements DataProvider {
 					"AND gri.grid=gi.grid " +
 					"AND n.node_uuid = uuid2bin(?) " +
 					"AND gri.label = ?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			st.setString(2, role);
 			res = st.executeQuery();
@@ -10529,9 +10532,9 @@ public class MysqlDataProvider implements DataProvider {
 						"SELECT 1, ?, portfolio_id " +
 						"FROM node " +
 						"WHERE node_uuid=uuid2bin(?)";
-				st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 				if (dbserveur.equals("oracle")){
-					st = connection.prepareStatement(sql, new String[]{"grid"});
+					st = c.prepareStatement(sql, new String[]{"grid"});
 				}
 				st.setString(1, role);
 				st.setString(2, nodeUuid);
@@ -10543,9 +10546,9 @@ public class MysqlDataProvider implements DataProvider {
 					rs.close(); st.close();
 
 					sql = "INSERT INTO group_info(grid, owner, label) VALUES(?,1,?)";
-					st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+					st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 					if (dbserveur.equals("oracle")){
-						st = connection.prepareStatement(sql, new String[]{"gid"});
+						st = c.prepareStatement(sql, new String[]{"gid"});
 					}
 					st.setInt(1, retval);
 					st.setString(2, role);
@@ -10580,9 +10583,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postRoleUser(int userId, int grid, Integer userid2) throws SQLException
+	public String postRoleUser(Connection c, Credential cred, int userId, int grid, Integer userid2) throws SQLException
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String label = null;
@@ -10600,7 +10603,7 @@ public class MysqlDataProvider implements DataProvider {
 		String sqlInsert;
 
 		sql = "SELECT * FROM group_info WHERE grid = ?";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setInt(1, grid);
 
 		res = st.executeQuery();
@@ -10610,7 +10613,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			sql = "SELECT * FROM group_right_info WHERE grid = ?";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, grid);
 
 			res1 = st.executeQuery();
@@ -10625,10 +10628,10 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// Synchronise les valeurs du rôle avec le groupe d'utilisateur
 			sqlInsert = "REPLACE INTO group_info(grid, owner, label) VALUES (?, ?, ?)";
-			stInsert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+			stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
 				sqlInsert = "MERGE INTO group_info d using (SELECT ? grid,? owner,? label from dual) s ON (1=2) WHEN NOT MATCHED THEN INSERT (d.grid, d.owner, d.label) values (s.grid, s.owner, s.label)";
-				stInsert = connection.prepareStatement(sqlInsert, new String[]{"gid"});
+				stInsert = c.prepareStatement(sqlInsert, new String[]{"gid"});
 			}
 
 			stInsert.setInt(1, grid);
@@ -10644,10 +10647,10 @@ public class MysqlDataProvider implements DataProvider {
 
 			// Ajoute la personne
 			sqlInsert = "REPLACE INTO group_user(gid, userid) VALUES (?, ?)";
-			stInsert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+			stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
 				sqlInsert = "MERGE INTO group_user d using (SELECT ? gid,? userid FROM DUAL) s ON (d.gid=s.gid AND d.userid=s.userid) WHEN NOT MATCHED THEN INSERT (d.gid, d.userid) VALUES (s.gid, s.userid)";
-				stInsert = connection.prepareStatement(sqlInsert);
+				stInsert = c.prepareStatement(sqlInsert);
 			}
 
 			stInsert.setInt(1, gid);
@@ -10659,10 +10662,10 @@ public class MysqlDataProvider implements DataProvider {
 			gid = res.getInt("gid");
 
 			sqlInsert = "REPLACE INTO group_user(gid, userid) VALUES (?, ?)";
-			stInsert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+			stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
 				sqlInsert = "MERGE INTO group_user d using (SELECT ? gid,? userid FROM DUAL) s ON (d.gid=s.gid AND d.userid=s.userid) WHEN NOT MATCHED THEN INSERT (d.gid, d.userid) VALUES (s.gid, s.userid)";
-				stInsert = connection.prepareStatement(sqlInsert);
+				stInsert = c.prepareStatement(sqlInsert);
 			}
 
 			stInsert.setInt(1, gid);
@@ -10675,7 +10678,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getRolePortfolio(MimeType mimeType, String role, String portfolioId, int userId) throws SQLException
+	public String getRolePortfolio(Connection c, MimeType mimeType, String role, String portfolioId, int userId) throws SQLException
 	{
 		Integer grid = null;
 
@@ -10684,7 +10687,7 @@ public class MysqlDataProvider implements DataProvider {
 		ResultSet res;
 
 		sql = "SELECT grid FROM group_right_info WHERE label = ? and portfolio_id = uuid2bin(?)";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setString(1, role);
 		st.setString(2, portfolioId);
 
@@ -10703,14 +10706,14 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getRole(MimeType mimeType, int grid, int userId) throws SQLException
+	public String getRole(Connection c, MimeType mimeType, int grid, int userId) throws SQLException
 	{
 		PreparedStatement st;
 		String sql;
 		ResultSet res;
 
 		sql = "SELECT grid FROM group_right_info WHERE grid = ?";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		st.setInt(1, grid);
 
 		res = st.executeQuery();
@@ -10738,7 +10741,7 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
-	private int updateMysqlCredentialToken(Integer userId, String  token)
+	private int updateMysqlCredentialToken(Connection c, Integer userId, String  token)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -10747,7 +10750,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			sql  = "UPDATE  credential SET token = ? WHERE userid  = ? ";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1,token);
 			st.setInt(2,userId);
 
@@ -10760,7 +10763,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private ResultSet getMysqlOtherNodeUuidByPortfolioModelUuidBySemanticTag(String portfolioModelUuid, String semantictag) throws SQLException
+	private ResultSet getMysqlOtherNodeUuidByPortfolioModelUuidBySemanticTag(Connection c, String portfolioModelUuid, String semantictag) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -10769,7 +10772,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 
 			sql = "SELECT bin2uuid(node_uuid) AS node_uuid FROM model_node WHERE portfolio_model_uuid = uuid2bin(?) and  semantic_tag=? ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioModelUuid);
 			st.setString(2, semantictag);
 			return st.executeQuery();
@@ -10782,7 +10785,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUsersByRole(int userId, String portfolioUuid, String role) throws SQLException
+	public String getUsersByRole(Connection c, int userId, String portfolioUuid, String role) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -10791,7 +10794,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT * FROM credential c, group_right_info gri, group_info gi, group_user gu WHERE c.userid = gu.userid AND gu.gid = gi.gid AND gi.grid = gri.grid AND gri.portfolio_id = uuid2bin(?) AND gri.label = ?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 			st.setString(2, role);
 			res = st.executeQuery();
@@ -10826,7 +10829,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getGroupsByRole(int userId, String portfolioUuid, String role)
+	public String getGroupsByRole(Connection c, int userId, String portfolioUuid, String role)
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -10835,7 +10838,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT DISTINCT gu.gid FROM group_right_info gri, group_info gi, group_user gu WHERE gu.gid = gi.gid AND gi.grid = gri.grid AND gri.portfolio_id = uuid2bin(?) AND gri.label = ?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 			st.setString(2, role);
 			res = st.executeQuery();
@@ -10862,16 +10865,16 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNodeMetadataWad(MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException
+	public Object getNodeMetadataWad(Connection c, Credential cred, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
 		// Verification securité
-		NodeRight nodeRight = credential.getNodeRight(userId,groupId,nodeUuid, label);
+		NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, label);
 
 		if(!nodeRight.read)
 			return result;
 
-		ResultSet resNode = getMysqlNode(nodeUuid,userId, groupId);
+		ResultSet resNode = getMysqlNode(c, nodeUuid,userId, groupId);
 
 		//try
 		//{
@@ -10918,7 +10921,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getResNode(String contextUuid, int userId, int groupId) throws Exception
+	public String getResNode(Connection c, String contextUuid, int userId, int groupId) throws Exception
 	{
 		PreparedStatement st=null;
 		ResultSet res=null;
@@ -10928,7 +10931,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			String sql = "SELECT content FROM resource_table " +
 					"WHERE node_uuid=(SELECT res_node_uuid FROM node WHERE node_uuid=uuid2bin(?))";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, contextUuid);
 
 			res = st.executeQuery();
@@ -10950,7 +10953,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getNodeRights(String nodeUuid, int userId, int groupId) throws Exception
+	public String getNodeRights(Connection c, String nodeUuid, int userId, int groupId) throws Exception
 	{
 		String sql;
 		PreparedStatement st;
@@ -10963,7 +10966,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT gri.grid, gri.label, gr.RD, gr.WR, gr.DL, gr.SB " +
 					"FROM group_rights gr, group_right_info gri " +
 					"WHERE gr.grid=gri.grid AND id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			res = st.executeQuery();
 
@@ -11019,7 +11022,7 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
-	private int updatetMySqlNodeMetadatawad(String nodeUuid, String metadatawad) throws Exception
+	private int updatetMySqlNodeMetadatawad(Connection c, String nodeUuid, String metadatawad) throws Exception
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -11028,7 +11031,7 @@ public class MysqlDataProvider implements DataProvider {
 		sql  = "UPDATE node SET ";
 		sql += "metadata_wad = ?";
 		sql += " WHERE node_uuid = uuid2bin(?) ";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 
 		st.setString(1, metadatawad);
 		st.setString(2, nodeUuid);
@@ -11037,7 +11040,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeMetadata(MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeMetadata(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
 		String metadata = "";
 
@@ -11046,13 +11049,13 @@ public class MysqlDataProvider implements DataProvider {
 		int sharedNodeRes = 0;
 
 		//TODO putNode getNodeRight
-		if(!credential.hasNodeRight(userId,groupId,nodeUuid, Credential.WRITE))
+		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 		//return "faux";
 
 		String status = "erreur";
 
-		String portfolioUid = getPortfolioUuidByNodeUuid(nodeUuid);
+		String portfolioUid = getPortfolioUuidByNodeUuid(c, nodeUuid);
 
 		// D'abord on supprime les noeuds existants
 		//deleteNode(nodeUuid, userId);
@@ -11072,9 +11075,9 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				String publicatt = attr.getNamedItem("public").getNodeValue();
 				if( "Y".equals(publicatt) )
-					setPublicState(userId, portfolioUid,true);
+					setPublicState(c, cred, userId, portfolioUid,true);
 				else if( "N".equals(publicatt) )
-					setPublicState(userId, portfolioUid,false);
+					setPublicState(c, cred, userId, portfolioUid,false);
 			}
 			catch(Exception ex) {}
 
@@ -11117,7 +11120,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				/// Mettre à jour les flags et donnée du champ
 				String sql = "UPDATE node SET metadata=?, semantictag=?, shared_res=?, shared_node=?, shared_node_res=? WHERE node_uuid=uuid2bin(?)";
-				PreparedStatement st = connection.prepareStatement(sql);
+				PreparedStatement st = c.prepareStatement(sql);
 				st.setString(1, metadata);
 				st.setString(2, tag);
 				st.setInt(3, sharedRes);
@@ -11129,7 +11132,7 @@ public class MysqlDataProvider implements DataProvider {
 
 				status = "editer";
 
-				touchPortfolio(null, portfolioUid);
+				touchPortfolio(c, null, portfolioUid);
 			}
 			catch(Exception ex)
 			{
@@ -11145,7 +11148,7 @@ public class MysqlDataProvider implements DataProvider {
 		return status;
 	}
 
-	public ResultSet getMysqlUserGroupByPortfolio(String portfolioUuid, int userId)
+	public ResultSet getMysqlUserGroupByPortfolio(Connection c, String portfolioUuid, int userId)
 	{
 		PreparedStatement st;
 		String sql;
@@ -11155,7 +11158,7 @@ public class MysqlDataProvider implements DataProvider {
 			// On recupere d'abord les informations dans la table structures
 			sql = "SELECT gi.gid, gi.owner, gi.grid,gi.label as g_label, gri.label as gri_label  FROM  group_right_info gri , group_info gi, group_user gu  WHERE   gu.gid=gi.gid AND gri.grid = gi.grid  AND gri.portfolio_id = uuid2bin(?) AND gu.userid= ? ";
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 			st.setInt(2, userId);
 
@@ -11170,9 +11173,9 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public String getUserGroupByPortfolio(String portfolioUuid, int userId)
+	public String getUserGroupByPortfolio(Connection c, String portfolioUuid, int userId)
 	{
-		ResultSet res = getMysqlUserGroupByPortfolio(portfolioUuid, userId);
+		ResultSet res = getMysqlUserGroupByPortfolio(c, portfolioUuid, userId);
 
 		String result = "<groups>";
 		try {
@@ -11199,12 +11202,12 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeMetadataWad(MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeMetadataWad(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
 		String metadatawad = "";
 
 		//TODO putNode getNodeRight
-		if(!credential.hasNodeRight(userId,groupId,nodeUuid, Credential.WRITE))
+		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 		//return "faux";
 
@@ -11223,7 +11226,7 @@ public class MysqlDataProvider implements DataProvider {
 //			metadatawad = processMeta(userId, metadatawad);
 		}
 
-		if (1 == updatetMySqlNodeMetadatawad(nodeUuid,metadatawad)){
+		if (1 == updatetMySqlNodeMetadatawad(c, nodeUuid,metadatawad)){
 			return "editer";
 		}
 
@@ -11231,9 +11234,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeMetadataEpm(MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeMetadataEpm(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
-		if(!credential.hasNodeRight(userId,groupId,nodeUuid, Credential.WRITE))
+		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 		//return "faux";
 
@@ -11254,14 +11257,14 @@ public class MysqlDataProvider implements DataProvider {
 
 		sql  = "UPDATE node SET metadata_epm = ? " +
 				"WHERE node_uuid = uuid2bin(?) ";
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 
 		st.setString(1, metadataepm);
 		st.setString(2, nodeUuid);
 
 		if (st.executeUpdate() == 1)
 		{
-			touchPortfolio( nodeUuid, null );
+			touchPortfolio( c, nodeUuid, null );
 			return "editer";
 		}
 		
@@ -11269,9 +11272,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeNodeContext(MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeNodeContext(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
-		if(!credential.hasNodeRight(userId,groupId,nodeUuid, Credential.WRITE))
+		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 		//return "faux";
 
@@ -11284,16 +11287,16 @@ public class MysqlDataProvider implements DataProvider {
 		if(node.getNodeName().equals("asmResource"))
 		{
 			// Si le noeud est de type asmResource, on stocke le innerXML du noeud
-			updateMysqlResourceByXsiType(nodeUuid,"context",DomUtils.getInnerXml(node),userId);
+			updateMysqlResourceByXsiType(c, nodeUuid,"context",DomUtils.getInnerXml(node),userId);
 			return "editer";
 		}
 		return "erreur";
 	}
 
 	@Override
-	public Object putNodeNodeResource(MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeNodeResource(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
-		if(!credential.hasNodeRight(userId,groupId,nodeUuid, Credential.WRITE))
+		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 		//return "faux";
 
@@ -11306,16 +11309,16 @@ public class MysqlDataProvider implements DataProvider {
 		if(node.getNodeName().equals("asmResource"))
 		{
 			// Si le noeud est de type asmResource, on stocke le innerXML du noeud
-			updateMysqlResourceByXsiType(nodeUuid,"nodeRes",DomUtils.getInnerXml(node),userId);
+			updateMysqlResourceByXsiType(c, nodeUuid,"nodeRes",DomUtils.getInnerXml(node),userId);
 			return "editer";
 		}
 		return "erreur";
 	}
 
 	@Override
-	public Object putRole(String xmlRole, int userId, int roleId) throws Exception
+	public Object putRole(Connection c, Credential cred, String xmlRole, int userId, int roleId) throws Exception
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String result = null;
@@ -11359,10 +11362,10 @@ public class MysqlDataProvider implements DataProvider {
 		//On ajoute l'utilisateur dans la base de donnees
 		try {
 			sqlInsert = "REPLACE INTO credential(login, display_firstname, display_lastname,email, password) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)))";
-			stInsert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+			stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
 				sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password) VALUES (?, ?, ?, ?, crypt(?))";
-				stInsert = connection.prepareStatement(sqlInsert, new String[]{"userid"});
+				stInsert = c.prepareStatement(sqlInsert, new String[]{"userid"});
 			}
 
 			stInsert.setString(1, username);
@@ -11385,8 +11388,9 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
+	@Deprecated
 	@Override
-	public Object getModels(MimeType mimeType, int userId) throws Exception
+	public Object getModels(Connection c, MimeType mimeType, int userId) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
@@ -11394,7 +11398,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		sql = "SELECT *  FROM  portfolio_model";
 
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		res = st.executeQuery();
 
 		String result = "";
@@ -11419,8 +11423,9 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
+	@Deprecated
 	@Override
-	public Object getModel(MimeType mimeType, Integer modelId, int userId) throws Exception
+	public Object getModel(Connection c, MimeType mimeType, Integer modelId, int userId) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
@@ -11428,7 +11433,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		sql = "SELECT *  FROM  portfolio_model WHERE portfolio_id = uuid2bin(?)";
 
-		st = connection.prepareStatement(sql);
+		st = c.prepareStatement(sql);
 		res = st.executeQuery();
 
 		String result = "";
@@ -11450,10 +11455,11 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
+	@Deprecated
 	@Override
-	public Object postModels(MimeType mimeType, String xmlModel, int userId) throws Exception
+	public Object postModels(Connection c, Credential cred, MimeType mimeType, String xmlModel, int userId) throws Exception
 	{
-		if(!credential.isAdmin(userId))
+		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String pm_label = null;
@@ -11524,7 +11530,7 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
-	public String processMeta(int userId, String meta)
+	public String processMeta(Connection c, int userId, String meta)
 	{
 		try
 		{
@@ -11532,7 +11538,7 @@ public class MysqlDataProvider implements DataProvider {
 			/// Trouve le login associé au userId
 			String sql = "SELECT login FROM credential c " +
 					"WHERE c.userid=?";
-			PreparedStatement  st = connection.prepareStatement(sql);
+			PreparedStatement  st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			ResultSet res = st.executeQuery();
 
@@ -11570,7 +11576,7 @@ public class MysqlDataProvider implements DataProvider {
 	/*****************************/
 
 	@Override
-	public String postMacroOnNode( int userId, String nodeUuid, String macroName )
+	public String postMacroOnNode( Connection c, Credential cred, int userId, String nodeUuid, String macroName )
 	{
 		String val = "erreur";
 		String sql = "";
@@ -11588,7 +11594,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "CREATE TEMPORARY TABLE t_struc_nodeid(" +
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -11597,7 +11603,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_nodeid_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_nodeid','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -11607,7 +11613,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "CREATE TEMPORARY TABLE t_struc_nodeid_2(" +
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			} else if (dbserveur.equals("oracle")){
@@ -11616,7 +11622,7 @@ public class MysqlDataProvider implements DataProvider {
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_nodeid_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_nodeid_2','"+v_sql+"')}";
-				CallableStatement ocs = connection.prepareCall(sql) ;
+				CallableStatement ocs = c.prepareCall(sql) ;
 				ocs.execute();
 				ocs.close();
 			}
@@ -11628,7 +11634,7 @@ public class MysqlDataProvider implements DataProvider {
 					"SELECT n.node_uuid, 0 " +
 					"FROM node n " +
 					"WHERE n.node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			st.executeUpdate();
 			st.close();
@@ -11652,9 +11658,9 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_nodeid,t_struc_nodeid_UK_uuid)*/ INTO t_struc_nodeid SELECT * FROM t_struc_nodeid_2";
 			}
-			PreparedStatement stTemp = connection.prepareStatement(sqlTemp);
+			PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			while( added != 0 )
 			{
 				st.setInt(1, level+1);
@@ -11671,7 +11677,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT gr.grid, gi.label " +
 					"FROM group_rights gr, group_info gi, group_user gu " +
 					"WHERE gr.grid=gi.grid AND gi.gid=gu.gid AND gu.userid=? AND gr.id=uuid2bin(?) AND NOT gi.label='all'";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			st.setString(2, nodeUuid);
 			ResultSet res = st.executeQuery();
@@ -11688,7 +11694,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			// Fetch metadata
 			sql = "SELECT metadata_wad FROM node WHERE node_uuid=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			res = st.executeQuery();
 			String meta = "";
@@ -11708,11 +11714,11 @@ public class MysqlDataProvider implements DataProvider {
 			boolean doUpdate = true;
 
 			NamedNodeMap metaAttr = rootMeta.getAttributes();
-			if( "reset".equals(macroName) && credential.isAdmin(userId) )
+			if( "reset".equals(macroName) && cred.isAdmin(c, userId) )
 			{
 				/// if reset and admin
 				// Call specific function to process current temporary table
-				resetRights();
+				resetRights(c);
 			}
 			else if( "show".equals(macroName) || "hide".equals(macroName) )
 			{
@@ -11752,7 +11758,7 @@ public class MysqlDataProvider implements DataProvider {
 									"INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.AD, d.types_id, d.rules_id) " +
 									"VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.AD, s.types_id, s.rules_id)";
 						}
-						st = connection.prepareStatement(sql);
+						st = c.prepareStatement(sql);
 						if( "hide".equals(macroName) )
 						{
 							st.setInt(1, 0);
@@ -11788,7 +11794,7 @@ public class MysqlDataProvider implements DataProvider {
 					System.out.println("META: "+meta);
 
 					sql = "UPDATE node SET metadata_wad=? WHERE node_uuid=uuid2bin(?)";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, meta);
 					st.setString(2, nodeUuid);
 					st.executeUpdate();
@@ -11819,7 +11825,7 @@ public class MysqlDataProvider implements DataProvider {
 							"INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.AD, d.SB, d.types_id, d.rules_id) " +
 							"VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.AD, s.SB, s.types_id, s.rules_id)";
 				}
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setInt(1, grid);
 				int rows = st.executeUpdate();
 				st.close();
@@ -11866,7 +11872,7 @@ public class MysqlDataProvider implements DataProvider {
 								"INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.AD, d.types_id, d.rules_id) " +
 								"VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.AD, s.types_id, s.rules_id)";
 					}
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, nodeUuid);
 					st.executeUpdate();
 					st.close();
@@ -11879,7 +11885,7 @@ public class MysqlDataProvider implements DataProvider {
 				rootMeta.setAttribute("submitted", "Y");
 				String updatedMeta = DomUtils.getNodeAttributesString(rootMeta);
 				sql = "UPDATE node SET metadata_wad=? WHERE node_uuid=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, updatedMeta);
 				st.setString(2, nodeUuid);
 				st.executeUpdate();
@@ -11903,12 +11909,12 @@ public class MysqlDataProvider implements DataProvider {
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_struc_nodeid, t_struc_nodeid_2";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
 
-				connection.close();
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -11916,7 +11922,7 @@ public class MysqlDataProvider implements DataProvider {
 		return val;
 	}
 
-	public String resetRights()
+	public String resetRights( Connection c )
 	{
 		try
 		{
@@ -11981,7 +11987,7 @@ public class MysqlDataProvider implements DataProvider {
 			/// t_struc_nodeid is already populated with the uuid we have to reset
 			String sql = "SELECT bin2uuid(n.node_uuid) AS uuid, bin2uuid(n.portfolio_id) AS puuid, n.metadata, n.metadata_wad, n.metadata_epm " +
 					"FROM t_struc_nodeid t, node n WHERE t.uuid=n.node_uuid";
-			PreparedStatement st = connection.prepareStatement(sql);
+			PreparedStatement st = c.prepareStatement(sql);
 			ResultSet res = st.executeQuery();
 
 			DocumentBuilder documentBuilder;
@@ -12185,7 +12191,7 @@ public class MysqlDataProvider implements DataProvider {
 					attribNode.removeAttribute("submitted");
 					String resetMeta = DomUtils.getNodeAttributesString(attribNode);
 					sql = "UPDATE node SET metadata_wad=? WHERE node_uuid=uuid2bin(?)";
-					PreparedStatement stu = connection.prepareStatement(sql);
+					PreparedStatement stu = c.prepareStatement(sql);
 					stu.setString(1, resetMeta);
 					stu.setString(2, uuid);
 					stu.executeUpdate();
@@ -12199,7 +12205,7 @@ public class MysqlDataProvider implements DataProvider {
 			res.close();
 			st.close();
 
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			/// On insère les données pré-compilé
 //			Iterator<String> entries = resolve.groups.keySet().iterator();
@@ -12208,7 +12214,7 @@ public class MysqlDataProvider implements DataProvider {
 			// portfolio, group name, id -> rights
 			String updateRight = "UPDATE group_rights gr SET gr.RD=?, gr.WR=?, gr.DL=?, gr.SB=?, gr.AD=?, gr.types_id=?, gr.rules_id=?, gr.notify_roles=? " +
 					"WHERE gr.grid=? AND gr.id=uuid2bin(?)";
-			st = connection.prepareStatement(updateRight);
+			st = c.prepareStatement(updateRight);
 
 			Iterator<Entry<String, groupright>> rights = resolve.resolve.entrySet().iterator();
 			while( rights.hasNext() )
@@ -12226,7 +12232,7 @@ public class MysqlDataProvider implements DataProvider {
 					String sqlgrid = "SELECT gr.grid " +
 							"FROM group_rights gr, group_right_info gri " +
 							"WHERE gri.grid=gr.grid AND gri.label=? AND gr.id=uuid2bin(?)";
-					PreparedStatement st2 = connection.prepareStatement(sqlgrid);
+					PreparedStatement st2 = c.prepareStatement(sqlgrid);
 					st2.setString(1, group);
 					st2.setString(2, uuid);
 					res = st2.executeQuery();
@@ -12257,8 +12263,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				if( connection.getAutoCommit() == false )
-					connection.rollback();
+				if( c.getAutoCommit() == false )
+					c.rollback();
 			}
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
@@ -12267,7 +12273,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
+				c.setAutoCommit(true);
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -12280,7 +12286,7 @@ public class MysqlDataProvider implements DataProvider {
 	/************************************/
 
 	@Override
-	public String getRRGList( int userId, String portfolio, Integer user, String role )
+	public String getRRGList( Connection c, int userId, String portfolio, Integer user, String role )
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -12297,7 +12303,7 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN group_rights gr ON r.node_uuid=gr.id " +
 						"LEFT JOIN group_right_info gri ON gr.grid=gri.grid " +
 						"WHERE r.user_id=? AND gri.portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setInt(1, user);
 				st.setString(2, portfolio);
 			}
@@ -12306,7 +12312,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "SELECT DISTINCT gri.grid, label, bin2uuid(gri.portfolio_id) AS portfolio " +
 						"FROM group_right_info gri " +
 						"WHERE gri.label=? AND gri.portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, role);
 				st.setString(2, portfolio);
 
@@ -12317,7 +12323,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "SELECT grid, label, bin2uuid(gri.portfolio_id) AS portfolio " +
 						"FROM group_right_info gri " +
 						"WHERE gri.portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolio);
 			}
 			else if( user != null )   // Juste ceux relié à une personne
@@ -12328,14 +12334,14 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN group_rights gr ON r.node_uuid=gr.id " +
 						"LEFT JOIN group_right_info gri ON gr.grid=gri.grid " +
 						"WHERE r.user_id=?";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setInt(1, user);
 			}
 			else  // Tout les groupe disponible
 			{
 				sql = "SELECT grid, label, bin2uuid(gri.portfolio_id) AS portfolio " +
 						"FROM group_right_info gri";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 			}
 
 			res = st.executeQuery();
@@ -12401,7 +12407,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getRRGInfo( int userId, Integer rrgid )
+	public String getRRGInfo( Connection c, int userId, Integer rrgid )
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -12416,7 +12422,7 @@ public class MysqlDataProvider implements DataProvider {
 					"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
 					"LEFT JOIN credential c ON gu.userid=c.userid " +
 					"WHERE gri.grid=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, rrgid);
 			res = st.executeQuery();
 
@@ -12505,7 +12511,7 @@ public class MysqlDataProvider implements DataProvider {
 
 	/// Liste des RRG et utilisateurs d'un portfolio donné
 	@Override
-	public String getPortfolioInfo( int userId, String portId )
+	public String getPortfolioInfo( Connection c, int userId, String portId )
 	{
 		String status = "erreur";
 		PreparedStatement st;
@@ -12519,7 +12525,7 @@ public class MysqlDataProvider implements DataProvider {
 					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
 					"WHERE gri.portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portId);
 			res = st.executeQuery();
 
@@ -12581,7 +12587,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.close();
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -12592,9 +12598,9 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public String putRRGUpdate( int userId, Integer rrgId, String data )
+	public String putRRGUpdate( Connection c, Credential cred, int userId, Integer rrgId, String data )
 	{
-		if(!credential.isAdmin(userId) && !credential.isOwnerRRG(userId, rrgId))
+		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String sql = "";
@@ -12647,7 +12653,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "UPDATE group_right_info "+sqlLabel+sqlPid+"WHERE grid=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 
 			for( int i=0; i<text.size(); ++i )
 				st.setString(i+1, text.get(i));
@@ -12666,9 +12672,9 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public String postRRGCreate( int userId, String portfolio, String data )
+	public String postRRGCreate( Connection c, Credential cred, int userId, String portfolio, String data )
 	{
-		if(!credential.isAdmin(userId) && !credential.isOwner(userId, portfolio))
+		if(!cred.isAdmin(c, userId) && !cred.isOwner(c, userId, portfolio))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String value="erreur";
@@ -12692,15 +12698,15 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 			Element labelNode = document.getDocumentElement();
 			String label = null;
 			//      NodeList rrgNodes = document.getElementsByTagName("rolerightsgroup");
 
 			String sqlRRG = "INSERT INTO group_right_info(owner,label,portfolio_id) VALUES(?,?,uuid2bin(?))";
-			PreparedStatement rrgst = connection.prepareStatement(sqlRRG, Statement.RETURN_GENERATED_KEYS);
+			PreparedStatement rrgst = c.prepareStatement(sqlRRG, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
-				rrgst = connection.prepareStatement(sqlRRG, new String[]{"grid"});
+				rrgst = c.prepareStatement(sqlRRG, new String[]{"grid"});
 			}
 			rrgst.setInt(1, userId);
 			//      String sqlGU = "INSERT INTO group_info(grid,owner,label) VALUES(?,?,?)";
@@ -12736,7 +12742,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch( Exception e )
 		{
-			try{ connection.rollback(); }
+			try{ c.rollback(); }
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
@@ -12744,8 +12750,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
-				connection.close();
+				c.setAutoCommit(true);
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -12754,20 +12760,20 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postRRGUser( int userId, Integer rrgid, Integer user )
+	public String postRRGUser( Connection c, Credential cred, int userId, Integer rrgid, Integer user )
 	{
-		if(!credential.isAdmin(userId) && !credential.isOwnerRRG(userId, rrgid))
+		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgid))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String value="";
 		ResultSet res=null;
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			/// Vérifie si un group_info/grid existe
 			String sqlCheck = "SELECT gid FROM group_info WHERE grid=?";
-			PreparedStatement st = connection.prepareStatement(sqlCheck);
+			PreparedStatement st = c.prepareStatement(sqlCheck);
 			st.setInt(1, rrgid);
 			res = st.executeQuery();
 
@@ -12776,7 +12782,7 @@ public class MysqlDataProvider implements DataProvider {
 				/// Copie de RRG vers group_info
 				String sqlCopy = "INSERT INTO group_info(grid,owner,label)" +
 						" SELECT grid,owner,label FROM group_right_info WHERE grid=?";
-				st = connection.prepareStatement(sqlCopy);
+				st = c.prepareStatement(sqlCopy);
 				st.setInt(1, rrgid);
 				st.executeUpdate();
 				st.close();
@@ -12790,7 +12796,7 @@ public class MysqlDataProvider implements DataProvider {
 				sqlUser = "INSERT /*+ ignore_row_on_dupkey_index(group_user,group_user_PK)*/ INTO group_user(gid,userid) ";
 			}
 			sqlUser += "SELECT gi.gid,? FROM group_info gi WHERE gi.grid=?";
-			st = connection.prepareStatement(sqlUser);
+			st = c.prepareStatement(sqlUser);
 			st.setInt(1, user);
 			st.setInt(2, rrgid);
 			st.executeUpdate();
@@ -12798,7 +12804,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch( Exception e )
 		{
-			try{ connection.rollback(); }
+			try{ c.rollback(); }
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
@@ -12806,8 +12812,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
-				connection.close();
+				c.setAutoCommit(true);
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -12822,9 +12828,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postRights(int userId, String uuid, String role, NodeRight rights)
+	public String postRights(Connection c, Credential cred, int userId, String uuid, String role, NodeRight rights)
 	{
-		if( !credential.isAdmin(userId) )
+		if( !cred.isAdmin(c, userId) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		try
@@ -12833,7 +12839,7 @@ public class MysqlDataProvider implements DataProvider {
 			String sqlgrid = "SELECT gr.grid " +
 					"FROM group_info gi, group_rights gr " +
 					"WHERE gi.grid=gr.grid AND gi.label=? AND gr.id=uuid2bin(?)";
-			PreparedStatement st = connection.prepareStatement(sqlgrid);
+			PreparedStatement st = c.prepareStatement(sqlgrid);
 			st.setString(1, role);
 			st.setString(2, uuid);
 			ResultSet res = st.executeQuery();
@@ -12869,7 +12875,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql += ", "+arg[0]+"=?";
 			}
 			sql += " WHERE gr.grid=? AND gr.id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 
 			int i=1;
 			do
@@ -12900,9 +12906,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postRRGUsers( int userId, Integer rrgid, String data )
+	public String postRRGUsers( Connection c, Credential cred, int userId, Integer rrgid, String data )
 	{
-		if(!credential.isAdmin(userId) && !credential.isOwnerRRG(userId, rrgid))
+		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgid))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String value="";
@@ -12926,7 +12932,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 			Element root = document.getDocumentElement();
 
 			/// Ajout des utilisateurs
@@ -12938,7 +12944,7 @@ public class MysqlDataProvider implements DataProvider {
 				sqlUser = "INSERT /*+ ignore_row_on_dupkey_index(group_user,group_user_PK)*/ INTO group_user(gid,userid) ";
 			}
 			sqlUser += "SELECT gi.gid,? FROM group_info gi WHERE gi.grid=?";
-			PreparedStatement st = connection.prepareStatement(sqlUser);
+			PreparedStatement st = c.prepareStatement(sqlUser);
 			st.setInt(2, rrgid);
 			for( int j=0; j<users.getLength(); ++j )
 			{
@@ -12952,7 +12958,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch( Exception e )
 		{
-			try{ connection.rollback(); }
+			try{ c.rollback(); }
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
@@ -12960,8 +12966,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
-				connection.close();
+				c.setAutoCommit(true);
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -12970,16 +12976,16 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deleteRRG( int userId, Integer rrgId )
+	public String deleteRRG( Connection c, Credential cred, int userId, Integer rrgId )
 	{
-		if(!credential.isAdmin(userId) && !credential.isOwnerRRG(userId, rrgId))
+		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String value="";
 
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			String sqlRRG = "DELETE gri, gu, gi, gr " +
 					"FROM group_right_info AS gri " +
@@ -12990,14 +12996,14 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("oracle")){
 				sqlRRG = "DELETE FROM group_right_info AS gri WHERE gri.grid=?";
 			}
-			PreparedStatement rrgst = connection.prepareStatement(sqlRRG);
+			PreparedStatement rrgst = c.prepareStatement(sqlRRG);
 			rrgst.setInt(1, rrgId);
 			rrgst.executeUpdate();
 			rrgst.close();
 		}
 		catch( Exception e )
 		{
-			try{ connection.rollback(); }
+			try{ c.rollback(); }
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
@@ -13005,8 +13011,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
-				connection.close();
+				c.setAutoCommit(true);
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -13015,20 +13021,20 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deleteRRGUser( int userId, Integer rrgId, Integer user )
+	public String deleteRRGUser( Connection c, Credential cred, int userId, Integer rrgId, Integer user )
 	{
-		if(!credential.isAdmin(userId) && !credential.isOwnerRRG(userId, rrgId))
+		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String value="";
 
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			String sqlRRG = "DELETE FROM group_user " +
 					"WHERE userid=? AND gid=(SELECT gid FROM group_info WHERE grid=?)";
-			PreparedStatement rrgst = connection.prepareStatement(sqlRRG);
+			PreparedStatement rrgst = c.prepareStatement(sqlRRG);
 			rrgst.setInt(1, user);
 			rrgst.setInt(2, rrgId);
 			rrgst.executeUpdate();
@@ -13036,7 +13042,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch( Exception e )
 		{
-			try{ connection.rollback(); }
+			try{ c.rollback(); }
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
@@ -13044,8 +13050,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
-				connection.close();
+				c.setAutoCommit(true);
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -13056,14 +13062,14 @@ public class MysqlDataProvider implements DataProvider {
 
 	/// Retire les utilisateurs des RRG d'un portfolio donné
 	@Override
-	public String deletePortfolioUser( int userId, String portId )
+	public String deletePortfolioUser( Connection c, Credential cred, int userId, String portId )
 	{
 		//    if(!credential.isAdmin(userId))
 		//      throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 
 			/// Bla here
 			String sqlRRG = "DELETE FROM group_user " +
@@ -13072,14 +13078,14 @@ public class MysqlDataProvider implements DataProvider {
 					"FROM group_right_info gri " +
 					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"WHERE gri.portfolio_id=uuid2bin(?))";
-			PreparedStatement rrgst = connection.prepareStatement(sqlRRG);
+			PreparedStatement rrgst = c.prepareStatement(sqlRRG);
 			rrgst.setString(1, portId);
 			rrgst.executeUpdate();
 			rrgst.close();
 		}
 		catch( Exception e )
 		{
-			try{ connection.rollback(); }
+			try{ c.rollback(); }
 			catch( SQLException e1 ){ e1.printStackTrace(); }
 			e.printStackTrace();
 		}
@@ -13087,8 +13093,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
-				connection.setAutoCommit(true);
-				connection.close();
+				c.setAutoCommit(true);
+				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -13104,7 +13110,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Integer putUserGroup(String usergroup, String userPut)
+	public Integer putUserGroup(Connection c, String usergroup, String userPut)
 	{
 		PreparedStatement st;
 		String sql;
@@ -13116,7 +13122,7 @@ public class MysqlDataProvider implements DataProvider {
 			int uid = Integer.parseInt(userPut);
 
 			sql = "INSERT INTO group_user(gid, userid) VALUES(?,?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, gid);
 			st.setInt(2, uid);
 			retval = st.executeUpdate();
@@ -13141,7 +13147,7 @@ public class MysqlDataProvider implements DataProvider {
   /** Managing and listing user groups
 	/********************************************************/
 	@Override
-	public int postUserGroup(String label, int userid)
+	public int postUserGroup(Connection c, String label, int userid)
 	{
 		String sql = "";
 		PreparedStatement st = null;
@@ -13152,9 +13158,9 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			sql = "INSERT INTO  * FROM credential_group(label) VALUE(?)";
 			if (dbserveur.equals("oracle"))
-				st = connection.prepareStatement(sql, new String[]{"cg"});
+				st = c.prepareStatement(sql, new String[]{"cg"});
 			else
-				st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			st.setString(1, label);
 			st.executeUpdate();
 			res = st.getGeneratedKeys();
@@ -13182,7 +13188,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUserGroupList( int userId )
+	public String getUserGroupList( Connection c, int userId )
 	{
 		String sql = "";
 		PreparedStatement st = null;
@@ -13192,7 +13198,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT * FROM credential_group";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			res = st.executeQuery();
 
 			while(res.next())
@@ -13224,7 +13230,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 	
 	@Override
-	public String getUsersByUserGroup(int userGroupId, int userId)
+	public String getUsersByUserGroup(Connection c, int userGroupId, int userId)
 	{
 		String sql = "";
 		PreparedStatement st = null;
@@ -13234,7 +13240,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT * FROM credential_group_members WHERE cg=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userGroupId);
 			res = st.executeQuery();
 
@@ -13266,7 +13272,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Integer putUserInUserGroup(int user, int siteGroupId, int currentUid)
+	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid)
 	{
 		String sql = "";
 		PreparedStatement st = null;
@@ -13275,7 +13281,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "INSERT INTO credential_group_members(cg, userid) VALUES(?, ?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, siteGroupId);
 			st.setInt(2, user);
 			res = st.executeQuery();
@@ -13297,7 +13303,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 	
 	@Override
-	public String deleteUsersGroups(int usersgroup, int currentUid)
+	public String deleteUsersGroups(Connection c, int usersgroup, int currentUid)
 	{
 		String sql = "";
 		PreparedStatement st = null;
@@ -13305,19 +13311,19 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			connection.setAutoCommit(false);
+			c.setAutoCommit(false);
 			
 			sql = "DELETE FROM credential_group WHERE cg=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, usersgroup);
 			res = st.executeQuery();
 			
 			sql = "DELETE FROM credential_group_members WHERE cg=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, usersgroup);
 			res = st.executeQuery();
 			
-			connection.setAutoCommit(true);
+			c.setAutoCommit(true);
 
 		}
 		catch (SQLException e)
@@ -13338,7 +13344,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deleteUsersFromUserGroups(int userId, int usersgroup, int currentUid)
+	public String deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid)
 	{
 		String sql = "";
 		PreparedStatement st = null;
@@ -13347,7 +13353,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "DELETE FROM credential_group_members WHERE cg=? AND userid=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, usersgroup);
 			st.setInt(2, userId);
 			res = st.executeQuery();
@@ -13370,7 +13376,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getRessource(String nodeUuid, int userId, int groupId, String type) throws SQLException
+	public String getRessource(Connection c, String nodeUuid, int userId, int groupId, String type) throws SQLException
 	{
 		// Récupére le noeud, et assemble les ressources, si il y en a
 
@@ -13392,7 +13398,7 @@ public class MysqlDataProvider implements DataProvider {
 			e.printStackTrace();
 		}
 //*/
-		resNode = getMysqlNode(nodeUuid,userId, groupId);
+		resNode = getMysqlNode(c, nodeUuid,userId, groupId);
 		resResource = null;
 
 		if(resNode.next())
@@ -13405,7 +13411,7 @@ public class MysqlDataProvider implements DataProvider {
 			result += "<metadata-epm "+m_epm+"/>";
 			result += "<metadata-wad "+resNode.getString("metadata_wad")+"/>";
 
-			resResource = getMysqlResource(resNode.getString("res_node_uuid"));
+			resResource = getMysqlResource(c, resNode.getString("res_node_uuid"));
 			if (resResource.next())
 			{
 				if(resNode.getString("res_node_uuid")!=null)
@@ -13419,7 +13425,7 @@ public class MysqlDataProvider implements DataProvider {
 						resResource.close();
 					}
 			}
-			resResource = getMysqlResource(resNode.getString("res_res_node_uuid"));
+			resResource = getMysqlResource(c, resNode.getString("res_res_node_uuid"));
 			if (resResource.next())
 			{
 				if(resNode.getString("res_res_node_uuid")!=null)
@@ -13433,7 +13439,7 @@ public class MysqlDataProvider implements DataProvider {
 						resResource.close();
 					}
 			}
-			resResource = getMysqlResource(resNode.getString("res_context_node_uuid"));
+			resResource = getMysqlResource(c, resNode.getString("res_context_node_uuid"));
 			if (resResource.next())
 			{
 				if(resNode.getString("res_context_node_uuid")!=null)
@@ -13457,7 +13463,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNodes(MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws SQLException
+	public Object getNodes(Connection c, Credential cred, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws SQLException
 	{
 		PreparedStatement st = null;
 		String sql;
@@ -13466,13 +13472,13 @@ public class MysqlDataProvider implements DataProvider {
 		ResultSet res4 = null;
 		String pid = null;
 
-		pid = this.getPortfolioUuidByPortfolioCode(portfoliocode);
+		pid = this.getPortfolioUuidByPortfolioCode(c, portfoliocode);
 
 		if( "".equals(pid) )
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Not found");
 
-		NodeRight right = credential.getPortfolioRight(userId, groupId, pid, Credential.READ);
-		if(!right.read && !credential.isAdmin(userId) && !credential.isPublic(null, pid) && !credential.isOwner(userId, pid))
+		NodeRight right = cred.getPortfolioRight(c, userId, groupId, pid, Credential.READ);
+		if(!right.read && !cred.isAdmin(c, userId) && !cred.isPublic(c, null, pid) && !cred.isOwner(c, userId, pid))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String result = "";
@@ -13495,7 +13501,7 @@ public class MysqlDataProvider implements DataProvider {
 							"semantictag varchar(250) DEFAULT NULL, " +
 							"code varchar(250)  DEFAULT NULL," +
 							"node_order int(12) NOT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 
@@ -13503,7 +13509,7 @@ public class MysqlDataProvider implements DataProvider {
 							"uuid binary(16) UNIQUE NOT NULL, " +
 							"node_parent_uuid binary(16), " +
 							"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 
@@ -13511,7 +13517,7 @@ public class MysqlDataProvider implements DataProvider {
 							"uuid binary(16) UNIQUE NOT NULL, " +
 							"node_parent_uuid binary(16), " +
 							"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
@@ -13526,7 +13532,7 @@ public class MysqlDataProvider implements DataProvider {
 							"code VARCHAR2(250 CHAR)  DEFAULT NULL," +
 							"node_order NUMBER(10,0) NOT NULL) ON COMMIT PRESERVE ROWS";
 					sql = "{call create_or_empty_table('t_s_node_2','"+v_sql+"')}";
-					CallableStatement ocs = connection.prepareCall(sql) ;
+					CallableStatement ocs = c.prepareCall(sql) ;
 					ocs.execute();
 					ocs.close();
 
@@ -13536,7 +13542,7 @@ public class MysqlDataProvider implements DataProvider {
 							"t_level NUMBER(10,0)"+
 							",  CONSTRAINT t_struc_parentid_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 					sql = "{call create_or_empty_table('t_struc_parentid','"+v_sql+"')}";
-					ocs = connection.prepareCall(sql) ;
+					ocs = c.prepareCall(sql) ;
 					ocs.execute();
 					ocs.close();
 
@@ -13546,7 +13552,7 @@ public class MysqlDataProvider implements DataProvider {
 							"t_level NUMBER(10,0)"+
 							",  CONSTRAINT t_struc_parentid_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 					sql = "{call create_or_empty_table('t_struc_parentid_2','"+v_sql+"')}";
-					ocs = connection.prepareCall(sql) ;
+					ocs = c.prepareCall(sql) ;
 					ocs.execute();
 					ocs.close();
 				}
@@ -13556,7 +13562,7 @@ public class MysqlDataProvider implements DataProvider {
 						"SELECT node_uuid, node_parent_uuid, asm_type, semtag, semantictag, code, node_order " +
 						"FROM node n " +
 						"WHERE n.portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, pid);
 				st.executeUpdate();
 				st.close();
@@ -13568,7 +13574,7 @@ public class MysqlDataProvider implements DataProvider {
 							"SELECT node_uuid, node_parent_uuid, 0 " +
 							"FROM t_s_node_2 WHERE semantictag LIKE ? AND code LIKE ?";
 					//sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, node_children_uuid, code, asm_type, label FROM node WHERE portfolio_id = uuid2bin('c884bdcd-2165-469b-9939-14376f7f3500') AND metadata LIKE '%semantictag=%competence%'";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, "%"+semtag_parent+"%");
 					st.setString(2, "%"+code_parent+"%");
 					st.executeUpdate();
@@ -13590,9 +13596,9 @@ public class MysqlDataProvider implements DataProvider {
 					} else if (dbserveur.equals("oracle")){
 						sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_parentid,t_struc_parentid_UK_uuid)*/ INTO t_struc_parentid SELECT * FROM t_struc_parentid_2";
 					}
-					PreparedStatement stTemp = connection.prepareStatement(sqlTemp);
+					PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					while( added != 0 )
 					{
 						st.setInt(1, level+1);
@@ -13609,7 +13615,7 @@ public class MysqlDataProvider implements DataProvider {
 							"FROM t_s_node_2 " +
 							"WHERE semantictag LIKE ? AND node_uuid IN (SELECT uuid FROM t_struc_parentid) " +
 							"ORDER BY code, node_order";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, "%"+semtag+"%");
 					res3 = st.executeQuery();
 
@@ -13621,11 +13627,11 @@ public class MysqlDataProvider implements DataProvider {
 						result += ">";
 						if (res3.getString("asm_type").equalsIgnoreCase("asmContext"))
 						{
-							result += getRessource(res3.getString("node_uuid"), userId, groupId, "Context");
+							result += getRessource(c, res3.getString("node_uuid"), userId, groupId, "Context");
 						}
 						else
 						{
-							result += getRessource(res3.getString("node_uuid"), userId, groupId, "nonContext");
+							result += getRessource(c, res3.getString("node_uuid"), userId, groupId, "nonContext");
 						}
 						result += "</node>";
 					}
@@ -13726,7 +13732,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "SELECT  bin2uuid(portfolio_id) AS portfolio_id,bin2uuid(root_node_uuid) as root_node_uuid, modif_user_id,modif_date, active, user_id "
 						+ "FROM portfolio "
 						+ "WHERE portfolio_id = uuid2bin(?) ";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, pid);
 				res = st.executeQuery();
 
@@ -13736,7 +13742,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					try
 					{
-						res1 = getMysqlNodeUuidBySemanticTag(pid, semtag);
+						res1 = getMysqlNodeUuidBySemanticTag(c, pid, semtag);
 					}
 					catch(Exception ex)
 					{
@@ -13753,11 +13759,11 @@ public class MysqlDataProvider implements DataProvider {
 						result += ">";
 						if (res1.getString("asm_type").equalsIgnoreCase("asmContext"))
 						{
-							result += getRessource(res1.getString("node_uuid"), userId, groupId, "Context");
+							result += getRessource(c, res1.getString("node_uuid"), userId, groupId, "Context");
 						}
 						else
 						{
-							result += getRessource(res1.getString("node_uuid"), userId, groupId, "nonContext");
+							result += getRessource(c, res1.getString("node_uuid"), userId, groupId, "nonContext");
 						}
 						result += "</node>";
 					}
@@ -13772,7 +13778,7 @@ public class MysqlDataProvider implements DataProvider {
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
 					sql = "DROP TEMPORARY TABLE IF EXISTS t_s_node_2, t_struc_parentid, t_struc_parentid_2";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
 				}
@@ -13785,7 +13791,7 @@ public class MysqlDataProvider implements DataProvider {
 			// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 			if (dbserveur.equals("mysql")){
 				sql = "DROP TEMPORARY TABLE IF EXISTS t_s_node_2, t_struc_parentid, t_struc_parentid_2";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
 			}
@@ -13802,14 +13808,14 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public Object getNodesParent(MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws Exception
+	public Object getNodesParent(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws Exception
 	{
 		PreparedStatement st = null;
 		String sql;
 		ResultSet res = null;
 		ResultSet res3 = null;
 		ResultSet res4 = null;
-		String pid = this.getPortfolioUuidByPortfolioCode(portfoliocode);
+		String pid = this.getPortfolioUuidByPortfolioCode(c, portfoliocode);
 		String result = "";
 
 		try
@@ -13817,7 +13823,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT  bin2uuid(portfolio_id) AS portfolio_id,bin2uuid(root_node_uuid) as root_node_uuid, modif_user_id,modif_date, active, user_id "
 					+ "FROM portfolio "
 					+ "WHERE portfolio_id = uuid2bin(?) ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, pid);
 			res = st.executeQuery();
 
@@ -13826,7 +13832,7 @@ public class MysqlDataProvider implements DataProvider {
 					+ "WHERE portfolio_id = uuid2bin(?) "
 					+ "and  metadata LIKE ? "
 					+ "and code = ?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, pid);
 			st.setString(2, "%semantictag=%"+semtag_parent+"%");
 			st.setString(3, code_parent);
@@ -13844,7 +13850,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql = "SELECT  bin2uuid(node_uuid) AS node_uuid, code, semantictag "
 							+ "FROM node "
 							+ "WHERE semantictag = ? and node_uuid = ?";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 	//				st.setString(1, listChildren[i]);
 	//				st.setString(2, semtag);
 					st.setString(1, semtag);
@@ -13876,14 +13882,14 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isAdmin( String uid )
+	public boolean isAdmin( Connection c, Credential cred, String uid )
 	{
 		int userid = Integer.parseInt(uid);
-		return credential.isAdmin(userid);
+		return cred.isAdmin(c, userid);
 	}
 
 	@Override
-	public String getUserId(String username, String email) throws Exception
+	public String getUserId(Connection c, String username, String email) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
@@ -13895,13 +13901,13 @@ public class MysqlDataProvider implements DataProvider {
 			if( username != null )
 			{
 				sql = "SELECT userid FROM credential WHERE login = ? ";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, username);
 			}
 			else if( email != null )
 			{
 				sql = "SELECT userid FROM credential WHERE email = ? ";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, email);
 			}
 			else
@@ -13919,7 +13925,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String createUser(String username) throws Exception
+	public String createUser(Connection c, String username) throws Exception
 	{
 		PreparedStatement st = null;
 		String sql;
@@ -13933,9 +13939,9 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("oracle")){
 				sql = "INSERT INTO credential SET login=?, display_firstname=?, display_lastname='', password=crypt(?)";
 			}
-			st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+			st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
-				st = connection.prepareStatement(sql, new String[]{"userid"});
+				st = c.prepareStatement(sql, new String[]{"userid"});
 			}
 			st.setString(1, username);
 			st.setString(2, username);
@@ -13962,7 +13968,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getGroupByName( String name )
+	public String getGroupByName( Connection c, String name )
 	{
 		PreparedStatement st;
 		String sql;
@@ -13972,7 +13978,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT gid FROM group_info WHERE label=? ";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, name);
 			res = st.executeQuery();
 			if( res.next() )
@@ -13987,7 +13993,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String createGroup( String name )
+	public String createGroup( Connection c, String name )
 	{
 		PreparedStatement st;
 		String sql;
@@ -13996,9 +14002,9 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "INSERT INTO group_right_info(owner, label) VALUES(1,?)";
-			st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+			st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
-				st = connection.prepareStatement(sql, new String[]{"grid"});
+				st = c.prepareStatement(sql, new String[]{"grid"});
 			}
 			st.setString(1, name);
 			st.executeUpdate();
@@ -14009,9 +14015,9 @@ public class MysqlDataProvider implements DataProvider {
 				rs.close(); st.close();
 
 				sql = "INSERT INTO group_info(grid, owner, label) VALUES(?,1,?)";
-				st = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 				if (dbserveur.equals("oracle")){
-					st = connection.prepareStatement(sql, new String[]{"gid"});
+					st = c.prepareStatement(sql, new String[]{"gid"});
 				}
 				st.setInt(1, retval);
 				st.setString(2, name);
@@ -14034,7 +14040,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isUserInGroup( String uid, String gid )
+	public boolean isUserInGroup( Connection c, String uid, String gid )
 	{
 		PreparedStatement st;
 		String sql;
@@ -14044,7 +14050,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT userid FROM group_user WHERE userid=? AND gid=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, uid);
 			st.setString(2, gid);
 			res = st.executeQuery();
@@ -14060,7 +14066,7 @@ public class MysqlDataProvider implements DataProvider {
 	};
 
 	@Override
-	public Set<String[]> getNotificationUserList( int userId, int groupId, String uuid )
+	public Set<String[]> getNotificationUserList( Connection c, int userId, int groupId, String uuid )
 	{
 		PreparedStatement st;
 		String sql;
@@ -14077,7 +14083,7 @@ public class MysqlDataProvider implements DataProvider {
 					"LEFT JOIN group_right_info gri ON gi.grid=gri.grid " +
 					"LEFT JOIN group_rights gr ON gri.grid=gr.grid " +
 					"WHERE gu.gid=? AND gu.userid=? AND gr.id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, groupId);
 			st.setInt(2, userId);
 			st.setString(3, uuid);
@@ -14105,7 +14111,7 @@ public class MysqlDataProvider implements DataProvider {
 					"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
 					"LEFT JOIN credential c ON gu.userid=c.userid " +
 					"WHERE gri.portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolio);
 			res = st.executeQuery();
 
@@ -14136,7 +14142,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean touchPortfolio( String fromNodeuuid, String fromPortuuid )
+	public boolean touchPortfolio( Connection c, String fromNodeuuid, String fromPortuuid )
 	{
 		boolean hasChanged = false;
 
@@ -14153,7 +14159,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql = "UPDATE portfolio SET modif_date=CURRENT_TIMESTAMP ";
 				}
 				sql += "WHERE portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, fromNodeuuid);
 				st.executeUpdate();
 
@@ -14166,7 +14172,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql = "UPDATE portfolio SET modif_date=CURRENT_TIMESTAMP ";
 				}
 				sql += "WHERE portfolio_id=uuid2bin(?)";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, fromPortuuid);
 				st.executeUpdate();
 
@@ -14193,7 +14199,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String[] logViaEmail( String email )
+	public String[] logViaEmail( Connection c, String email )
 	{
 		String[] data = null;
 		String sql;
@@ -14203,7 +14209,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT userid, login FROM credential WHERE email=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, email);
 			res = st.executeQuery();
 
@@ -14236,7 +14242,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String emailFromLogin( String username )
+	public String emailFromLogin( Connection c, String username )
 	{
 		if( "".equals(username) || username == null )
 			return "";
@@ -14250,7 +14256,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT email FROM credential WHERE login=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, username);
 			res = st.executeQuery();
 
@@ -14277,7 +14283,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean changePassword( String username, String password )
+	public boolean changePassword( Connection c, String username, String password )
 	{
 		boolean changed = false;
 
@@ -14288,7 +14294,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "UPDATE credential SET password=UNHEX(SHA1(?)) WHERE login=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, password);
 			st.setString(2, username);
 			st.executeUpdate();
@@ -14315,7 +14321,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean registerUser( String username, String password )
+	public boolean registerUser( Connection c, String username, String password )
 	{
 		boolean changed = false;
 		String sql = "";
@@ -14325,7 +14331,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			// Check if user exists
 			sql = "SELECT login FROM credential WHERE login=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, username);
 			res = st.executeQuery();
 
@@ -14336,7 +14342,7 @@ public class MysqlDataProvider implements DataProvider {
 
 				// Insert user
 				sql = "INSERT INTO credential(login, password, is_designer, display_firstname, display_lastname) VALUES(?, UNHEX(SHA1(?)), 1, '', '')";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, username);
 				st.setString(2, password);
 				st.executeUpdate();

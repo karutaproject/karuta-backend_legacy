@@ -17,6 +17,7 @@ package com.portfolio.data.utils;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.util.Properties;
 
@@ -38,6 +39,12 @@ import com.portfolio.data.provider.DataProvider;
 public class SqlUtils
 {
 	static final Logger logger = LoggerFactory.getLogger(SqlUtils.class);
+	static final String dataProviderName = ConfigUtils.get("dataProviderClass");
+	static final String serverType = ConfigUtils.get("serverType");
+	static boolean loaded = false;
+	static InitialContext cxt = null;
+	static DataSource ds = null;
+
 	public static  String getCurrentTimeStamp()
 	{
 		java.util.Date date= new java.util.Date();
@@ -51,7 +58,7 @@ public class SqlUtils
 	public static DataProvider initProvider(ServletContext application, Logger logger) throws Exception
 	{
 	//============= init servers ===============================
-		String dataProviderName = ConfigUtils.get("dataProviderClass");
+//		String dataProviderName = ConfigUtils.get("dataProviderClass");
 		DataProvider dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
 //		Connection connection = getConnection(application);
@@ -60,23 +67,27 @@ public class SqlUtils
 		return dataProvider;
 	}
 
+	// If servContext is null, only load from pooled connection
 	public static Connection getConnection( ServletContext servContext ) throws Exception
 	{
-		// Try to initialize Datasource
-		InitialContext cxt = new InitialContext();
-		if ( cxt == null ) {
-			throw new Exception("no context found!");
-		}
-
-		DataSource ds = null;
-		/// Init this here, might fail depending on server hosting
-		try
+		if( !loaded )
 		{
-			ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
-		}
-		catch( Exception e )
-		{
-			logger.info("Might not be possible to load context.xml: "+e.getMessage());
+			// Try to initialize Datasource
+			cxt = new InitialContext();
+			if ( cxt == null ) {
+				throw new Exception("no context found!");
+			}
+	
+			/// Init this here, might fail depending on server hosting
+			try
+			{
+				ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
+			}
+			catch( Exception e )
+			{
+				logger.info("Might not be possible to load context.xml: "+e.getMessage());
+			}
+			loaded = true;
 		}
 		
 		if( ds != null )	// Return the connection directly
@@ -108,7 +119,15 @@ public class SqlUtils
 				info.put(name, val);
 		}
 
-		return DriverManager.getConnection(url, info);
+		Connection connection = DriverManager.getConnection(url, info);
+		if( "mysql".equals(serverType) )
+		{	// Because we don't always have access to base configuration
+			PreparedStatement st = connection.prepareStatement("SET SESSION group_concat_max_len = 1048576");	// 1MB
+			st.execute();
+			st.close();
+		}
+
+		return connection;
 	}
 
 }

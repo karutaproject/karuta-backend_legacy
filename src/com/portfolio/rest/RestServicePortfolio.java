@@ -127,7 +127,7 @@ public class RestServicePortfolio
 
 //	DataSource ds;
 	DataProvider dataProvider;
-	Credential credential = null;
+	final Credential credential = new Credential();
 	int logRestRequests = 0;
 	String label = null;
 	String casUrlValidation = null;
@@ -231,11 +231,14 @@ public class RestServicePortfolio
 		}
 	}
 
+	@Deprecated
 	public void logRestRequest(HttpServletRequest httpServletRequest, String inBody, String outBody, int httpCode)
 	{
 
 		try
 		{
+			/*
+			Connection c = SqlUtils.getConnection(servContext);
 			if(logRestRequests==1)
 			{
 				String httpHeaders = "";
@@ -246,11 +249,12 @@ public class RestServicePortfolio
 				}
 				String url = httpServletRequest.getRequestURL().toString();
 				if(httpServletRequest.getQueryString()!=null) url += "?" + httpServletRequest.getQueryString().toString();
-				dataProvider.writeLog(url,
+				dataProvider.writeLog(c, url,
 						httpServletRequest.getMethod().toString(),
 						httpHeaders,
 						inBody, outBody, httpCode);
 			}
+				//*/
 		}
 		catch(Exception ex)
 		{
@@ -266,7 +270,7 @@ public class RestServicePortfolio
 	{
 		try
 		{
-			Connection con = SqlUtils.getConnection(servContext);
+//			Connection con = SqlUtils.getConnection(servContext);
 			/*
 			if( ds == null )	// Case where we can't deploy context.xml
 			{
@@ -279,28 +283,30 @@ public class RestServicePortfolio
 				dataProvider.setConnection(con);
 			}
 			//*/
-			dataProvider.setConnection(con);
+//			dataProvider.setConnection(con);
 //			dataProvider.setDataSource(ds);
 
-			credential = new Credential(con);
+//			credential = new Credential(con);
 
 			/// Configure session
 			/// FIXME: Oracle part might be missing
+			/*
 			if( "mysql".equals(ConfigUtils.get("serverType")) )
 			{
 				PreparedStatement st = con.prepareStatement("SET SESSION group_concat_max_len = 1048576");	// 1MB
 				st.execute();
 				st.close();
 			}
+			//*/
 
 			/// Configure eventbus
 			//	    KEventHandler handlerDB = new HandlerDatabase(request, dataProvider);
-			KEventHandler handlerLog = new HandlerLogging(request, dataProvider);
-			KEventHandler handlerSakaiNotification = new HandlerNotificationSakai(request, dataProvider);
+//			KEventHandler handlerLog = new HandlerLogging(request, dataProvider);
+//			KEventHandler handlerSakaiNotification = new HandlerNotificationSakai(request, dataProvider);
 
 			//        eventbus.addChain( handlerDB );
-			eventbus.addChain( handlerLog );
-			eventbus.addChain( handlerSakaiNotification );
+//			eventbus.addChain( handlerLog );
+//			eventbus.addChain( handlerSakaiNotification );
 		}
 		catch ( Exception e )
 		{
@@ -354,6 +360,7 @@ public class RestServicePortfolio
 	public Response getCredential( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		if( ui.userId == 0 )	// Non valid userid
 		{
@@ -362,7 +369,9 @@ public class RestServicePortfolio
 
 		try
 		{
-			String xmluser = dataProvider.getInfUser(ui.userId, ui.userId);
+			c = SqlUtils.getConnection(servContext);
+
+			String xmluser = dataProvider.getInfUser(c, ui.userId, ui.userId);
 			logRestRequest(httpServletRequest, "", xmluser, Status.OK.getStatusCode());
 
 			return Response.ok(xmluser).build();
@@ -376,7 +385,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -398,10 +412,13 @@ public class RestServicePortfolio
 	public String getGroups(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
+		Connection c = null;
+		
 		try
 		{
-			String xmlGroups = (String) dataProvider.getUserGroups(ui.userId);
+			c = SqlUtils.getConnection(servContext);
+
+			String xmlGroups = (String) dataProvider.getUserGroups(c, ui.userId);
 			logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
 			return xmlGroups;
@@ -415,7 +432,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -445,10 +467,13 @@ public class RestServicePortfolio
 	public String getUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String xmlGroups = dataProvider.getListUsers(ui.userId);
+			c = SqlUtils.getConnection(servContext);
+
+			String xmlGroups = dataProvider.getListUsers(c, ui.userId);
 			logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
 			return xmlGroups;
@@ -462,7 +487,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -488,10 +518,13 @@ public class RestServicePortfolio
 	public String getUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("user-id") int userid, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String xmluser = dataProvider.getInfUser(ui.userId, userid);
+			c = SqlUtils.getConnection(servContext);
+
+			String xmluser = dataProvider.getInfUser(c, ui.userId, userid);
 			logRestRequest(httpServletRequest, "", xmluser, Status.OK.getStatusCode());
 
 			return xmluser;
@@ -511,7 +544,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -550,10 +588,13 @@ public class RestServicePortfolio
 	public String putUser( String xmlInfUser, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("user-id") int userid, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
+		Connection c = null;
+		
 		try
 		{
-			String queryuser = dataProvider.putInfUser(ui.userId, userid, xmlInfUser);
+			c = SqlUtils.getConnection(servContext);
+
+			String queryuser = dataProvider.putInfUser(c, ui.userId, userid, xmlInfUser);
 			logRestRequest(httpServletRequest, "", queryuser, Status.OK.getStatusCode());
 
 			return queryuser;
@@ -567,7 +608,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -584,10 +630,13 @@ public class RestServicePortfolio
 	public String getUserId(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("username") String username, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String userid = dataProvider.getUserID(ui.userId, username);
+			c = SqlUtils.getConnection(servContext);
+
+			String userid = dataProvider.getUserID(c, ui.userId, username);
 			logRestRequest(httpServletRequest, "", username, Status.OK.getStatusCode());
 			return userid;
 		}
@@ -604,7 +653,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -628,10 +682,13 @@ public class RestServicePortfolio
 	public String getGroupsUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("user-id") int useridCible, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String xmlgroupsUser = dataProvider.getRoleUser(ui.userId, useridCible);
+			c = SqlUtils.getConnection(servContext);
+
+			String xmlgroupsUser = dataProvider.getRoleUser(c, ui.userId, useridCible);
 			logRestRequest(httpServletRequest, "", xmlgroupsUser, Status.OK.getStatusCode());
 
 			return xmlgroupsUser;
@@ -645,7 +702,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -677,10 +739,13 @@ public class RestServicePortfolio
 	public String getGroupRights(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String xmlGroups = (String) dataProvider.getGroupRights(ui.userId, groupId);
+			c = SqlUtils.getConnection(servContext);
+			
+			String xmlGroups = (String) dataProvider.getGroupRights(c, credential, ui.userId, groupId);
 			logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
 			return xmlGroups;
@@ -694,7 +759,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -717,10 +787,13 @@ public class RestServicePortfolio
 	public String getGroupRightsInfos(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("portfolioId") String portfolioId)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String xmlGroups = dataProvider.getGroupRightsInfos(ui.userId, portfolioId);
+			c = SqlUtils.getConnection(servContext);
+
+			String xmlGroups = dataProvider.getGroupRightsInfos(c, credential, ui.userId, portfolioId);
 			logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
 			return xmlGroups;
@@ -734,7 +807,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -770,10 +848,12 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
+		Connection c = null;
 		Response response = null;
 		try
 		{
-			String portfolio = dataProvider.getPortfolio(new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, resource, "", ui.subId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String portfolio = dataProvider.getPortfolio(c, credential, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, resource, "", ui.subId).toString();
 
 			if( "faux".equals(portfolio) )
 			{
@@ -991,8 +1071,13 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			if( dataProvider != null )
-				dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			if( dataProvider != null )
+//				dataProvider.disconnect();
 		}
 
 		return response;
@@ -1056,10 +1141,12 @@ public class RestServicePortfolio
 	public String getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
+		Connection c = null;
+		
 		try
 		{
-			String returnValue = dataProvider.getPortfolioByCode(new MimeType("text/xml"),code,ui.userId, groupId, resources, ui.subId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getPortfolioByCode(c, credential, new MimeType("text/xml"),code,ui.userId, groupId, resources, ui.subId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -1090,7 +1177,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1128,12 +1220,14 @@ public class RestServicePortfolio
 	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
+		Connection c = null;
+		
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			if(portfolioUuid!=null)
 			{
-				String returnValue = dataProvider.getPortfolio(new MimeType("text/xml"),portfolioUuid,ui.userId, groupId, this.label, null, null, ui.subId).toString();
+				String returnValue = dataProvider.getPortfolio(c, credential, new MimeType("text/xml"),portfolioUuid,ui.userId, groupId, this.label, null, null, ui.subId).toString();
 				if(accept.equals(MediaType.APPLICATION_JSON))
 					returnValue = XML.toJSONObject(returnValue).toString();
 
@@ -1153,17 +1247,17 @@ public class RestServicePortfolio
 				try { portfolioCode = code; } catch(Exception ex) { };
 				if(portfolioCode!=null)
 				{
-					returnValue = dataProvider.getPortfolioByCode(new MimeType("text/xml"),portfolioCode, ui.userId, groupId, null, ui.subId).toString();
+					returnValue = dataProvider.getPortfolioByCode(c, credential, new MimeType("text/xml"),portfolioCode, ui.userId, groupId, null, ui.subId).toString();
 				}
 				else
 				{
-					if( userId != null && credential.isAdmin(ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
+					if( userId != null && credential.isAdmin(c, ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
 					{
-						returnValue = dataProvider.getPortfolios(new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId).toString();
+						returnValue = dataProvider.getPortfolios(c, credential, new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId).toString();
 					}
 					else
 					{
-						returnValue = dataProvider.getPortfolios(new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId).toString();
+						returnValue = dataProvider.getPortfolios(c, credential, new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId).toString();
 					}
 
 					if(accept.equals(MediaType.APPLICATION_JSON))
@@ -1195,7 +1289,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1215,7 +1314,8 @@ public class RestServicePortfolio
 	public String putPortfolio( String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("active") String active, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
+		Connection c = null;
+		
 		try
 		{
 			Boolean portfolioActive;
@@ -1224,7 +1324,8 @@ public class RestServicePortfolio
 			else
 				portfolioActive = true;
 
-			dataProvider.putPortfolio(new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio,portfolioUuid, ui.userId,portfolioActive, groupId,null);
+			c = SqlUtils.getConnection(servContext);
+			dataProvider.putPortfolio(c, credential, new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio,portfolioUuid, ui.userId,portfolioActive, groupId,null);
 			logRestRequest(httpServletRequest, xmlPortfolio, null, Status.OK.getStatusCode());
 
 			return "";
@@ -1239,7 +1340,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1258,13 +1364,15 @@ public class RestServicePortfolio
 	public String putPortfolioConfiguration(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portfolioUuid, @QueryParam("active") Boolean portfolioActive)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
+		Connection c = null;
+		
 		try
 		{
 			String returnValue = "";
 			if(portfolioUuid!=null && portfolioActive!=null)
 			{
-				dataProvider.putPortfolioConfiguration(portfolioUuid,portfolioActive, ui.userId);
+				c = SqlUtils.getConnection(servContext);
+				dataProvider.putPortfolioConfiguration(c, credential, portfolioUuid,portfolioActive, ui.userId);
 			}
 			logRestRequest(httpServletRequest, xmlPortfolio, returnValue, Status.OK.getStatusCode());
 
@@ -1279,7 +1387,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1311,10 +1424,12 @@ public class RestServicePortfolio
 	public Response postUser(String xmluser, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String xmlUser = dataProvider.postUsers(xmluser, ui.userId);
+			c = SqlUtils.getConnection(servContext);
+			String xmlUser = dataProvider.postUsers(c, credential, xmluser, ui.userId);
 			logRestRequest(httpServletRequest, "", xmlUser, Status.OK.getStatusCode());
 
 			if( xmlUser == null )
@@ -1334,7 +1449,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1371,7 +1491,7 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1383,6 +1503,7 @@ public class RestServicePortfolio
 	 *	- group: group id
 	 *	return:
 	 **/
+	@Deprecated
 	@Path("/credential/group/{group-id}")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
@@ -1415,7 +1536,7 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1434,10 +1555,12 @@ public class RestServicePortfolio
 	public String  postGroup(String xmlgroup, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
+		Connection c = null;
+		
 		try
 		{
-			String xmlGroup = (String) dataProvider.postGroup(xmlgroup, ui.userId);
+			c = SqlUtils.getConnection(servContext);
+			String xmlGroup = (String) dataProvider.postGroup(c, credential, xmlgroup, ui.userId);
 			logRestRequest(httpServletRequest, "", xmlGroup, Status.OK.getStatusCode());
 
 			return xmlGroup;
@@ -1455,7 +1578,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1474,10 +1602,12 @@ public class RestServicePortfolio
 	public String  postGroupsUsers( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("userId") int userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			if(dataProvider.postGroupsUsers(ui.userId, userId,groupId))
+			c = SqlUtils.getConnection(servContext);
+			if(dataProvider.postGroupsUsers(c, credential, ui.userId, userId,groupId))
 			{
 				return "<ok/>";
 			}
@@ -1497,7 +1627,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1515,10 +1650,12 @@ public class RestServicePortfolio
 	public Response  postRightGroup( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("groupRightId") int groupRightId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			if(dataProvider.postRightGroup(groupRightId,groupId, ui.userId))
+			c = SqlUtils.getConnection(servContext);
+			if(dataProvider.postRightGroup(c, credential, groupRightId,groupId, ui.userId))
 			{
 				System.out.print("ajout�");
 			}
@@ -1538,7 +1675,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 		return null;
 	}
@@ -1564,6 +1706,7 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		//// TODO: IF user is creator and has parameter owner -> change ownership
+		Connection c = null;
 
 		try
 		{
@@ -1577,11 +1720,12 @@ public class RestServicePortfolio
 			/// Check if code exist, find a suitable one otherwise. Eh.
 			String newcode = tgtcode;
 			int num = 0;
-			while( dataProvider.isCodeExist(newcode) )
+			c = SqlUtils.getConnection(servContext);
+			while( dataProvider.isCodeExist(c, newcode) )
 				newcode = tgtcode+" ("+ num++ +")";
 			tgtcode = newcode;
 
-			String returnValue = dataProvider.postInstanciatePortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
+			String returnValue = dataProvider.postInstanciatePortfolio(c, credential, new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
 			logRestRequest(httpServletRequest, value+" to: "+returnValue, returnValue, Status.OK.getStatusCode());
 
 			if( returnValue.startsWith("no rights") )
@@ -1601,7 +1745,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1622,7 +1771,7 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		//// TODO: IF user is creator and has parameter owner -> change ownership
-
+		Connection c = null;
 		try
 		{
 			boolean setOwner = false;
@@ -1632,11 +1781,12 @@ public class RestServicePortfolio
 			/// Check if code exist, find a suitable one otherwise. Eh.
 			String newcode = tgtcode;
 			int num = 0;
-			while( dataProvider.isCodeExist(newcode) )
+			c = SqlUtils.getConnection(servContext);
+			while( dataProvider.isCodeExist(c, newcode) )
 				newcode = tgtcode+" ("+ num++ +")";
 			tgtcode = newcode;
 
-			String returnValue = dataProvider.postCopyPortfolio(new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, setOwner ).toString();
+			String returnValue = dataProvider.postCopyPortfolio(c, credential, new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, setOwner ).toString();
 			logRestRequest(httpServletRequest, value+" to: "+returnValue, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1650,7 +1800,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1765,13 +1920,15 @@ public class RestServicePortfolio
 			}
 		}
 
+		Connection c = null;
 		try
 		{
 			boolean instantiate = false;
 			if( "true".equals(instance) )
 				instantiate = true;
 
-			String returnValue = dataProvider.postPortfolio(new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postPortfolio(c, credential, new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
 			logRestRequest(httpServletRequest, xmlPortfolio, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1791,7 +1948,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1809,6 +1971,7 @@ public class RestServicePortfolio
 	public String postPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
@@ -1816,7 +1979,8 @@ public class RestServicePortfolio
 			if( "true".equals(instance) )
 				instantiate = true;
 
-			String returnValue = dataProvider.postPortfolioZip(new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postPortfolioZip(c, credential, new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
 			logRestRequest(httpServletRequest, returnValue, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1830,7 +1994,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1846,11 +2015,12 @@ public class RestServicePortfolio
 	public String deletePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-
-			Integer nbPortfolioDeleted = Integer.parseInt(dataProvider.deletePortfolio(portfolioUuid, ui.userId, groupId).toString());
+			c = SqlUtils.getConnection(servContext);
+			Integer nbPortfolioDeleted = Integer.parseInt(dataProvider.deletePortfolio(c, credential, portfolioUuid, ui.userId, groupId).toString());
 			if(nbPortfolioDeleted==0)
 			{
 				logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
@@ -1877,7 +2047,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1896,10 +2071,12 @@ public class RestServicePortfolio
 	public String getNode( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getNode(new MimeType("text/xml"),nodeUuid,false, ui.userId, groupId, this.label).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getNode(c, credential, new MimeType("text/xml"),nodeUuid,false, ui.userId, groupId, this.label).toString();
 			if(returnValue.length() != 0)
 			{
 				if(accept.equals(MediaType.APPLICATION_JSON))
@@ -1939,7 +2116,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -1957,10 +2139,12 @@ public class RestServicePortfolio
 	public String getNodeWithChildren( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getNode(new MimeType("text/xml"),nodeUuid,true, ui.userId, groupId, this.label).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getNode(c, credential, new MimeType("text/xml"),nodeUuid,true, ui.userId, groupId, this.label).toString();
 			if(returnValue.length() != 0)
 			{
 				if(accept.equals(MediaType.APPLICATION_JSON))
@@ -1993,7 +2177,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2011,10 +2200,12 @@ public class RestServicePortfolio
 	public String getNodeMetadataWad( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getNodeMetadataWad(new MimeType("text/xml"),nodeUuid,true, ui.userId, groupId, this.label).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getNodeMetadataWad(c, credential, new MimeType("text/xml"),nodeUuid,true, ui.userId, groupId, this.label).toString();
 			if(returnValue.length() != 0)
 			{
 				if(accept.equals(MediaType.APPLICATION_JSON))
@@ -2041,7 +2232,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2063,10 +2259,12 @@ public class RestServicePortfolio
 	public String getNodeRights( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getNodeRights(nodeUuid, ui.userId, groupId);
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getNodeRights(c, nodeUuid, ui.userId, groupId);
 			if(returnValue.length() != 0)
 			{
 				if(accept.equals(MediaType.APPLICATION_JSON))
@@ -2105,7 +2303,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2129,6 +2332,7 @@ public class RestServicePortfolio
 	public String postNodeRights( String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
@@ -2141,6 +2345,8 @@ public class RestServicePortfolio
 			String xpathRole = "//*[local-name()='role']";
 			XPathExpression findRole = xPath.compile(xpathRole);
 			NodeList roles = (NodeList) findRole.evaluate(doc, XPathConstants.NODESET);
+
+			c = SqlUtils.getConnection(servContext);
 
 			/// For all roles we have to change
 			for( int i=0; i<roles.getLength(); ++i )
@@ -2178,12 +2384,12 @@ public class RestServicePortfolio
 						noderight.submit = "Y".equals(val) ? true: false;
 
 					// change right
-					dataProvider.postRights(ui.userId, nodeUuid, rolename, noderight);
+					dataProvider.postRights(c, credential, ui.userId, nodeUuid, rolename, noderight);
 				}
 				else if( "action".equals(right.getNodeName()) )	// Using an action on node
 				{
 					// reset right
-					dataProvider.postMacroOnNode(ui.userId, nodeUuid, "reset");
+					dataProvider.postMacroOnNode(c, credential, ui.userId, nodeUuid, "reset");
 				}
 			}
 
@@ -2209,7 +2415,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 
 		return "";
@@ -2229,10 +2440,12 @@ public class RestServicePortfolio
 	public String getNodeBySemanticTag( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-uuid") String portfolioUuid,@PathParam("semantictag") String semantictag,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getNodeBySemanticTag(new MimeType("text/xml"),portfolioUuid,semantictag, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getNodeBySemanticTag(c, credential, new MimeType("text/xml"),portfolioUuid,semantictag, ui.userId, groupId).toString();
 			if(returnValue.length() != 0)
 			{
 				logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
@@ -2257,7 +2470,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2275,10 +2493,12 @@ public class RestServicePortfolio
 	public String getNodesBySemanticTag( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-uuid") String portfolioUuid,@PathParam("semantictag") String semantictag,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getNodesBySemanticTag(new MimeType("text/xml"), ui.userId, groupId,portfolioUuid,semantictag).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getNodesBySemanticTag(c, credential, new MimeType("text/xml"), ui.userId, groupId,portfolioUuid,semantictag).toString();
 			if(returnValue.length() != 0)
 			{
 				logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
@@ -2304,7 +2524,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2321,12 +2546,14 @@ public class RestServicePortfolio
 	{
 //		long t_startRest = System.nanoTime();
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 //		long t_checkCred = System.nanoTime();
 
 		try
 		{
-			String returnValue = dataProvider.putNode(new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.putNode(c, credential, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 
 //			long t_query = System.nanoTime();
 
@@ -2363,7 +2590,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2379,10 +2611,12 @@ public class RestServicePortfolio
 	public String putNodeMetadata(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.putNodeMetadata(new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.putNodeMetadata(c, credential, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2410,7 +2644,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2426,10 +2665,12 @@ public class RestServicePortfolio
 	public String putNodeMetadataWad(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.putNodeMetadataWad(new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.putNodeMetadataWad(c, credential, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2457,7 +2698,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2473,10 +2719,12 @@ public class RestServicePortfolio
 	public String putNodeMetadataEpm(String xmlNode, @PathParam("nodeid") String nodeUuid, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.putNodeMetadataEpm(new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.putNodeMetadataEpm(c, credential, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2507,7 +2755,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2523,10 +2776,12 @@ public class RestServicePortfolio
 	public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.putNodeNodeContext(new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.putNodeNodeContext(c, credential, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2548,7 +2803,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2564,6 +2824,7 @@ public class RestServicePortfolio
 	public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
@@ -2571,7 +2832,8 @@ public class RestServicePortfolio
 			//xmlNode = xmlNode.getBytes("UTF-8").toString();
 			/// putNode(MimeType inMimeType, String nodeUuid, String in,int userId, int groupId)
 			//          String returnValue = dataProvider.putNode(new MimeType("text/xml"),nodeUuid,xmlNode,this.userId,this.groupId).toString();
-			String returnValue = dataProvider.putNodeNodeResource(new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.putNodeNodeResource(c, credential, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2593,7 +2855,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2608,14 +2875,16 @@ public class RestServicePortfolio
 	public String postImportNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.postImportNode(new MimeType("text/xml"), parentId, semtag, code, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postImportNode(c, credential, new MimeType("text/xml"), parentId, semtag, code, ui.userId, groupId).toString();
 
 			if( returnValue == null )
 			{
-				returnValue = dataProvider.postImportNode(new MimeType("text/xml"), parentId, semtag, code, ui.userId, groupId).toString();
+				returnValue = dataProvider.postImportNode(c, credential, new MimeType("text/xml"), parentId, semtag, code, ui.userId, groupId).toString();
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
@@ -2639,7 +2908,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2654,12 +2928,14 @@ public class RestServicePortfolio
 	public String postCopyNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		//// TODO: IF user is creator and has parameter owner -> change ownership
 
 		try
 		{
-			String returnValue = dataProvider.postCopyNode(new MimeType("text/xml"), parentId, semtag, code, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postCopyNode(c, new MimeType("text/xml"), parentId, semtag, code, ui.userId, groupId).toString();
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -2686,7 +2962,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2706,10 +2987,12 @@ public class RestServicePortfolio
 	public String getNodes( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("portfoliocode") String portfoliocode, @QueryParam("semtag") String semtag, @QueryParam("semtag_parent") String semtag_parent, @QueryParam("code_parent") String code_parent)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getNodes(new MimeType("text/xml"), portfoliocode, semtag, ui.userId, groupId, semtag_parent, code_parent).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getNodes(c, credential, new MimeType("text/xml"), portfoliocode, semtag, ui.userId, groupId, semtag_parent, code_parent).toString();
 			logRestRequest(httpServletRequest, "getNodes", returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -2736,7 +3019,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2760,6 +3048,7 @@ public class RestServicePortfolio
 		event.uuid = parentId;
 		event.inputData = xmlNode;
 
+		Connection c = null;
 		try
 		{
 			if( ui.userId == 0 )
@@ -2768,7 +3057,8 @@ public class RestServicePortfolio
 			}
 			else
 			{
-				String returnValue = dataProvider.postNode(new MimeType("text/xml"),parentId,xmlNode, ui.userId, groupId).toString();
+				c = SqlUtils.getConnection(servContext);
+				String returnValue = dataProvider.postNode(c, credential, new MimeType("text/xml"),parentId,xmlNode, ui.userId, groupId).toString();
 				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 				Response response;
@@ -2797,7 +3087,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2823,6 +3118,7 @@ public class RestServicePortfolio
       event.inputData = xmlNode;
       //*/
 		Response response;
+		Connection c = null;
 
 		try
 		{
@@ -2832,7 +3128,8 @@ public class RestServicePortfolio
 			}
 			else
 			{
-				int returnValue = dataProvider.postMoveNodeUp(ui.userId, nodeId);
+				c = SqlUtils.getConnection(servContext);
+				int returnValue = dataProvider.postMoveNodeUp(c, credential, ui.userId, nodeId);
 				logRestRequest(httpServletRequest, xmlNode, Integer.toString(returnValue), Status.OK.getStatusCode());
 
 				if( returnValue == -1 )
@@ -2861,7 +3158,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 
 		return response;
@@ -2888,10 +3190,12 @@ public class RestServicePortfolio
       event.uuid = parentId;
       event.inputData = xmlNode;
       //*/
+		Connection c = null;
 
 		try
 		{
-			boolean returnValue = dataProvider.postChangeNodeParent(ui.userId, nodeId, parentId);
+			c = SqlUtils.getConnection(servContext);
+			boolean returnValue = dataProvider.postChangeNodeParent(c, credential, ui.userId, nodeId, parentId);
 			logRestRequest(httpServletRequest, xmlNode, Boolean.toString(returnValue), Status.OK.getStatusCode());
 
 			Response response;
@@ -2918,7 +3222,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2935,10 +3244,12 @@ public class RestServicePortfolio
 	public String postActionNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeId, @PathParam("action-name") String macro, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.postMacroOnNode(ui.userId, nodeId, macro);
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postMacroOnNode(c, credential, ui.userId, nodeId, macro);
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if( returnValue == "erreur")
@@ -2960,7 +3271,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -2976,10 +3292,12 @@ public class RestServicePortfolio
 	public String deleteNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-uuid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			int nbDeletedNodes = Integer.parseInt(dataProvider.deleteNode(nodeUuid, ui.userId, groupId).toString());
+			c = SqlUtils.getConnection(servContext);
+			int nbDeletedNodes = Integer.parseInt(dataProvider.deleteNode(c, credential, nodeUuid, ui.userId, groupId).toString());
 			if(nbDeletedNodes==0)
 			{
 				logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
@@ -3009,7 +3327,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3043,10 +3366,12 @@ public class RestServicePortfolio
 	public String getResource( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-parent-id") String nodeParentUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getResource(new MimeType("text/xml"),nodeParentUuid, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getResource(c, credential, new MimeType("text/xml"),nodeParentUuid, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -3076,7 +3401,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3094,10 +3424,12 @@ public class RestServicePortfolio
 	public String getResources( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getResources(new MimeType("text/xml"),portfolioUuid, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getResources(c, credential, new MimeType("text/xml"),portfolioUuid, ui.userId, groupId).toString();
 			if(accept.equals(MediaType.APPLICATION_JSON))
 				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
@@ -3113,7 +3445,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3137,10 +3474,12 @@ public class RestServicePortfolio
 		event.uuid = nodeParentUuid;
 		event.inputData = xmlResource;
 		//*/
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.putResource(new MimeType("text/xml"),nodeParentUuid,xmlResource, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.putResource(c, credential, new MimeType("text/xml"),nodeParentUuid,xmlResource, ui.userId, groupId).toString();
 			logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
 
 //			eventbus.processEvent(event);
@@ -3165,7 +3504,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3181,11 +3525,13 @@ public class RestServicePortfolio
 	public String postResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-parent-uuid") String nodeParentUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
 			//TODO userId
-			String returnValue = dataProvider.postResource(new MimeType("text/xml"),nodeParentUuid,xmlResource, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postResource(c, credential, new MimeType("text/xml"),nodeParentUuid,xmlResource, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -3207,7 +3553,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3223,11 +3574,13 @@ public class RestServicePortfolio
 	public String postResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type, @QueryParam("resource") String resource,@QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
 			//TODO userId
-			String returnValue = dataProvider.postResource(new MimeType("text/xml"),resource,xmlResource, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postResource(c, credential, new MimeType("text/xml"),resource,xmlResource, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -3249,7 +3602,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3265,11 +3623,13 @@ public class RestServicePortfolio
 	public String postRoleUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("grid") int grid,@QueryParam("user-id") Integer userid)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
 			//TODO userId
-			String returnValue = dataProvider.postRoleUser(ui.userId, grid, userid).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postRoleUser(c, credential, ui.userId, grid, userid).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -3291,7 +3651,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3307,11 +3672,13 @@ public class RestServicePortfolio
 	public String putRole(String xmlRole, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("role-id") int roleId)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
 			//TODO userId
-			String returnValue = dataProvider.putRole(xmlRole, ui.userId, roleId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.putRole(c, credential, xmlRole, ui.userId, roleId).toString();
 			if(returnValue.equals("faux")){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -3333,7 +3700,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3349,10 +3721,12 @@ public class RestServicePortfolio
 	public String getRolePortfolio( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("role") String role, @PathParam("portfolio-id") String portfolioId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getRolePortfolio(new MimeType("text/xml"),role,portfolioId,ui.userId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getRolePortfolio(c, new MimeType("text/xml"),role,portfolioId,ui.userId).toString();
 			//			if(accept.equals(MediaType.APPLICATION_JSON))
 			//				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
@@ -3368,7 +3742,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3385,11 +3764,12 @@ public class RestServicePortfolio
 	public String getRole( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("role-id") Integer roleId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-
-			String returnValue = dataProvider.getRole(new MimeType("text/xml"),roleId,ui.userId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getRole(c, new MimeType("text/xml"),roleId,ui.userId).toString();
 			if(returnValue.equals(""))
 			{
 				logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
@@ -3418,7 +3798,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3435,10 +3820,12 @@ public class RestServicePortfolio
 	public String getModels(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getModels(new MimeType("text/xml"),ui.userId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getModels(c, new MimeType("text/xml"),ui.userId).toString();
 			if(returnValue.equals(""))
 			{
 				logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
@@ -3467,7 +3854,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3484,10 +3876,12 @@ public class RestServicePortfolio
 	public String getModel(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("model-id") Integer modelId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.getModel(new MimeType("text/xml"),modelId,ui.userId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.getModel(c, new MimeType("text/xml"),modelId,ui.userId).toString();
 			if(returnValue.equals(""))
 			{
 				logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
@@ -3516,7 +3910,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3533,11 +3932,12 @@ public class RestServicePortfolio
 	public String postModel(String xmlModel, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-
-			String returnValue = dataProvider.postModels(new MimeType("text/xml"),xmlModel,ui.userId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postModels(c, credential, new MimeType("text/xml"),xmlModel,ui.userId).toString();
 			if(returnValue.equals(""))
 			{
 				logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
@@ -3566,7 +3966,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3582,10 +3987,12 @@ public class RestServicePortfolio
 	public String deleteResource(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("resource-id") String resourceUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteResource(resourceUuid, ui.userId, groupId).toString());
+			c = SqlUtils.getConnection(servContext);
+			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteResource(c, credential, resourceUuid, ui.userId, groupId).toString());
 			if(nbResourceDeleted==0)
 			{
 				logRestRequest(httpServletRequest, null,null, Status.NOT_FOUND.getStatusCode());
@@ -3611,7 +4018,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3627,10 +4039,12 @@ public class RestServicePortfolio
 	public String deleteGroupRights(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("groupRightId") Integer groupRightId)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteGroupRights(groupId, groupRightId, ui.userId).toString());
+			c = SqlUtils.getConnection(servContext);
+			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteGroupRights(c, credential, groupId, groupRightId, ui.userId).toString());
 			if(nbResourceDeleted==0)
 			{
 				System.out.print("supprim�");
@@ -3654,7 +4068,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3670,10 +4089,12 @@ public class RestServicePortfolio
 	public String deleteUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("userId") Integer userId)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteUsers(userId, null).toString());
+			c = SqlUtils.getConnection(servContext);
+			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteUsers(c, credential, userId, null).toString());
 			if(nbResourceDeleted==0)
 			{
 				System.out.print("supprim�");
@@ -3697,7 +4118,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3713,10 +4139,12 @@ public class RestServicePortfolio
 	public String deleteUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("user-id") Integer userid)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteUsers(ui.userId, userid).toString());
+			c = SqlUtils.getConnection(servContext);
+			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteUsers(c, credential, ui.userId, userid).toString());
 			//			 if(nbResourceDeleted==0)
 			//			 {
 			//				 System.out.print("supprim�");
@@ -3740,7 +4168,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3756,10 +4189,12 @@ public class RestServicePortfolio
 	public String getGroupsPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String xmlGroups = dataProvider.getGroupsPortfolio(portfolioUuid, ui.userId);
+			c = SqlUtils.getConnection(servContext);
+			String xmlGroups = dataProvider.getGroupsPortfolio(c, credential, portfolioUuid, ui.userId);
 			logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
 			return xmlGroups;
@@ -3773,7 +4208,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3790,10 +4230,12 @@ public class RestServicePortfolio
 	{
 		HttpSession session = httpServletRequest.getSession(true);
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String xmlGroups = dataProvider.getUserGroupByPortfolio(portfolioUuid, ui.userId);
+			c = SqlUtils.getConnection(servContext);
+			String xmlGroups = dataProvider.getUserGroupByPortfolio(c, portfolioUuid, ui.userId);
 			logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
@@ -3831,7 +4273,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -3918,6 +4365,7 @@ public class RestServicePortfolio
 		event.inputData = xmlCredential;
 		String retVal = "";
 		int status = 0;
+		Connection c = null;
 
 		try
 		{
@@ -3937,7 +4385,8 @@ public class RestServicePortfolio
 			}
 
 			int dummy = 0;
-			String[] resultCredential = dataProvider.postCredentialFromXml(dummy, login, password, substit);
+			c = SqlUtils.getConnection(servContext);
+			String[] resultCredential = dataProvider.postCredentialFromXml(c, dummy, login, password, substit);
 			// 0: xml de retour
 			// 1,2: username, uid
 			// 3,4: substitute name, substitute id
@@ -3998,8 +4447,13 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			if( dataProvider != null )
-				dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			if( dataProvider != null )
+//				dataProvider.disconnect();
 		}
 		
 		return Response.status(status).entity(retVal).type(MediaType.APPLICATION_XML).build();
@@ -4020,6 +4474,7 @@ public class RestServicePortfolio
 		initService( httpServletRequest );
 		int retVal = 404;
 		String retText = "";
+		Connection c = null;
 
 		try
 		{
@@ -4040,8 +4495,9 @@ public class RestServicePortfolio
 				}
 			}
 
+			c = SqlUtils.getConnection(servContext);
 			// Check if we have that email somewhere
-			String email = dataProvider.emailFromLogin(username);
+			String email = dataProvider.emailFromLogin(c, username);
 			if( email != null && !"".equals(email) )
 			{
 				// Generate password
@@ -4052,7 +4508,7 @@ public class RestServicePortfolio
 				password = password.substring(0, 9);
 
 				// Write change
-				boolean result = dataProvider.changePassword(username, password);
+				boolean result = dataProvider.changePassword(c, username, password);
 				String content = "Your new password: "+password;
 
 				if( result )
@@ -4080,7 +4536,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 
 		return Response.status(retVal).entity(retText).build();
@@ -4106,6 +4567,7 @@ public class RestServicePortfolio
 		String completeURL;
 		StringBuffer requestURL;
 
+		Connection c = null;
 		try
 		{
 			ServiceTicketValidator sv = new ServiceTicketValidator();
@@ -4128,16 +4590,17 @@ public class RestServicePortfolio
 			//<cas:user>vassoilm</cas:user>
 			//session.setAttribute("user", sv.getUser());
 			//session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
-			userId =  dataProvider.getUserId(sv.getUser(), null);
+			c = SqlUtils.getConnection(servContext);
+			userId =  dataProvider.getUserId(c, sv.getUser(), null);
 			if(userId!=null)
 			{
 				session.setAttribute("user", sv.getUser());
 				session.setAttribute("uid",Integer.parseInt(userId));
-				dataProvider.disconnect();
+//				dataProvider.disconnect();
 			}
 			else
 			{
-				dataProvider.disconnect();
+//				dataProvider.disconnect();
 				return Response.status(403).entity("Login "+sv.getUser()+" not found or bad CAS auth (bad ticket or bad url service : "+completeURL+") : "+sv.getErrorMessage()).build();
 			}
 
@@ -4161,8 +4624,17 @@ public class RestServicePortfolio
 		catch(Exception ex)
 		{
 			ex.printStackTrace();
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :"+casUrlValidation);
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+			
 		}
 	}
 
@@ -4196,6 +4668,7 @@ public class RestServicePortfolio
 	public String getNodeWithXSL( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @QueryParam("xsl-file") String xslFile, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("lang") String lang, @QueryParam("p1") String p1, @QueryParam("p2") String p2, @QueryParam("p3") String  p3)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
@@ -4205,10 +4678,11 @@ public class RestServicePortfolio
 			javax.servlet.http.HttpSession session = httpServletRequest.getSession(true);
 			String ppath = session.getServletContext().getRealPath(File.separator);
 
+			c = SqlUtils.getConnection(servContext);
 			/// webapps...
 			ppath = ppath.substring(0,ppath.lastIndexOf(File.separator, ppath.length()-2)+1);
 			xslFile = ppath+xslFile;
-			String returnValue = dataProvider.getNodeWithXSL(new MimeType("text/xml"),nodeUuid,xslFile, parameters, ui.userId, groupId).toString();
+			String returnValue = dataProvider.getNodeWithXSL(c, credential, new MimeType("text/xml"),nodeUuid,xslFile, parameters, ui.userId, groupId).toString();
 			if(returnValue.length() != 0)
 			{
 				if(accept.equals(MediaType.APPLICATION_JSON))
@@ -4243,7 +4717,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -4260,10 +4739,12 @@ public class RestServicePortfolio
 	public String postNodeFromModelBySemanticTag(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @PathParam("semantic-tag") String semantictag, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
 
 		try
 		{
-			String returnValue = dataProvider.postNodeFromModelBySemanticTag(new MimeType("text/xml"),nodeUuid,semantictag, ui.userId, groupId).toString();
+			c = SqlUtils.getConnection(servContext);
+			String returnValue = dataProvider.postNodeFromModelBySemanticTag(c, credential, new MimeType("text/xml"),nodeUuid,semantictag, ui.userId, groupId).toString();
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -4286,7 +4767,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -4304,6 +4790,7 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		String returnValue = "";
+		Connection c = null;
 
 		try
 		{
@@ -4311,7 +4798,8 @@ public class RestServicePortfolio
 			if( "true".equals(instance) )
 				instantiate = true;
 
-			returnValue = dataProvider.postPortfolioZip(new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
+			c = SqlUtils.getConnection(servContext);
+			returnValue = dataProvider.postPortfolioZip(c, credential, new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
 		}
 		catch( Exception e )
 		{
@@ -4319,7 +4807,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 
 		return returnValue;
@@ -4401,10 +4894,12 @@ public class RestServicePortfolio
 	public String getUsersByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		Connection c = null;
 
 		try
 		{
-			String xmlUsers = dataProvider.getUsersByRole(ui.userId, portfolioUuid, role);
+			c = SqlUtils.getConnection(servContext);
+			String xmlUsers = dataProvider.getUsersByRole(c, ui.userId, portfolioUuid, role);
 			logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
 
 			return xmlUsers;
@@ -4418,7 +4913,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -4434,10 +4934,12 @@ public class RestServicePortfolio
 	public String getGroupsByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		Connection c = null;
 
 		try
 		{
-			String xmlGroups = dataProvider.getGroupsByRole(ui.userId, portfolioUuid, role);
+			c = SqlUtils.getConnection(servContext);
+			String xmlGroups = dataProvider.getGroupsByRole(c, ui.userId, portfolioUuid, role);
 			logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
 			return xmlGroups;
@@ -4451,7 +4953,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -4480,10 +4987,12 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		int response = -1;
+		Connection c = null;
 
 		try
 		{
-			response = dataProvider.postUserGroup(groupname, ui.userId);
+			c = SqlUtils.getConnection(servContext);
+			response = dataProvider.postUserGroup(c, groupname, ui.userId);
 			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
 			
 			if( response == -1 )
@@ -4498,7 +5007,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 
 		return response;
@@ -4518,11 +5032,13 @@ public class RestServicePortfolio
 	public String putUserInUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		Connection c = null;
 
 		try
 		{
 			int response = -1;
-			response = dataProvider.putUserInUserGroup(user, group, ui.userId);
+			c = SqlUtils.getConnection(servContext);
+			response = dataProvider.putUserInUserGroup(c, user, group, ui.userId);
 			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
 
 			return "";
@@ -4536,7 +5052,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -4566,13 +5087,15 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
+		Connection c = null;
 		String xmlUsers = "";
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			if( group == null )
-				xmlUsers = dataProvider.getUserGroupList(ui.userId);
+				xmlUsers = dataProvider.getUserGroupList(c, ui.userId);
 			else
-				xmlUsers = dataProvider.getUsersByUserGroup(group, ui.userId);
+				xmlUsers = dataProvider.getUsersByUserGroup(c, group, ui.userId);
 			logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
 		}
 		catch(Exception ex)
@@ -4584,7 +5107,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 
 		return xmlUsers;
@@ -4605,13 +5133,15 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		String response = "";
+		Connection c = null;
 
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			if( user == null )
-				response = dataProvider.deleteUsersGroups(group, ui.userId);
+				response = dataProvider.deleteUsersGroups(c, group, ui.userId);
 			else
-				response = dataProvider.deleteUsersFromUserGroups(user, group, ui.userId);
+				response = dataProvider.deleteUsersFromUserGroups(c, user, group, ui.userId);
 			logRestRequest(httpServletRequest, "", response, Status.OK.getStatusCode());
 
 		}
@@ -4624,7 +5154,12 @@ public class RestServicePortfolio
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 		return response;
 	}
@@ -4657,12 +5192,14 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			// On execute l'action sur le noeud uuid
 			if( uuid != null && macroName != null )
 			{
-				returnValue = dataProvider.postMacroOnNode(ui.userId, uuid, macroName);
+				returnValue = dataProvider.postMacroOnNode(c, credential, ui.userId, uuid, macroName);
 				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 				if(returnValue == "faux")
@@ -4687,12 +5224,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -4722,6 +5264,7 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
 			/**
@@ -4799,11 +5342,12 @@ public class RestServicePortfolio
 				}
 			}
 
+			c = SqlUtils.getConnection(servContext);
 			ArrayList<String> nodes = new ArrayList<String>();
 			for( int i=0; i<portfolio.size(); ++i )	// For all portfolio
 			{
 				String portfolioUuid = portfolio.get(i);
-				String portfolioStr = dataProvider.getPortfolio(new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, null, null, ui.subId).toString();
+				String portfolioStr = dataProvider.getPortfolio(c, credential, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, null, null, ui.subId).toString();
 				Document docPort = documentBuilder.parse(new ByteArrayInputStream(portfolioStr.getBytes("UTF-8")));
 
 				/// Fetch nodes inside those portfolios
@@ -4870,7 +5414,7 @@ public class RestServicePortfolio
 						String nodeid = nodes.get(j);
 
 						// change right
-						dataProvider.postRights(ui.userId, nodeid, rolename, noderight);
+						dataProvider.postRights(c, credential, ui.userId, nodeid, rolename, noderight);
 					}
 				}
 				else if( "action".equals(right.getNodeName()) )	// Using an action on node
@@ -4882,7 +5426,7 @@ public class RestServicePortfolio
 
 						// TODO: check for reset keyword
 						// reset right
-						dataProvider.postMacroOnNode(ui.userId, nodeid, "reset");
+						dataProvider.postMacroOnNode(c, credential, ui.userId, nodeid, "reset");
 					}
 				}
 			}
@@ -4905,12 +5449,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -4928,10 +5477,12 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			// Retourne le contenu du type
-			returnValue = dataProvider.getRRGList(ui.userId, portfolio, queryuser, role);
+			returnValue = dataProvider.getRRGList(c, ui.userId, portfolio, queryuser, role);
 			logRestRequest(httpServletRequest, "getRightsGroup", returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -4949,12 +5500,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getRightsGroup",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -4972,12 +5528,14 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			// Retourne le contenu du type
 			if( portId != null )
 			{
-				returnValue = dataProvider.getPortfolioInfo(ui.userId, portId);
+				returnValue = dataProvider.getPortfolioInfo(c, ui.userId, portId);
 				logRestRequest(httpServletRequest, "getPortfolioRightInfo", returnValue, Status.OK.getStatusCode());
 
 				if(returnValue == "faux")
@@ -4997,12 +5555,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getPortfolioRightInfo",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -5020,12 +5583,14 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			// Retourne le contenu du type
 			if( rrgId != null )
 			{
-				returnValue = dataProvider.getRRGInfo(ui.userId, rrgId);
+				returnValue = dataProvider.getRRGInfo(c, ui.userId, rrgId);
 				logRestRequest(httpServletRequest, "getRightInfo", returnValue, Status.OK.getStatusCode());
 
 				if(returnValue == "faux")
@@ -5045,12 +5610,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getRightInfo",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -5068,12 +5638,14 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			// Retourne le contenu du type
 			if( rrgId != null )
 			{
-				returnValue = dataProvider.putRRGUpdate(ui.userId, rrgId, xmlNode);
+				returnValue = dataProvider.putRRGUpdate(c, credential, ui.userId, rrgId, xmlNode);
 				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 				if(returnValue == "faux")
@@ -5093,12 +5665,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -5120,9 +5697,11 @@ public class RestServicePortfolio
 		 */
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
-			returnValue = dataProvider.postRRGCreate(ui.userId, portfolio, xmlNode);
+			c = SqlUtils.getConnection(servContext);
+			returnValue = dataProvider.postRRGCreate(c, credential, ui.userId, portfolio, xmlNode);
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -5140,12 +5719,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -5163,9 +5747,11 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
-			returnValue = dataProvider.postRRGUsers(ui.userId, rrgId, xmlNode);
+			c = SqlUtils.getConnection(servContext);
+			returnValue = dataProvider.postRRGUsers(c, credential, ui.userId, rrgId, xmlNode);
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -5183,12 +5769,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -5206,9 +5797,11 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
-			returnValue = dataProvider.postRRGUser(ui.userId, rrgId, queryuser);
+			c = SqlUtils.getConnection(servContext);
+			returnValue = dataProvider.postRRGUser(c, credential, ui.userId, rrgId, queryuser);
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -5226,12 +5819,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -5249,9 +5847,11 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
-			returnValue = dataProvider.deleteRRG(ui.userId, rrgId);
+			c = SqlUtils.getConnection(servContext);
+			returnValue = dataProvider.deleteRRG(c, credential, ui.userId, rrgId);
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -5269,12 +5869,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -5292,9 +5897,11 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
-			returnValue = dataProvider.deleteRRGUser(ui.userId, rrgId, queryuser);
+			c = SqlUtils.getConnection(servContext);
+			returnValue = dataProvider.deleteRRGUser(c, credential, ui.userId, rrgId, queryuser);
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -5312,12 +5919,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -5335,12 +5947,14 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
+		Connection c = null;
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			// Retourne le contenu du type
 			if( portId != null )
 			{
-				returnValue = dataProvider.deletePortfolioUser(ui.userId, portId);
+				returnValue = dataProvider.deletePortfolioUser(c, credential, ui.userId, portId);
 				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 				if(returnValue == "faux")
@@ -5360,12 +5974,17 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 
@@ -5420,7 +6039,7 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "",javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 	}
@@ -5449,7 +6068,7 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "",javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
+//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 	}

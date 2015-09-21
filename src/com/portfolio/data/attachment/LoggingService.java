@@ -24,9 +24,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -55,8 +57,9 @@ public class LoggingService  extends HttpServlet
 	String path;
 
 	@Override
-	public void init() throws ServletException
+	public void init( ServletConfig config ) throws ServletException
 	{
+		super.init(config);
 		try
 		{
 			/// Checking Log folder
@@ -81,14 +84,15 @@ public class LoggingService  extends HttpServlet
 		
 	}
 
+	/*
 	public void initialize(HttpServletRequest httpServletRequest)
 	{
 		Connection c;
 		try
 		{
-			dataProvider.disconnect();	// Ensure we are disconnected
-			c = SqlUtils.getConnection(getServletContext());
-			dataProvider.setConnection(c);
+//			dataProvider.disconnect();	// Ensure we are disconnected
+//			c = SqlUtils.getConnection(getServletContext());
+//			dataProvider.setConnection(c);
 		}
 		catch( Exception e )
 		{
@@ -96,12 +100,14 @@ public class LoggingService  extends HttpServlet
 			logger.error(e.getMessage());
 		}
 	}
+	//*/
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 	{
-		initialize(request);
+//		initialize(request);
 		
+		Connection c = null;
 		try
 		{
 			HttpSession session = request.getSession(true);
@@ -131,11 +137,12 @@ public class LoggingService  extends HttpServlet
 			String showuser = request.getParameter("user");
 			if( "true".equals(showuser) )
 			{
-				String userinfo = dataProvider.getInfUser(1, val);
+				c = SqlUtils.getConnection(session.getServletContext());
+				String userinfo = dataProvider.getInfUser(c, 1, val);
 				Document doc = DomUtils.xmlString2Document(userinfo, null);
 				NodeList usernameNodes = doc.getElementsByTagName("username");
 				username = usernameNodes.item(0).getTextContent();
-				dataProvider.disconnect();
+//				dataProvider.disconnect();
 			}
 			
 			/// Formatting
@@ -168,9 +175,11 @@ public class LoggingService  extends HttpServlet
 		{
 			try
 			{
+				if( c != null ) c.close();
 				request.getInputStream().close();
 				response.getWriter().close();
 			}
+			catch( SQLException e ){ e.printStackTrace(); }
 			catch( IOException e )
 			{
 				e.printStackTrace();
