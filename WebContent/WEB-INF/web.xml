@@ -12,6 +12,10 @@
 		<res-auth>Container</res-auth>
 	</resource-ref>
 	
+	<listener>
+		<listener-class>com.portfolio.data.utils.Manager</listener-class>
+	</listener>
+	
 	<servlet>
 		<servlet-name>Jersey REST Service</servlet-name>
 		<servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>

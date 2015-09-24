@@ -79,7 +79,7 @@ public class RegisterService  extends HttpServlet {
 		super.init(config);
 		try
 		{
-			ConfigUtils.loadConfigFile(config);
+			ConfigUtils.loadConfigFile(config.getServletContext());
 			dataProviderName = ConfigUtils.get("dataProviderClass");
 			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 		}

@@ -86,7 +86,7 @@ public class LTIServlet extends HttpServlet {
 	  ServletContext application = getServletConfig().getServletContext();
 	  try
 	  {
-	  	ConfigUtils.loadConfigFile(sc);
+	  	ConfigUtils.loadConfigFile(sc.getServletContext());
 	    loadRoleMapAttributes(application);
 	  }
 	  catch( Exception e ){ e.printStackTrace(); }

@@ -132,7 +132,7 @@ public class FileServlet  extends HttpServlet
 		servContext = config.getServletContext();
 		try
 		{
-			ConfigUtils.loadConfigFile(config);
+			ConfigUtils.loadConfigFile(config.getServletContext());
 		}
 		catch( Exception e1 )
 		{

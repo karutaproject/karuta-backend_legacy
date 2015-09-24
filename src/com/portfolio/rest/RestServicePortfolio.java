@@ -149,7 +149,7 @@ public class RestServicePortfolio
 		try
 		{
 			// Loading configKaruta.properties
-			ConfigUtils.loadConfigFile(sc);
+			ConfigUtils.loadConfigFile(sc.getServletContext());
 
 			// Initialize data provider and cas
 			try

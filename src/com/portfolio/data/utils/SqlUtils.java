@@ -22,6 +22,7 @@ import java.sql.Timestamp;
 import java.util.Properties;
 
 import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.servlet.ServletContext;
 import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
@@ -130,4 +131,19 @@ public class SqlUtils
 		return connection;
 	}
 
+	public static void close()
+	{
+		try
+		{
+			if( cxt != null )
+			{
+				cxt.close();
+				cxt = null;
+			}
+		}
+		catch( NamingException e )
+		{
+			e.printStackTrace();
+		}
+	}
 }
