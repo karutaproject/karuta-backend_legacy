@@ -98,8 +98,7 @@ public class HandlerNotificationSakai implements KEventHandler
 							if( notif.isEmpty() )
 								return false;
 
-							Credential cred = new Credential();
-							String context = dataProvider.getNode(connection, cred, new MimeType("text/xml"),event.uuid,true,this.userId,this.groupId, null).toString();
+							String context = dataProvider.getNode(connection, new MimeType("text/xml"),event.uuid,true,this.userId,this.groupId, null).toString();
 							Document docContext = parseString(context);
 							NodeList res = docContext.getElementsByTagName("asmResource");
 							String blah = "";

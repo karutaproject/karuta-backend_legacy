@@ -64,7 +64,6 @@ public class RegisterService  extends HttpServlet {
 //	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	final Credential credential = new Credential();
 	int userId;
 	int groupId = -1;
 	String user = "";
@@ -230,7 +229,7 @@ public class RegisterService  extends HttpServlet {
 
 			if( !"".equals(username) )
 			{
-				String val = dataProvider.postUsers(connection, credential, converted, 1);
+				String val = dataProvider.postUsers(connection, converted, 1);
 				if( !"".equals(val) )
 				{
 					logger.debug("Account create: "+val);

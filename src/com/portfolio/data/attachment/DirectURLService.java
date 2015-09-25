@@ -55,7 +55,6 @@ public class DirectURLService  extends HttpServlet {
 	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	final Credential credential = new Credential();
 	int userId;
 	int groupId = -1;
 	HttpSession session;
@@ -159,11 +158,11 @@ public class DirectURLService  extends HttpServlet {
 				if( uid > 0 )
 				{
 					/// Find group for this node
-					int rrgid = dataProvider.getRoleByNode(c, credential, 1, uuid, role);
+					int rrgid = dataProvider.getRoleByNode(c, 1, uuid, role);
 
 					/// Put person in specified group
 					String userInfo = "<users><user id='"+uid+"'></users>";
-					dataProvider.postRRGUsers(c, credential, 1, rrgid, userInfo);
+					dataProvider.postRRGUsers(c, 1, rrgid, userInfo);
 
 					/// Log person
 					session.setAttribute("user", login[1]);

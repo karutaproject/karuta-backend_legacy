@@ -104,8 +104,7 @@ public class HandlerDatabase implements KEventHandler
 					switch( event.requestType )
 					{
 						case POST:
-							Credential cred = new Credential();
-							String returnValue = dataProvider.postNode(connection, cred, new MimeType("text/xml"), event.uuid, event.inputData, this.userId, this.groupId).toString();
+							String returnValue = dataProvider.postNode(connection, new MimeType("text/xml"), event.uuid, event.inputData, this.userId, this.groupId).toString();
 							if( "faux".equals(returnValue) )
 							{
 								event.message = "Vous n'avez pas les droits d'acces";

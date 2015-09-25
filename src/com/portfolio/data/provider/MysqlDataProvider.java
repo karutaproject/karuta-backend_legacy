@@ -109,7 +109,7 @@ public class MysqlDataProvider implements DataProvider {
 	final Logger logger = LoggerFactory.getLogger(MysqlDataProvider.class);
 
 //	private Connection connection = null;
-//	private Credential credential = null;
+	final private Credential cred = new Credential();
 	private String portfolioUuidPreliminaire = null; // Sert pour generer un uuid avant import du portfolio
 //	private final ArrayList<String> portfolioRessourcesImportUuid = new ArrayList();
 //	private final ArrayList<String> portfolioRessourcesImportPath = new ArrayList();
@@ -270,7 +270,7 @@ public class MysqlDataProvider implements DataProvider {
 		return st.executeQuery();
 	}
 
-	public ResultSet getMysqlPortfolios(Connection c, Credential cred, Integer userId, int substid, Boolean portfolioActive)
+	public ResultSet getMysqlPortfolios(Connection c, Integer userId, int substid, Boolean portfolioActive)
 	{
 		if( userId == null && substid == 0 ) return null;
 		PreparedStatement st;
@@ -594,7 +594,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private int deleteMySqlPortfolio(Connection c, Credential cred, String portfolioUuid, int userId, int groupId) throws SQLException
+	private int deleteMySqlPortfolio(Connection c, String portfolioUuid, int userId, int groupId) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -655,7 +655,7 @@ public class MysqlDataProvider implements DataProvider {
 		return status;
 	}
 
-	private int deleteMySqlNode(Connection c, Credential cred, String nodeUuid, String nodeParentUuid,int userId, int groupId) throws SQLException
+	private int deleteMySqlNode(Connection c, String nodeUuid, String nodeParentUuid,int userId, int groupId) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -1109,7 +1109,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private int deleteMySqlResource(Connection c, Credential cred, String resourceUuid, int userId, int groupId) throws SQLException
+	private int deleteMySqlResource(Connection c, String resourceUuid, int userId, int groupId) throws SQLException
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -1152,7 +1152,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isUserMemberOfGroup(Connection c, Credential cred, int userId,int groupId)
+	public boolean isUserMemberOfGroup(Connection c, int userId,int groupId)
 	{
 		return cred.isUserMemberOfGroup(c, userId,groupId);
 	}
@@ -1427,7 +1427,7 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public Object getPortfolio(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception
+	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception
 	{
 		String rootNodeUuid = getPortfolioRootNode(c, portfolioUuid);
 		String header = "";
@@ -1489,7 +1489,7 @@ public class MysqlDataProvider implements DataProvider {
 			//          root.setAttribute("schemaVersion", "1.0");
 //			document.appendChild(root);
 
-			String data = getLinearXml(c, cred, portfolioUuid, rootNodeUuid, null, true, null, userId, nodeRight.rrgId, nodeRight.groupLabel);
+			String data = getLinearXml(c, portfolioUuid, rootNodeUuid, null, true, null, userId, nodeRight.rrgId, nodeRight.groupLabel);
 
 			StringWriter stw = new StringWriter();
 			stw.append(headerXML+data+"</portfolio>");
@@ -1560,11 +1560,11 @@ public class MysqlDataProvider implements DataProvider {
 			footer = "}}";
 		}
 
-		return header+getNode(c, cred, outMimeType, rootNodeUuid,true, userId, groupId, label).toString()+footer;
+		return header+getNode(c, outMimeType, rootNodeUuid,true, userId, groupId, label).toString()+footer;
 	}
 
 	@Override
-	public Object getPortfolioByCode(Connection c, Credential cred, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception
+	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception
 	{
 		//return this.getPortfolio(mimeType, this.getPortfolioUuidByPortfolioCode(portfolioCode), userId, groupId, null);
 
@@ -1583,7 +1583,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(withResources)
 		{
-			return this.getPortfolio(c, cred, new MimeType("text/xml"),pid,userId, groupId, null, null, null, substid).toString();
+			return this.getPortfolio(c, new MimeType("text/xml"),pid,userId, groupId, null, null, null, substid).toString();
 		}
 		else
 		{
@@ -1607,7 +1607,7 @@ public class MysqlDataProvider implements DataProvider {
 				result += DomUtils.getXmlAttributeOutput("id", res.getString("portfolio_id"))+" ";
 				result += DomUtils.getXmlAttributeOutput("root_node_id", res.getString("root_node_uuid"))+" ";
 				result += ">";
-				result += getNodeXmlOutput(c, cred, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId, null,false);
+				result += getNodeXmlOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId, null,false);
 				result += "</portfolio>";
 			}
 		}
@@ -1616,7 +1616,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getPortfolios(Connection c, Credential cred, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid) throws SQLException
+	public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid) throws SQLException
 	{
 		PreparedStatement st = null;
 		ResultSet res = null;
@@ -1677,7 +1677,7 @@ public class MysqlDataProvider implements DataProvider {
 				
 				if(res.getString("shared_node_uuid")!=null)	// FIXME, add to query
 				{
-					out.append(getNodeXmlOutput(c, cred, res.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
+					out.append(getNodeXmlOutput(c, res.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
 				}
 				else
 				{
@@ -1780,7 +1780,7 @@ public class MysqlDataProvider implements DataProvider {
 				result += "{ ";
 				result += DomUtils.getJsonAttributeOutput("id", res.getString("portfolio_id"))+", ";
 				result += DomUtils.getJsonAttributeOutput("root_node_id", res.getString("root_node_uuid"))+", ";
-				result += getNodeJsonOutput(c, cred, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId,null,false);
+				result += getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId,null,false);
 				result += "} ";
 				firstPass = true;
 			}
@@ -1793,7 +1793,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNodeBySemanticTag(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception
+	public Object getNodeBySemanticTag(Connection c, MimeType outMimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception
 	{
 		ResultSet res;
 		String nodeUuid;
@@ -1807,15 +1807,15 @@ public class MysqlDataProvider implements DataProvider {
 			return null;
 
 		if(outMimeType.getSubType().equals("xml"))
-			return getNodeXmlOutput(c, cred, nodeUuid,true,null,userId, groupId, null,true);
+			return getNodeXmlOutput(c, nodeUuid,true,null,userId, groupId, null,true);
 		else if(outMimeType.getSubType().equals("json"))
-			return "{"+getNodeJsonOutput(c, cred, nodeUuid,true,null,userId, groupId,null,true)+"}";
+			return "{"+getNodeJsonOutput(c, nodeUuid,true,null,userId, groupId,null,true)+"}";
 		else
 			return null;
 	}
 
 	@Override
-	public Object getNodesBySemanticTag(Connection c, Credential cred, MimeType outMimeType, int userId,int groupId, String portfolioUuid, String semanticTag) throws SQLException
+	public Object getNodesBySemanticTag(Connection c, MimeType outMimeType, int userId,int groupId, String portfolioUuid, String semanticTag) throws SQLException
 	{
 		ResultSet res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semanticTag);
 		String result = "";
@@ -1861,7 +1861,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postPortfolio(Connection c, Credential cred, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String portfolioModelId, int substid, boolean parseRights) throws Exception
+	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String portfolioModelId, int substid, boolean parseRights) throws Exception
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -1872,7 +1872,7 @@ public class MysqlDataProvider implements DataProvider {
 		// Si le modele est renseigné, on ignore le XML posté et on récupere le contenu du modele
 		// à la place
 		if(portfolioModelId!=null)
-			in = getPortfolio(c, cred, inMimeType,portfolioModelId,userId, groupId, null, null, null, substid).toString();
+			in = getPortfolio(c, inMimeType,portfolioModelId,userId, groupId, null, null, null, substid).toString();
 
 		// On génère un nouvel uuid
 		if(this.portfolioUuidPreliminaire!=null)
@@ -1921,7 +1921,7 @@ public class MysqlDataProvider implements DataProvider {
 
 				insertMysqlPortfolio(c, portfolioUuid,uuid,0,userId);
 
-				writeNode(c, cred, rootNode, portfolioUuid, portfolioModelId, userId,0, uuid,null,0,0,false, null, parseRights);
+				writeNode(c, rootNode, portfolioUuid, portfolioModelId, userId,0, uuid,null,0,0,false, null, parseRights);
 			}
 		}
 		updateMysqlPortfolioActive(c, portfolioUuid,true);
@@ -1932,7 +1932,7 @@ public class MysqlDataProvider implements DataProvider {
 //		if( !parseRights )
 		{
 			/// Créer groupe 'designer', 'all' est mis avec ce qui est spécifié dans le xml reçu
-			int groupid = postCreateRole(c, cred, portfolioUuid, "designer", userId);
+			int groupid = postCreateRole(c, portfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
@@ -1990,7 +1990,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putPortfolio(Connection c, Credential cred, MimeType inMimeType, MimeType outMimeType, String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String portfolioModelId) throws Exception
+	public Object putPortfolio(Connection c, MimeType inMimeType, MimeType outMimeType, String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String portfolioModelId) throws Exception
 	{
 		StringBuffer outTrace = new StringBuffer();
 
@@ -2043,7 +2043,7 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				insertMysqlPortfolio(c, portfolioUuid,uuid,0,userId);
 
-				writeNode(c, cred, rootNode, portfolioUuid, portfolioModelId, userId,0, null,null,0,0,true, null, false);
+				writeNode(c, rootNode, portfolioUuid, portfolioModelId, userId,0, null,null,0,0,true, null, false);
 			}
 		}
 
@@ -2053,25 +2053,25 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object deletePortfolio(Connection c, Credential cred, String portfolioUuid, int userId, int groupId) throws SQLException
+	public Object deletePortfolio(Connection c, String portfolioUuid, int userId, int groupId) throws SQLException
 	{
 		/*
 		if(!credential.isAdmin(userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 		//*/
 
-		return this.deleteMySqlPortfolio(c, cred, portfolioUuid, userId, groupId);
+		return this.deleteMySqlPortfolio(c, portfolioUuid, userId, groupId);
 	}
 
 	@Override
-	public Object getNodes(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid,
+	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,
 			int userId,int groupId, String semtag, String parentUuid, String filterId,
 			String filterParameters, String sortId) throws SQLException
 	{
-		return getNodeXmlListOutput(c, cred, parentUuid, true, userId, groupId);
+		return getNodeXmlListOutput(c, parentUuid, true, userId, groupId);
 	}
 
-	private  StringBuffer getNodeJsonOutput(Connection c, Credential cred, String nodeUuid,boolean withChildren, String withChildrenOfXsiType,int userId,int groupId,String label, boolean checkSecurity) throws SQLException
+	private  StringBuffer getNodeJsonOutput(Connection c, String nodeUuid,boolean withChildren, String withChildrenOfXsiType,int userId,int groupId,String label, boolean checkSecurity) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
 		ResultSet resNode = getMysqlNode(c, nodeUuid,userId,groupId);
@@ -2156,7 +2156,7 @@ public class MysqlDataProvider implements DataProvider {
 
 							}
 							if(withChildrenOfXsiType==null || withChildrenOfXsiType.equals(tmpXsiType))
-								result.append(getNodeJsonOutput(c, cred, arrayChild[i],true,null,userId,groupId,label,true));
+								result.append(getNodeJsonOutput(c, arrayChild[i],true,null,userId,groupId,label,true));
 
 							if(withChildrenOfXsiType==null)
 								if(arrayChild.length>1)
@@ -2181,7 +2181,7 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
-	private  StringBuffer getNodeXmlOutput(Connection c, Credential cred, String nodeUuid,boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String label,boolean checkSecurity) throws SQLException
+	private  StringBuffer getNodeXmlOutput(Connection c, String nodeUuid,boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String label,boolean checkSecurity) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
 		// Verification securité
@@ -2215,7 +2215,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			if(resNode.getString("shared_node_uuid")!=null)
 			{
-				result.append(getNodeXmlOutput(c, cred, resNode.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
+				result.append(getNodeXmlOutput(c, resNode.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
 			}
 			else
 			{
@@ -2364,7 +2364,7 @@ public class MysqlDataProvider implements DataProvider {
 
 								}
 								if(withChildrenOfXsiType==null || withChildrenOfXsiType.equals(tmpXsiType))
-									result.append(getNodeXmlOutput(c, cred, arrayChild[i],true,null,userId,groupId, null,true));
+									result.append(getNodeXmlOutput(c, arrayChild[i],true,null,userId,groupId, null,true));
 
 								resChildNode.close();
 							}
@@ -2403,7 +2403,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 
-	private String getLinearXml(Connection c, Credential cred, String portfolioUuid, String rootuuid, Node portfolio, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role) throws SQLException, SAXException, IOException, ParserConfigurationException
+	private String getLinearXml(Connection c, String portfolioUuid, String rootuuid, Node portfolio, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role) throws SQLException, SAXException, IOException, ParserConfigurationException
 //	private String getLinearXml(String portfolioUuid, String rootuuid, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role) throws SQLException, SAXException, IOException, ParserConfigurationException
 	{
 		DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
@@ -2421,7 +2421,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		time0 = System.currentTimeMillis();
 
-		ResultSet resNode = getMysqlStructure(c, cred, portfolioUuid,userId, groupId);
+		ResultSet resNode = getMysqlStructure(c, portfolioUuid,userId, groupId);
 
 		time1= System.currentTimeMillis();
 
@@ -2750,7 +2750,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private ResultSet getMysqlStructure(Connection c, Credential cred, String portfolioUuid, int userId,  int groupId) throws SQLException
+	private ResultSet getMysqlStructure(Connection c, String portfolioUuid, int userId,  int groupId) throws SQLException
 	{
 		PreparedStatement st=null;
 		String sql = "";
@@ -3193,7 +3193,7 @@ public class MysqlDataProvider implements DataProvider {
 	/// TODO: A faire un 'benchmark' dessus
 	/// Récupère les noeuds en dessous par niveau. Pour faciliter le traitement des shared_node
 	/// Mais ça serait beaucoup plus simple de faire un objet a traiter dans le client
-	private ResultSet getNodePerLevel(Connection c, Credential cred, String nodeUuid, int userId,  int rrgId) throws SQLException
+	private ResultSet getNodePerLevel(Connection c, String nodeUuid, int userId,  int rrgId) throws SQLException
 	{
 		PreparedStatement st = null;
 		String sql="";
@@ -3544,7 +3544,7 @@ public class MysqlDataProvider implements DataProvider {
 		return res;
 	}
 
-	private  StringBuffer getNodeXmlListOutput(Connection c, Credential cred, String nodeUuid,boolean withChildren,int userId, int groupId) throws SQLException
+	private  StringBuffer getNodeXmlListOutput(Connection c, String nodeUuid,boolean withChildren,int userId, int groupId) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
 
@@ -3611,7 +3611,7 @@ public class MysqlDataProvider implements DataProvider {
 							arrayChild = resNode.getString("node_children_uuid").split(",");
 							for(int i =0;i<(arrayChild.length);i++)
 							{
-								result.append(getNodeXmlListOutput(c, cred, arrayChild[i],true, userId, groupId));
+								result.append(getNodeXmlListOutput(c, arrayChild[i],true, userId, groupId));
 							}
 						}
 					}
@@ -3633,7 +3633,7 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public Object getNode(Connection c, Credential cred, MimeType outMimeType, String nodeUuid,boolean withChildren, int userId,int groupId, String label) throws SQLException, TransformerFactoryConfigurationError, ParserConfigurationException, UnsupportedEncodingException, DOMException, SAXException, IOException, TransformerException
+	public Object getNode(Connection c, MimeType outMimeType, String nodeUuid,boolean withChildren, int userId,int groupId, String label) throws SQLException, TransformerFactoryConfigurationError, ParserConfigurationException, UnsupportedEncodingException, DOMException, SAXException, IOException, TransformerException
 	{
 		StringBuffer nodexml = new StringBuffer();
 
@@ -3655,7 +3655,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(outMimeType.getSubType().equals("xml"))
 		{
-			ResultSet result = getNodePerLevel(c, cred, nodeUuid, userId, nodeRight.rrgId);
+			ResultSet result = getNodePerLevel(c, nodeUuid, userId, nodeRight.rrgId);
 
 			long t_nodePerLevel = System.currentTimeMillis();
 
@@ -3746,13 +3746,13 @@ public class MysqlDataProvider implements DataProvider {
 			return nodexml;
 		}
 		else if(outMimeType.getSubType().equals("json"))
-			return "{"+getNodeJsonOutput(c, cred, nodeUuid,withChildren,null,userId, groupId,label,true)+"}";
+			return "{"+getNodeJsonOutput(c, nodeUuid,withChildren,null,userId, groupId,label,true)+"}";
 		else
 			return null;
 	}
 
 	@Override
-	public Object deleteNode(Connection c, Credential cred, String nodeUuid, int userId, int groupId)
+	public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId)
 	{
 		/// FIXME: This method is taking time
 		NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, Credential.DELETE);
@@ -3970,7 +3970,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postInstanciatePortfolio(Connection c, Credential cred, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception
+	public Object postInstanciatePortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception
 	{
 		if( !cred.isAdmin(c, userId) && !cred.isCreator(c, userId) ) return "no rights";
 		
@@ -4102,7 +4102,7 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid binary(16) NOT NULL, " +
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
-						"t_level INT) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
@@ -4127,7 +4127,7 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid binary(16) NOT NULL, " +
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
-						"t_level INT) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
@@ -4893,14 +4893,14 @@ public class MysqlDataProvider implements DataProvider {
 			st.close();
 
 			/// Finalement on crée un rôle designer
-			int groupid = postCreateRole(c, cred, newPortfolioUuid, "designer", userId);
+			int groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
 
 			/// Set portfolio public if needed
 			if( setPublic )
-				setPublicState(c, cred, userId, newPortfolioUuid, setPublic);
+				setPublicState(c, userId, newPortfolioUuid, setPublic);
 		}
 		catch( Exception e )
 		{
@@ -4937,7 +4937,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postCopyPortfolio(Connection c, Credential cred, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception
+	public Object postCopyPortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception
 	{
 		String sql = "";
 		PreparedStatement st;
@@ -5066,7 +5066,7 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid binary(16) NOT NULL, " +
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
-						"t_level INT) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
@@ -5279,7 +5279,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.close();
 
 			/// Finalement on crée un rôle designer
-			int groupid = postCreateRole(c, cred, newPortfolioUuid, "designer", userId);
+			int groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
@@ -5494,10 +5494,13 @@ public class MysqlDataProvider implements DataProvider {
 	}
 	
 	@Override
-	public Object postImportNode( Connection c, Credential cred, MimeType inMimeType, String destUuid, String tag, String code, int userId, int groupId ) throws Exception
+	public Object postImportNode( Connection c, MimeType inMimeType, String destUuid, String tag, String code, String srcuuid, int userId, int groupId ) throws Exception
 	{
 		if( "".equals(tag) || tag == null || "".equals(code) || code == null )
-			return "erreur";
+		{
+			if( srcuuid == null || "".equals(srcuuid) )
+				return "erreur";
+		}
 
 		String sql = "";
 		PreparedStatement st;
@@ -5515,11 +5518,22 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			/// Check/update cache
-			String portfolioCode = checkCache(c, code);
-			
-			if( portfolioCode == null )
-				return "Inexistent selection";
+			/// If we have a uuid specified
+			String portfolioCode = "";
+			if( srcuuid != null )
+			{
+				// Check if user has right to read it
+				if( !cred.hasNodeRight(c, userId, groupId, srcuuid, Credential.READ) )
+						return "No rights";
+			}
+			else
+			{
+				/// Check/update cache
+				portfolioCode = checkCache(c, code);
+				
+				if( portfolioCode == null )
+					return "Inexistent selection";
+			}
 
 			///// Création des tables temporaires
 			/// Pour la copie de la structure
@@ -5594,46 +5608,70 @@ public class MysqlDataProvider implements DataProvider {
 
 			t1 = System.currentTimeMillis();
 			
-			// Copie the whole portfolio from shared cache to local cache
-			sql = "INSERT INTO t_data_node ";
-			if (dbserveur.equals("mysql")){
-				sql += "SELECT uuid2bin(UUID()), ";
-			} else if (dbserveur.equals("oracle")){
-				sql += "SELECT sys_guid(), ";
-			}
-			sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
-					"FROM t_node_cache n " +
-					"WHERE n.portfolio_id=uuid2bin(?)";
-			st = c.prepareStatement(sql);
-			st.setString(1, portfolioCode);
-			st.executeUpdate();
-			st.close();
-
-			t1e = System.currentTimeMillis();
-
-			/// Find the right starting node we want
-			sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
-					"FROM t_data_node n2 " +
-					"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
-			st = c.prepareStatement(sql);
-			st.setString(1, tag);
-			st.setString(2, portfolioCode);
-
-			ResultSet res = st.executeQuery();
+			// If we have uuid, copy portfolio from uuid to local cache
 			String baseUuid="";
-			String pUuid="";
-			if( res.next() )	// Take the first one declared
+			ResultSet res = null;
+			if( srcuuid != null )
 			{
-				baseUuid = res.getString("nUuid");
-				pUuid = res.getString("pUuid");
-				res.close();
+				sql = "INSERT INTO t_data_node ";
+				if (dbserveur.equals("mysql")){
+					sql += "SELECT uuid2bin(UUID()), ";
+				} else if (dbserveur.equals("oracle")){
+					sql += "SELECT sys_guid(), ";
+				}
+				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+						"FROM t_node_cache n " +
+						"WHERE n.portfolio_id=(SELECT node_uuid=uuid2bin(?))";
+				st = c.prepareStatement(sql);
+				st.setString(1, srcuuid);
+				st.executeUpdate();
 				st.close();
+				
+				// Then skip tag searching since we know the uuid
+				baseUuid = srcuuid;
 			}
 			else
 			{
-				res.close();
+				// Copie the whole portfolio from shared cache to local cache
+				sql = "INSERT INTO t_data_node ";
+				if (dbserveur.equals("mysql")){
+					sql += "SELECT uuid2bin(UUID()), ";
+				} else if (dbserveur.equals("oracle")){
+					sql += "SELECT sys_guid(), ";
+				}
+				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+						"FROM t_node_cache n " +
+						"WHERE n.portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, portfolioCode);
+				st.executeUpdate();
 				st.close();
-				return "Selection non existante.";
+	
+				t1e = System.currentTimeMillis();
+	
+				/// Find the right starting node we want
+				sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
+						"FROM t_data_node n2 " +
+						"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, tag);
+				st.setString(2, portfolioCode);
+	
+				res = st.executeQuery();
+				String pUuid="";
+				if( res.next() )	// Take the first one declared
+				{
+					baseUuid = res.getString("nUuid");
+					pUuid = res.getString("pUuid");
+					res.close();
+					st.close();
+				}
+				else
+				{
+					res.close();
+					st.close();
+					return "Selection non existante.";
+				}
 			}
 
 			t2 = System.currentTimeMillis();
@@ -6028,8 +6066,8 @@ public class MysqlDataProvider implements DataProvider {
 					st.close();
 
 					/// Ensure specific user group exist in final tables, and add user in it
-					int ngid = getRoleByNode(c, cred, 1, destUuid, login);
-					postGroupsUsers(c, cred, 1, userId, ngid);
+					int ngid = getRoleByNode(c, 1, destUuid, login);
+					postGroupsUsers(c, 1, userId, ngid);
 					
 					/// Ensure entry is there in temp table, just need a skeleton info
 					sql = "REPLACE INTO t_group_right_info(grid, owner, label) VALUES((SELECT grid FROM group_info gi WHERE gid=?), 1, ?)";
@@ -6197,7 +6235,7 @@ public class MysqlDataProvider implements DataProvider {
 							merge = tokens.nextElement().toString();
 						while (tokens.hasMoreElements())
 							merge += ","+tokens.nextElement().toString();
-						postNotifyRoles(c, cred, userId, portfolioUuid, uuid, merge);
+						postNotifyRoles(c, userId, portfolioUuid, uuid, merge);
 					}
 
 					meta = res.getString("metadata");
@@ -6211,9 +6249,9 @@ public class MysqlDataProvider implements DataProvider {
 					{
 						Node publicatt = attribMap.getNamedItem("public");
 						if( publicatt != null && "Y".equals(publicatt.getNodeValue()) )
-							setPublicState(c, cred, userId, portfolioUuid, true);
+							setPublicState(c, userId, portfolioUuid, true);
 						else if ( "N".equals(publicatt) )
-							setPublicState(c, cred, userId, portfolioUuid, false);
+							setPublicState(c, userId, portfolioUuid, false);
 					}
 					catch(Exception ex)
 					{
@@ -6971,7 +7009,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int postMoveNodeUp( Connection c, Credential cred, int userid, String uuid )
+	public int postMoveNodeUp( Connection c, int userid, String uuid )
 	{
 		if(!cred.isAdmin(c, userid) && !cred.isDesigner(c, userid, uuid) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -7054,7 +7092,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean postChangeNodeParent( Connection c, Credential cred, int userid, String uuid, String uuidParent)
+	public boolean postChangeNodeParent( Connection c, int userid, String uuid, String uuidParent)
 	{
 		/// FIXME something with parent uuid too
 		if(!cred.isAdmin(c, userid) && !cred.isDesigner(c, userid, uuid) )
@@ -7124,7 +7162,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postNode(Connection c, Credential cred, MimeType inMimeType, String parentNodeUuid, String in,int userId, int groupId) throws Exception {
+	public Object postNode(Connection c, MimeType inMimeType, String parentNodeUuid, String in,int userId, int groupId) throws Exception {
 
 		/// FIXME On devrait vérifier le droit d'ajouter.
 		/// Mais dans WAD il n'y a pas ce type de droit
@@ -7183,7 +7221,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		 */
 
-		String nodeUuid = writeNode(c, cred, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, false);
+		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, false);
 
 		result = "<nodes>";
 		result += "<"+nodeType+" ";
@@ -7197,7 +7235,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNode(Connection c, Credential cred, MimeType inMimeType, String nodeUuid, String in,int userId, int groupId) throws Exception
+	public Object putNode(Connection c, MimeType inMimeType, String nodeUuid, String in,int userId, int groupId) throws Exception
 	{
 		String asmType = null;
 		String xsiType = null;
@@ -7399,17 +7437,17 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object deleteResource(Connection c, Credential cred, String resourceUuid,int userId, int groupId) throws Exception
+	public Object deleteResource(Connection c, String resourceUuid,int userId, int groupId) throws Exception
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		return deleteMySqlResource(c, cred, resourceUuid, userId, groupId);
+		return deleteMySqlResource(c, resourceUuid, userId, groupId);
 		//TODO asmResource(s) dans table Node et parentNode children a mettre à jour
 	}
 
 	@Override
-	public Object getResource(Connection c, Credential cred, MimeType outMimeType, String nodeParentUuid, int userId, int groupId) throws Exception
+	public Object getResource(Connection c, MimeType outMimeType, String nodeParentUuid, int userId, int groupId) throws Exception
 	{
 		String[] data = getMysqlResourceByNodeParentUuid(c, nodeParentUuid);
 //		java.sql.ResultSet res =
@@ -7423,7 +7461,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int postCreateRole(Connection c, Credential cred, String portfolioUuid, String role, int userId)
+	public int postCreateRole(Connection c, String portfolioUuid, String role, int userId)
 	{
 		int groupid = 0;
 		String rootNodeUuid = "";
@@ -7529,7 +7567,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deletePersonRole(Connection c, Credential cred, String portfolioUuid, String role, int userId, int uid)
+	public String deletePersonRole(Connection c, String portfolioUuid, String role, int userId, int uid)
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -7579,7 +7617,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getResources(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid, int userId, int groupId) throws Exception
+	public Object getResources(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId) throws Exception
 	{
 		java.sql.ResultSet res = getMysqlResources(c, portfolioUuid);
 		String returnValue = "";
@@ -7619,7 +7657,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postResource(Connection c, Credential cred, MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId) throws Exception
+	public Object postResource(Connection c, MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId) throws Exception
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -7648,13 +7686,13 @@ public class MysqlDataProvider implements DataProvider {
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 			//return "faux";
 		}
-		else postNode(c, cred, inMimeType, nodeParentUuid, in, userId, groupId);
+		else postNode(c, inMimeType, nodeParentUuid, in, userId, groupId);
 		//else throw new Exception("le noeud contient déjà un enfant de type asmResource !");
 		return "";
 	}
 
 	@Override
-	public Object putResource(Connection c, Credential cred, MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId) throws Exception
+	public Object putResource(Connection c, MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId) throws Exception
 	{
 		// TODO userId ???
 //		long t_start = System.currentTimeMillis();
@@ -7722,7 +7760,7 @@ public class MysqlDataProvider implements DataProvider {
 	/*
 	 * forcedParentUuid permet de forcer l'uuid parent, indépendamment de l'attribut du noeud fourni
 	 */
-	private String writeNode(Connection c, Credential cred, Node node, String portfolioUuid, String portfolioModelId, int userId, int ordrer, String forcedUuid, String forcedUuidParent,int sharedResParent,int sharedNodeResParent, boolean rewriteId, HashMap<String,String> resolve, boolean parseRights ) throws Exception
+	private String writeNode(Connection c, Node node, String portfolioUuid, String portfolioModelId, int userId, int ordrer, String forcedUuid, String forcedUuidParent,int sharedResParent,int sharedNodeResParent, boolean rewriteId, HashMap<String,String> resolve, boolean parseRights ) throws Exception
 	{
 		String uuid = "";
 		String originUuid = null;
@@ -8025,7 +8063,7 @@ public class MysqlDataProvider implements DataProvider {
 							while (tokens.hasMoreElements())
 								merge += ","+tokens.nextElement().toString();
 
-							postNotifyRoles(c, cred, userId, portfolioUuid, uuid, merge);
+							postNotifyRoles(c, userId, portfolioUuid, uuid, merge);
 						}
 					}
 					catch(Exception ex) {}
@@ -8043,9 +8081,9 @@ public class MysqlDataProvider implements DataProvider {
 					{
 						String publicatt = children.item(i).getAttributes().getNamedItem("public").getNodeValue();
 						if( "Y".equals(publicatt) )
-							setPublicState(c, cred, userId, portfolioUuid, true);
+							setPublicState(c, userId, portfolioUuid, true);
 						else if( "N".equals(publicatt) )
-							setPublicState(c, cred, userId, portfolioUuid, false);
+							setPublicState(c, userId, portfolioUuid, false);
 					}
 					catch(Exception ex) {}
 
@@ -8249,12 +8287,12 @@ public class MysqlDataProvider implements DataProvider {
 							"asmContext".equals(nodeName) )
 					{
 						//System.out.println("uid="+uuid+":"+",enfant_uuid="+children.item(i).getAttributes().getNamedItem("id")+",ordre="+k);
-						writeNode(c, cred, child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
+						writeNode(c, child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
 						k++;
 					}
 					else if( "asmResource".equals(nodeName) ) // Les asmResource pose problême dans l'ordre des noeuds
 					{
-						writeNode(c, cred, child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
+						writeNode(c, child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
 					}
 				}
 			}
@@ -8272,7 +8310,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putPortfolioConfiguration(Connection c, Credential cred, String portfolioUuid, Boolean portfolioActive, Integer userId)
+	public Object putPortfolioConfiguration(Connection c, String portfolioUuid, Boolean portfolioActive, Integer userId)
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -8327,7 +8365,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String[] postCredential(Credential cred, String login, String password, Integer UserId) throws ServletException, IOException
+	public String[] postCredential(String login, String password, Integer UserId) throws ServletException, IOException
 	{
 		try{
 			return cred.doPost(login, password);
@@ -8338,7 +8376,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public void getCredential(HttpServletRequest request, HttpServletResponse response, Credential cred) throws ServletException, IOException
+	public void getCredential(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		try{
 			cred.doGet(request, response);
@@ -8348,7 +8386,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getUserUidByTokenAndLogin(Connection c, Credential cred, String login, String token) throws Exception
+	public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception
 	{
 		try{
 			return cred.getMysqlUserUidByTokenAndLogin(c, login, token);
@@ -8366,7 +8404,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postGroup(Connection c, Credential cred, String in, int userId) throws Exception
+	public Object postGroup(Connection c, String in, int userId) throws Exception
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -8484,7 +8522,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getGroupRights(Connection c, Credential cred, int userId, int groupId) throws Exception
+	public Object getGroupRights(Connection c, int userId, int groupId) throws Exception
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -8564,7 +8602,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean postGroupsUsers(Connection c, Credential cred, int user, int userId, int groupId)
+	public boolean postGroupsUsers(Connection c, int user, int userId, int groupId)
 	{
 		PreparedStatement stInsert;
 		String sqlInsert;
@@ -8592,7 +8630,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean postRightGroup(Connection c, Credential cred, int groupRightId, int groupId, Integer userId)
+	public boolean postRightGroup(Connection c, int groupRightId, int groupId, Integer userId)
 	{
 		PreparedStatement stUpdate;
 		String sqlUpdate;
@@ -8617,7 +8655,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean postNotifyRoles(Connection c, Credential cred, int userId, String portfolio, String uuid, String notify)
+	public boolean postNotifyRoles(Connection c, int userId, String portfolio, String uuid, String notify)
 	{
 		boolean ret = false;
 		if(!cred.isAdmin(c, userId))
@@ -8645,7 +8683,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean setPublicState(Connection c, Credential cred, int userId, String portfolio, boolean isPublic)
+	public boolean setPublicState(Connection c, int userId, String portfolio, boolean isPublic)
 	{
 		boolean ret = false;
 		if( !cred.isAdmin(c, userId) && !cred.isOwner(c, userId, portfolio) && !cred.isDesigner(c, userId, portfolio) && !cred.isCreator(c, userId) )
@@ -8761,7 +8799,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int postShareGroup(Connection c, Credential cred, String portfolio, int user, Integer userId, String write)
+	public int postShareGroup(Connection c, String portfolio, int user, Integer userId, String write)
 	{
 		int status = -1;
 		String sql = "";
@@ -8882,7 +8920,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int deleteShareGroup(Connection c, Credential cred, String portfolio, Integer userId)
+	public int deleteShareGroup(Connection c, String portfolio, Integer userId)
 	{
 		int status = -1;
 		String sql = "";
@@ -8933,7 +8971,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int deleteSharePerson(Connection c, Credential cred, String portfolio, int user, Integer userId)
+	public int deleteSharePerson(Connection c, String portfolio, int user, Integer userId)
 	{
 		int status = -1;
 		String sql = "";
@@ -8981,7 +9019,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object deleteUsers(Connection c, Credential cred, Integer userId,Integer userId2)
+	public Object deleteUsers(Connection c, Integer userId,Integer userId2)
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -9021,7 +9059,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object deleteGroupRights(Connection c, Credential cred, Integer groupId, Integer groupRightId, Integer userId)
+	public Object deleteGroupRights(Connection c, Integer groupId, Integer groupRightId, Integer userId)
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -9059,7 +9097,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postPortfolioZip(Connection c, Credential cred, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws IOException
+	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws IOException
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -9188,12 +9226,12 @@ public class MysqlDataProvider implements DataProvider {
 
 						insertMysqlPortfolio(c, portfolioUuid,uuid,0,userId);
 
-						writeNode(c, cred, rootNode, portfolioUuid, null, userId,0, uuid,null,0,0,false, resolve, parseRights);
+						writeNode(c, rootNode, portfolioUuid, null, userId,0, uuid,null,0,0,false, resolve, parseRights);
 					}
 					updateMysqlPortfolioActive(c, portfolioUuid,true);
 
 					/// Finalement on crée un rôle designer
-					int groupid = postCreateRole(c, cred, portfolioUuid, "designer", userId);
+					int groupid = postCreateRole(c, portfolioUuid, "designer", userId);
 
 					/// Ajoute la personne dans ce groupe
 					putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
@@ -9405,7 +9443,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postUser(Connection c, Credential cred, String in, int userId) throws Exception
+	public Object postUser(Connection c, String in, int userId) throws Exception
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -9603,7 +9641,7 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public String getGroupRightsInfos(Connection c, Credential cred, int userId, String portfolioId) throws SQLException
+	public String getGroupRightsInfos(Connection c, int userId, String portfolioId) throws SQLException
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -10050,7 +10088,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postUsers(Connection c, Credential cred, String in, int userId) throws Exception
+	public String postUsers(Connection c, String in, int userId) throws Exception
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -10372,7 +10410,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int deleteCredential(Connection c, Credential cred, int userId)
+	public int deleteCredential(Connection c, int userId)
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -10383,7 +10421,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNodeWithXSL(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId)
+	public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId)
 	{
 		String xml;
 		try {
@@ -10401,7 +10439,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// TODO: Test this more, should use getNode rather than having another output
-			xml = getNode(c, cred, new MimeType("text/xml"),nodeUuid,true, userId, groupId, null).toString();
+			xml = getNode(c, new MimeType("text/xml"),nodeUuid,true, userId, groupId, null).toString();
 
 //			xml = getNodeXmlOutput(nodeUuid,true,null,userId, groupId, null,true).toString();
 			return DomUtils.processXSLTfile2String( DomUtils.xmlString2Document(xml, new StringBuffer()), xslFile, param, paramVal, new StringBuffer());
@@ -10419,13 +10457,13 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postNodeFromModelBySemanticTag(Connection c, Credential cred, MimeType inMimeType, String parentNodeUuid, String semanticTag,int userId, int groupId) throws Exception
+	public Object postNodeFromModelBySemanticTag(Connection c, MimeType inMimeType, String parentNodeUuid, String semanticTag,int userId, int groupId) throws Exception
 	{
 		String portfolioUid = getPortfolioUuidByNodeUuid(c, parentNodeUuid);
 
 		String portfolioModelId = getPortfolioModelUuid(c, portfolioUid);
 
-		String xml = getNodeBySemanticTag(c, cred, inMimeType, portfolioModelId,
+		String xml = getNodeBySemanticTag(c, inMimeType, portfolioModelId,
 				semanticTag,userId, groupId).toString();
 
 		ResultSet res = getMysqlOtherNodeUuidByPortfolioModelUuidBySemanticTag(c, portfolioModelId, semanticTag);
@@ -10433,7 +10471,7 @@ public class MysqlDataProvider implements DataProvider {
 		// C'est le noeud obtenu dans le modele indiqué par la table de correspondance
 		String otherParentNodeUuid = res.getString("node_uuid");
 
-		return postNode(c, cred, inMimeType, otherParentNodeUuid, xml,userId, groupId);
+		return postNode(c, inMimeType, otherParentNodeUuid, xml,userId, groupId);
 	}
 
 	public ResultSet getMysqlGroupsPortfolio(Connection c, String portfolioUuid)
@@ -10461,7 +10499,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getGroupsPortfolio(Connection c, Credential cred, String portfolioUuid, int userId)
+	public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId)
 	{
 		NodeRight right = cred.getPortfolioRight(c, userId,0, portfolioUuid, Credential.READ);
 		if(!right.read)
@@ -10497,7 +10535,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Integer getRoleByNode( Connection c, Credential cred, int userId, String nodeUuid, String role )
+	public Integer getRoleByNode( Connection c, int userId, String nodeUuid, String role )
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -10583,7 +10621,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postRoleUser(Connection c, Credential cred, int userId, int grid, Integer userid2) throws SQLException
+	public String postRoleUser(Connection c, int userId, int grid, Integer userid2) throws SQLException
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -10865,7 +10903,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNodeMetadataWad(Connection c, Credential cred, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException
+	public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
 		// Verification securité
@@ -11040,7 +11078,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeMetadata(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeMetadata(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
 		String metadata = "";
 
@@ -11075,9 +11113,9 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				String publicatt = attr.getNamedItem("public").getNodeValue();
 				if( "Y".equals(publicatt) )
-					setPublicState(c, cred, userId, portfolioUid,true);
+					setPublicState(c, userId, portfolioUid,true);
 				else if( "N".equals(publicatt) )
-					setPublicState(c, cred, userId, portfolioUid,false);
+					setPublicState(c, userId, portfolioUid,false);
 			}
 			catch(Exception ex) {}
 
@@ -11202,7 +11240,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeMetadataWad(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
 		String metadatawad = "";
 
@@ -11234,7 +11272,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeMetadataEpm(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeMetadataEpm(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
 		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
@@ -11272,7 +11310,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeNodeContext(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeNodeContext(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
 		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
@@ -11294,7 +11332,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeNodeResource(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeNodeResource(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
 		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
@@ -11316,7 +11354,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putRole(Connection c, Credential cred, String xmlRole, int userId, int roleId) throws Exception
+	public Object putRole(Connection c, String xmlRole, int userId, int roleId) throws Exception
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -11457,7 +11495,7 @@ public class MysqlDataProvider implements DataProvider {
 
 	@Deprecated
 	@Override
-	public Object postModels(Connection c, Credential cred, MimeType mimeType, String xmlModel, int userId) throws Exception
+	public Object postModels(Connection c, MimeType mimeType, String xmlModel, int userId) throws Exception
 	{
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -11576,7 +11614,7 @@ public class MysqlDataProvider implements DataProvider {
 	/*****************************/
 
 	@Override
-	public String postMacroOnNode( Connection c, Credential cred, int userId, String nodeUuid, String macroName )
+	public String postMacroOnNode( Connection c, int userId, String nodeUuid, String macroName )
 	{
 		String val = "erreur";
 		String sql = "";
@@ -12598,7 +12636,7 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public String putRRGUpdate( Connection c, Credential cred, int userId, Integer rrgId, String data )
+	public String putRRGUpdate( Connection c, int userId, Integer rrgId, String data )
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -12672,7 +12710,7 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public String postRRGCreate( Connection c, Credential cred, int userId, String portfolio, String data )
+	public String postRRGCreate( Connection c, int userId, String portfolio, String data )
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isOwner(c, userId, portfolio))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -12760,7 +12798,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postRRGUser( Connection c, Credential cred, int userId, Integer rrgid, Integer user )
+	public String postRRGUser( Connection c, int userId, Integer rrgid, Integer user )
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgid))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -12828,7 +12866,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postRights(Connection c, Credential cred, int userId, String uuid, String role, NodeRight rights)
+	public String postRights(Connection c, int userId, String uuid, String role, NodeRight rights)
 	{
 		if( !cred.isAdmin(c, userId) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -12906,7 +12944,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postRRGUsers( Connection c, Credential cred, int userId, Integer rrgid, String data )
+	public String postRRGUsers( Connection c, int userId, Integer rrgid, String data )
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgid))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -12976,7 +13014,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deleteRRG( Connection c, Credential cred, int userId, Integer rrgId )
+	public String deleteRRG( Connection c, int userId, Integer rrgId )
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -13021,7 +13059,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deleteRRGUser( Connection c, Credential cred, int userId, Integer rrgId, Integer user )
+	public String deleteRRGUser( Connection c, int userId, Integer rrgId, Integer user )
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -13062,7 +13100,7 @@ public class MysqlDataProvider implements DataProvider {
 
 	/// Retire les utilisateurs des RRG d'un portfolio donné
 	@Override
-	public String deletePortfolioUser( Connection c, Credential cred, int userId, String portId )
+	public String deletePortfolioUser( Connection c, int userId, String portId )
 	{
 		//    if(!credential.isAdmin(userId))
 		//      throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -13463,7 +13501,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNodes(Connection c, Credential cred, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws SQLException
+	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws SQLException
 	{
 		PreparedStatement st = null;
 		String sql;
@@ -13882,7 +13920,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isAdmin( Connection c, Credential cred, String uid )
+	public boolean isAdmin( Connection c, String uid )
 	{
 		int userid = Integer.parseInt(uid);
 		return cred.isAdmin(c, userid);

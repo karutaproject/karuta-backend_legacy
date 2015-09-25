@@ -98,7 +98,6 @@ public class XSLService  extends HttpServlet {
 	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	final Credential credential = new Credential();
 	ServletContext sc;
 	String context = "";
 	DataSource ds;
@@ -289,7 +288,7 @@ public class XSLService  extends HttpServlet {
 				for( int i=0; i<portfolioid.length; ++i )
 				{
 					String p = portfolioid[i];
-					String portfolioxml = dataProvider.getPortfolio(c, credential, new MimeType("text/xml"), p, userId, groupId, "", null, null, 0).toString();
+					String portfolioxml = dataProvider.getPortfolio(c, new MimeType("text/xml"), p, userId, groupId, "", null, null, 0).toString();
 					aggregate.append(portfolioxml);
 				}
 			}
@@ -300,7 +299,7 @@ public class XSLService  extends HttpServlet {
 				for( int i=0; i<nodeid.length; ++i )
 				{
 					String n = nodeid[i];
-					String nodexml = dataProvider.getNode(c, credential, new MimeType("text/xml"), n, true, userId, groupId, "").toString();
+					String nodexml = dataProvider.getNode(c, new MimeType("text/xml"), n, true, userId, groupId, "").toString();
 					aggregate.append(nodexml);
 				}
 			}
@@ -353,7 +352,7 @@ public class XSLService  extends HttpServlet {
 //				Node uuid = XPathAPI.selectSingleNode(res, filterCode);
 
 				/// Fetch node we want to replace
-				String returnValue = dataProvider.getNode(c, credential, new MimeType("text/xml"), uuid.getTextContent(), true, userId, groupId, "").toString();
+				String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), uuid.getTextContent(), true, userId, groupId, "").toString();
 
 				is = new ByteArrayInputStream(returnValue.getBytes("UTF-8"));
 				Document rep = documentBuilder.parse(is);

@@ -66,34 +66,34 @@ public class MongoDBDataProvider implements DataProvider {
 	//*/
 
 	@Override
-	public Object deleteNode(Connection c, Credential cred, String nodeUuid, int userId, int groupId) throws Exception {
+	public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object deletePortfolio(Connection c, Credential cred, String portfolioUuid, int userId, int groupId)
+	public Object deletePortfolio(Connection c, String portfolioUuid, int userId, int groupId)
 			throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object deleteResource(Connection c, Credential cred, String resourceUuid, int userId, int groupId)
+	public Object deleteResource(Connection c, String resourceUuid, int userId, int groupId)
 			throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object getNode(Connection c, Credential cred, MimeType outMimeType, String nodeUuid,
+	public Object getNode(Connection c, MimeType outMimeType, String nodeUuid,
 			boolean withChildren, int userId, int groupId, String label) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object getNodes(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid,
+	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,
 			int userId,int groupId,
 			String semtag, String parentUuid, String filterId,
 			String filterParameters, String sortId) throws Exception {
@@ -102,40 +102,40 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getPortfolio(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid,
+	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid,
 			int userId, int groupId, String label, String resource, String files, int substid) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object getPortfolios(Connection c, Credential cred, MimeType outMimeType, int userId,int groupId, Boolean portfolioActive, int substid)
+	public Object getPortfolios(Connection c, MimeType outMimeType, int userId,int groupId, Boolean portfolioActive, int substid)
 			throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object getResource(Connection c, Credential cred, MimeType outMimeType, String nodeParentUuid,
+	public Object getResource(Connection c, MimeType outMimeType, String nodeParentUuid,
 			int userId, int groupId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public int postCreateRole(Connection c, Credential cred, String portfolioUuid, String role, int userId)
+	public int postCreateRole(Connection c, String portfolioUuid, String role, int userId)
 	{
 		return 0;
 	}
 
 	@Override
-	public String deletePersonRole(Connection c, Credential cred, String portfolioUuid, String role, int userId, int uid)
+	public String deletePersonRole(Connection c, String portfolioUuid, String role, int userId, int uid)
 	{
 		return null;
 	}
 
 	@Override
-	public Object getResources(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid,
+	public Object getResources(Connection c, MimeType outMimeType, String portfolioUuid,
 			int userId, int groupId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
@@ -148,22 +148,22 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postInstanciatePortfolio( Connection c, Credential cred, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception
+	public Object postInstanciatePortfolio( Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object postCopyPortfolio(Connection c, Credential cred, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception
+	public Object postCopyPortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object postImportNode( Connection c, Credential cred, MimeType inMimeType, String destUuid, String tag,
-			String code, int userId, int groupId ) throws Exception
+	public Object postImportNode( Connection c, MimeType inMimeType, String destUuid, String tag,
+			String code, String srcuuid, int userId, int groupId ) throws Exception
 			{
 		// TODO Auto-generated method stub
 		return null;
@@ -178,40 +178,40 @@ public class MongoDBDataProvider implements DataProvider {
 			}
 
 	@Override
-	public int postMoveNodeUp( Connection c, Credential cred, int userid, String uuid )
+	public int postMoveNodeUp( Connection c, int userid, String uuid )
 	{
 		return -1;
 	}
 
 	@Override
-	public boolean postChangeNodeParent( Connection c, Credential cred, int userid, String uuid, String uuidParent)
+	public boolean postChangeNodeParent( Connection c, int userid, String uuid, String uuidParent)
 	{
 		return false;
 	}
 
 	@Override
-	public Object postNode(Connection c, Credential cred, MimeType inMimeType, String parentNodeUuid,
+	public Object postNode(Connection c, MimeType inMimeType, String parentNodeUuid,
 			String in, int userId, int groupId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object postPortfolio(Connection c, Credential cred, MimeType inMimeType, MimeType outMimeType,
+	public Object postPortfolio(Connection c, MimeType inMimeType, MimeType outMimeType,
 			String in, int userId, int groupId, String modelId, int substid, boolean parseRights ) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object postResource(Connection c, Credential cred, MimeType inMimeType, String nodeParentUuid,String in, int userId, int groupId)
+	public Object postResource(Connection c, MimeType inMimeType, String nodeParentUuid,String in, int userId, int groupId)
 			throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object putNode(Connection c, Credential cred, MimeType inMimeType, String nodeUuid,
+	public Object putNode(Connection c, MimeType inMimeType, String nodeUuid,
 			String in, int userId, int groupId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
@@ -224,14 +224,14 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putPortfolio(Connection c, Credential cred, MimeType inMimeType, MimeType outMimeType,
+	public Object putPortfolio(Connection c, MimeType inMimeType, MimeType outMimeType,
 			String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String modelId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object putResource(Connection c, Credential cred, MimeType inMimeType, String nodeParentUuid,
+	public Object putResource(Connection c, MimeType inMimeType, String nodeParentUuid,
 			String in, int userId, int groupId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
@@ -266,21 +266,21 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putPortfolioConfiguration(Connection c, Credential cred, String portfolioUuid,
+	public Object putPortfolioConfiguration(Connection c, String portfolioUuid,
 			Boolean portfolioActive, Integer userId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object getPortfolioByCode(Connection c, Credential cred, MimeType mimeType, String portfolioCode,
+	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode,
 			int userId, int groupId,String resources, int substid) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String[] postCredential(Credential cred, String login, String password, Integer UserId) throws ServletException, IOException {
+	public String[] postCredential(String login, String password, Integer UserId) throws ServletException, IOException {
 		return null;
 		// TODO Auto-generated method stub
 
@@ -288,7 +288,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public void getCredential(HttpServletRequest request,
-			HttpServletResponse response, Credential cred) throws ServletException, IOException {
+			HttpServletResponse response) throws ServletException, IOException {
 		// TODO Auto-generated method stub
 
 	}
@@ -302,7 +302,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 
 	@Override
-	public String getUserUidByTokenAndLogin(Connection c, Credential cred, String login, String token)
+	public String getUserUidByTokenAndLogin(Connection c, String login, String token)
 			throws Exception {
 		// TODO Auto-generated method stub
 		return null;
@@ -321,13 +321,13 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isUserMemberOfGroup(Connection c, Credential cred, int userId, int groupId) {
+	public boolean isUserMemberOfGroup(Connection c, int userId, int groupId) {
 		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
-	public Object postGroup(Connection c, Credential cred, String xmlgroup, int userId) throws Exception {
+	public Object postGroup(Connection c, String xmlgroup, int userId) throws Exception {
 		// TODO Auto-generated method stub
 		return false;
 	}
@@ -339,66 +339,66 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getGroupRights(Connection c, Credential cred, int userId, int groupId) {
+	public String getGroupRights(Connection c, int userId, int groupId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public boolean postGroupsUsers(Connection c, Credential cred, int user, int userId, int groupName) {
+	public boolean postGroupsUsers(Connection c, int user, int userId, int groupName) {
 		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
-	public boolean postRightGroup(Connection c, Credential cred, int groupRightId, int groupId, Integer userId) {
+	public boolean postRightGroup(Connection c, int groupRightId, int groupId, Integer userId) {
 		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
-	public boolean postNotifyRoles(Connection c, Credential cred, int userId, String portfolio, String uuid, String notify) {
+	public boolean postNotifyRoles(Connection c, int userId, String portfolio, String uuid, String notify) {
 		return false;
 	}
 
 	@Override
-	public boolean setPublicState(Connection c, Credential cred, int userId, String portfolio, boolean isPublic)
+	public boolean setPublicState(Connection c, int userId, String portfolio, boolean isPublic)
 	{
 		return false;
 	}
 
 	@Override
-	public int postShareGroup(Connection c, Credential cred, String portfolio, int user, Integer userId, String write)
+	public int postShareGroup(Connection c, String portfolio, int user, Integer userId, String write)
 	{
 		return 0;
 	}
 
 	@Override
-	public int deleteShareGroup(Connection c, Credential cred, String portfolio, Integer userId)
+	public int deleteShareGroup(Connection c, String portfolio, Integer userId)
 	{
 		return 0;
 	}
 
 	@Override
-	public int deleteSharePerson(Connection c, Credential cred, String portfolio, int user, Integer userId)
+	public int deleteSharePerson(Connection c, String portfolio, int user, Integer userId)
 	{
 		return 0;
 	}
 
 	@Override
-	public Object deleteUsers(Connection c, Credential cred, Integer userId, Integer userId2) {
+	public Object deleteUsers(Connection c, Integer userId, Integer userId2) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object deleteGroupRights(Connection c, Credential cred, Integer groupId, Integer groupRightId, Integer userId) {
+	public Object deleteGroupRights(Connection c, Integer groupId, Integer groupRightId, Integer userId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object postPortfolioZip(Connection c, Credential cred, MimeType mimeType, MimeType mimeType2,
+	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2,
 			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws FileNotFoundException, IOException
 			{
 		// TODO Auto-generated method stub
@@ -412,26 +412,26 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postUser(Connection c, Credential cred, String xmluser, int user) throws SQLException, Exception {
+	public Object postUser(Connection c, String xmluser, int user) throws SQLException, Exception {
 		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
-	public Object getNodeBySemanticTag(Connection c, Credential cred, MimeType mimeType, String portfolioUuid,
+	public Object getNodeBySemanticTag(Connection c, MimeType mimeType, String portfolioUuid,
 			String semantictag, int userId, int groupId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String getGroupRightsInfos(Connection c, Credential cred, int userId, String portfolioId) {
+	public String getGroupRightsInfos(Connection c, int userId, String portfolioId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object getNodesBySemanticTag(Connection c, Credential cred, MimeType outMimeType, int userId,
+	public Object getNodesBySemanticTag(Connection c, MimeType outMimeType, int userId,
 			int groupId, String portfolioUuid, String semanticTag)
 					throws SQLException {
 		// TODO Auto-generated method stub
@@ -466,7 +466,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int deleteCredential(Connection c, Credential cred, int userId) {
+	public int deleteCredential(Connection c, int userId) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
@@ -486,7 +486,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postUsers(Connection c, Credential cred, String xmlUsers, int userId) throws Exception {
+	public String postUsers(Connection c, String xmlUsers, int userId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -502,34 +502,34 @@ public class MongoDBDataProvider implements DataProvider {
 
 
 	@Override
-	public Object getNodeWithXSL(Connection c, Credential cred, MimeType mimeType, String nodeUuid,
+	public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid,
 			String xslFile, String parameters, int userId, int groupId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object postNodeFromModelBySemanticTag(Connection c, Credential cred, MimeType mimeType,
+	public Object postNodeFromModelBySemanticTag(Connection c, MimeType mimeType,
 			String nodeUuid, String semantictag, int userId, int groupId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String getGroupsPortfolio(Connection c, Credential cred, String portfolioUuid, int userId) {
+	public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Integer getRoleByNode( Connection c, Credential cred, int userId, String nodeUuid, String role )
+	public Integer getRoleByNode( Connection c, int userId, String nodeUuid, String role )
 	{
 		return null;
 	}
 
 
 	@Override
-	public String postRoleUser(Connection c, Credential cred, int userId, int grid, Integer userid2) {
+	public String postRoleUser(Connection c, int userId, int grid, Integer userid2) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -555,7 +555,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String postMacroOnNode( Connection c, Credential cred, int userId, String nodeUuid, String macroName )
+	public String postMacroOnNode( Connection c, int userId, String nodeUuid, String macroName )
 	{
 		// TODO Auto-generated method stub
 		return null;
@@ -626,7 +626,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNodeMetadataWad(Connection c, Credential cred, MimeType mimeType, String nodeUuid,
+	public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid,
 			boolean b, int userId, int groupId, String label) throws SQLException {
 		// TODO Auto-generated method stub
 		return null;
@@ -647,34 +647,34 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object putNodeMetadata(Connection c, Credential cred, MimeType mimeType, String nodeUuid,
+	public Object putNodeMetadata(Connection c, MimeType mimeType, String nodeUuid,
 			String xmlNode, int userId, int groupId) throws Exception  {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object putNodeMetadataWad(Connection c, Credential cred, MimeType mimeType, String nodeUuid,
+	public Object putNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid,
 			String xmlNode, int userId, int groupId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object putNodeMetadataEpm(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
+	public Object putNodeMetadataEpm(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception
 	{
 		return null;
 	}
 
 	@Override
-	public Object putNodeNodeContext(Connection c, Credential cred, MimeType mimeType, String nodeUuid,
+	public Object putNodeNodeContext(Connection c, MimeType mimeType, String nodeUuid,
 			String xmlNode, int userId, int groupId) throws Exception{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object putNodeNodeResource(Connection c, Credential cred, MimeType mimeType, String nodeUuid,
+	public Object putNodeNodeResource(Connection c, MimeType mimeType, String nodeUuid,
 			String xmlNode, int userId, int groupId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
@@ -717,28 +717,28 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String putRRGUpdate( Connection c, Credential cred, int userId, Integer rrgId, String data )
+	public String putRRGUpdate( Connection c, int userId, Integer rrgId, String data )
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String postRRGCreate( Connection c, Credential cred, int userId, String portfolio, String data )
+	public String postRRGCreate( Connection c, int userId, String portfolio, String data )
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String postRRGUsers( Connection c, Credential cred, int userId, Integer rrgid, String data )
+	public String postRRGUsers( Connection c, int userId, Integer rrgid, String data )
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String postRights(Connection c, Credential cred, int userId, String uuid, String role, NodeRight rights)
+	public String postRights(Connection c, int userId, String uuid, String role, NodeRight rights)
 	{
 		// TODO Auto-generated method stub
 		return null;
@@ -746,35 +746,35 @@ public class MongoDBDataProvider implements DataProvider {
 
 
 	@Override
-	public String postRRGUser( Connection c, Credential cred, int userId, Integer rrgid, Integer user )
+	public String postRRGUser( Connection c, int userId, Integer rrgid, Integer user )
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String deleteRRG( Connection c, Credential cred, int userId, Integer rrgId )
+	public String deleteRRG( Connection c, int userId, Integer rrgId )
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String deleteRRGUser( Connection c, Credential cred, int userId, Integer rrgId, Integer user )
+	public String deleteRRGUser( Connection c, int userId, Integer rrgId, Integer user )
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String deletePortfolioUser( Connection c, Credential cred, int userId, String portId )
+	public String deletePortfolioUser( Connection c, int userId, String portId )
 	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object putRole(Connection c, Credential cred, String xmlRole, int userId, int roleId) throws Exception{
+	public Object putRole(Connection c, String xmlRole, int userId, int roleId) throws Exception{
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -796,14 +796,14 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Deprecated
 	@Override
-	public Object postModels(Connection c, Credential cred, MimeType mimeType, String xmlModel, int userId)
+	public Object postModels(Connection c, MimeType mimeType, String xmlModel, int userId)
 			throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Object getNodes(Connection c, Credential cred, MimeType mimeType, String portfoliocode, String semtag,
+	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag,
 			int userId, int groupId, String semtag_parent, String code_parent) throws SQLException {
 		// TODO Auto-generated method stub
 		return null;
@@ -831,7 +831,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isAdmin( Connection c, Credential cred, String uid )
+	public boolean isAdmin( Connection c, String uid )
 	{
 		return false;
 	}

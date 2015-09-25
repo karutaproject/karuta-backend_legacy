@@ -25,7 +25,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.portfolio.security.Credential;
 import com.portfolio.security.NodeRight;
 
 
@@ -67,31 +66,31 @@ public interface DataProvider {
 	public void writeLog(Connection c, String url, String method, String headers, String inBody, String outBody, int code);
 
 	/// Relatif ˆ l'authentification
-	public String[] postCredential(Credential cred, String login, String password, Integer userId) throws ServletException, IOException;
+	public String[] postCredential(String login, String password, Integer userId) throws ServletException, IOException;
 	public String[] postCredentialFromXml(Connection c, Integer userId, String username, String password, String substitute) throws ServletException, IOException;
-	public void getCredential(HttpServletRequest request, HttpServletResponse response, Credential cred) throws ServletException, IOException;
+	public void getCredential(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException;
 	public String getMysqlUserUid (Connection c, String login) throws Exception;
-	public String getUserUidByTokenAndLogin(Connection c, Credential cred, String login, String token) throws Exception;
-	public int deleteCredential(Connection c, Credential cred, int userId);
-	public boolean isAdmin( Connection c, Credential cred, String uid );
+	public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception;
+	public int deleteCredential(Connection c, int userId);
+	public boolean isAdmin( Connection c, String uid );
 
 	/// Relatif aux portfolios
-	public Object getPortfolio(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception;
-	public Object getPortfolios(Connection c, Credential cred, MimeType outMimeType,int userId,int groupId,Boolean portfolioActive, int substid) throws Exception;
-	public Object getPortfolioByCode(Connection c, Credential cred, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception;
+	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception;
+	public Object getPortfolios(Connection c, MimeType outMimeType,int userId,int groupId,Boolean portfolioActive, int substid) throws Exception;
+	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception;
 	public String getPortfolioUuidByNodeUuid(Connection c, String nodeUuid) throws Exception ;
 	public Object getPortfolioZip(MimeType mimeType, String portfolioUuid, int userId, int groupId, String label, Boolean resource, Boolean files) throws Exception;
 
-	public Object putPortfolio(Connection c, Credential cred, MimeType inMimeType,MimeType outMimeType,String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String modelId) throws Exception;
-	public Object putPortfolioConfiguration(Connection c, Credential cred, String portfolioUuid,Boolean portfolioActive, Integer userId);
+	public Object putPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String modelId) throws Exception;
+	public Object putPortfolioConfiguration(Connection c, String portfolioUuid,Boolean portfolioActive, Integer userId);
 
-	public Object postPortfolio(Connection c, Credential cred, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid, boolean parseRights) throws Exception;
-	public Object postPortfolioZip(Connection c, Credential cred, MimeType mimeType, MimeType mimeType2,
+	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid, boolean parseRights) throws Exception;
+	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2,
 			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws FileNotFoundException, IOException;
-	public Object postInstanciatePortfolio(Connection c, Credential cred, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception;
-	public Object postCopyPortfolio(Connection c, Credential cred, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception;
+	public Object postInstanciatePortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception;
+	public Object postCopyPortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception;
 
-	public Object deletePortfolio(Connection c, Credential cred, String portfolioUuid, int userId, int groupId) throws Exception;
+	public Object deletePortfolio(Connection c, String portfolioUuid, int userId, int groupId) throws Exception;
 
 	public boolean isCodeExist( Connection c, String code );
 
@@ -103,30 +102,30 @@ public interface DataProvider {
 	public Object getModel(Connection c, MimeType mimeType, Integer modelId, int userId) throws Exception;
 
 	@Deprecated
-	public Object postModels(Connection c, Credential cred, MimeType mimeType, String xmlModel, int userId)throws Exception;
+	public Object postModels(Connection c, MimeType mimeType, String xmlModel, int userId)throws Exception;
 
 	/// Relatif aux noeuds
-	public Object getNode(Connection c, Credential cred, MimeType outMimeType,String nodeUuid,boolean withChildren, int userId, int groupId, String label) throws Exception;
-	public Object getNodes(Connection c, Credential cred, MimeType outMimeType, String portfolioUuid,int userId, int groupId, String semtag,String parentUuid, String filterId,String filterParameters,String sortId) throws Exception;
-	public Object getNodes(Connection c, Credential cred, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws SQLException;
-	public Object getNodeBySemanticTag(Connection c, Credential cred, MimeType mimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception;
-	Object getNodesBySemanticTag(Connection c, Credential cred, MimeType outMimeType, int userId, int groupId, String portfolioUuid, String semanticTag) throws SQLException;
-	public Object getNodeWithXSL(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId);
+	public Object getNode(Connection c, MimeType outMimeType,String nodeUuid,boolean withChildren, int userId, int groupId, String label) throws Exception;
+	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,int userId, int groupId, String semtag,String parentUuid, String filterId,String filterParameters,String sortId) throws Exception;
+	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws SQLException;
+	public Object getNodeBySemanticTag(Connection c, MimeType mimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception;
+	Object getNodesBySemanticTag(Connection c, MimeType outMimeType, int userId, int groupId, String portfolioUuid, String semanticTag) throws SQLException;
+	public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId);
 	public Object getNodesParent(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws Exception;
-	public Object getNodeMetadataWad(Connection c, Credential cred, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException;
+	public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException;
 	public String getResNode(Connection c, String contextUuid, int userId, int groupId) throws Exception;
 	public String getNodeRights(Connection c, String nodeUuid, int userId, int groupId) throws Exception;
 
-	public Object putNode(Connection c, Credential cred, MimeType inMimeType,String nodeUuid,String in, int userId, int groupId) throws Exception;
-	public Object putNodeMetadata(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception ;
-	public Object putNodeMetadataWad(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception;
-	public Object putNodeMetadataEpm(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception;
-	public Object putNodeNodeContext(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId)throws Exception;
-	public Object putNodeNodeResource(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId)throws Exception;
+	public Object putNode(Connection c, MimeType inMimeType,String nodeUuid,String in, int userId, int groupId) throws Exception;
+	public Object putNodeMetadata(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception ;
+	public Object putNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception;
+	public Object putNodeMetadataEpm(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception;
+	public Object putNodeNodeContext(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId)throws Exception;
+	public Object putNodeNodeResource(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId)throws Exception;
 
-	public Object postNode(Connection c, Credential cred, MimeType inMimeType,String parentNodeUuid,String in, int userId, int groupId) throws Exception;
-	public Object postNodeFromModelBySemanticTag(Connection c, Credential cred, MimeType mimeType, String nodeUuid, String semantictag, int userId, int groupId) throws Exception;
-	public Object postImportNode(Connection c, Credential cred, MimeType inMimeType,String destUuid,String tag, String code, int userId, int groupId) throws Exception;
+	public Object postNode(Connection c, MimeType inMimeType,String parentNodeUuid,String in, int userId, int groupId) throws Exception;
+	public Object postNodeFromModelBySemanticTag(Connection c, MimeType mimeType, String nodeUuid, String semantictag, int userId, int groupId) throws Exception;
+	public Object postImportNode(Connection c, MimeType inMimeType,String destUuid,String tag, String code, String srcuuid, int userId, int groupId) throws Exception;
 	public Object postCopyNode(Connection c, MimeType inMimeType,String destUuid,String tag, String code, int userId, int groupId) throws Exception;
 
 	/**
@@ -135,20 +134,20 @@ public interface DataProvider {
 	 * 	-1: Invalid uuid
 	 * 	-2: First node, can't move
 	 */
-	public int postMoveNodeUp( Connection c, Credential cred, int userid, String uuid );
-	public boolean postChangeNodeParent( Connection c, Credential cred, int userid, String uuid, String uuidParent);
+	public int postMoveNodeUp( Connection c, int userid, String uuid );
+	public boolean postChangeNodeParent( Connection c, int userid, String uuid, String uuidParent);
 
-	public Object deleteNode(Connection c, Credential cred, String nodeUuid, int userId, int groupId) throws Exception;
+	public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId) throws Exception;
 
 	/// Relatif aux ressources
-	public Object getResource(Connection c, Credential cred, MimeType outMimeType,String nodeParentUuid, int userId, int groupId) throws Exception;
-	public Object getResources(Connection c, Credential cred, MimeType outMimeType,String portfolioUuid, int userId, int groupId) throws Exception;
+	public Object getResource(Connection c, MimeType outMimeType,String nodeParentUuid, int userId, int groupId) throws Exception;
+	public Object getResources(Connection c, MimeType outMimeType,String portfolioUuid, int userId, int groupId) throws Exception;
 
-	public Object putResource(Connection c, Credential cred, MimeType inMimeType,String nodeParentUuid,String in, int userId, int groupId) throws Exception;
+	public Object putResource(Connection c, MimeType inMimeType,String nodeParentUuid,String in, int userId, int groupId) throws Exception;
 
-	public Object postResource(Connection c, Credential cred, MimeType inMimeType,String nodeParentUuid,String in,int userId, int groupId) throws Exception;
+	public Object postResource(Connection c, MimeType inMimeType,String nodeParentUuid,String in,int userId, int groupId) throws Exception;
 
-	public Object deleteResource(Connection c, Credential cred, String resourceUuid, int userId, int groupId) throws Exception;
+	public Object deleteResource(Connection c, String resourceUuid, int userId, int groupId) throws Exception;
 
 	/// Relatif aux utilisateurs
 	public String getListUsers(Connection c, int userId);
@@ -163,62 +162,62 @@ public interface DataProvider {
 	public Object putUser(Connection c, int userId,String oAuthToken,String oAuthSecret) throws Exception;
 	public String putInfUser(Connection c, int userId, int userid2, String xmlPortfolio) throws SQLException;
 
-	public Object postUser(Connection c, Credential cred, String xmluser, int userId) throws SQLException, Exception;
-	public String postUsers(Connection c, Credential cred, String xmlUsers, int userId)throws Exception;
+	public Object postUser(Connection c, String xmluser, int userId) throws SQLException, Exception;
+	public String postUsers(Connection c, String xmlUsers, int userId)throws Exception;
 	public String postUsersGroups(int userId);
 
 	public Object deleteUser(int userid, int userId1);
-	public Object deleteUsers(Connection c, Credential cred, Integer userId, Integer userid2);
+	public Object deleteUsers(Connection c, Integer userId, Integer userid2);
 
 	/// Relatif aux ressources
 	public String getResourceNodeUuidByParentNodeUuid(Connection c, String nodeParentUuid);
 	public String getRessource(Connection c, String nodeUuid,int userId,int groupId, String type) throws SQLException;
 
 	/// Relatif aux r™les
-	public int postCreateRole(Connection c, Credential cred, String portfolioUuid, String role, int userId);
-	public String deletePersonRole(Connection c, Credential cred, String portfolioUuid, String role, int userId, int uid);
+	public int postCreateRole(Connection c, String portfolioUuid, String role, int userId);
+	public String deletePersonRole(Connection c, String portfolioUuid, String role, int userId, int uid);
 
 	/// Relatif aux groupe d'utilisateurs
-	public boolean isUserMemberOfGroup(Connection c, Credential cred, int userId, int groupId);
+	public boolean isUserMemberOfGroup(Connection c, int userId, int groupId);
 	public String getRoleUser(Connection c, int userId, int userid2);
 	public String getUserGroupList(Connection c, int userId);
 	public String getUsersByUserGroup(Connection c, int userGroupId, int userId);
 	public String getGroupsByRole(Connection c, int userId, String portfolioUuid, String role);
-	public String getGroupsPortfolio(Connection c, Credential cred, String portfolioUuid, int userId);
-	public Integer getRoleByNode( Connection c, Credential cred, int userId, String nodeUuid, String role );
+	public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId);
+	public Integer getRoleByNode( Connection c, int userId, String nodeUuid, String role );
 
 	public Integer putUserGroup(Connection c, String siteGroupId, String userId);
 	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid);
 
-	public Object postGroup(Connection c, Credential cred, String xmlgroup, int userId) throws Exception ;
-	public boolean postGroupsUsers(Connection c, Credential cred, int user, int userId, int groupId);
+	public Object postGroup(Connection c, String xmlgroup, int userId) throws Exception ;
+	public boolean postGroupsUsers(Connection c, int user, int userId, int groupId);
 	public int postUserGroup(Connection c, String label, int userid);
 
 	public String deleteUsersGroups(Connection c, int usersgroup, int currentUid);
 	public String deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid);
 
 	/// Relatif aux groupe de droits
-	public Object getGroupRights(Connection c, Credential cred, int userId, int groupId) throws Exception;
-	public String getGroupRightsInfos(Connection c, Credential cred, int userId, String portfolioId) throws SQLException;
+	public Object getGroupRights(Connection c, int userId, int groupId) throws Exception;
+	public String getGroupRightsInfos(Connection c, int userId, String portfolioId) throws SQLException;
 	public String getRolePortfolio(Connection c, MimeType mimeType, String role, String portfolioId, int userId)throws SQLException;
 	String getRole(Connection c, MimeType mimeType, int grid, int userId) throws SQLException;
 
-	public Object putRole(Connection c, Credential cred, String xmlRole, int userId, int roleId)throws Exception;
+	public Object putRole(Connection c, String xmlRole, int userId, int roleId)throws Exception;
 
-	public String postRoleUser(Connection c, Credential cred, int userId, int grid, Integer userid2)throws SQLException;
+	public String postRoleUser(Connection c, int userId, int grid, Integer userid2)throws SQLException;
 	boolean postNodeRight(int userId, String nodeUuid) throws Exception;
-	public boolean postRightGroup(Connection c, Credential cred, int groupRightId, int groupId, Integer userId);
-	public boolean postNotifyRoles(Connection c, Credential cred, int userId, String portfolio, String uuid, String notify);
-	public boolean setPublicState(Connection c, Credential cred, int userId, String portfolio, boolean isPublic);
-	public int postShareGroup(Connection c, Credential cred, String portfolio, int user, Integer userId, String write);
+	public boolean postRightGroup(Connection c, int groupRightId, int groupId, Integer userId);
+	public boolean postNotifyRoles(Connection c, int userId, String portfolio, String uuid, String notify);
+	public boolean setPublicState(Connection c, int userId, String portfolio, boolean isPublic);
+	public int postShareGroup(Connection c, String portfolio, int user, Integer userId, String write);
 
-	public int deleteShareGroup(Connection c, Credential cred, String portfolio, Integer userId);
-	public int deleteSharePerson(Connection c, Credential cred,String portfolio, int user, Integer userId);
-	public Object deleteGroupRights(Connection c, Credential cred, Integer groupId, Integer groupRightId, Integer userId);
+	public int deleteShareGroup(Connection c, String portfolio, Integer userId);
+	public int deleteSharePerson(Connection c,String portfolio, int user, Integer userId);
+	public Object deleteGroupRights(Connection c, Integer groupId, Integer groupRightId, Integer userId);
 
 	/// Ã€ propos des macro-commandes pour la modification des droits
 	/// e.g.: submit, show/hide; ainsi que la partie gestion de ces commandes
-	public String postMacroOnNode(Connection c, Credential cred, int userId, String nodeUuid, String macroName);
+	public String postMacroOnNode(Connection c, int userId, String nodeUuid, String macroName);
 
 	/// Ã€ propos de la gestion des groupes de droits
 	public String getRRGList(Connection c, int userId, String portfolio, Integer user, String role);
@@ -226,16 +225,16 @@ public interface DataProvider {
 	public String getPortfolioInfo(Connection c, int userId, String portId);
 	public String[] getPorfolioGroup( int userId, String groupName );
 
-	public String putRRGUpdate(Connection c, Credential cred, int userId, Integer rrgId, String data);
+	public String putRRGUpdate(Connection c, int userId, Integer rrgId, String data);
 
-	public String postRRGCreate(Connection c, Credential cred, int userId, String portfolio, String data);
-	public String postRRGUsers( Connection c, Credential cred, int userId, Integer rrgid, String data );
-	public String postRRGUser(Connection c, Credential cred, int userId, Integer rrgid, Integer user);
-	public String postRights(Connection c, Credential cred, int userId, String uuid, String role, NodeRight rights);
+	public String postRRGCreate(Connection c, int userId, String portfolio, String data);
+	public String postRRGUsers( Connection c, int userId, Integer rrgid, String data );
+	public String postRRGUser(Connection c, int userId, Integer rrgid, Integer user);
+	public String postRights(Connection c, int userId, String uuid, String role, NodeRight rights);
 
-	public String deleteRRG(Connection c, Credential cred, int userId, Integer rrgId);
-	public String deleteRRGUser(Connection c, Credential cred, int userId, Integer rrgId, Integer user);
-	public String deletePortfolioUser( Connection c, Credential cred, int userId, String portId );
+	public String deleteRRG(Connection c, int userId, Integer rrgId);
+	public String deleteRRGUser(Connection c, int userId, Integer rrgId, Integer user);
+	public String deletePortfolioUser( Connection c, int userId, String portId );
 
 	//// LTI related
 	public String getUserId(Connection c, String username, String email) throws Exception;
