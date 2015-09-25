@@ -11342,6 +11342,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 
 		if (1 == updatetMySqlNodeMetadatawad(c, nodeUuid,metadatawad)){
+			touchPortfolio( c, nodeUuid, null );
 			return "editer";
 		}
 
