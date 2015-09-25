@@ -15,12 +15,15 @@
 
 package com.portfolio.data.provider.test;
 
+import java.sql.Connection;
 import java.util.Properties;
 
 import javax.activation.MimeType;
 
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.DomUtils;
+import com.portfolio.data.utils.SqlUtils;
+import com.portfolio.security.Credential;
 
 
 
@@ -45,6 +48,8 @@ public class MysqlDataProviderTest {
 		{
 			MimeType xmlMimeType = new MimeType("text/xml");
 			DataProvider dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
+			Connection connection = SqlUtils.getConnection(null);
+			Credential cred = new Credential();
 //			dataProvider.connect(connectionProperties);
 			//System.out.println(dataProvider.getNode(new MimeType("text/xml"),"1"));
 			//System.out.println(dataProvider.getNode(new MimeType("text/xml"),"2"));
@@ -85,44 +90,44 @@ public class MysqlDataProviderTest {
 			// putPortfolio
 			String xml = DomUtils.file2String("c:\\temp\\iut2.xml", new StringBuffer());
 			System.out.println("--- putPortfolio() ------");
-			dataProvider.putPortfolio(xmlMimeType,xmlMimeType,xml,portfolioUuid,userId,true, groupId,null);
+			dataProvider.putPortfolio(connection, xmlMimeType,xmlMimeType,xml,portfolioUuid,userId,true, groupId,null);
 
 
 			  // getNode
 			String uuid = "43020565-b650-4655-b466-af2c69b0c714";
 			System.out.println("--- getNode("+uuid+") ------");
-			System.out.println(dataProvider.getNode(xmlMimeType, uuid, false,userId, groupId, null));
+			System.out.println(dataProvider.getNode(connection, xmlMimeType, uuid, false,userId, groupId, null));
 			// getNode with children
 			System.out.println("--- getNode("+uuid+") with children ------");
-			System.out.println(dataProvider.getNode(xmlMimeType, uuid, true,userId, groupId, null));
+			System.out.println(dataProvider.getNode(connection, xmlMimeType, uuid, true,userId, groupId, null));
 
 			// putNode
 			String parent_uuid_putnode = "82af4eae-0119-4055-b422-e37cece57e0f";
 			System.out.println("--- putNode("+parent_uuid_putnode+") ------");
 			String xml_putnode = DomUtils.file2String("c:\\temp\\putnode.xml", new StringBuffer());
-			System.out.println(dataProvider.putNode(xmlMimeType, parent_uuid_putnode, xml_putnode,userId, groupId));
+			System.out.println(dataProvider.putNode(connection, xmlMimeType, parent_uuid_putnode, xml_putnode,userId, groupId));
 
 
 
 			String uuid_deletenode = "b6b20bf7-3732-4256-ae16-171f42030207";
 			System.out.println("--- deleteNode("+uuid_deletenode+") ------");
-			System.out.println(dataProvider.deleteNode(uuid_deletenode,userId, groupId));
+			System.out.println(dataProvider.deleteNode(connection, uuid_deletenode,userId, groupId));
 
 
 			// getPortfolio
 			System.out.println("--- getPortfolio() ------");
-			String xml_out = dataProvider.getPortfolio(xmlMimeType,portfolioUuid,userId, groupId, null, null, null, 0).toString();
+			String xml_out = dataProvider.getPortfolio(connection, xmlMimeType,portfolioUuid,userId, groupId, null, null, null, 0).toString();
 			DomUtils.saveString(xml_out, "c:\\temp\\out2.xml");
 
 			//getPortfolios
 			userId = null;
 			System.out.println("--- getPortfolios("+userId+") ------");
-			System.out.println(dataProvider.getPortfolios(xmlMimeType, userId,groupId, true, 0));
+			System.out.println(dataProvider.getPortfolios(connection, xmlMimeType, userId,groupId, true, 0));
 
 			//getNodes
 			String uuid_getnodes = "43020565-b650-4655-b466-af2c69b0c714";
 			System.out.println("--- getNodes("+uuid_getnodes+") ------");
-			System.out.println(dataProvider.getNodes(xmlMimeType, null,
+			System.out.println(dataProvider.getNodes(connection, xmlMimeType, null,
 					userId, groupId, null,uuid_getnodes, null,
 					null,null)
 			);
@@ -134,7 +139,7 @@ public class MysqlDataProviderTest {
 			//getPortfolios
 			userId = null;
 			System.out.println("--- getPortfolios("+userId+") ------");
-			System.out.println(dataProvider.getPortfolios(xmlMimeType, userId,groupId, true, 0));
+			System.out.println(dataProvider.getPortfolios(connection, xmlMimeType, userId,groupId, true, 0));
 
 
 		}

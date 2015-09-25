@@ -86,7 +86,7 @@ public class LTIServlet extends HttpServlet {
 	  ServletContext application = getServletConfig().getServletContext();
 	  try
 	  {
-	  	ConfigUtils.loadConfigFile(sc);
+	  	ConfigUtils.loadConfigFile(sc.getServletContext());
 	    loadRoleMapAttributes(application);
 	  }
 	  catch( Exception e ){ e.printStackTrace(); }
@@ -121,6 +121,7 @@ public class LTIServlet extends HttpServlet {
         String dataProviderName  =  ConfigUtils.get("dataProviderClass");
         dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
 
+        /*
   			// Try to initialize Datasource
   			InitialContext cxt = new InitialContext();
   			if ( cxt == null ) {
@@ -141,7 +142,7 @@ public class LTIServlet extends HttpServlet {
   			else
   				dataProvider.setConnection(ds.getConnection());
 //  			dataProvider.setDataSource(ds);
-
+  			//*/
         /*
 		String DBuser =  (String)application.getAttribute("DBuser");
 		String DBpwd =  (String)application.getAttribute("DBpwd");
@@ -246,6 +247,7 @@ public class LTIServlet extends HttpServlet {
 
 			loadRoleMapAttributes(application);
 
+			connexion = SqlUtils.getConnection(session.getServletContext());
 			String userId = getOrCreateUser(payload, cookies, connexion, outTrace);
 
 			if( !"0".equals(userId) ) // FIXME: Need more checking and/or change uid String to int
@@ -414,10 +416,10 @@ public class LTIServlet extends HttpServlet {
 //		if( username == null )	/// If all fail, at least we get the context_id
 //			username = (String)payload.get(BasicLTIConstants.CONTEXT_ID);
 
-		userId = dataProvider.getUserId( username, email );
+		userId = dataProvider.getUserId( connexion, username, email );
 		if ( "0".equals(userId) ) {
 			//create it
-			userId = dataProvider.createUser(username);
+			userId = dataProvider.createUser(connexion, username);
 			outTrace.append("\nCreate User (self) results: " + userId);
 		}
 		else {
@@ -439,13 +441,13 @@ public class LTIServlet extends HttpServlet {
 	 */
 	private String getOrCreateGroup(Connection connexion, String groupTitle, String role, StringBuffer outTrace) throws Exception {
 		//Does the site group already exist?
-		String group = dataProvider.getGroupByName(role);;
+		String group = dataProvider.getGroupByName(connexion, role);;
 //		String groupId = "";
 		if ("0".equals(group)) {
 			//create it
 		  /// createGroup
 //			StringBuffer groupXml = buildGroupXml(groupTitle, role);
-			group = dataProvider.createGroup(role);
+			group = dataProvider.createGroup(connexion, role);
 //			groupId = wadbackend.WadUtilities.getAttribute(group,  "id");
 			outTrace.append("\nCreate Group (self) results: " + group);
 		}

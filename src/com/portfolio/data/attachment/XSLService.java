@@ -26,6 +26,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
@@ -97,7 +98,6 @@ public class XSLService  extends HttpServlet {
 	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	Credential credential;
 	ServletContext sc;
 	String context = "";
 	DataSource ds;
@@ -112,6 +112,7 @@ public class XSLService  extends HttpServlet {
 	@Override
 	public void init(ServletConfig config) throws ServletException
 	{
+		super.init(config);
 		sc = config.getServletContext();
 		servletDir = sc.getRealPath("/");
 		int last = servletDir.lastIndexOf(File.separator);
@@ -168,30 +169,18 @@ public class XSLService  extends HttpServlet {
 		 *   </parameters>
 		 * </convert>
 		 */
-		Connection con = null;
+		Connection c = null;
 		try
 		{
-			if( ds == null )	// Case where we can't deploy context.xml
-			{
-				logger.error("CREATING CONNECTION FROM CONTEXT.XML");
-				con = SqlUtils.getConnection(sc);
-			}
-			else
-			{
-				logger.error("CREATING CONNECTION WITH POOL");
-				con = ds.getConnection();
-			}
-			dataProvider.setConnection(con);
+			c = SqlUtils.getConnection(sc);
 		}
-		catch( Exception e )
+		catch( Exception e1 )
 		{
-			logger.error("ERROR CREATING CONNECTION: "+e.getMessage());
-			e.printStackTrace();
+			e1.printStackTrace();
 		}
-		credential = new Credential(con);
 
 		String origin = request.getRequestURL().toString();
-		logger.error("Is connection null "+con);
+		logger.error("Is connection null "+c);
 
 		/// Variable stuff
 		int userId = 0;
@@ -299,7 +288,7 @@ public class XSLService  extends HttpServlet {
 				for( int i=0; i<portfolioid.length; ++i )
 				{
 					String p = portfolioid[i];
-					String portfolioxml = dataProvider.getPortfolio(new MimeType("text/xml"), p, userId, groupId, "", null, null, 0).toString();
+					String portfolioxml = dataProvider.getPortfolio(c, new MimeType("text/xml"), p, userId, groupId, "", null, null, 0).toString();
 					aggregate.append(portfolioxml);
 				}
 			}
@@ -310,7 +299,7 @@ public class XSLService  extends HttpServlet {
 				for( int i=0; i<nodeid.length; ++i )
 				{
 					String n = nodeid[i];
-					String nodexml = dataProvider.getNode(new MimeType("text/xml"), n, true, userId, groupId, "").toString();
+					String nodexml = dataProvider.getNode(c, new MimeType("text/xml"), n, true, userId, groupId, "").toString();
 					aggregate.append(nodexml);
 				}
 			}
@@ -363,7 +352,7 @@ public class XSLService  extends HttpServlet {
 //				Node uuid = XPathAPI.selectSingleNode(res, filterCode);
 
 				/// Fetch node we want to replace
-				String returnValue = dataProvider.getNode(new MimeType("text/xml"), uuid.getTextContent(), true, userId, groupId, "").toString();
+				String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), uuid.getTextContent(), true, userId, groupId, "").toString();
 
 				is = new ByteArrayInputStream(returnValue.getBytes("UTF-8"));
 				Document rep = documentBuilder.parse(is);
@@ -539,7 +528,12 @@ public class XSLService  extends HttpServlet {
 		}
 		finally
 		{
-			dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+//			dataProvider.disconnect();
 		}
 	}
 

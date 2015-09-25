@@ -18,6 +18,7 @@ package com.portfolio.eventbus;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.sql.Connection;
 import java.util.Enumeration;
 
 import javax.servlet.http.HttpServletRequest;
@@ -30,6 +31,7 @@ import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.SqlUtils;
 
 
 public class HandlerLogging implements KEventHandler
@@ -39,11 +41,20 @@ public class HandlerLogging implements KEventHandler
 	int userId;
 	int groupId;
 	DataProvider dataProvider;
+	Connection connection;
 
 	public HandlerLogging( HttpServletRequest request, DataProvider provider )
 	{
 		httpServletRequest = request;
 		dataProvider = provider;
+		try
+		{
+			connection = SqlUtils.getConnection(request.getSession().getServletContext());
+		}
+		catch( Exception e )
+		{
+			e.printStackTrace();
+		}
 
 		this.session = request.getSession(true);
 		Integer val = (Integer) session.getAttribute("uid");
@@ -71,7 +82,7 @@ public class HandlerLogging implements KEventHandler
 					}
 					String url = httpServletRequest.getRequestURL().toString();
 					if(httpServletRequest.getQueryString()!=null) url += "?" + httpServletRequest.getQueryString().toString();
-					dataProvider.writeLog(url, httpServletRequest.getMethod().toString(),
+					dataProvider.writeLog(connection, url, httpServletRequest.getMethod().toString(),
 							httpHeaders, event.inputData, event.doc.toString(), event.status);
 
 					//// TODO Devrait aussi Žcrire une partie dans les fichiers

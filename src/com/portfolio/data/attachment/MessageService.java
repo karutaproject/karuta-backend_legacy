@@ -30,10 +30,8 @@ import javax.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.MailUtils;
-import com.portfolio.security.Credential;
 
 public class MessageService  extends HttpServlet {
 
@@ -43,10 +41,8 @@ public class MessageService  extends HttpServlet {
 	final Logger logger = LoggerFactory.getLogger(MessageService.class);
 	private static final long serialVersionUID = 9188067506635747901L;
 
-	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	Credential credential;
 	int userId;
 	int groupId = -1;
 	HttpSession session;

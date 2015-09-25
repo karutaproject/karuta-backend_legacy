@@ -42,7 +42,7 @@ public class Credential
 {
 	final Logger logger = LoggerFactory.getLogger(Credential.class);
 
-	private final Connection connection;
+//	private final Connection connection;
 	public static final String NONE = "none";
 	public static final String ADD = "add";
 	public static final String READ = "read";
@@ -58,14 +58,14 @@ public class Credential
 	 * @param connection
 	 * @see HttpServlet#HttpServlet()
 	 */
-	public Credential(Connection connection)
+	public Credential()
 	{
 		super();
 		dbserveur = ConfigUtils.get("serverType");
-		this.connection = connection;
+//		this.connection = connection;
 	}
 
-	public int getAllGroupRightId(String portfolio_id)
+	public int getAllGroupRightId(Connection c, String portfolio_id)
 	{
 		PreparedStatement st;
 		String sql;
@@ -78,7 +78,7 @@ public class Credential
 			{
 				/// Requete SQL qui cherche le grid du gr "all" en fonction du portfolioid
 				sql = "SELECT grid FROM group_right_info gr WHERE portfolio_id = uuid2bin(?) AND label = ? ";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolio_id);
 				st.setString(2, label);
 				res = st.executeQuery();
@@ -100,6 +100,7 @@ public class Credential
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
+	@Deprecated
 	public void doGet( HttpServletRequest request, HttpServletResponse response ) throws ServletException, IOException
 	{
 		Cookie[] cookies = request.getCookies();
@@ -119,6 +120,7 @@ public class Credential
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 * retourne 2 chaines : [0] = cookie login, [1] = cookie credential
 	 */
+	@Deprecated
 	public String[] doPost( String login, String password ) throws ServletException, IOException
 	{
 		DBConnect db;
@@ -201,13 +203,14 @@ public class Credential
 	/**
 	 * @see HttpServlet#doPut(HttpServletRequest request, HttpServletResponse response)
 	 */
+	@Deprecated
 	protected void doPut( HttpServletRequest request, HttpServletResponse response ) throws ServletException, IOException
 	{
 		/// UNHEX(SHA1('password'))
 		/// Create account
 	}
 
-	public String getMysqlUserUidByTokenAndLogin(String login, String token) throws Exception
+	public String getMysqlUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
@@ -216,7 +219,7 @@ public class Credential
 		try
 		{
 			sql = "SELECT userid FROM credential WHERE login = ? and token = ?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, login);
 			st.setString(2, token);
 			res = st.executeQuery();
@@ -234,7 +237,7 @@ public class Credential
 
 
 	//test pour l'affichage du getPortfolio
-	public NodeRight getPortfolioRight(int userId, int groupId, String portfolioUuid, String droit)
+	public NodeRight getPortfolioRight(Connection c, int userId, int groupId, String portfolioUuid, String droit)
 	{
 		PreparedStatement st;
 		String sql;
@@ -246,7 +249,7 @@ public class Credential
 		{
 			//sql = "SELECT distinct portfolio_id FROM GroupRights gr, group_user gu, group_info gi, node n WHERE gu.gid = gi.gid AND gi.grid = gr.grid and gr.id = n.node_uuid AND gu.userid = ? and gr.grid =  '26'";
 			sql = "SELECT user_id, bin2uuid(root_node_uuid) as root_node_uuid FROM portfolio WHERE portfolio_id = uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 			res = st.executeQuery();
 			res.next();
@@ -261,7 +264,7 @@ public class Credential
 			}
 			//*/
 
-			reponse = getNodeRight(userId, groupId, res.getString("root_node_uuid"), droit);
+			reponse = getNodeRight(c, userId, groupId, res.getString("root_node_uuid"), droit);
 
 		}
 		catch(Exception ex)
@@ -273,9 +276,9 @@ public class Credential
 		return reponse;
 	}
 
-	public boolean hasNodeRight(int userId, int groupId, String node_uuid, String droit)
+	public boolean hasNodeRight(Connection c, int userId, int groupId, String node_uuid, String droit)
 	{
-		NodeRight nodeRight = getNodeRight(userId, groupId, node_uuid, null);
+		NodeRight nodeRight = getNodeRight(c, userId, groupId, node_uuid, null);
 		if(droit.equals(READ))
 			return nodeRight.read;
 		else if(droit.equals(WRITE))
@@ -289,7 +292,7 @@ public class Credential
 	}
 
 	//test pour l'affichage des differentes methodes de Node
-	public NodeRight getNodeRight(int userId, int groupId, String node_uuid, String label)
+	public NodeRight getNodeRight(Connection c, int userId, int groupId, String node_uuid, String label)
 	{
 		PreparedStatement st=null;
 		String sql;
@@ -300,14 +303,14 @@ public class Credential
 
 		try
 		{
-			if( getPortfolioAdmin(userId, node_uuid) || isAdmin(userId) )
+			if( getPortfolioAdmin(c, userId, node_uuid) || isAdmin(c, userId) )
 			{
 				nodeRight.read = true;
 				nodeRight.write = true;
 				nodeRight.submit = true;
 				nodeRight.delete = true;
 			}
-			else if( isDesigner(userId, node_uuid) )	/// Droits via le partage totale (obsolète) ou si c'est designer
+			else if( isDesigner(c, userId, node_uuid) )	/// Droits via le partage totale (obsolète) ou si c'est designer
 			{
 				nodeRight.read = true;
 				nodeRight.write = true;
@@ -328,7 +331,7 @@ public class Credential
 							"AND gi.gid=gu.gid " +
 							"AND gu.userid=? " +
 							"AND n.node_uuid=uuid2bin(?)";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setInt(1, userId);
 					st.setString(2, node_uuid);
 					res = st.executeQuery();
@@ -354,7 +357,7 @@ public class Credential
 						"WHERE gu.gid = gi.gid " +
 						"AND gi.grid = gr.grid AND gu.userid = ? " +
 						"AND gr.id = uuid2bin(?) AND gu.gid = ?";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setInt(1, userId);
 				st.setString(2, node_uuid);
 				st.setInt(3, groupId);
@@ -377,7 +380,7 @@ public class Credential
 						"AND grid=(SELECT grid " +
 						"FROM credential c, group_right_info gri, node n " +
 						"WHERE c.login=gri.label AND c.userid=? AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?))";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, node_uuid);
 				st.setInt(2, userId);
 				st.setString(3, node_uuid);
@@ -405,7 +408,7 @@ public class Credential
 						"INNER JOIN group_right_info gri1 ON gi.grid=gri1.grid " +
 						"INNER JOIN group_right_info gri2 ON gri1.portfolio_id=gri2.portfolio_id " +
 						"WHERE gi.gid=? AND gri2.label='all')";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, node_uuid);
 				st.setInt(2, groupId);
 
@@ -422,7 +425,7 @@ public class Credential
 			} // fin else
 
 			/// Public rights (last chance for rights)
-			if( isPublic( node_uuid, null ) )
+			if( isPublic( c, node_uuid, null ) )
 			{
 				nodeRight.read = true;
 			}
@@ -443,7 +446,7 @@ public class Credential
 	}
 
 	/// From node, check if portoflio has user 'public' in group 'all'
-	public boolean isPublic( String node_uuid, String portfolio_uuid )
+	public boolean isPublic( Connection c, String node_uuid, String portfolio_uuid )
 	{
 		PreparedStatement st = null;
 		ResultSet res = null;
@@ -462,7 +465,7 @@ public class Credential
 						"WHERE n.node_uuid=uuid2bin(?) " +
 						"AND gri.label='all' " +
 						"AND c.login='public'";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, node_uuid);
 			}
 			else
@@ -475,7 +478,7 @@ public class Credential
 						"WHERE gri.portfolio_id=uuid2bin(?) " +
 						"AND gri.label='all' " +
 						"AND c.login='public'";
-				st = connection.prepareStatement(sql);
+				st = c.prepareStatement(sql);
 				st.setString(1, portfolio_uuid);
 			}
 			res = st.executeQuery();
@@ -498,7 +501,7 @@ public class Credential
 		return val;
 	}
 
-	public int getPublicUid()
+	public int getPublicUid( Connection c )
 	{
 		String sql;
 		PreparedStatement st = null;
@@ -509,7 +512,7 @@ public class Credential
 		{
 			// Récupération du userid de 'public'
 			sql = "SELECT userid FROM credential WHERE login='public'";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			res = st.executeQuery();
 			if(res.next())
 				publicid = res.getInt(1);
@@ -527,7 +530,7 @@ public class Credential
 		return publicid;
 	}
 
-	public NodeRight getPublicRight(int userId, int groupId, String node_uuid, String label)
+	public NodeRight getPublicRight(Connection c, int userId, int groupId, String node_uuid, String label)
 	{
 		String sql;
 		PreparedStatement st = null;
@@ -548,7 +551,7 @@ public class Credential
 					"WHERE id=uuid2bin(?) " +
 					"AND gri.label='all' " +
 					"AND gu.userid=?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, node_uuid);
 			st.setInt(2, userId);
 
@@ -575,7 +578,7 @@ public class Credential
 	}
 
 	//recuperation de l'uuid du createur du portfolio
-	public boolean getPortfolioAdmin(int userId, String node_uuid)
+	public boolean getPortfolioAdmin(Connection c, int userId, String node_uuid)
 	{
 		PreparedStatement st=null;
 		String sql;
@@ -586,7 +589,7 @@ public class Credential
 		{
 			//sql = "SELECT distinct portfolio_id FROM GroupRights gr, group_user gu, group_info gi, node n WHERE gu.gid = gi.gid AND gi.grid = gr.grid and gr.id = n.node_uuid AND gu.userid = ? and gr.grid =  '26'";
 			sql = "SELECT distinct user_id FROM portfolio p, node n WHERE n.portfolio_id = p.portfolio_id and (n.node_uuid = uuid2bin(?) OR n.res_res_node_uuid = uuid2bin(?) OR n.res_node_uuid = uuid2bin(?) OR n.res_context_node_uuid = uuid2bin(?))";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, node_uuid);
 			st.setString(2, node_uuid);
 			st.setString(3, node_uuid);
@@ -613,7 +616,7 @@ public class Credential
 	}
 
 	//recuperation du portfolio_id
-	public String getPortfolio_id(String node_uuid)
+	public String getPortfolio_id(Connection c, String node_uuid)
 	{
 		PreparedStatement st;
 		String sql;
@@ -624,7 +627,7 @@ public class Credential
 		{
 			//sql = "SELECT distinct portfolio_id FROM GroupRights gr, group_user gu, group_info gi, node n WHERE gu.gid = gi.gid AND gi.grid = gr.grid and gr.id = n.node_uuid AND gu.userid = ? and gr.grid =  '26'";
 			sql = "SELECT bin2uuid(portfolio_id) as portfolio_id FROM node n WHERE node_uuid = uuid2bin(?)";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setString(1, node_uuid);
 			res = st.executeQuery();
 
@@ -644,7 +647,7 @@ public class Credential
 	}
 
 
-	public boolean postRights( String role, int userId, String uuid, NodeRight rights, String portfolioUuid )
+	public boolean postRights( Connection c, String role, int userId, String uuid, NodeRight rights, String portfolioUuid )
 	{
 		PreparedStatement st=null;
 		PreparedStatement st1=null;
@@ -669,7 +672,7 @@ public class Credential
 							"LEFT JOIN group_info gi ON gu.gid=gi.gid " +
 							"LEFT JOIN group_right_info gri ON gi.grid=gri.grid " +
 							"WHERE portfolio_id = uuid2bin(?) AND gu.userid = ?";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, portfolioUuid);
 					st.setInt(2, userId);
 					res = st.executeQuery();
@@ -677,7 +680,7 @@ public class Credential
 				else if( !"".equals(portfolioUuid) )	/// Rôle et portfolio
 				{
 					sql = "SELECT bin2uuid(portfolio_id) as portfolio_id FROM group_right_info gri  WHERE portfolio_id = uuid2bin(?) AND label = ?";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, portfolioUuid);
 					st.setString(2, role);
 					res = st.executeQuery();
@@ -685,9 +688,9 @@ public class Credential
 					if(!res.next())    /// Groupe non-existant
 					{
 						sqlInsert	= "INSERT INTO group_right_info(owner,label, portfolio_id) Values (?,?, uuid2bin(?)) ";
-						st1 = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+						st1 = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 						if (dbserveur.equals("oracle")){
-							st1 = connection.prepareStatement(sqlInsert, new String[]{"grid"});
+							st1 = c.prepareStatement(sqlInsert, new String[]{"grid"});
 						}
 						st1.setInt(1, userId);
 						st1.setString(2, role);
@@ -703,9 +706,9 @@ public class Credential
 
 						/// Crée une copie dans group_info, le temps de ré-organiser tout ça
 						sqlInsert = "INSERT INTO group_info(grid,owner,label) Values (?,?,?) ";
-						st1 = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+						st1 = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 						if (dbserveur.equals("oracle")){
-							st1 = connection.prepareStatement(sqlInsert, new String[]{"gid"});
+							st1 = c.prepareStatement(sqlInsert, new String[]{"gid"});
 						}
 						st1.setInt(1, grid);
 						st1.setInt(2, userId);
@@ -715,7 +718,7 @@ public class Credential
 					}
 
 					sql = "SELECT bin2uuid(portfolio_id) as portfolio_id,  grid FROM group_right_info gri  WHERE portfolio_id = uuid2bin(?) AND label = ?";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, portfolioUuid);
 					st.setString(2, role);
 					res = st.executeQuery();
@@ -726,7 +729,7 @@ public class Credential
 							"FROM group_rights gr, group_right_info gri " +
 							"WHERE gr.id = uuid2bin(?) AND " +
 							"gri.label = ?";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, uuid);
 					st.setString(2, role);
 					res = st.executeQuery();
@@ -740,7 +743,7 @@ public class Credential
 					}
 
 					sql = "SELECT bin2uuid(id) as id, grid FROM group_rights gri WHERE  grid=? AND id = uuid2bin(?) ";
-					st2 = connection.prepareStatement(sql);
+					st2 = c.prepareStatement(sql);
 					st2.setInt(1, grid);
 					st2.setString(2, uuid);
 					res2 = st2.executeQuery();
@@ -750,7 +753,7 @@ public class Credential
 						try
 						{
 							sqlUpdate = "UPDATE group_rights SET RD=?, WR=?, DL=?, SB=? WHERE grid=? AND id=uuid2bin(?)";
-							st = connection.prepareStatement(sqlUpdate);
+							st = c.prepareStatement(sqlUpdate);
 							st.setBoolean(1, rights.read);
 							st.setBoolean(2, rights.write);
 							st.setBoolean(3, rights.delete);
@@ -773,7 +776,7 @@ public class Credential
 						try
 						{
 							sqlUpdate = "INSERT INTO group_rights(grid, id, RD, WR, DL, SB) VALUES (?, uuid2bin(?),?,?,?,?)";
-							st = connection.prepareStatement(sqlUpdate);
+							st = c.prepareStatement(sqlUpdate);
 							st.setInt(1, grid);
 							st.setString(2, uuid);
 							st.setBoolean(1, rights.read);
@@ -814,7 +817,7 @@ public class Credential
 
 	//Ajout des droits du portfolio dans group_right_info, group_rights
 	// FIXME: Ne peut pas enlever des droits
-	public boolean postGroupRight(String label, String uuid, String droit, String portfolioUuid, int userId)
+	public boolean postGroupRight(Connection c, String label, String uuid, String droit, String portfolioUuid, int userId)
 	{
 		PreparedStatement st=null;
 		PreparedStatement st1=null;
@@ -866,7 +869,7 @@ public class Credential
 							"LEFT JOIN group_info gi ON gu.gid=gi.gid " +
 							"LEFT JOIN group_right_info gri ON gi.grid=gri.grid " +
 							"WHERE portfolio_id = uuid2bin(?) AND gu.userid = ?";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, portfolioUuid);
 					st.setInt(2, userId);
 					res = st.executeQuery();
@@ -874,7 +877,7 @@ public class Credential
 				else if( !"".equals(portfolioUuid) )	/// Rôle et portfolio
 				{
 					sql = "SELECT bin2uuid(portfolio_id) as portfolio_id FROM group_right_info gri  WHERE portfolio_id = uuid2bin(?) AND label = ?";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, portfolioUuid);
 					st.setString(2, label);
 					res = st.executeQuery();
@@ -886,9 +889,9 @@ public class Credential
 
 						sqlInsert	= "INSERT INTO group_right_info(owner, label, change_rights, portfolio_id) Values (?, ?, 0, uuid2bin(?)) ";
 						if( "mysql".equals(dbserveur) )
-							st1 = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+							st1 = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 						if (dbserveur.equals("oracle"))
-							st1 = connection.prepareStatement(sqlInsert, new String[]{"grid"});
+							st1 = c.prepareStatement(sqlInsert, new String[]{"grid"});
 						st1.setInt(1, userId);
 						st1.setString(2, label);
 						st1.setString(3, portfolioUuid);
@@ -901,7 +904,7 @@ public class Credential
 
 						/// Crée une copie dans group_info, le temps de ré-organiser tout ça
 						sqlInsert = "INSERT INTO group_info(grid,owner,label) Values (?,?,?) ";
-						st1 = connection.prepareStatement(sqlInsert);
+						st1 = c.prepareStatement(sqlInsert);
 						st1.setInt(1, grid);
 						st1.setInt(2, userId);
 						st1.setString(3, label);
@@ -910,7 +913,7 @@ public class Credential
 					}
 
 					sql = "SELECT bin2uuid(portfolio_id) as portfolio_id,  grid FROM group_right_info gri  WHERE portfolio_id = uuid2bin(?) AND label = ?";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, portfolioUuid);
 					st.setString(2, label);
 					res = st.executeQuery();
@@ -921,7 +924,7 @@ public class Credential
 							"FROM group_rights gr, group_right_info gri " +
 							"WHERE gr.id = uuid2bin(?) AND " +
 							"gri.label = ?";
-					st = connection.prepareStatement(sql);
+					st = c.prepareStatement(sql);
 					st.setString(1, uuid);
 					st.setString(2, label);
 					res = st.executeQuery();
@@ -937,7 +940,7 @@ public class Credential
 					st.close();
 
 					sql = "SELECT bin2uuid(id) as id, grid FROM group_rights gri WHERE  grid=? AND id = uuid2bin(?) ";
-					st2 = connection.prepareStatement(sql);
+					st2 = c.prepareStatement(sql);
 					st2.setInt(1, grid);
 					st2.setString(2, uuid);
 					res2 = st2.executeQuery();
@@ -954,7 +957,7 @@ public class Credential
 							if(droit == READ)
 							{
 								sqlUpdate = "UPDATE group_rights SET RD = ?  WHERE grid = ? AND id = uuid2bin(?)";
-								st = connection.prepareStatement(sqlUpdate);
+								st = c.prepareStatement(sqlUpdate);
 								st.setInt(1, RD);
 								st.setInt(2, grid);
 								st.setString(3, uuid);
@@ -963,7 +966,7 @@ public class Credential
 							else if (droit == WRITE)
 							{
 								sqlUpdate = "UPDATE group_rights SET WR = ? WHERE grid = ? AND id = uuid2bin(?)";
-								st = connection.prepareStatement(sqlUpdate);
+								st = c.prepareStatement(sqlUpdate);
 								st.setInt(1, WR);
 								st.setInt(2, grid);
 								st.setString(3, uuid);
@@ -972,7 +975,7 @@ public class Credential
 							else if (droit == DELETE)
 							{
 								sqlUpdate = "UPDATE group_rights SET DL = ? WHERE grid = ? AND id = uuid2bin(?)";
-								st = connection.prepareStatement(sqlUpdate);
+								st = c.prepareStatement(sqlUpdate);
 								st.setInt(1, DL);
 								st.setInt(2, grid);
 								st.setString(3, uuid);
@@ -982,7 +985,7 @@ public class Credential
 							{
 								//// FIXME: ajoute le rules_id pré-canné pour certaine valeurs
 								sqlUpdate = "UPDATE group_rights SET SB = ? WHERE grid = ? AND id = uuid2bin(?)";
-								st = connection.prepareStatement(sqlUpdate);
+								st = c.prepareStatement(sqlUpdate);
 								st.setInt(1, SB);
 								st.setInt(2, grid);
 								st.setString(3, uuid);
@@ -991,7 +994,7 @@ public class Credential
 							else if ( droit == ADD )
 							{
 								sqlUpdate = "UPDATE group_rights SET AD = ? WHERE grid = ? AND id = uuid2bin(?)";
-								st = connection.prepareStatement(sqlUpdate);
+								st = c.prepareStatement(sqlUpdate);
 								st.setInt(1, AD);
 								st.setInt(2, grid);
 								st.setString(3, uuid);
@@ -1000,7 +1003,7 @@ public class Credential
 							else  // Les droits d'exécuter des actions. FIXME Pas propre, à changer plus tard.
 							{
 								sqlUpdate = "UPDATE group_rights SET rules_id = ? WHERE grid = ? AND id = uuid2bin(?)";
-								st = connection.prepareStatement(sqlUpdate);
+								st = c.prepareStatement(sqlUpdate);
 								st.setString(1, droit);
 								st.setInt(2, grid);
 								st.setString(3, uuid);
@@ -1027,7 +1030,7 @@ public class Credential
 							if(droit == READ)
 							{
 								sqlInsert = "INSERT INTO group_rights(grid, id, RD) VALUES (?, uuid2bin(?),?)";
-								st = connection.prepareStatement(sqlInsert);
+								st = c.prepareStatement(sqlInsert);
 								st.setInt(1, grid);
 								st.setString(2, uuid);
 								st.setInt(3, RD);
@@ -1036,7 +1039,7 @@ public class Credential
 							else if (droit == WRITE)
 							{
 								sqlInsert = "INSERT INTO group_rights(grid, id, WR) VALUES (?, uuid2bin(?),?)";
-								st = connection.prepareStatement(sqlInsert);
+								st = c.prepareStatement(sqlInsert);
 								st.setInt(1, grid);
 								st.setString(2, uuid);
 								st.setInt(3, WR);
@@ -1045,7 +1048,7 @@ public class Credential
 							else if (droit == DELETE)
 							{
 								sqlInsert = "INSERT INTO group_rights(grid, id, DL) VALUES (?, uuid2bin(?),?)";
-								st = connection.prepareStatement(sqlInsert);
+								st = c.prepareStatement(sqlInsert);
 								st.setInt(1, grid);
 								st.setString(2, uuid);
 								st.setInt(3, DL);
@@ -1054,7 +1057,7 @@ public class Credential
 							else if (droit == SUBMIT)
 							{
 								sqlInsert = "INSERT INTO group_rights(grid, id, SB) VALUES (?, uuid2bin(?),?)";
-								st = connection.prepareStatement(sqlInsert);
+								st = c.prepareStatement(sqlInsert);
 								st.setInt(1, grid);
 								st.setString(2, uuid);
 								st.setInt(3, SB);
@@ -1063,7 +1066,7 @@ public class Credential
 							else
 							{
 								sqlInsert = "INSERT INTO group_rights(grid, id, AD) VALUES (?, uuid2bin(?),?)";
-								st = connection.prepareStatement(sqlInsert);
+								st = c.prepareStatement(sqlInsert);
 								st.setInt(1, grid);
 								st.setString(2, uuid);
 								st.setInt(3, AD);
@@ -1100,7 +1103,7 @@ public class Credential
 		return reponse;
 	}
 
-	public boolean isUserMemberOfGroup(int userId, int groupId) {
+	public boolean isUserMemberOfGroup(Connection c, int userId, int groupId) {
 		boolean status = false;
 		PreparedStatement st=null;
 		String sql;
@@ -1108,7 +1111,7 @@ public class Credential
 		try
 		{
 			sql = "SELECT userid FROM group_user gu WHERE gu.userid = ? AND gu.gid = ?";
-			st = connection.prepareStatement(sql);
+			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 
 			st.setInt(2, groupId);
@@ -1135,7 +1138,7 @@ public class Credential
 	}
 
 
-	public boolean isAdmin( Integer userId)
+	public boolean isAdmin( Connection c, Integer userId)
 	{
 		boolean status = false;
 		if( userId == null )
@@ -1147,7 +1150,7 @@ public class Credential
 		try
 		{
 			String query = "SELECT userid FROM credential WHERE userid=?  AND is_admin=1 ";
-			stmt=connection.prepareStatement(query);
+			stmt=c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			rs = stmt.executeQuery();
 
@@ -1169,7 +1172,7 @@ public class Credential
 	}
 
 	// System-wide designer
-	public boolean isCreator( Integer userId )
+	public boolean isCreator( Connection c, Integer userId )
 	{
 		boolean status = false;
 		if( userId == null )
@@ -1180,7 +1183,7 @@ public class Credential
 		try
 		{
 			String query = "SELECT c.userid FROM credential c WHERE c.userid=? AND c.is_designer=1";
-			stmt=connection.prepareStatement(query);
+			stmt=c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			rs = stmt.executeQuery();
 
@@ -1201,7 +1204,7 @@ public class Credential
 	}
 
 	/// Specific portfolio designer
-	public boolean isDesigner( Integer userId, String nodeId )
+	public boolean isDesigner( Connection c, Integer userId, String nodeId )
 	{
 		boolean status = false;
 		if( userId == null )
@@ -1217,7 +1220,7 @@ public class Credential
 					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
 					"WHERE gu.userid=? AND n.node_uuid=uuid2bin(?) AND gri.label='designer' ";
-			stmt=connection.prepareStatement(query);
+			stmt=c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			stmt.setString(2, nodeId);
 			rs = stmt.executeQuery();
@@ -1266,7 +1269,7 @@ public class Credential
 	}
 	//*/
 
-	public boolean isOwner( Integer userId, String portfolio )
+	public boolean isOwner( Connection c, Integer userId, String portfolio )
 	{
 		if( userId == null )
 			return false;
@@ -1278,7 +1281,7 @@ public class Credential
 		{
 			/// FIXME
 			String query = "SELECT modif_user_id FROM node WHERE modif_user_id=? AND portfolio_id=uuid2bin(?)";
-			stmt=connection.prepareStatement(query);
+			stmt=c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			stmt.setString(2, portfolio);
 			rs = stmt.executeQuery();
@@ -1299,7 +1302,7 @@ public class Credential
 		return false;
 	}
 
-	public boolean isNodeOwner( Integer userId, String nodeuuid )
+	public boolean isNodeOwner( Connection c, Integer userId, String nodeuuid )
 	{
 		if( userId == null )
 			return false;
@@ -1309,7 +1312,7 @@ public class Credential
 		try
 		{
 			String query = "SELECT modif_user_id FROM node WHERE modif_user_id=? AND node_uuid=uuid2bin(?)";
-			stmt=connection.prepareStatement(query);
+			stmt=c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			stmt.setString(2, nodeuuid);
 			rs = stmt.executeQuery();
@@ -1325,14 +1328,14 @@ public class Credential
 		return false;
 	}
 
-	public int getOwner( Integer userId, String portfolio )
+	public int getOwner( Connection c, Integer userId, String portfolio )
 	{
 		ResultSet rs=null;
 		PreparedStatement stmt=null;
 		try
 		{
 			String query = "SELECT modif_user_id FROM portfolio WHERE portfolio_id=uuid2bin(?)";
-			stmt=connection.prepareStatement(query);
+			stmt=c.prepareStatement(query);
 			stmt.setString(1, portfolio);
 			rs = stmt.executeQuery();
 
@@ -1347,7 +1350,7 @@ public class Credential
 	}
 
 
-	public boolean isOwnerRRG( Integer userId, int rrg )
+	public boolean isOwnerRRG( Connection c, Integer userId, int rrg )
 	{
 		if( userId == null )
 			return false;
@@ -1361,7 +1364,7 @@ public class Credential
 					"FROM group_right_info gri " +
 					"LEFT JOIN portfolio p ON gri.portfolio_id=p.portfolio_id " +
 					"WHERE p.modif_user_id=? AND gri.grid=?";
-			stmt=connection.prepareStatement(query);
+			stmt=c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			stmt.setInt(2, rrg);
 			rs = stmt.executeQuery();

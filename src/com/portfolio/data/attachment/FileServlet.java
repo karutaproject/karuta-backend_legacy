@@ -29,6 +29,7 @@ import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.URL;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -85,7 +86,7 @@ public class FileServlet  extends HttpServlet
 //	DataProvider dataProvider = null;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-//	Credential credential;
+	final Credential credential = new Credential();
 
 	private String server = "";
 	private String backend = "";
@@ -93,6 +94,7 @@ public class FileServlet  extends HttpServlet
 	ServletContext servContext;
 	DataSource ds;
 	ArrayList<String> ourIPs = new ArrayList<String>();
+	DataProvider dataProvider;
 
 	@Override
 	public void init( ServletConfig config )
@@ -100,6 +102,10 @@ public class FileServlet  extends HttpServlet
 		/// List possible local address
 		try
 		{
+			super.init(config);
+			
+			dataProvider = SqlUtils.initProvider(config.getServletContext(), logger);
+			
 			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
 			while (interfaces.hasMoreElements()){
 				NetworkInterface current = interfaces.nextElement();
@@ -108,9 +114,15 @@ public class FileServlet  extends HttpServlet
 				while (addresses.hasMoreElements()){
 					InetAddress current_addr = addresses.nextElement();
 					if (current_addr instanceof Inet4Address)
-						ourIPs.add(current_addr.getHostAddress());
+					{
+						String ip = current_addr.getHostAddress();
+//						System.out.println("USED IP: "+ip);
+						ourIPs.add(ip);
+					}
 				}
 			}
+			// Force localhost ip to be set, sometime it isn't listed
+			ourIPs.add("127.0.0.1");
 		}
 		catch( Exception e )
 		{
@@ -120,7 +132,7 @@ public class FileServlet  extends HttpServlet
 		servContext = config.getServletContext();
 		try
 		{
-			ConfigUtils.loadConfigFile(config);
+			ConfigUtils.loadConfigFile(config.getServletContext());
 		}
 		catch( Exception e1 )
 		{
@@ -171,19 +183,21 @@ public class FileServlet  extends HttpServlet
 		String useragent = request.getHeader("User-Agent");
 		logger.error("Agent: "+useragent);
 
-		DataProvider dataProvider = null;
-		Credential credential = null;
+//		DataProvider dataProvider = null;
 		Connection c = null;
 		try
 		{
-			dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+//			dataProvider = SqlUtils.initProvider(getServletContext(), logger);
+//			dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
 			//On initialise le dataProvider
+			/*
 			if( ds == null )	// Case where we can't deploy context.xml
 			{ c = SqlUtils.getConnection(servContext); }
 			else
 			{ c = ds.getConnection(); }
 			dataProvider.setConnection(c);
-			credential = new Credential(c);
+			//*/
+			c = SqlUtils.getConnection(getServletContext());
 		}
 		catch(Exception e)
 		{
@@ -245,7 +259,7 @@ public class FileServlet  extends HttpServlet
 		}
 
 		/// Vérification des droits d'accès
-		if(!credential.hasNodeRight(userId, groupId, uuid, Credential.WRITE))
+		if(!credential.hasNodeRight(c, userId, groupId, uuid, Credential.WRITE))
 		{
 			response.sendError(HttpServletResponse.SC_FORBIDDEN);
 			//throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit WRITE sur le noeud "+nodeUuid);
@@ -255,7 +269,7 @@ public class FileServlet  extends HttpServlet
 		String fileid = "";
 		try
 		{
-			data = dataProvider.getResNode(uuid, userId, groupId);
+			data = dataProvider.getResNode(c, uuid, userId, groupId);
 
 			/// Parse les données
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
@@ -456,7 +470,12 @@ public class FileServlet  extends HttpServlet
 		respWriter.write(json);
 
 //		RetrieveAnswer(connection, response, ref);
-		dataProvider.disconnect();
+//		dataProvider.disconnect();
+		try
+		{
+			if( c != null ) c.close();
+		}
+		catch( SQLException e ){ e.printStackTrace(); }
 	}
 
 	// =====================================================================================
@@ -465,11 +484,13 @@ public class FileServlet  extends HttpServlet
 	{
 		initialize(request);
 
-		DataProvider dataProvider = null;
-		Credential credential = null;
+//		DataProvider dataProvider = null;
 		Connection c = null;
 		try
 		{
+//			dataProvider = SqlUtils.initProvider(getServletContext(), logger);
+			c = SqlUtils.getConnection(getServletContext());
+			/*
 			dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
 			//On initialise le dataProvider
 			if( ds == null )	// Case where we can't deploy context.xml
@@ -477,7 +498,7 @@ public class FileServlet  extends HttpServlet
 			else
 			{ c = ds.getConnection(); }
 			dataProvider.setConnection(c);
-			credential = new Credential(c);
+			//*/
 		}
 		catch(Exception e)
 		{
@@ -529,7 +550,7 @@ public class FileServlet  extends HttpServlet
 
 		response.setCharacterEncoding("UTF-8");
 
-		System.out.println("FileServlet::doGet");
+		System.out.println("FileServlet::doGet: "+url+" from user: "+userId );
 		try{
 			// ====== URI : /resources/file[/{lang}]/{context-id}
 			// ====== PathInfo: /resources/file[/{uuid}?lang={fr|en}&size={S|L}] pathInfo
@@ -550,7 +571,7 @@ public class FileServlet  extends HttpServlet
 				if( userId == 0 )
 					throw new RestWebApplicationException(Status.FORBIDDEN, "");
 
-				if(!credential.hasNodeRight(userId, groupId, uuid, Credential.READ))
+				if(!credential.hasNodeRight(c, userId, groupId, uuid, Credential.READ))
 				{
 					response.sendError(HttpServletResponse.SC_FORBIDDEN);
 					//throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit READ sur le noeud "+nodeUuid);
@@ -563,7 +584,7 @@ public class FileServlet  extends HttpServlet
 			}
 
 			/// On récupère le noeud de la ressource pour retrouver le lien
-			String data = dataProvider.getResNode(uuid, userId, groupId);
+			String data = dataProvider.getResNode(c, uuid, userId, groupId);
 
 			//			javax.servlet.http.HttpSession session = request.getSession(true);
 			//====================================================
@@ -702,14 +723,16 @@ public class FileServlet  extends HttpServlet
 		}
 		finally
 		{
-			try{
-				dataProvider.disconnect();
+			try
+			{
+				if( c != null ) c.close();
 			}
 			catch(Exception e){
 				ServletOutputStream out = response.getOutputStream();
 				out.println("Erreur dans doGet: " +e);
 				out.close();
 			}
+//				dataProvider.disconnect();
 			request.getInputStream().close();
 			response.getOutputStream().close();
 		}

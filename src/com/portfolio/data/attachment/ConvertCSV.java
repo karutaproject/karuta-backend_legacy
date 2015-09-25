@@ -35,9 +35,6 @@ import org.json.JSONObject;
 
 import au.com.bytecode.opencsv.CSVReader;
 
-import com.portfolio.data.provider.DataProvider;
-import com.portfolio.security.Credential;
-
 public class ConvertCSV  extends HttpServlet {
 
 	/**
@@ -45,10 +42,8 @@ public class ConvertCSV  extends HttpServlet {
 	 */
 	private static final long serialVersionUID = 9188067506635747901L;
 
-	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	Credential credential;
 	int userId;
 	int groupId = -1;
 	String user = "";

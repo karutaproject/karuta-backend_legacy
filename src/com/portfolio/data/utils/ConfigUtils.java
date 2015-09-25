@@ -21,6 +21,7 @@ import java.io.FileInputStream;
 import java.util.HashMap;
 
 import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,14 +33,14 @@ public class ConfigUtils
 	static HashMap<String, String> attributes = new HashMap<String, String>();
 	static String filePath = "";
 	
-	public static boolean loadConfigFile( ServletConfig config ) throws Exception
+	public static boolean loadConfigFile( ServletContext context ) throws Exception
 	{
 		if( hasLoaded ) return true;
 		String path = "";
 		try
 		{
-			String servName = config.getServletContext().getContextPath();
-			path = config.getServletContext().getRealPath("/");
+			String servName = context.getContextPath();
+			path = context.getRealPath("/");
 			File base = new File(path+".."+File.separatorChar+"..");
 			String tomcatRoot = base.getCanonicalPath();
 			path = tomcatRoot + servName +"_config"+File.separatorChar;

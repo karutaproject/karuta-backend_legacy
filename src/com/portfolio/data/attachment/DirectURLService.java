@@ -22,6 +22,8 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 
@@ -53,7 +55,6 @@ public class DirectURLService  extends HttpServlet {
 	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	Credential credential;
 	int userId;
 	int groupId = -1;
 	HttpSession session;
@@ -66,6 +67,7 @@ public class DirectURLService  extends HttpServlet {
 		/// List possible local address
 		try
 		{
+			dataProvider = SqlUtils.initProvider(getServletContext(), logger);
 			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
 			while (interfaces.hasMoreElements()){
 				NetworkInterface current = interfaces.nextElement();
@@ -122,26 +124,16 @@ public class DirectURLService  extends HttpServlet {
 		String email = splitData[1];
 		String role = splitData[2];
 		/// log person with associated email
+		Connection c = null;
 		try
 		{
 			session = request.getSession(true);
-			dataProvider = SqlUtils.initProvider(getServletContext(), logger);
-			String[] login = dataProvider.logViaEmail(email);
+			c = SqlUtils.getConnection(getServletContext());
+			String[] login = dataProvider.logViaEmail(c, email);
 
 			if( login != null )
 			{
 				/// Init DB connection
-				DataProvider dataProvider = null;
-				try
-				{
-					dataProvider = SqlUtils.initProvider(getServletContext(), logger);
-				}
-				catch( Exception e1 )
-				{
-					e1.printStackTrace();
-				}
-				if( dataProvider == null )
-					return;
 
 
 				// TODO
@@ -166,11 +158,11 @@ public class DirectURLService  extends HttpServlet {
 				if( uid > 0 )
 				{
 					/// Find group for this node
-					int rrgid = dataProvider.getRoleByNode(1, uuid, role);
+					int rrgid = dataProvider.getRoleByNode(c, 1, uuid, role);
 
 					/// Put person in specified group
 					String userInfo = "<users><user id='"+uid+"'></users>";
-					dataProvider.postRRGUsers(1, rrgid, userInfo);
+					dataProvider.postRRGUsers(c, 1, rrgid, userInfo);
 
 					/// Log person
 					session.setAttribute("user", login[1]);
@@ -178,12 +170,20 @@ public class DirectURLService  extends HttpServlet {
 					uuid = splitData[0];
 				}
 
-				dataProvider.disconnect();
+//				dataProvider.disconnect();
 			}
 		}
 		catch( Exception e )
 		{
 			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
 		PrintWriter writer = response.getWriter();
