@@ -3831,28 +3831,62 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId)
 	{
-		/// FIXME: This method is taking time
+		float t1=0, t2=0, t3=0, t4=0, t5=0, t6=0;
+		float t0 = System.currentTimeMillis();
+		
 		NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, Credential.DELETE);
 
 		if(!nodeRight.delete)
 			if(!cred.isAdmin(c, userId) && !cred.isDesigner(c, userId, nodeUuid))
 				throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
+		t1 = System.currentTimeMillis();
+		
 		PreparedStatement st;
 		String sql = "";
 		int result = 0;
 		String parentid = "";
 		try
 		{
-			/// On trouve le parent, pour ré-ordonner la numérotation
-			sql = "SELECT bin2uuid(node_parent_uuid) FROM node WHERE node_uuid=uuid2bin(?)";
-			st = c.prepareStatement(sql);
-			st.setString(1, nodeUuid);
-			ResultSet res = st.executeQuery();
-			if( res.next() )
-				parentid = res.getString("bin2uuid(node_parent_uuid)");
-			res.close();
-			st.close();
+			/// Temp table for node ids, so we can traverse from here
+			if (dbserveur.equals("mysql")){
+				sql = "CREATE TEMPORARY TABLE IF NOT EXISTS t_node(" +
+						"node_uuid binary(16)  NOT NULL, " +
+						"node_parent_uuid binary(16) DEFAULT NULL, " +
+						"node_order int(12) NOT NULL, " +
+						"res_node_uuid binary(16) DEFAULT NULL, " +
+						"res_res_node_uuid binary(16) DEFAULT NULL, " +
+						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
+						"shared_res int(1) NOT NULL, " +
+						"shared_node int(1) NOT NULL, " +
+						"shared_node_res int(1) NOT NULL, " +
+						"shared_res_uuid BINARY(16)  NULL, " +
+						"shared_node_uuid BINARY(16) NULL, " +
+						"shared_node_res_uuid BINARY(16) NULL, " +
+						"portfolio_id binary(16) DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+				st = c.prepareStatement(sql);
+				st.execute();
+				st.close();
+			} else if (dbserveur.equals("oracle")){
+				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_node(" +
+						"node_uuid RAW(16)  NOT NULL, " +
+						"node_parent_uuid RAW(16) DEFAULT NULL, " +
+						"node_order NUMBER(12) NOT NULL, " +
+						"res_node_uuid RAW(16) DEFAULT NULL, " +
+						"res_res_node_uuid RAW(16) DEFAULT NULL, " +
+						"res_context_node_uuid RAW(16)  DEFAULT NULL, " +
+						"shared_res NUMBER(1) NOT NULL, " +
+						"shared_node NUMBER(1) NOT NULL, " +
+						"shared_node_res NUMBER(1) NOT NULL, " +
+						"shared_res_uuid RAW(16) DEFAULT NULL, " +
+						"shared_node_uuid RAW(16) DEFAULT NULL, " +
+						"shared_node_res_uuid RAW(16) DEFAULT NULL, " +
+						"portfolio_id RAW(16) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
+				sql = "{call create_or_empty_table('t_node','"+v_sql+"')}";
+				CallableStatement ocs = c.prepareCall(sql) ;
+				ocs.execute();
+				ocs.close();
+			}
 
 			/// Pour le filtrage de la structure
 			if (dbserveur.equals("mysql")){
@@ -3924,15 +3958,39 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
+			t2 = System.currentTimeMillis();
+
+			/// Copy portfolio base info
+			sql = "INSERT INTO t_node(node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, portfolio_id) " +
+					"SELECT node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, portfolio_id " +
+					"FROM node WHERE portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
+			st = c.prepareStatement(sql);
+			st.setString(1, nodeUuid);
+			st.execute();
+			st.close();
+			
+			/// Find parent for re-ordering the remaining childs
+			sql = "SELECT bin2uuid(node_parent_uuid) FROM t_node WHERE node_uuid=uuid2bin(?)";
+			st = c.prepareStatement(sql);
+			st.setString(1, nodeUuid);
+			ResultSet res = st.executeQuery();
+			if( res.next() )
+				parentid = res.getString("bin2uuid(node_parent_uuid)");
+			res.close();
+			st.close();
+			
+
 			/// Liste les noeud a filtrer
 			// Initiale
 			sql = "INSERT INTO t_struc_node_resids(uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) " +
 					"SELECT node_uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, 0 " +
-					"FROM node WHERE node_uuid=uuid2bin(?)";
+					"FROM t_node WHERE node_uuid=uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			st.executeUpdate();
 			st.close();
+
+			t3 = System.currentTimeMillis();
 
 			/// On descend les noeuds
 			int level = 0;
@@ -3943,7 +4001,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_node_resids_2,t_struc_node_resids_2_UK_uuid)*/ INTO t_struc_node_resids_2(uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) ";
 				}
 				sql += "SELECT node_uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, ? " +
-					"FROM node WHERE node_parent_uuid IN (SELECT uuid FROM t_struc_node_resids t " +
+					"FROM t_node WHERE node_parent_uuid IN (SELECT uuid FROM t_struc_node_resids t " +
 					"WHERE t.t_level=?)";
 			st = c.prepareStatement(sql);
 
@@ -3966,6 +4024,8 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			st.close();
 			stTemp.close();
+
+			t4 = System.currentTimeMillis();
 
 			/// On liste les ressources à effacer
 			if (dbserveur.equals("mysql")){
@@ -3998,19 +4058,53 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
+			t5 = System.currentTimeMillis();
+
 			c.setAutoCommit(false);
 			/// On efface
 			// Les ressources
-			sql = "DELETE FROM resource_table WHERE node_uuid IN (SELECT uuid FROM t_res_uuid)";
+			if( "mysql".equals(dbserveur) )
+			{
+				sql = "DELETE rt FROM t_res_uuid tru LEFT JOIN resource_table rt ON tru.uuid=rt.node_uuid";
+			}
+			else	// FIXME Not sure if it's correct
+			{
+				sql = "DELETE resource_table WHERE (node_uuid) IN (SELECT uuid FROM t_res_uuid)";
+			}
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
 			// Les noeuds
-			sql = "DELETE FROM node WHERE node_uuid IN (SELECT uuid FROM t_struc_node_resids)";
+			if( "mysql".equals(dbserveur) )
+			{
+				sql = "DELETE n FROM t_struc_node_resids tsnr LEFT JOIN node n ON tsnr.uuid=n.node_uuid";
+			}
+			else	// FIXME Not sure if it's correct
+			{
+				sql = "DELETE node WHERE (node_uuid) IN (SELECT uuid FROM t_struc_node_resids)";
+			}
 			st = c.prepareStatement(sql);
 			result = st.executeUpdate();
 			st.close();
+			
+			t6 = System.currentTimeMillis();
+
+			/*
+			float checkRights = t1-t0;
+			float initstuff = t2-t1;
+			float insertbase = t3-t2;
+			float traversetree = t4-t3;
+			float listresource = t5-t4;
+			float purge = t6-t5;
+			System.out.println("=====DELETE=====");
+			System.out.println("Check rights: "+checkRights);
+			System.out.println("Initialize: "+initstuff);
+			System.out.println("Insert data: "+insertbase);
+			System.out.println("Traverse: "+traversetree);
+			System.out.println("List res: "+listresource);
+			System.out.println("Delete: "+purge);
+			//*/
 		}
 		catch( Exception e )
 		{
@@ -4029,7 +4123,7 @@ public class MysqlDataProvider implements DataProvider {
 				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
-					sql = "DROP TEMPORARY TABLE IF EXISTS t_struc_node_resids, t_struc_node_resids_2, t_res_uuid";
+					sql = "DROP TEMPORARY TABLE IF EXISTS t_node, t_struc_node_resids, t_struc_node_resids_2, t_res_uuid";
 					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
