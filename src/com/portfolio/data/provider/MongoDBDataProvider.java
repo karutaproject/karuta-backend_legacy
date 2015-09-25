@@ -625,6 +625,41 @@ public class MongoDBDataProvider implements DataProvider {
 		return -1;
 	}
 
+	public int postPortfolioGroup( Connection c, String groupname, int userId )
+	{
+		return 0;
+	}
+	
+	@Override
+	public String getPortfolioGroupList( Connection c, int userId )
+	{
+		return null;
+	}
+
+	@Override
+	public String getPortfolioByPortfolioGroup( Connection c, Integer portfolioGroupId, int userId )
+	{
+		return null;
+	}
+
+	@Override
+	public String deletePortfolioGroups( Connection c, int portfolioGroupId, int userId )
+	{
+		return null;
+	}
+
+	@Override
+	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, int userId )
+	{
+		return 0;
+	}
+
+	@Override
+	public String deletePortfolioFromPortfolioGroups( Connection c, String uuid, int portfolioGroupId, int userId )
+	{
+		return null;
+	}
+
 	@Override
 	public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid,
 			boolean b, int userId, int groupId, String label) throws SQLException {

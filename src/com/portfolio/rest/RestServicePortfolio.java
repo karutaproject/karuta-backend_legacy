@@ -5162,6 +5162,204 @@ public class RestServicePortfolio
 
 	/********************************************************/
 	/**
+	 * ######   #####  ######  #######   ###   ######
+	 * ##   ## ##   ## ##   ##    #    ##   ## ##   ##
+	 * ##   ## ##   ## ##   ##    #    ##      ##   ##
+	 * ######  ##   ## ######     #    ##  ### ######
+	 * ##      ##   ## ## ##      #    ##   ## ##   ##
+	 * ##      ##   ## ##  ##     #    ##   ## ##   ##
+	 * ##       #####  ##   ##    #      ###   ##   ##
+  /** Managing and listing portfolios
+	/********************************************************/
+	/**
+	 *	Create a new portfolio group
+	 *	POST /rest/api/portfoliogroups
+	 *	parameters:
+	 *	 - name: Name of the group we are creating
+	 *	return:
+	 *   - groupid
+	 **/
+	@Path("/portfoliogroups")
+	@POST
+	public int postPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname)
+	{
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		int response = -1;
+		Connection c = null;
+
+		try
+		{
+			c = SqlUtils.getConnection(servContext);
+			response = dataProvider.postPortfolioGroup(c, groupname, ui.userId);
+			logRestRequest(httpServletRequest, "", "Add portfolio group", Status.OK.getStatusCode());
+			
+			if( response == -1 )
+				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Error in creation");
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		return response;
+	}
+
+	/**
+	 *	Put a portfolio in portfolio group
+	 *	PUT /rest/api/portfoliogroups
+	 *	parameters:
+	 *	 - group: group id
+	 *	 - uuid: portfolio id
+	 *	return:
+	 *	 Code 200
+	 **/
+	@Path("/portfoliogroups")
+	@PUT
+	public String putPortfolioInPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String uuid)
+	{
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		Connection c = null;
+		
+		try
+		{
+			c = SqlUtils.getConnection(servContext);
+			int response = -1;
+			response = dataProvider.putPortfolioInGroup(c, uuid, group, ui.userId);
+			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
+
+			return "";
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+	}
+
+	/**
+	 *	Get portfolio by portfoliogroup, or if there's no group id give, give the list of portfolio group
+	 *	GET /rest/api/portfoliogroups
+	 *	parameters:
+	 *	 - group: group id
+	 *	return:
+	 *	 - Without group id
+	 *		<groups>
+	 *			<group id={groupid}>
+	 *				<label>{group name}</label>
+	 *			</group>
+	 *			...
+	 *		</groups>
+	 *
+	 *	 - With group id
+	 *		<group id={groupid}>
+	 *			<portfolio id={uuid}></portfolio>
+	 *			...
+	 *		</group>
+	 **/
+	@Path("/portfoliogroups")
+	@GET
+	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group)
+	{
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		Connection c = null;
+		String xmlUsers = "";
+		
+		try
+		{
+			c = SqlUtils.getConnection(servContext);
+			if( group == null )
+				xmlUsers = dataProvider.getPortfolioGroupList(c, ui.userId);
+			else
+				xmlUsers = dataProvider.getPortfolioByPortfolioGroup(c, group, ui.userId);
+			logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		return xmlUsers;
+	}
+
+	/**
+	 *	Remove a portfolio from a portfolio group, or remove a portfoliogroup
+	 *	DELETE /rest/api/portfoliogroups
+	 *	parameters:
+	 *	 - group: group id
+	 *	 - uuid: portfolio id
+	 *	return:
+	 *	 Code 200
+	 **/
+	@Path("/portfoliogroups")
+	@DELETE
+	public String deletePortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") int group, @QueryParam("uuid") String uuid)
+	{
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		String response = "";
+		Connection c = null;
+
+		try
+		{
+			c = SqlUtils.getConnection(servContext);
+			if( uuid == null )
+				response = dataProvider.deletePortfolioGroups(c, group, ui.userId);
+			else
+				response = dataProvider.deletePortfolioFromPortfolioGroups(c, uuid, group, ui.userId);
+			logRestRequest(httpServletRequest, "", response, Status.OK.getStatusCode());
+
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+		return response;
+	}
+
+	/********************************************************/
+	/**
 	 * ##   ##   ###     ###   #####     ###
 	 * ### ### ##   ## ##   ## ##   ## ##   ##
 	 * ## # ## ##   ## ##      ##   ## ##   ##

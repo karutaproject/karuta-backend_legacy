@@ -196,6 +196,14 @@ public interface DataProvider {
 	public String deleteUsersGroups(Connection c, int usersgroup, int currentUid);
 	public String deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid);
 
+	/// Related to portfolio groups
+	public int postPortfolioGroup( Connection c, String groupname, int userId );
+	public String getPortfolioGroupList( Connection c, int userId );
+	public String getPortfolioByPortfolioGroup( Connection c, Integer portfolioGroupId, int userId );
+	public String deletePortfolioGroups( Connection c, int portfolioGroupId, int userId );
+	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, int userId );
+	public String deletePortfolioFromPortfolioGroups( Connection c, String uuid, int portfolioGroupId, int userId );
+
 	/// Relatif aux groupe de droits
 	public Object getGroupRights(Connection c, int userId, int groupId) throws Exception;
 	public String getGroupRightsInfos(Connection c, int userId, String portfolioId) throws SQLException;
