@@ -2450,7 +2450,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		/// Reconstruct functional tree
 		t_tree root = entries.get(rootuuid);
-		StringBuilder out = new StringBuilder();
+		StringBuilder out = new StringBuilder(256);
 		if( root != null )
 			reconstructTree( out, root, entries );
 
@@ -2548,13 +2548,17 @@ public class MysqlDataProvider implements DataProvider {
 		long t_05 = 0;
 		long t_06 = 0;
 
+		long totalConstruct = 0;
 		long totalAggregate = 0;
 		long totalParse = 0;
 		long totalAdopt = 0;
 		long totalReconstruct = 0;
+		StringBuilder data = new StringBuilder(256);
 		if( result != null )
 			while( result.next() )
 			{
+				data.setLength(0);
+				
 				t_01 = System.currentTimeMillis();
 				String nodeUuid = result.getString("node_uuid");
 				if( nodeUuid == null ) continue;    // Cas où on a des droits sur plus de noeuds qui ne sont pas dans le portfolio
@@ -2563,6 +2567,10 @@ public class MysqlDataProvider implements DataProvider {
 
 				String type = result.getString("asm_type");
 
+				data.append("<");
+				data.append(type);
+				data.append(" ");
+				
 				String xsi_type = result.getString("xsi_type");
 				if( null == xsi_type )
 					xsi_type = "";
@@ -2572,45 +2580,79 @@ public class MysqlDataProvider implements DataProvider {
 				String submitRight= result.getInt("SB")==1 ? "Y" : "N";
 				String deleteRight= result.getInt("DL")==1 ? "Y" : "N";
 				String macro = result.getString("rules_id");
+				
 				if( macro != null )
-					macro = "action=\""+macro+"\"";
+				{
+					data.append("action=\"");
+					data.append(macro);
+					data.append("\" ");
+//					macro = "action=\""+macro+"\"";
+				}
 				else
 					macro = "";
 
+				data.append("delete=\"");
+				data.append(deleteRight);
+				data.append("\" id=\"");
+				data.append(nodeUuid);
+				data.append("\" read=\"");
+				data.append(readRight);
+				data.append("\" role=\"");
+				data.append(role);
+				data.append("\" submit=\"");
+				data.append(submitRight);
+				data.append("\" write=\"");
+				data.append(writeRight);
+				data.append("\" xsi_type=\"");
+				data.append(xsi_type);
+				data.append("\">");
+				
 				String attr = result.getString("metadata_wad");
-				String metaFragwad;
+				String metaFragwad="";
 //				if( !"".equals(attr) )  /// Attributes exists
-		        if( attr!=null && !"".equals(attr) )  /// Attributes exists
+				if( attr!=null && !"".equals(attr) )  /// Attributes exists
 				{
-					metaFragwad = "<metadata-wad "+attr+"/>";
+					data.append("<metadata-wad ");
+					data.append(attr);
+					data.append("/>");
+//					metaFragwad = "<metadata-wad "+attr+"/>";
 				}
 				else
 				{
-					metaFragwad = "<metadata-wad />";
+					data.append("<metadata-wad/>");
+//					metaFragwad = "<metadata-wad />";
 				}
 
 				attr = result.getString("metadata_epm");
-				String metaFragepm;
+				String metaFragepm="";
 //				if( !"".equals(attr) )  /// Attributes exists
-		        if( attr!=null && !"".equals(attr) )  /// Attributes exists
+				if( attr!=null && !"".equals(attr) )  /// Attributes exists
 				{
-					metaFragepm = "<metadata-epm "+attr+"/>";
+					data.append("<metadata-epm ");
+					data.append(attr);
+					data.append("/>");
+//					metaFragepm = "<metadata-epm "+attr+"/>";
 				}
 				else
 				{
-					metaFragepm = "<metadata-epm />";
+					data.append("<metadata-epm/>");
+//					metaFragepm = "<metadata-epm />";
 				}
 
 				attr = result.getString("metadata");
-				String metaFrag;
+				String metaFrag="";
 //				if( !"".equals(attr) )  /// Attributes exists
-		        if( attr!=null && !"".equals(attr) )  /// Attributes exists
+				if( attr!=null && !"".equals(attr) )  /// Attributes exists
 				{
-					metaFrag = "<metadata "+attr+"/>";
+					data.append("<metadata ");
+					data.append(attr);
+					data.append("/>");
+//					metaFrag = "<metadata "+attr+"/>";
 				}
 				else
 				{
-					metaFrag = "<metadata />";
+					data.append("<metadata/>");
+//					metaFrag = "<metadata />";
 				}
 
 				String res_res_node_uuid = result.getString("res_res_node_uuid");
@@ -2620,7 +2662,14 @@ public class MysqlDataProvider implements DataProvider {
 					String nodeContent = result.getString("r2_content");
 					if( nodeContent != null )
 					{
-						res_res_node = "<asmResource contextid=\""+nodeUuid+"\" id=\""+res_res_node_uuid+"\" xsi_type=\"nodeRes\">"+nodeContent.trim()+"</asmResource>";
+						data.append("<asmResource contextid=\"");
+						data.append(nodeUuid);
+						data.append("\" id=\"");
+						data.append(res_res_node_uuid);
+						data.append("\" xsi_type=\"nodeRes\">");
+						data.append(nodeContent.trim());
+						data.append("</asmResource>");
+//						res_res_node = "<asmResource contextid=\""+nodeUuid+"\" id=\""+res_res_node_uuid+"\" xsi_type=\"nodeRes\">"+nodeContent.trim()+"</asmResource>";
 					}
 				}
 
@@ -2631,9 +2680,21 @@ public class MysqlDataProvider implements DataProvider {
 					String nodeContent = result.getString("r3_content");
 					if( nodeContent != null )
 					{
-						context_node = "<asmResource contextid=\""+nodeUuid+"\" id=\""+res_context_node_uuid+"\" xsi_type=\"context\">"+nodeContent.trim()+"</asmResource>";
+						data.append("<asmResource contextid=\"");
+						data.append(nodeUuid);
+						data.append("\" id=\"");
+						data.append(res_context_node_uuid);
+						data.append("\" xsi_type=\"context\">");
+						data.append(nodeContent.trim());
+						data.append("</asmResource>");
+//						context_node = "<asmResource contextid=\""+nodeUuid+"\" id=\""+res_context_node_uuid+"\" xsi_type=\"context\">"+nodeContent.trim()+"</asmResource>";
 					} else {
-						context_node = "<asmResource contextid=\""+nodeUuid+"\" id=\""+res_context_node_uuid+"\" xsi_type=\"context\"/>";
+						data.append("<asmResource contextid=\"");
+						data.append(nodeUuid);
+						data.append("\" id=\"");
+						data.append(res_context_node_uuid);
+						data.append("\" xsi_type=\"context\"/>");
+//						context_node = "<asmResource contextid=\""+nodeUuid+"\" id=\""+res_context_node_uuid+"\" xsi_type=\"context\"/>";
 					}
 				}
 
@@ -2644,13 +2705,23 @@ public class MysqlDataProvider implements DataProvider {
 					String nodeContent = result.getString("r1_content");
 					if( nodeContent != null )
 					{
-						specific_node = "<asmResource contextid=\""+nodeUuid+"\" id=\""+res_node_uuid+"\" xsi_type=\""+result.getString("r1_type")+"\">"+nodeContent.trim()+"</asmResource>";
+						data.append("<asmResource contextid=\"");
+						data.append(nodeUuid);
+						data.append("\" id=\"");
+						data.append(res_node_uuid);
+						data.append("\" xsi_type=\"");
+						data.append(result.getString("r1_type"));
+						data.append("\">");
+						data.append(nodeContent.trim());
+						data.append("</asmResource>");
+//						specific_node = "<asmResource contextid=\""+nodeUuid+"\" id=\""+res_node_uuid+"\" xsi_type=\""+result.getString("r1_type")+"\">"+nodeContent.trim()+"</asmResource>";
 					}
 				}
 
 				t_02 = System.currentTimeMillis();
 
 				/// On spécifie aussi le rôle qui a été choisi dans la récupération des données
+				/*
 				String snode = "<"+type+" "+macro+" delete=\""+deleteRight+"\" id=\""+nodeUuid+"\" read=\""+readRight+"\" role=\""+role+"\" submit=\""+submitRight+"\" write=\""+writeRight+"\" xsi_type=\""+xsi_type+"\" >"+
 						metaFragwad+
 						metaFragepm+
@@ -2660,7 +2731,9 @@ public class MysqlDataProvider implements DataProvider {
 						specific_node
 //						+"</"+type+">";
 						+"";	// Will be closed when recontructing by string instead of xml parsing
-
+				//*/
+				String snode = data.toString();
+				
 				t_03 = System.currentTimeMillis();
 
 				/*
@@ -2694,11 +2767,14 @@ public class MysqlDataProvider implements DataProvider {
 
 				t_06 = System.currentTimeMillis();
 
+				/*
+				totalConstruct += t_02-t_01;
 				totalAggregate += t_03-t_02;
 				totalParse += t_04-t_03;
 				totalAdopt += t_05-t_04;
 				totalReconstruct += t_06-t_05;
-
+//*/
+				
 				/*
 				System.out.println("======= Loop =======");
 				System.out.println("Retrieve data: "+ (t_02-t_01));
@@ -2710,6 +2786,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 		/*
 		System.out.println("======= Total =======");
+		System.out.println("Construct: "+ totalConstruct);
 		System.out.println("Aggregate: "+ totalAggregate);
 		System.out.println("Parsing: "+ totalParse);
 		System.out.println("Adopt: "+ totalAdopt);
@@ -3680,7 +3757,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// Reconstruct functional tree
 			t_tree root = entries.get(nodeUuid);
-			StringBuilder out = new StringBuilder();
+			StringBuilder out = new StringBuilder(256);
 			reconstructTree( out, root, entries );
 
 			/// Reconstruct data
