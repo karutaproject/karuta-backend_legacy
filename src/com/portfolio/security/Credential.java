@@ -303,6 +303,8 @@ public class Credential
 
 		try
 		{
+			long t1=0, t2=0, t3=0, t4=0, t5=0, t6=0;
+			long t0 = System.currentTimeMillis();
 			if( getPortfolioAdmin(c, userId, node_uuid) || isAdmin(c, userId) )
 			{
 				nodeRight.read = true;
@@ -319,6 +321,7 @@ public class Credential
 			}
 			else
 			{
+				t1 = System.currentTimeMillis();
 				// Sans sélection de groupe
 				if(groupId == 0)
 				{
@@ -351,6 +354,8 @@ public class Credential
 					res.close();
 				}
 
+				t2 = System.currentTimeMillis();
+				
 				/// Sinon on évalue le droit donnée directement
 				sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
 						"FROM group_rights gr, group_user gu, group_info gi " +
@@ -369,9 +374,11 @@ public class Credential
 					nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
 					nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
 				}
-
+				
 				st.close();
 				res.close();
+				
+				t3 = System.currentTimeMillis();
 
 				/// Les droits donné spécifiquement à l'utilisateur
 				sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
@@ -397,6 +404,8 @@ public class Credential
 				res.close();
 				st.close();
 
+				t4 = System.currentTimeMillis();
+				
 				/// Les droits que l'on a du groupe "all"
 				/// NOTE: Pas de vérification si la personne est dans le groupe 'all'
 				///  Le fonctionnement voulu est différent de ce que j'avais prévu, mais ça marche aussi
@@ -422,6 +431,8 @@ public class Credential
 				}
 				res.close();
 				st.close();
+				
+				t5 = System.currentTimeMillis();
 			} // fin else
 
 			/// Public rights (last chance for rights)
@@ -429,6 +440,23 @@ public class Credential
 			{
 				nodeRight.read = true;
 			}
+			t6 = System.currentTimeMillis();
+			
+			/*
+			long checkSysInfo = t1-t0;
+			long groupSelect = t2-t1;
+			long rightFromGroup = t3-t2;
+			long rightSpecificUser = t4-t3;
+			long rightFromAll = t5-t4;
+			long checkPublic = t6-t5;
+			System.out.println("=====Check Rights=====");
+			System.out.println("Check sys info: "+checkSysInfo);
+			System.out.println("Group selection: "+groupSelect);
+			System.out.println("Right from group: "+rightFromGroup);
+			System.out.println("Right for user: "+rightSpecificUser);
+			System.out.println("Right from all: "+rightFromAll);
+			System.out.println("Check public: "+checkPublic);
+			//*/
 		}
 		catch(Exception ex)
 		{
@@ -587,13 +615,11 @@ public class Credential
 
 		try
 		{
-			//sql = "SELECT distinct portfolio_id FROM GroupRights gr, group_user gu, group_info gi, node n WHERE gu.gid = gi.gid AND gi.grid = gr.grid and gr.id = n.node_uuid AND gu.userid = ? and gr.grid =  '26'";
-			sql = "SELECT distinct user_id FROM portfolio p, node n WHERE n.portfolio_id = p.portfolio_id and (n.node_uuid = uuid2bin(?) OR n.res_res_node_uuid = uuid2bin(?) OR n.res_node_uuid = uuid2bin(?) OR n.res_context_node_uuid = uuid2bin(?))";
+			sql = "SELECT user_id " +
+					"FROM portfolio p, node n " +
+					"WHERE n.portfolio_id = p.portfolio_id AND n.node_uuid = uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setString(1, node_uuid);
-			st.setString(2, node_uuid);
-			st.setString(3, node_uuid);
-			st.setString(4, node_uuid);
 			res = st.executeQuery();
 
 			if(res.next() && res.getInt("user_id") == userId)
@@ -1214,6 +1240,7 @@ public class Credential
 		PreparedStatement stmt=null;
 		try
 		{
+			// FIXME
 			String query = "SELECT gu.userid " +
 					"FROM node n " +
 					"LEFT JOIN group_right_info gri ON n.portfolio_id=gri.portfolio_id " +
