@@ -3540,8 +3540,8 @@ public class MysqlDataProvider implements DataProvider {
 					sql = "INSERT INTO t_rights_22(grid,id,RD,WR,DL,SB,AD) ";
 					sql += "SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
 						"FROM group_right_info gri, group_rights gr, t_struc_parentid ts " +
-						"WHERE gri.grid=gr.grid AND ts.uuid=gr.id AND gri.portfolio_id=uuid2bin(?) " +
-						"AND (gri.label='all' OR gri.grid=? OR " +
+						"WHERE gri.portfolio_id=uuid2bin(?) AND gri.grid=gr.grid AND ts.uuid=gr.id " +
+						"AND (gri.grid=(SELECT grid FROM group_right_info WHERE portfolio_id=uuid2bin(?) AND label='all') OR gri.grid=? OR " +
 						"gri.grid=(SELECT grid FROM credential c, group_right_info gri, t_node n WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND c.login=gri.label AND c.userid=?)) " +
 						"ON DUPLICATE KEY " +
 						"UPDATE t_rights_22.RD=GREATEST(t_rights_22.RD,gr.RD), " +
@@ -3556,7 +3556,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql += "SELECT MAX(gr.grid) AS grid, gr.id, MAX(gr.RD) AS RD, MAX(gr.WR) AS WR, MAX(gr.DL) AS DL, MAX(gr.SB) AS SB, MAX(gr.AD) AS AD " +	// FIXME MAX(gr.grid) will have unintended consequences
 							"FROM group_right_info gri, group_rights gr, t_struc_parentid ts " +
 							"WHERE gri.grid=gr.grid AND ts.uuid=gr.id AND gri.portfolio_id=uuid2bin(?) " +
-							"AND (gri.label='all' OR gri.grid=? OR " +
+							"AND (gri.grid=(SELECT grid FROM group_right_info WHERE portfolio_id=uuid2bin(?) AND label='all') OR gri.grid=? OR " +
 						"gri.grid=(SELECT grid FROM credential c, group_right_info gri, t_node n WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND c.login=gri.label AND c.userid=?)) ";
 					sql += " GROUP BY gr.id) s " +
 							"ON (d.grid = s.grid AND d.id = s.id) " +
@@ -3570,9 +3570,10 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				st = c.prepareStatement(sql);
 				st.setString(1, portfolioid);
-				st.setInt(2, rrgId);
-				st.setString(3, nodeUuid);
-				st.setInt(4, userId);
+				st.setString(2, portfolioid);
+				st.setInt(3, rrgId);
+				st.setString(4, nodeUuid);
+				st.setInt(5, userId);
 //				System.out.println("VALUES: "+portfolioid+" "+rrgId+" "+nodeUuid+" "+userId);
 			}
 			st.executeUpdate();
@@ -3609,7 +3610,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_aggregate = System.currentTimeMillis();
 
-			/*
+//			/*
 			long d_tempTable = t_tempTable - t_start;
 			long d_initData = t_dataTable - t_tempTable;
 			long d_initRecusion = t_initNode - t_dataTable;
@@ -3618,6 +3619,7 @@ public class MysqlDataProvider implements DataProvider {
 			long d_fetchRights = t_allRights - t_endLoop;
 			long d_aggregateInfo = t_aggregate - t_allRights;
 
+			System.out.println("===== Get node per level ====");
 			System.out.println("Temp table creation: "+d_tempTable);
 			System.out.println("Init data: "+d_initData);
 			System.out.println("Init node recursion: "+d_initRecusion);
@@ -3828,7 +3830,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_convertString = System.currentTimeMillis();
 
-			/*
+//			/*
 			long d_right = t_nodeRight - t_start;
 			long d_queryNodes = t_nodePerLevel - t_nodeRight;
 			long d_initConstruct = t_initContruction - t_nodePerLevel;
