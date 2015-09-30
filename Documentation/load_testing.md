@@ -2,7 +2,7 @@
 
 ## Protocol
 
-Load testing aimed to test load average (5 sec) of Karuta server under high load. Weused a unique testing script :
+Load testing aimed to test load average (5 sec) of Karuta server under high load Linux server (MySQL). Weused a unique testing script :
 
 Load testing script launch for a single user this sequence :
 
@@ -18,6 +18,24 @@ Parameters we varied to evaluate Load Average 5sec (LOAD) :
 - Total number of users (TOTAL_USERS)
 - Number of simultaneous users in a pack (NB_USERS_IN_PACK)
 - Pause between two packs (in seconds) (PAUSE)
+
+Server caracteristics :
+
+RAM : 8 Go
+CPU : 4 cores Intel(R) Xeon(R) CPU           E5620  @ 2.40GHz
+
+Mysql configuration :
+
+key_buffer=16M
+max_connections=150
+query_cache_size=768M
+tmp_table_size=256M
+max_heap_table_size=256M
+key_buffer_size=768M
+sort_buffer_size=16M
+join_buffer_size=64M
+
+
 
 ## Results
 
