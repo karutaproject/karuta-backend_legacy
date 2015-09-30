@@ -173,112 +173,105 @@ public class XSLService  extends HttpServlet {
 		try
 		{
 			c = SqlUtils.getConnection(sc);
-		}
-		catch( Exception e1 )
-		{
-			e1.printStackTrace();
-		}
 
-		String origin = request.getRequestURL().toString();
-		logger.error("Is connection null "+c);
-
-		/// Variable stuff
-		int userId = 0;
-		int groupId = 0;
-		String user = "";
-		HttpSession session = request.getSession(true);
-		if( session != null )
-		{
-			Integer val = (Integer) session.getAttribute("uid");
-			if( val != null )
-				userId = val;
-			val = (Integer) session.getAttribute("gid");
-			if( val != null )
-				groupId = val;
-			user = (String) session.getAttribute("user");
-		}
-
-		/// TODO: A voire si un form get ne ferait pas l'affaire aussi
-
-		/// On lis le xml
-		/*
-		BufferedReader rd = new BufferedReader(new InputStreamReader(request.getInputStream()));
-		StringBuilder sb = new StringBuilder();
-		String line;
-		while( (line = rd.readLine()) != null )
-			sb.append(line);
-
-		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
-		DocumentBuilder documentBuilder = null;
-		Document doc=null;
-		try
-		{
-			documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			doc = documentBuilder.parse(new ByteArrayInputStream(sb.toString().getBytes("UTF-8")));
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
-
-		/// On lit les param�tres
-		NodeList portfolioNode = doc.getElementsByTagName("portfolioid");
-		NodeList nodeNode = doc.getElementsByTagName("nodeid");
-		NodeList documentNode = doc.getElementsByTagName("documentid");
-		NodeList xslNode = doc.getElementsByTagName("xsl");
-		NodeList formatNode = doc.getElementsByTagName("format");
-		NodeList parametersNode = doc.getElementsByTagName("parameters");
-		//*/
-//		String xslfile = xslNode.item(0).getTextContent();
-		String xslfile = request.getParameter("xsl");
-		String format = request.getParameter("format");
-//		String format = formatNode.item(0).getTextContent();
-		String parameters = request.getParameter("parameters");
-		String documentid = request.getParameter("documentid");
-		String portfolios = request.getParameter("portfolioids");
-		String[] portfolioid = null;
-		if( portfolios != null )
-			portfolioid = portfolios.split(";");
-		String nodes = request.getParameter("nodeids");
-		String[] nodeid = null;
-		if( nodes != null )
-			nodeid = nodes.split(";");
-
-		System.out.println("PARAMETERS: ");
-		System.out.println("xsl: "+xslfile);
-		System.out.println("format: "+format);
-		System.out.println("user: "+userId);
-		System.out.println("portfolioids: "+portfolios);
-		System.out.println("nodeids: "+nodes);
-		System.out.println("parameters: "+parameters);
-
-		boolean redirectDoc = false;
-		if( documentid != null )
-		{
-			redirectDoc = true;
-			System.out.println("documentid @ "+documentid);
-			logger.error("documentid @ "+documentid);
-		}
-
-		boolean usefop = false;
-		String ext = "";
-		if( MimeConstants.MIME_PDF.equals(format) )
-		{
-			usefop = true;
-			ext = ".pdf";
-		}
-		else if( MimeConstants.MIME_RTF.equals(format) )
-		{
-			usefop = true;
-			ext = ".rtf";
-		}
-		//// Param�tre portfolio-uuid et file-xsl
+			String origin = request.getRequestURL().toString();
+			logger.error("Is connection null "+c);
+	
+			/// Variable stuff
+			int userId = 0;
+			int groupId = 0;
+			String user = "";
+			HttpSession session = request.getSession(true);
+			if( session != null )
+			{
+				Integer val = (Integer) session.getAttribute("uid");
+				if( val != null )
+					userId = val;
+				val = (Integer) session.getAttribute("gid");
+				if( val != null )
+					groupId = val;
+				user = (String) session.getAttribute("user");
+			}
+	
+			/// TODO: A voire si un form get ne ferait pas l'affaire aussi
+	
+			/// On lis le xml
+			/*
+			BufferedReader rd = new BufferedReader(new InputStreamReader(request.getInputStream()));
+			StringBuilder sb = new StringBuilder();
+			String line;
+			while( (line = rd.readLine()) != null )
+				sb.append(line);
+	
+			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
+			DocumentBuilder documentBuilder = null;
+			Document doc=null;
+			try
+			{
+				documentBuilder = documentBuilderFactory.newDocumentBuilder();
+				doc = documentBuilder.parse(new ByteArrayInputStream(sb.toString().getBytes("UTF-8")));
+			}
+			catch( Exception e )
+			{
+				e.printStackTrace();
+			}
+	
+			/// On lit les param�tres
+			NodeList portfolioNode = doc.getElementsByTagName("portfolioid");
+			NodeList nodeNode = doc.getElementsByTagName("nodeid");
+			NodeList documentNode = doc.getElementsByTagName("documentid");
+			NodeList xslNode = doc.getElementsByTagName("xsl");
+			NodeList formatNode = doc.getElementsByTagName("format");
+			NodeList parametersNode = doc.getElementsByTagName("parameters");
+			//*/
+	//		String xslfile = xslNode.item(0).getTextContent();
+			String xslfile = request.getParameter("xsl");
+			String format = request.getParameter("format");
+	//		String format = formatNode.item(0).getTextContent();
+			String parameters = request.getParameter("parameters");
+			String documentid = request.getParameter("documentid");
+			String portfolios = request.getParameter("portfolioids");
+			String[] portfolioid = null;
+			if( portfolios != null )
+				portfolioid = portfolios.split(";");
+			String nodes = request.getParameter("nodeids");
+			String[] nodeid = null;
+			if( nodes != null )
+				nodeid = nodes.split(";");
+	
+			System.out.println("PARAMETERS: ");
+			System.out.println("xsl: "+xslfile);
+			System.out.println("format: "+format);
+			System.out.println("user: "+userId);
+			System.out.println("portfolioids: "+portfolios);
+			System.out.println("nodeids: "+nodes);
+			System.out.println("parameters: "+parameters);
+	
+			boolean redirectDoc = false;
+			if( documentid != null )
+			{
+				redirectDoc = true;
+				System.out.println("documentid @ "+documentid);
+				logger.error("documentid @ "+documentid);
+			}
+	
+			boolean usefop = false;
+			String ext = "";
+			if( MimeConstants.MIME_PDF.equals(format) )
+			{
+				usefop = true;
+				ext = ".pdf";
+			}
+			else if( MimeConstants.MIME_RTF.equals(format) )
+			{
+				usefop = true;
+				ext = ".rtf";
+			}
+			//// Param�tre portfolio-uuid et file-xsl
 //		String uuid = request.getParameter("uuid");
 //		String xslfile = request.getParameter("xsl");
-
-		StringBuilder aggregate = new StringBuilder();
-		try
-		{
+	
+			StringBuilder aggregate = new StringBuilder();
 			int portcount = 0;
 			int nodecount = 0;
 			// On aggr�ge les donn�es
@@ -368,22 +361,15 @@ public class XSLService  extends HttpServlet {
 				ggp.removeChild(gp);
 			}
 
-			try	// Convert XML document to string
-			{
-				DOMSource domSource = new DOMSource(doc);
-				StringWriter writer = new StringWriter();
-				StreamResult result = new StreamResult(writer);
-				TransformerFactory tf = TransformerFactory.newInstance();
-				Transformer transformer = tf.newTransformer();
-				transformer.transform(domSource, result);
-				writer.flush();
-				input = writer.toString();
-			}
-			catch(TransformerException ex)
-			{
-				logger.error("Can't convert XML to string: "+ex.getMessage());
-				ex.printStackTrace();
-			}
+		// Convert XML document to string
+			DOMSource domSource = new DOMSource(doc);
+			StringWriter writer = new StringWriter();
+			StreamResult result = new StreamResult(writer);
+			TransformerFactory tf = TransformerFactory.newInstance();
+			Transformer transformer = tf.newTransformer();
+			transformer.transform(domSource, result);
+			writer.flush();
+			input = writer.toString();
 
 //			System.out.println("INPUT DATA:"+ input);
 

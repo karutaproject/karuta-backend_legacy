@@ -198,77 +198,70 @@ public class FileServlet  extends HttpServlet
 			dataProvider.setConnection(c);
 			//*/
 			c = SqlUtils.getConnection(getServletContext());
-		}
-		catch(Exception e)
-		{
-			logger.error("Fail to create objects for provider: '"+dataProviderName+"' ("+e.getMessage()+")");
-			e.printStackTrace();
-		}
 
-		int userId = 0;
-		int groupId = 0;
-		String user = "";
-		boolean fromSakai = false;
-
-		String doCopy = request.getParameter("copy");
-		if( doCopy != null )
-			doCopy = "?copy";
-		else
-			doCopy = "";
-
-		HttpSession session = request.getSession(false);
-		if( session != null )
-		{
-			String srceType = request.getParameter("srce");
-			if( "sakai".equals(srceType) )
+			int userId = 0;
+			int groupId = 0;
+			String user = "";
+			boolean fromSakai = false;
+	
+			String doCopy = request.getParameter("copy");
+			if( doCopy != null )
+				doCopy = "?copy";
+			else
+				doCopy = "";
+	
+			HttpSession session = request.getSession(false);
+			if( session != null )
 			{
-				fromSakai = true;
+				String srceType = request.getParameter("srce");
+				if( "sakai".equals(srceType) )
+				{
+					fromSakai = true;
+				}
+	
+				Integer val = (Integer) session.getAttribute("uid");
+				if( val != null )
+					userId = val;
+				val = (Integer) session.getAttribute("gid");
+				if( val != null )
+					groupId = val;
+				user = (String) session.getAttribute("user");
 			}
-
-			Integer val = (Integer) session.getAttribute("uid");
-			if( val != null )
-				userId = val;
-			val = (Integer) session.getAttribute("gid");
-			if( val != null )
-				groupId = val;
-			user = (String) session.getAttribute("user");
-		}
-		else
-		{
-			response.sendError(HttpServletResponse.SC_FORBIDDEN);
-			return;
-		}
-
-		/// uuid: celui de la ressource
-		/// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
-
-		String origin = request.getRequestURL().toString();
-
-		/// Récupération des paramètres
-		String url = request.getPathInfo();
-		String[] token = url.split("/");
-		String uuid = token[1];
-
-		String size = request.getParameter("size");
-		if(size == null)
-			size = "S";
-
-		String lang = request.getParameter("lang");
-		if (lang==null){
-			lang = "fr";
-		}
-
-		/// Vérification des droits d'accès
-		if(!credential.hasNodeRight(c, userId, groupId, uuid, Credential.WRITE))
-		{
-			response.sendError(HttpServletResponse.SC_FORBIDDEN);
-			//throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit WRITE sur le noeud "+nodeUuid);
-		}
-
-		String data;
-		String fileid = "";
-		try
-		{
+			else
+			{
+				response.sendError(HttpServletResponse.SC_FORBIDDEN);
+				return;
+			}
+	
+			/// uuid: celui de la ressource
+			/// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
+	
+			String origin = request.getRequestURL().toString();
+	
+			/// Récupération des paramètres
+			String url = request.getPathInfo();
+			String[] token = url.split("/");
+			String uuid = token[1];
+	
+			String size = request.getParameter("size");
+			if(size == null)
+				size = "S";
+	
+			String lang = request.getParameter("lang");
+			if (lang==null){
+				lang = "fr";
+			}
+	
+			/// Vérification des droits d'accès
+			if(!credential.hasNodeRight(c, userId, groupId, uuid, Credential.WRITE))
+			{
+				response.sendError(HttpServletResponse.SC_FORBIDDEN);
+				//throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit WRITE sur le noeud "+nodeUuid);
+			}
+	
+			String data;
+			String fileid = "";
+			
 			data = dataProvider.getResNode(c, uuid, userId, groupId);
 
 			/// Parse les données
@@ -302,33 +295,26 @@ public class FileServlet  extends HttpServlet
 					fileid = fileNode.getTextContent();
 				}
 			}
-		}
-		catch( Exception e2 )
-		{
-			e2.printStackTrace();
-		}
-
-		int last = fileid.lastIndexOf("/") +1;	// FIXME temp patch
-		if( last < 0 )
-			last = 0;
-		fileid = fileid.substring(last);
-
-		/// écriture des données
-		String urlTarget = "http://"+ server + "/" + fileid+doCopy;
-//		String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
-
-		// Unpack form, fetch binary data and send
-	// Create a factory for disk-based file items
-		DiskFileItemFactory factory = new DiskFileItemFactory();
-
-		// Create a new file upload handler
-		ServletFileUpload upload = new ServletFileUpload(factory);
-
-		String json = "";
-		HttpURLConnection connection=null;
-		// Parse the request
-		try
-		{
+	
+			int last = fileid.lastIndexOf("/") +1;	// FIXME temp patch
+			if( last < 0 )
+				last = 0;
+			fileid = fileid.substring(last);
+	
+			/// écriture des données
+			String urlTarget = "http://"+ server + "/" + fileid+doCopy;
+	//		String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
+	
+			// Unpack form, fetch binary data and send
+		// Create a factory for disk-based file items
+			DiskFileItemFactory factory = new DiskFileItemFactory();
+	
+			// Create a new file upload handler
+			ServletFileUpload upload = new ServletFileUpload(factory);
+	
+			String json = "";
+			HttpURLConnection connection=null;
+			// Parse the request
 			InputStream inputData = null;
 			String fileName = "";
 			long filesize = 0;
@@ -454,28 +440,32 @@ public class FileServlet  extends HttpServlet
 
 				json = StringOutput.toString();
 			}
-		}
-		catch( FileUploadException e1 )
-		{
-			e1.printStackTrace();
-		}
-
-		connection.disconnect();
-		/// Renvoie le JSON au client
-		if( useragent.contains("MSIE 9.0") || useragent.contains("MSIE 8.0") || useragent.contains("MSIE 7.0") )
-			response.setContentType("text/html");
-		else	// The normal type
-			response.setContentType("application/json");
-		PrintWriter respWriter = response.getWriter();
-		respWriter.write(json);
+	
+			connection.disconnect();
+			/// Renvoie le JSON au client
+			if( useragent.contains("MSIE 9.0") || useragent.contains("MSIE 8.0") || useragent.contains("MSIE 7.0") )
+				response.setContentType("text/html");
+			else	// The normal type
+				response.setContentType("application/json");
+			PrintWriter respWriter = response.getWriter();
+			respWriter.write(json);
 
 //		RetrieveAnswer(connection, response, ref);
 //		dataProvider.disconnect();
-		try
-		{
-			if( c != null ) c.close();
 		}
-		catch( SQLException e ){ e.printStackTrace(); }
+		catch(Exception e)
+		{
+			logger.error("Binary transfer error: "+e.getMessage()+"");
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
 	}
 
 	// =====================================================================================
@@ -486,8 +476,7 @@ public class FileServlet  extends HttpServlet
 
 //		DataProvider dataProvider = null;
 		Connection c = null;
-		try
-		{
+		try{
 //			dataProvider = SqlUtils.initProvider(getServletContext(), logger);
 			c = SqlUtils.getConnection(getServletContext());
 			/*
@@ -499,59 +488,53 @@ public class FileServlet  extends HttpServlet
 			{ c = ds.getConnection(); }
 			dataProvider.setConnection(c);
 			//*/
-		}
-		catch(Exception e)
-		{
-			logger.error(e.getMessage());
-		}
 
-		int userId = 0;
-		int groupId = 0;
-		String user = "";
-		String context = request.getContextPath();
-		String url = request.getPathInfo();
-
-		HttpSession session = request.getSession(true);
-		if( session != null )
-		{
-			Integer val = (Integer) session.getAttribute("uid");
-			if( val != null )
-				userId = val;
-			val = (Integer) session.getAttribute("gid");
-			if( val != null )
-				groupId = val;
-			user = (String) session.getAttribute("user");
-		}
-
-		/*
-		Credential credential = null;
-		try
-		{
-			//On initialise le dataProvider
-			Connection c = null;
-			if( ds == null )	// Case where we can't deploy context.xml
-			{ c = SqlUtils.getConnection(servContext); }
-			else
-			{ c = ds.getConnection(); }
-			dataProvider.setConnection(c);
-			credential = new Credential(c);
-		}
-		catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-		//*/
-
-		// =====================================================================================
-		boolean trace = false;
-		StringBuffer outTrace = new StringBuffer();
-		StringBuffer outPrint = new StringBuffer();
-		String logFName = null;
-
-		response.setCharacterEncoding("UTF-8");
-
-		System.out.println("FileServlet::doGet: "+url+" from user: "+userId );
-		try{
+			int userId = 0;
+			int groupId = 0;
+			String user = "";
+			String context = request.getContextPath();
+			String url = request.getPathInfo();
+	
+			HttpSession session = request.getSession(true);
+			if( session != null )
+			{
+				Integer val = (Integer) session.getAttribute("uid");
+				if( val != null )
+					userId = val;
+				val = (Integer) session.getAttribute("gid");
+				if( val != null )
+					groupId = val;
+				user = (String) session.getAttribute("user");
+			}
+	
+			/*
+			Credential credential = null;
+			try
+			{
+				//On initialise le dataProvider
+				Connection c = null;
+				if( ds == null )	// Case where we can't deploy context.xml
+				{ c = SqlUtils.getConnection(servContext); }
+				else
+				{ c = ds.getConnection(); }
+				dataProvider.setConnection(c);
+				credential = new Credential(c);
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+			//*/
+	
+			// =====================================================================================
+			boolean trace = false;
+			StringBuffer outTrace = new StringBuffer();
+			StringBuffer outPrint = new StringBuffer();
+			String logFName = null;
+	
+			response.setCharacterEncoding("UTF-8");
+	
+			System.out.println("FileServlet::doGet: "+url+" from user: "+userId );
 			// ====== URI : /resources/file[/{lang}]/{context-id}
 			// ====== PathInfo: /resources/file[/{uuid}?lang={fr|en}&size={S|L}] pathInfo
 			//			String uri = request.getRequestURI();

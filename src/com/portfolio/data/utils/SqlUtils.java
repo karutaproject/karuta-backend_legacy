@@ -45,6 +45,7 @@ public class SqlUtils
 	static boolean loaded = false;
 	static InitialContext cxt = null;
 	static DataSource ds = null;
+	static DataProvider dp = null;
 
 	public static  String getCurrentTimeStamp()
 	{
@@ -60,12 +61,13 @@ public class SqlUtils
 	{
 	//============= init servers ===============================
 //		String dataProviderName = ConfigUtils.get("dataProviderClass");
-		DataProvider dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
+		if( dp == null )
+			dp = (DataProvider)Class.forName(dataProviderName).newInstance();
 
 //		Connection connection = getConnection(application);
 //		dataProvider.setConnection(connection);
 		
-		return dataProvider;
+		return dp;
 	}
 
 	// If servContext is null, only load from pooled connection

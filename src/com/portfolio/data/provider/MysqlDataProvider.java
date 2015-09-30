@@ -1429,6 +1429,9 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception
 	{
+		long t1=0, t2=0, t3=0, t4=0, t5=0;
+		long t0 = System.currentTimeMillis();
+		
 		String rootNodeUuid = getPortfolioRootNode(c, portfolioUuid);
 		String header = "";
 		String footer = "";
@@ -1442,6 +1445,8 @@ public class MysqlDataProvider implements DataProvider {
 			if( !nodeRight.read )
 				return "faux";
 		}
+		
+		t1 = System.currentTimeMillis();
 
 		if(outMimeType.getSubType().equals("xml"))
 		{
@@ -1489,11 +1494,17 @@ public class MysqlDataProvider implements DataProvider {
 			//          root.setAttribute("schemaVersion", "1.0");
 //			document.appendChild(root);
 
+			t2 = System.currentTimeMillis();
+			 
 			String data = getLinearXml(c, portfolioUuid, rootNodeUuid, null, true, null, userId, nodeRight.rrgId, nodeRight.groupLabel);
 
+			t3 = System.currentTimeMillis();
+			
 			StringWriter stw = new StringWriter();
 			stw.append(headerXML+data+"</portfolio>");
 
+			t4 = System.currentTimeMillis();
+			
 			/*
 			Transformer serializer = TransformerFactory.newInstance().newTransformer();
 			serializer.transform(new DOMSource(document), new StreamResult(stw));
@@ -1552,6 +1563,22 @@ public class MysqlDataProvider implements DataProvider {
 				}
 			}
 
+			t5 = System.currentTimeMillis();
+			
+			/*
+			long checkRights = t1-t0;
+			long initStuff = t2-t1;
+			long getData = t3-t2;
+			long appendData = t4-t3;
+			long zipRelated = t5-t4;
+			System.out.println("=====Get Portfolio=====");
+			System.out.println("Check rights: "+checkRights);
+			System.out.println("Init stuff: "+initStuff);
+			System.out.println("Get data: "+getData);
+			System.out.println("Append data: "+appendData);
+			System.out.println("Zip related: "+zipRelated);
+			//*/
+			
 			return stw.toString();
 		}
 		else if(outMimeType.getSubType().equals("json"))
@@ -1560,6 +1587,8 @@ public class MysqlDataProvider implements DataProvider {
 			footer = "}}";
 		}
 
+		System.out.println("AM I EVEN GOING HERE?");
+		
 		return header+getNode(c, outMimeType, rootNodeUuid,true, userId, groupId, label).toString()+footer;
 	}
 
@@ -2889,7 +2918,6 @@ public class MysqlDataProvider implements DataProvider {
 				/// FIXME: Il faudrait peut-être prendre une autre stratégie pour sélectionner les bonnes données
 				// Cas propriétaire
 				// Cas générale (partage via droits)
-				time2 = System.currentTimeMillis();
 
 				if (dbserveur.equals("mysql")){
 					sql = "CREATE TEMPORARY TABLE t_rights(" +
@@ -2917,6 +2945,7 @@ public class MysqlDataProvider implements DataProvider {
 					ocs.execute();
 					ocs.close();
 				}
+				time2 = System.currentTimeMillis();
 
 				time3 = System.currentTimeMillis();
 
@@ -3088,9 +3117,9 @@ public class MysqlDataProvider implements DataProvider {
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
-//		System.out.println("---- Query Portfolio ----");
 //		System.out.println((time1-time0)+","+(time2-time1)+","+(time3-time2)+","+(time4-time3)+","+(time5-time4)+","+(time6-time5));
-		/*
+//		/*
+		System.out.println("---- Query Portfolio ----");
 		System.out.println("Fetch root: "+(time1-time0));
 		System.out.println("Check rights: "+(time2-time1));
 		System.out.println("Create temp: "+(time3-time2));
@@ -3831,8 +3860,8 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId)
 	{
-		float t1=0, t2=0, t3=0, t4=0, t5=0, t6=0;
-		float t0 = System.currentTimeMillis();
+		long t1=0, t2=0, t3=0, t4=0, t5=0, t6=0;
+		long t0 = System.currentTimeMillis();
 		
 		NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, Credential.DELETE);
 
@@ -4091,12 +4120,12 @@ public class MysqlDataProvider implements DataProvider {
 			t6 = System.currentTimeMillis();
 
 			/*
-			float checkRights = t1-t0;
-			float initstuff = t2-t1;
-			float insertbase = t3-t2;
-			float traversetree = t4-t3;
-			float listresource = t5-t4;
-			float purge = t6-t5;
+			long checkRights = t1-t0;
+			long initstuff = t2-t1;
+			long insertbase = t3-t2;
+			long traversetree = t4-t3;
+			long listresource = t5-t4;
+			long purge = t6-t5;
 			System.out.println("=====DELETE=====");
 			System.out.println("Check rights: "+checkRights);
 			System.out.println("Initialize: "+initstuff);
@@ -6582,8 +6611,8 @@ public class MysqlDataProvider implements DataProvider {
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
-		System.out.println((t1-start)+","+(t1e-t1)+","+(t2-t1e)+","+(t3-t2)+","+(t4-t3)+","+(t5-t4)+","+(t6-t5)+","+(t7-t6)+","+(t8-t7)+","+(t9-t8)+","+(t10-t9)+","+(t11-t10)+","+(t12-t11)+","+(t13-t12)+","+(t14-t13)+","+(t15-t14)+","+(t16-t15)+","+(t17-t16)+","+(t18-t17)+","+(t19-t18)+","+(t20-t19)+","+(t21-t20)+","+(t22-t21)+","+(t23-t22)+","+(end-t23));
 		/*
+		System.out.println((t1-start)+","+(t1e-t1)+","+(t2-t1e)+","+(t3-t2)+","+(t4-t3)+","+(t5-t4)+","+(t6-t5)+","+(t7-t6)+","+(t8-t7)+","+(t9-t8)+","+(t10-t9)+","+(t11-t10)+","+(t12-t11)+","+(t13-t12)+","+(t14-t13)+","+(t15-t14)+","+(t16-t15)+","+(t17-t16)+","+(t18-t17)+","+(t19-t18)+","+(t20-t19)+","+(t21-t20)+","+(t22-t21)+","+(t23-t22)+","+(end-t23));
 		System.out.println("---- Import ---");
 		System.out.println("d0-1: "+(t1-start));
 		System.out.println("d1a-1: "+(t1a-t1));
@@ -7590,6 +7619,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		long t_udpateNode = System.currentTimeMillis();
 
+		/*
 		long d_rights = t_rights - t_start;
 		long d_parsexml = t_parsexml - t_rights;
 		long d_parsenode = t_endparsing - t_parsexml;
@@ -7598,6 +7628,7 @@ public class MysqlDataProvider implements DataProvider {
 		long d_touchPort = t_touchPortfolio - t_updateNodeChildren;
 		long d_updatNode = t_udpateNode - t_touchPortfolio;
 
+		System.out.println("===== PUT Node =====");
 		System.out.println("Check rights: "+d_rights);
 		System.out.println("Parse XML: "+d_parsexml);
 		System.out.println("Parse nodes: "+d_parsenode);
@@ -7605,6 +7636,7 @@ public class MysqlDataProvider implements DataProvider {
 		System.out.println("Update order: "+d_updateOrder);
 		System.out.println("Touch portfolio: "+d_touchPort);
 		System.out.println("Update node: "+d_updatNode);
+		//*/
 
 		return retval;
 	}
