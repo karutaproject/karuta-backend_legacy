@@ -3610,7 +3610,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_aggregate = System.currentTimeMillis();
 
-//			/*
+			/*
 			long d_tempTable = t_tempTable - t_start;
 			long d_initData = t_dataTable - t_tempTable;
 			long d_initRecusion = t_initNode - t_dataTable;
@@ -3830,7 +3830,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_convertString = System.currentTimeMillis();
 
-//			/*
+			/*
 			long d_right = t_nodeRight - t_start;
 			long d_queryNodes = t_nodePerLevel - t_nodeRight;
 			long d_initConstruct = t_initContruction - t_nodePerLevel;
