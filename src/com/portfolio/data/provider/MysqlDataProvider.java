@@ -9905,7 +9905,8 @@ public class MysqlDataProvider implements DataProvider {
 	{
 		ResultSet res = getMysqlUsers(c, userId);
 
-		String result = "<users>";
+		StringBuilder result = new StringBuilder();
+		result.append("<users>");
 		try {
 			int curUser = 0;
 			while(res.next())
@@ -9920,30 +9921,38 @@ public class MysqlDataProvider implements DataProvider {
 					else
 						subs = "0";
 
-					result += "<user ";
-					result += DomUtils.getXmlAttributeOutput("id", res.getString("userid"))+" ";
-					result += ">";
-					result += DomUtils.getXmlElementOutput("username", res.getString("login"));
-					result += DomUtils.getXmlElementOutput("firstname", res.getString("display_firstname"));
-					result += DomUtils.getXmlElementOutput("lastname", res.getString("display_lastname"));
-					result += DomUtils.getXmlElementOutput("admin", res.getString("is_admin"));
-					result += DomUtils.getXmlElementOutput("designer", res.getString("is_designer"));
-					result += DomUtils.getXmlElementOutput("email", res.getString("email"));
-					result += DomUtils.getXmlElementOutput("active", res.getString("active"));
-					result += DomUtils.getXmlElementOutput("substitute", subs);
-					result += "</user>";
+					result.append("<user id=\"");
+					result.append(res.getString("userid"));
+					result.append("\"><username>");
+					result.append(res.getString("login"));
+					result.append("</username><firstname>");
+					result.append(res.getString("display_firstname"));
+					result.append("</firstname><lastname>");
+					result.append(res.getString("display_lastname"));
+					result.append("</lastname><admin>");
+					result.append(res.getString("is_admin"));
+					result.append("</admin><designer>");
+					result.append(res.getString("is_designer"));
+					result.append("</designer><email>");
+					result.append(res.getString("email"));
+					result.append("</email><active>");
+					result.append(res.getString("active"));
+					result.append("</active><substitute>");
+					result.append(subs);
+					result.append("</substitute></user>");
 				}
 				else {}
 			}
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
+		}
+		catch (SQLException e)
+		{
 			e.printStackTrace();
 			return "<users></users>";
 		}
 
-		result += "</users>";
+		result.append("</users>");
 
-		return result;
+		return result.toString();
 
 	}
 
@@ -13890,6 +13899,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
+				if( res != null )
+					res.close();
 				if( st != null )
 					st.close();
       }
