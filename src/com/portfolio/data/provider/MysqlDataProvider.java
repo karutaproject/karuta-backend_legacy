@@ -4092,6 +4092,9 @@ public class MysqlDataProvider implements DataProvider {
 			t5 = System.currentTimeMillis();
 
 			c.setAutoCommit(false);
+			/// Update last changed date, doing it first since uuid won't exist anymore
+			touchPortfolio(c, nodeUuid, null);
+
 			/// On efface
 			// Les ressources
 			if( "mysql".equals(dbserveur) )
