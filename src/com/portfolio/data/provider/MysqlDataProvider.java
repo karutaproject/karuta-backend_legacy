@@ -13634,7 +13634,7 @@ public class MysqlDataProvider implements DataProvider {
   /** Managing and listing portfolios
 	/********************************************************/
 	@Override
-	public int postPortfolioGroup( Connection c, String groupname, int userId )
+	public int postPortfolioGroup( Connection c, String groupname, String type, Integer parent, int userId )
 	{
 		String sql = "";
 		PreparedStatement st = null;
@@ -13643,12 +13643,32 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			sql = "INSERT INTO  * FROM portfolio_group(label) VALUE(?)";
+			if( parent != null )
+			{	// Check parent exists
+				sql = "SELECT pg FROM portfolio_group WHERE pg=? AND type='GROUP'";
+				st = c.prepareStatement(sql);
+				st.setInt(1, parent);
+				res = st.executeQuery();
+				if( !res.next() )
+					return -1;
+				res.close();
+				st.close();
+			}
+			
+			sql = "INSERT INTO portfolio_group";
+			if( parent == null )
+				sql += "(label, type) VALUE(?, ?)";
+			else
+				// Ensure parent exists
+				sql += "(label, type, pg_parent) VALUE(?, ?, ?)";
 			if (dbserveur.equals("oracle"))
 				st = c.prepareStatement(sql, new String[]{"pg"});
 			else
 				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			st.setString(1, groupname);
+			st.setString(2, type);
+			if( parent != null )
+				st.setInt(3, parent);
 			st.executeUpdate();
 			res = st.getGeneratedKeys();
 			if( res.next() )
@@ -13681,21 +13701,79 @@ public class MysqlDataProvider implements DataProvider {
 		PreparedStatement st = null;
 		ResultSet res = null;
 
-		String result = "<groups>";
+		StringBuilder result = new StringBuilder();
+		result.append("<groups>");
 		try
 		{
 			sql = "SELECT * FROM portfolio_group";
 			st = c.prepareStatement(sql);
 			res = st.executeQuery();
 
+			class TreeNode
+			{
+				String nodeContent;
+				String type;
+				int nodeId;
+				ArrayList<TreeNode> childs = new ArrayList<TreeNode>();
+			}
+			class ProcessTree
+			{
+				public void reconstruct(StringBuilder data, TreeNode tree)
+				{
+					String nodeData = tree.nodeContent;
+					data.append(nodeData);	// Add current node content
+					for( int i=0; i<tree.childs.size(); ++i )
+					{
+						TreeNode child = tree.childs.get(i);
+						reconstruct(data, child);
+					}
+					// Close node tag
+					data.append("</group").append(tree.type).append(">");
+				}
+			}
+			
+			ArrayList<TreeNode> trees = new ArrayList<TreeNode>();
+			HashMap<Integer, TreeNode> resolve = new HashMap<Integer, TreeNode>();
+			
+			ProcessTree pf = new ProcessTree();
+			
+			StringBuilder currNode = new StringBuilder();
 			while(res.next())
 			{
-				result +="<group ";
-				result += DomUtils.getXmlAttributeOutput("pg", res.getString("pg"))+" ";
-				result += ">";
-				result += DomUtils.getXmlElementOutput("label", res.getString("label"));
-				result += "</group>";
+				currNode.setLength(0);
+				String pgStr = res.getString("pg");
+				String type = res.getString("type");
+				currNode.append("<group").append(type).append(" pg=\"");
+				currNode.append(pgStr);
+				currNode.append("\"><label>");
+				currNode.append(res.getString("label"));
+				currNode.append("</label>");
+				// group tag will be closed at reconstruction
+				
+				TreeNode currTreeNode = new TreeNode();
+				currTreeNode.nodeContent = currNode.toString();
+				currTreeNode.nodeId = Integer.parseInt(pgStr);
+				currTreeNode.type = type;
+				Integer parentId = res.getInt("pg_parent");
+				resolve.put(currTreeNode.nodeId, currTreeNode);
+				if( parentId != null && parentId != 0 )
+				{
+					TreeNode parentTreeNode = resolve.get(parentId);
+					parentTreeNode.childs.add(currTreeNode);
+				}
+				else	// Top level groups
+				{
+					trees.add(currTreeNode);
+				}
 			}
+			
+			/// Go through top level parent and reconstruct each tree
+			for( int i=0; i<trees.size(); ++i )
+			{
+				TreeNode topNode = trees.get(i);
+				pf.reconstruct(result, topNode);
+			}
+			
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -13711,9 +13789,9 @@ public class MysqlDataProvider implements DataProvider {
       catch( SQLException e ){ e.printStackTrace(); }
 		}
 
-		result += "</groups>";
+		result.append("</groups>");
 
-		return result;
+		return result.toString();
 	}
 
 	@Override
@@ -13723,20 +13801,28 @@ public class MysqlDataProvider implements DataProvider {
 		PreparedStatement st = null;
 		ResultSet res = null;
 
-		String result = "<group id=\""+portfolioGroupId+"\">";
+		StringBuilder result = new StringBuilder();
+		result.append("<group id=\"").append(portfolioGroupId).append("\">");
+//		String result = "<group id=\""+portfolioGroupId+"\">";
 		try
 		{
-			sql = "SELECT * FROM portfolio_group_members WHERE pg=?";
+			sql = "SELECT bin2uuid(portfolio_id) AS portfolio_id FROM portfolio_group_members WHERE pg=?";
 			st = c.prepareStatement(sql);
 			st.setInt(1, portfolioGroupId);
 			res = st.executeQuery();
 
 			while(res.next())
 			{
-				result +="<portfolio";
-				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("userid"))+" ";
-				result += ">";
-				result += "</portfolio>";
+				result.append("<portfolio");
+//				result +="<portfolio";
+				result.append(" id=\"");
+				result.append(res.getString("portfolio_id"));
+				result.append("\"");
+//				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("userid"))+" ";
+				result.append(">");
+//				result += ">";
+				result.append("</portfolio>");
+//				result += "</portfolio>";
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -13753,9 +13839,10 @@ public class MysqlDataProvider implements DataProvider {
       catch( SQLException e ){ e.printStackTrace(); }
 		}
 
-		result += "</group>";
+		result.append("</group>");
+//		result += "</group>";
 
-		return result;
+		return result.toString();
 	}
 
 	@Override
@@ -13767,12 +13854,32 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
+			/// Check if exist with correct type
+			sql = "SELECT pg FROM portfolio_group WHERE pg=? AND type='PORTFOLIO'";
+			st = c.prepareStatement(sql);
+			st.setInt(1, portfolioGroupId);
+			res = st.executeQuery();
+			if( !res.next() )
+				return -1;
+			
+			res.close();
+			st.close();
+			
+			sql = "SELECT portfolio_id FROM portfolio WHERE portfolio_id=uuid2bin(?)";
+			st = c.prepareStatement(sql);
+			st.setString(1, uuid);
+			res = st.executeQuery();
+			if( !res.next() )
+				return -1;
+			
+			res.close();
+			st.close();
+			
 			sql = "INSERT INTO portfolio_group_members(pg, portfolio_id) VALUES(?, uuid2bin(?))";
 			st = c.prepareStatement(sql);
 			st.setInt(1, portfolioGroupId);
 			st.setString(2, uuid);
-			res = st.executeQuery();
-
+			st.executeUpdate();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -13821,6 +13928,8 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			try
 			{
+				if( res != null )
+					res.close();
 				if( st != null )
 					st.close();
       }

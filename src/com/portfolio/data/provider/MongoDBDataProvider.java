@@ -625,7 +625,7 @@ public class MongoDBDataProvider implements DataProvider {
 		return -1;
 	}
 
-	public int postPortfolioGroup( Connection c, String groupname, int userId )
+	public int postPortfolioGroup( Connection c, String groupname, String type, Integer parent, int userId )
 	{
 		return 0;
 	}

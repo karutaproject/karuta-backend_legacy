@@ -5176,25 +5176,31 @@ public class RestServicePortfolio
 	 *	POST /rest/api/portfoliogroups
 	 *	parameters:
 	 *	 - name: Name of the group we are creating
+	 *	 - parent: parentid
+	 *	 - type: group/portfolio
 	 *	return:
 	 *   - groupid
 	 **/
 	@Path("/portfoliogroups")
 	@POST
-	public int postPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname)
+	public Response postPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname, @QueryParam("type") String type, @QueryParam("parent") Integer parent)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		int response = -1;
 		Connection c = null;
 
+		// Check type value
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			response = dataProvider.postPortfolioGroup(c, groupname, ui.userId);
+			response = dataProvider.postPortfolioGroup(c, groupname, type, parent, ui.userId);
 			logRestRequest(httpServletRequest, "", "Add portfolio group", Status.OK.getStatusCode());
 			
 			if( response == -1 )
-				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Error in creation");
+			{
+				return Response.status(Status.NOT_MODIFIED).entity("Error in creation").build();
+			}
+//				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Error in creation");
 		}
 		catch(Exception ex)
 		{
@@ -5212,7 +5218,7 @@ public class RestServicePortfolio
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
-		return response;
+		return Response.ok(Integer.toString(response)).build();
 	}
 
 	/**
