@@ -11305,19 +11305,28 @@ public class MysqlDataProvider implements DataProvider {
 		int sharedNode = 0;
 		int sharedNodeRes = 0;
 
+		long t1=0, t2=0, t3=0, t4=0, t5=0;
+		long t0=System.currentTimeMillis();
 		//TODO putNode getNodeRight
 		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 		//return "faux";
 
+		t1=System.currentTimeMillis();
+		
 		String status = "erreur";
 
 		String portfolioUid = getPortfolioUuidByNodeUuid(c, nodeUuid);
 
+		t2=System.currentTimeMillis();
+		
 		// D'abord on supprime les noeuds existants
 		//deleteNode(nodeUuid, userId);
 		xmlNode = DomUtils.cleanXMLData(xmlNode);
 		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
+		
+		t3=System.currentTimeMillis();
+		
 		// Puis on le recree
 		Node node;
 		node = doc.getDocumentElement();
@@ -11373,6 +11382,8 @@ public class MysqlDataProvider implements DataProvider {
 
 			metadata = DomUtils.getNodeAttributesString(node);
 
+			t4=System.currentTimeMillis();
+			
 			try
 			{
 				/// Mettre à jour les flags et donnée du champ
@@ -11396,8 +11407,24 @@ public class MysqlDataProvider implements DataProvider {
 				ex.printStackTrace();
 			}
 
+			t5=System.currentTimeMillis();
 		}
 
+//		/*
+		long checkRights = t1-t0;
+		long findPortfolio = t2-t1;
+		long xmlParsing = t3-t2;
+		long attrManip = t4-t3;
+		long updateMeta = t5-t4;
+		
+		System.out.println("==== PUT metadata =====");
+		System.out.println("Check rights: "+checkRights);
+		System.out.println("Find portfolio: "+findPortfolio);
+		System.out.println("XML Parsing: "+xmlParsing);
+		System.out.println("Attribute manipulation: "+attrManip);
+		System.out.println("Update metadata: "+updateMeta);
+
+		//*/
 		//		if (1 == updatetMySqlNodeMetadata(nodeUuid,metadata)){
 		//			return ;
 		//		}
