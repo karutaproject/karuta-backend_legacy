@@ -612,18 +612,6 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				c.setAutoCommit(false);
 
-				/// Portfolio
-				sql = "DELETE FROM portfolio WHERE portfolio_id=uuid2bin(?)";
-				st = c.prepareStatement(sql);
-				st.setString(1, portfolioUuid);
-				st.executeUpdate();
-
-				/// Nodes
-				sql = "DELETE FROM node WHERE portfolio_id=uuid2bin(?)";	/// On garde les resources, c'est ce qu'il faut?
-				st = c.prepareStatement(sql);
-				st.setString(1, portfolioUuid);
-				st.executeUpdate();
-
 				/// Group and rights
 				sql = "DELETE gri, gi, gu, gr " +
 						"FROM group_right_info gri " +
@@ -637,9 +625,48 @@ public class MysqlDataProvider implements DataProvider {
 				st = c.prepareStatement(sql);
 				st.setString(1, portfolioUuid);
 				st.executeUpdate();
+				st.close();
+				
+				/// Resources
+				sql = "DELETE r FROM resource_table r, node n " +
+						"WHERE n.res_context_node_uuid=r.node_uuid AND portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, portfolioUuid);
+				st.executeUpdate();
+				st.close();
+				
+				sql = "DELETE r FROM resource_table r, node n " +
+						"WHERE n.res_res_node_uuid=r.node_uuid AND portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, portfolioUuid);
+				st.executeUpdate();
+				st.close();
+				
+				sql = "DELETE r FROM resource_table r, node n " +
+						"WHERE n.res_node_uuid=r.node_uuid AND portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, portfolioUuid);
+				st.executeUpdate();
+				st.close();
+				
+				/// Nodes
+				sql = "DELETE FROM node WHERE portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, portfolioUuid);
+				st.executeUpdate();
+				st.close();
+
+				/// Portfolio
+				sql = "DELETE FROM portfolio WHERE portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, portfolioUuid);
+				st.executeUpdate();
+				st.close();
+
 			}
 			catch( Exception e )
 			{
+				c.commit();
 				try{ c.rollback(); }
 				catch( SQLException e1 ){ e1.printStackTrace(); }
 				e.printStackTrace();
@@ -648,7 +675,6 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				c.commit();
 				c.setAutoCommit(true);
-				c.close();
 				status = 1;
 			}
 		}
@@ -3118,7 +3144,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 
 //		System.out.println((time1-time0)+","+(time2-time1)+","+(time3-time2)+","+(time4-time3)+","+(time5-time4)+","+(time6-time5));
-//		/*
+		/*
 		System.out.println("---- Query Portfolio ----");
 		System.out.println("Fetch root: "+(time1-time0));
 		System.out.println("Check rights: "+(time2-time1));
@@ -4163,8 +4189,6 @@ public class MysqlDataProvider implements DataProvider {
 					st.close();
 				}
 				updateMysqlNodeChildren(c, parentid);
-
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -5134,8 +5158,6 @@ public class MysqlDataProvider implements DataProvider {
 					st.execute();
 					st.close();
 				}
-
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -5514,8 +5536,6 @@ public class MysqlDataProvider implements DataProvider {
 					st.execute();
 					st.close();
 				}
-
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -5523,6 +5543,8 @@ public class MysqlDataProvider implements DataProvider {
 		return newPortfolioUuid;
 	}
 
+	/// Probably configuration related, sometime MySQL cache queries
+	/// and on occasion not, slowing down the whole system
 	private String checkCache( Connection c, String code ) throws SQLException
 	{
 		String sql = "";
@@ -5630,7 +5652,10 @@ public class MysqlDataProvider implements DataProvider {
 			st.setString(1, code);
 			res = st.executeQuery();
 			if( !res.next() )
+			{
+				System.out.println("INVALIDATE CACHE FOR: "+code);
 				updateCache = true;
+			}
 			res.close();
 			st.close();
 		}
@@ -5645,7 +5670,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		if( updateCache )	/// FIXME: Sync problems
 		{
-			System.out.println("FLUSH CACHE FOR CODE: "+code+" -> "+portfolioCode);
+			System.out.println("FLUSH CACHE FOR: "+code+" -> "+portfolioCode);
 			sql = "DELETE FROM t_node_cache WHERE portfolio_id=uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setString(1, portfolioCode);
@@ -5660,18 +5685,18 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			System.out.println("CACHE MISS FOR CODE: "+code);
 
-			/// Also force last date from the portfolio list to all nodes
+			/// We'll put all node cached dated the same than portfolio. Related to checking cache validity
 			if (dbserveur.equals("mysql")){
 				sql = "INSERT IGNORE INTO t_node_cache ";
 			} else if (dbserveur.equals("oracle")){
 				sql = "INSERT /*+ ignore_row_on_dupkey_index(node_uuid)*/ INTO t_node_cache ";
 			}
-			sql += "SELECT n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
+			sql += "SELECT SQL_NO_CACHE n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
 					"FROM node n, portfolio p " +
-					"WHERE n.portfolio_id=p.portfolio_id AND n.portfolio_id=(" +
+					"WHERE n.portfolio_id=p.portfolio_id AND p.portfolio_id=(" +
 					"SELECT n1.portfolio_id " +
-					"FROM node n1 LEFT JOIN portfolio p ON n1.portfolio_id=p.portfolio_id " +
-					"WHERE n1.code=? AND p.active=1)";
+					"FROM node n1, portfolio p " +
+					"WHERE n1.portfolio_id=p.portfolio_id AND n1.code=? AND p.active=1)";
 
 			st = c.prepareStatement(sql);
 			st.setString(1, code);
@@ -5681,6 +5706,7 @@ public class MysqlDataProvider implements DataProvider {
 			if( insertData == 0 )	// Code isn't found, no need to go further
 				return null;
 
+			/// Redundant
 			sql = "SELECT bin2uuid(portfolio_id) FROM t_node_cache WHERE code=?";
 			st = c.prepareStatement(sql);
 			st.setString(1, code);
@@ -5818,7 +5844,7 @@ public class MysqlDataProvider implements DataProvider {
 			// If we have uuid, copy portfolio from uuid to local cache
 			String baseUuid="";
 			ResultSet res = null;
-			if( srcuuid != null )
+			if( srcuuid != null )	// Since we're not sure if those nodes have to be cached, do it from general table
 			{
 				sql = "INSERT INTO t_data_node ";
 				if (dbserveur.equals("mysql")){
@@ -5827,8 +5853,8 @@ public class MysqlDataProvider implements DataProvider {
 					sql += "SELECT sys_guid(), ";
 				}
 				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
-						"FROM t_node_cache n " +
-						"WHERE n.portfolio_id=(SELECT node_uuid=uuid2bin(?))";
+						"FROM node n " +
+						"WHERE n.portfolio_id=(SELECT portfolio_id FROM node n1 WHERE n1.node_uuid=uuid2bin(?))";
 				st = c.prepareStatement(sql);
 				st.setString(1, srcuuid);
 				st.executeUpdate();
@@ -6178,305 +6204,310 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// Copy current roles for easier referencing
-			/// FIXME: We presuppose all groups referenced already exists
 			sql = "INSERT INTO `t_group_right_info` " +
 					"SELECT * FROM group_right_info WHERE portfolio_id=(" +
 					"SELECT n.portfolio_id FROM node n WHERE n.node_uuid=uuid2bin(?))";
 			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);	/// TODO: Might want to have the destination portfolio id
-			st.execute();
+			int hasGroup = st.executeUpdate();
 			st.close();
 
-			if (dbserveur.equals("mysql")){
-				sql = "CREATE TEMPORARY TABLE `t_group_rights` (" +
-						"`grid` bigint(20) NOT NULL, " +
-						"`id` binary(16) NOT NULL, " +
-						"`RD` tinyint(1) NOT NULL DEFAULT '1', " +
-						"`WR` tinyint(1) NOT NULL DEFAULT '0', " +
-						"`DL` tinyint(1) NOT NULL DEFAULT '0', " +
-						"`SB` tinyint(1) NOT NULL DEFAULT '0', " +
-						"`AD` tinyint(1) NOT NULL DEFAULT '0', " +
-						"`types_id` varchar(255) COLLATE utf8_unicode_ci, " +
-						"`rules_id` varchar(255) COLLATE utf8_unicode_ci, " +
-						"`notify_roles` varchar(10000) COLLATE utf8_unicode_ci, " +
-						"PRIMARY KEY (`grid`,`id`) " +
-						") ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = c.prepareStatement(sql);
-				st.execute();
-				st.close();
-			} else if (dbserveur.equals("oracle")){
-				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_group_rights(" +
-						"grid NUMBER(19,0) NOT NULL, " +
-						"id RAW(16) NOT NULL, " +
-						"RD NUMBER(1) NOT NULL, " +
-						"WR NUMBER(1) NOT NULL, " +
-						"DL NUMBER(1) NOT NULL, " +
-						"SB NUMBER(1) NOT NULL, " +
-						"AD NUMBER(1) NOT NULL, " +
-						"types_id VARCHAR2(255 CHAR) DEFAULT NULL, " +
-						"rules_id VARCHAR2(255 CHAR) DEFAULT NULL, " +
-						"notify_roles VARCHAR2(10000 CHAR) DEFAULT NULL, " +
-						"CONSTRAINT t_group_rights_UK_id UNIQUE (id)) ON COMMIT PRESERVE ROWS";
-				sql = "{call create_or_empty_table('t_group_rights','"+v_sql+"')}";
-				CallableStatement ocs = c.prepareCall(sql) ;
-				ocs.execute();
-				ocs.close();
-			}
-
-			/// FIXME: Would be better to parse all and insert in one go
-			/// Prepare statement
-			String sqlUpdateRD = "INSERT INTO t_group_rights(grid,id, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1) ON DUPLICATE KEY UPDATE RD = 1 ";
-			if( dbserveur.equals("oracle") )
-				sqlUpdateRD = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.RD=1 WHEN NOT MATCHED THEN INSERT (grid, id, RD) VALUES (t.grid, t.id, t.RD)";
-			PreparedStatement stRD = c.prepareStatement(sqlUpdateRD);
-
-			String sqlUpdateWR = "INSERT INTO t_group_rights(grid,id, WR, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1, 0) ON DUPLICATE KEY UPDATE WR = 1";
-			if( dbserveur.equals("oracle") )
-				sqlUpdateWR = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS WR, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.WR=1 WHEN NOT MATCHED THEN INSERT (grid, id, WR, RD) VALUES (t.grid, t.id, t.WR, t.RD)";
-			PreparedStatement stWR = c.prepareStatement(sqlUpdateWR);
-
-			String sqlUpdateDL = "INSERT INTO t_group_rights(grid,id, DL, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1, 0) ON DUPLICATE KEY UPDATE DL = 1";
-			if( dbserveur.equals("oracle") )
-				sqlUpdateDL = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS DL, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.DL=1 WHEN NOT MATCHED THEN INSERT (grid, id, DL, RD) VALUES (t.grid, t.id, t.DL, t.RD)";
-			PreparedStatement stDL = c.prepareStatement(sqlUpdateDL);
-
-			String sqlUpdateSB = "INSERT INTO t_group_rights(grid,id, SB, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1, 0) ON DUPLICATE KEY UPDATE SB = 1";
-			if( dbserveur.equals("oracle") )
-				sqlUpdateSB = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS SB, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.SB=1 WHEN NOT MATCHED THEN INSERT (grid, id, SB, RD) VALUES (t.grid, t.id, t.SB, t.RD)";
-			PreparedStatement stSB = c.prepareStatement(sqlUpdateSB);
-
-			// Selection des metadonnées
-			sql = "SELECT bin2uuid(t.new_uuid) AS uuid, bin2uuid(t.portfolio_id) AS puuid, n.metadata, n.metadata_wad, n.metadata_epm " +
-					"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
-			st = c.prepareStatement(sql);
-			res = st.executeQuery();
-
-			t18 = System.currentTimeMillis();
-
-			while( res.next() )
+			/// Managing rights
+			if( hasGroup > 0 )
 			{
-				String uuid = res.getString("uuid");
-				String portfolioUuid = res.getString("puuid");
-				// Process et remplacement de 'user' par la personne en cours
-				String meta = res.getString("metadata_wad");
-
-				if( meta.contains("user") )
-				{
-					meta = meta.replaceAll("user", login);
-
-					/// Replace metadata with actual username
-					sql = "UPDATE t_data_node t SET t.metadata_wad=? WHERE t.new_uuid=uuid2bin(?)";
+				if (dbserveur.equals("mysql")){
+					sql = "CREATE TEMPORARY TABLE `t_group_rights` (" +
+							"`grid` bigint(20) NOT NULL, " +
+							"`id` binary(16) NOT NULL, " +
+							"`RD` tinyint(1) NOT NULL DEFAULT '1', " +
+							"`WR` tinyint(1) NOT NULL DEFAULT '0', " +
+							"`DL` tinyint(1) NOT NULL DEFAULT '0', " +
+							"`SB` tinyint(1) NOT NULL DEFAULT '0', " +
+							"`AD` tinyint(1) NOT NULL DEFAULT '0', " +
+							"`types_id` varchar(255) COLLATE utf8_unicode_ci, " +
+							"`rules_id` varchar(255) COLLATE utf8_unicode_ci, " +
+							"`notify_roles` varchar(10000) COLLATE utf8_unicode_ci, " +
+							"PRIMARY KEY (`grid`,`id`) " +
+							") ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 					st = c.prepareStatement(sql);
-					st.setString(1, meta);
-					st.setString(2, uuid);
-					st.executeUpdate();
+					st.execute();
 					st.close();
-
-					/// Ensure specific user group exist in final tables, and add user in it
-					int ngid = getRoleByNode(c, 1, destUuid, login);
-					postGroupsUsers(c, 1, userId, ngid);
-					
-					/// Ensure entry is there in temp table, just need a skeleton info
-					sql = "REPLACE INTO t_group_right_info(grid, owner, label) VALUES((SELECT grid FROM group_info gi WHERE gid=?), 1, ?)";
-					if (dbserveur.equals("oracle")){
-						// FIXME Unsure about this, might need testing
-						sql = "MERGE INTO group_info d using (SELECT ? grid,1 ,? label from dual) s ON (1=2) WHEN NOT MATCHED THEN INSERT (d.grid, d.owner, d.label) values (s.grid, s.owner, s.label)";
-					}
-					st = c.prepareStatement(sql);
-					st.setInt(1, ngid);
-					st.setString(2, login);
-					st.executeUpdate();
-					st.close();
+				} else if (dbserveur.equals("oracle")){
+					String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_group_rights(" +
+							"grid NUMBER(19,0) NOT NULL, " +
+							"id RAW(16) NOT NULL, " +
+							"RD NUMBER(1) NOT NULL, " +
+							"WR NUMBER(1) NOT NULL, " +
+							"DL NUMBER(1) NOT NULL, " +
+							"SB NUMBER(1) NOT NULL, " +
+							"AD NUMBER(1) NOT NULL, " +
+							"types_id VARCHAR2(255 CHAR) DEFAULT NULL, " +
+							"rules_id VARCHAR2(255 CHAR) DEFAULT NULL, " +
+							"notify_roles VARCHAR2(10000 CHAR) DEFAULT NULL, " +
+							"CONSTRAINT t_group_rights_UK_id UNIQUE (id)) ON COMMIT PRESERVE ROWS";
+					sql = "{call create_or_empty_table('t_group_rights','"+v_sql+"')}";
+					CallableStatement ocs = c.prepareCall(sql) ;
+					ocs.execute();
+					ocs.close();
 				}
-
-				String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"></transfer>";
-//				System.out.println("!!!!!! METADATA: "+nodeString);
-				try
+	
+				/// FIXME: Would be better to parse all and insert in one go
+				/// Prepare statement
+				String sqlUpdateRD = "INSERT INTO t_group_rights(grid,id, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1) ON DUPLICATE KEY UPDATE RD = 1 ";
+				if( dbserveur.equals("oracle") )
+					sqlUpdateRD = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.RD=1 WHEN NOT MATCHED THEN INSERT (grid, id, RD) VALUES (t.grid, t.id, t.RD)";
+				PreparedStatement stRD = c.prepareStatement(sqlUpdateRD);
+	
+				String sqlUpdateWR = "INSERT INTO t_group_rights(grid,id, WR, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1, 0) ON DUPLICATE KEY UPDATE WR = 1";
+				if( dbserveur.equals("oracle") )
+					sqlUpdateWR = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS WR, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.WR=1 WHEN NOT MATCHED THEN INSERT (grid, id, WR, RD) VALUES (t.grid, t.id, t.WR, t.RD)";
+				PreparedStatement stWR = c.prepareStatement(sqlUpdateWR);
+	
+				String sqlUpdateDL = "INSERT INTO t_group_rights(grid,id, DL, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1, 0) ON DUPLICATE KEY UPDATE DL = 1";
+				if( dbserveur.equals("oracle") )
+					sqlUpdateDL = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS DL, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.DL=1 WHEN NOT MATCHED THEN INSERT (grid, id, DL, RD) VALUES (t.grid, t.id, t.DL, t.RD)";
+				PreparedStatement stDL = c.prepareStatement(sqlUpdateDL);
+	
+				String sqlUpdateSB = "INSERT INTO t_group_rights(grid,id, SB, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1, 0) ON DUPLICATE KEY UPDATE SB = 1";
+				if( dbserveur.equals("oracle") )
+					sqlUpdateSB = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS SB, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.SB=1 WHEN NOT MATCHED THEN INSERT (grid, id, SB, RD) VALUES (t.grid, t.id, t.SB, t.RD)";
+				PreparedStatement stSB = c.prepareStatement(sqlUpdateSB);
+	
+				// Selection des metadonnées
+				sql = "SELECT bin2uuid(t.new_uuid) AS uuid, bin2uuid(t.portfolio_id) AS puuid, n.metadata, n.metadata_wad, n.metadata_epm " +
+						"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
+				st = c.prepareStatement(sql);
+				res = st.executeQuery();
+	
+				t18 = System.currentTimeMillis();
+	
+				/// Loop through metadata and assemble rights
+				while( res.next() )
 				{
-					/// Ensure we can parse it correctly
-					DocumentBuilder documentBuilder;
-					DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
-					documentBuilder = documentBuilderFactory.newDocumentBuilder();
-					InputSource is = new InputSource(new StringReader(nodeString));
-					Document doc = documentBuilder.parse(is);
-
-					/// Process attributes
-					Element attribNode = doc.getDocumentElement();
-					NamedNodeMap attribMap = attribNode.getAttributes();
-
-					/// FIXME: à améliorer pour faciliter le changement des droits
-					String nodeRole;
-					Node att = attribMap.getNamedItem("access");
-					if(att != null)
+					String uuid = res.getString("uuid");
+					String portfolioUuid = res.getString("puuid");
+					// Process et remplacement de 'user' par la personne en cours
+					String meta = res.getString("metadata_wad");
+	
+					if( meta.contains("user") )
 					{
-						//if(access.equalsIgnoreCase("public") || access.contains("public"))
-						//	credential.postGroupRight("all",uuid,Credential.READ,portfolioUuid,userId);
-					}
-					att = attribMap.getNamedItem("seenoderoles");
-					if(att != null)
-					{
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						stRD.setString(2, uuid);
-						while (tokens.hasMoreElements())
-						{
-							nodeRole = tokens.nextElement().toString();
-							stRD.setString(1, nodeRole);
-							int result = stRD.executeUpdate();
-//							System.out.println("RD "+nodeRole+" -> "+result+" : "+uuid);
-//							credential.postGroupRight(nodeRole,uuid,Credential.READ,portfolioUuid,userId);
+						meta = meta.replaceAll("user", login);
+	
+						/// Replace metadata with actual username
+						sql = "UPDATE t_data_node t SET t.metadata_wad=? WHERE t.new_uuid=uuid2bin(?)";
+						st = c.prepareStatement(sql);
+						st.setString(1, meta);
+						st.setString(2, uuid);
+						st.executeUpdate();
+						st.close();
+	
+						/// Ensure specific user group exist in final tables, and add user in it
+						int ngid = getRoleByNode(c, 1, destUuid, login);
+						postGroupsUsers(c, 1, userId, ngid);
+						
+						/// Ensure entry is there in temp table, just need a skeleton info
+						sql = "REPLACE INTO t_group_right_info(grid, owner, label) VALUES((SELECT grid FROM group_info gi WHERE gid=?), 1, ?)";
+						if (dbserveur.equals("oracle")){
+							// FIXME Unsure about this, might need testing
+							sql = "MERGE INTO group_info d using (SELECT ? grid,1 ,? label from dual) s ON (1=2) WHEN NOT MATCHED THEN INSERT (d.grid, d.owner, d.label) values (s.grid, s.owner, s.label)";
 						}
+						st = c.prepareStatement(sql);
+						st.setInt(1, ngid);
+						st.setString(2, login);
+						st.executeUpdate();
+						st.close();
 					}
-					att = attribMap.getNamedItem("delnoderoles");
-					if(att != null)
-					{
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						stDL.setString(2, uuid);
-						while (tokens.hasMoreElements())
-						{
-							nodeRole = tokens.nextElement().toString();
-							stDL.setString(1, nodeRole);
-							int result = stDL.executeUpdate();
-//							credential.postGroupRight(nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
-//							System.out.println("DL "+nodeRole+" -> "+result+" : "+uuid);
-						}
-					}
-					att = attribMap.getNamedItem("editnoderoles");
-					if(att != null)
-					{
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						stWR.setString(2, uuid);
-						while (tokens.hasMoreElements())
-						{
-							nodeRole = tokens.nextElement().toString();
-							stWR.setString(1, nodeRole);
-							int result = stWR.executeUpdate();
-//							credential.postGroupRight(nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
-//							System.out.println("WR "+nodeRole+" -> "+result+" : "+uuid);
-						}
-					}
-					att = attribMap.getNamedItem("submitroles");
-					if(att != null)
-					{
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						stSB.setString(2, uuid);
-						while (tokens.hasMoreElements())
-						{
-							nodeRole = tokens.nextElement().toString();
-							stSB.setString(1, nodeRole);
-							int result = stSB.executeUpdate();
-//							credential.postGroupRight(nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
-//							System.out.println("SB "+nodeRole+" -> "+result+" : "+uuid);
-						}
-					}
-//					/*
-					att = attribMap.getNamedItem("seeresroles");
-					if(att != null)
-					{
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements())
-						{
-							nodeRole = tokens.nextElement().toString();
-							cred.postGroupRight(c, nodeRole,uuid,Credential.READ,portfolioUuid,userId);
-						}
-					}
-					att = attribMap.getNamedItem("delresroles");
-					if(att != null)
-					{
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements())
-						{
-							nodeRole = tokens.nextElement().toString();
-							cred.postGroupRight(c, nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
-						}
-					}
-					att = attribMap.getNamedItem("editresroles");
-					if(att != null)
-					{
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						stWR.setString(2, uuid);
-						while (tokens.hasMoreElements())
-						{
-							nodeRole = tokens.nextElement().toString();
-							stWR.setString(1, nodeRole);
-							int result = stWR.executeUpdate();
-//							credential.postGroupRight(nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
-//							System.out.println("WR2 "+nodeRole+" -> "+result+" : "+uuid);
-						}
-					}
-					att = attribMap.getNamedItem("submitresroles");
-					if(att != null)
-					{
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements())
-						{
-							nodeRole = tokens.nextElement().toString();
-							cred.postGroupRight(c, nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
-						}
-					}
-					//*/
-					/// FIXME: Incomplete
-					/// FIXME: Incomplete
-					/// FIXME: Incomplete
-					Node actionroles = attribMap.getNamedItem("actionroles");
-					if(actionroles!=null)
-					{
-						/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-						StringTokenizer tokens = new StringTokenizer(actionroles.getNodeValue(), ";");
-						while (tokens.hasMoreElements())
-						{
-							nodeRole = tokens.nextElement().toString();
-							StringTokenizer data = new StringTokenizer(nodeRole, ":");
-							String role = data.nextElement().toString();
-							String actions = data.nextElement().toString();
-							cred.postGroupRight(c, role,uuid,actions,portfolioUuid,userId);
-						}
-					}
-
-					Node notifyroles = attribMap.getNamedItem("notifyroles");
-					if(notifyroles!=null)
-					{
-						/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-						StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
-						String merge = "";
-						if( tokens.hasMoreElements() )
-							merge = tokens.nextElement().toString();
-						while (tokens.hasMoreElements())
-							merge += ","+tokens.nextElement().toString();
-						postNotifyRoles(c, userId, portfolioUuid, uuid, merge);
-					}
-
-					meta = res.getString("metadata");
-					nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"/>";
-					is = new InputSource(new StringReader(nodeString));
-					doc = documentBuilder.parse(is);
-					attribNode = doc.getDocumentElement();
-					attribMap = attribNode.getAttributes();
-
+	
+					String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"></transfer>";
+	//				System.out.println("!!!!!! METADATA: "+nodeString);
 					try
 					{
-						Node publicatt = attribMap.getNamedItem("public");
-						if( publicatt != null && "Y".equals(publicatt.getNodeValue()) )
-							setPublicState(c, userId, portfolioUuid, true);
-						else if ( "N".equals(publicatt) )
-							setPublicState(c, userId, portfolioUuid, false);
+						/// Ensure we can parse it correctly
+						DocumentBuilder documentBuilder;
+						DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
+						documentBuilder = documentBuilderFactory.newDocumentBuilder();
+						InputSource is = new InputSource(new StringReader(nodeString));
+						Document doc = documentBuilder.parse(is);
+	
+						/// Process attributes
+						Element attribNode = doc.getDocumentElement();
+						NamedNodeMap attribMap = attribNode.getAttributes();
+	
+						/// FIXME: à améliorer pour faciliter le changement des droits
+						String nodeRole;
+						Node att = attribMap.getNamedItem("access");
+						if(att != null)
+						{
+							//if(access.equalsIgnoreCase("public") || access.contains("public"))
+							//	credential.postGroupRight("all",uuid,Credential.READ,portfolioUuid,userId);
+						}
+						att = attribMap.getNamedItem("seenoderoles");
+						if(att != null)
+						{
+							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+							stRD.setString(2, uuid);
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								stRD.setString(1, nodeRole);
+								int result = stRD.executeUpdate();
+	//							System.out.println("RD "+nodeRole+" -> "+result+" : "+uuid);
+	//							credential.postGroupRight(nodeRole,uuid,Credential.READ,portfolioUuid,userId);
+							}
+						}
+						att = attribMap.getNamedItem("delnoderoles");
+						if(att != null)
+						{
+							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+							stDL.setString(2, uuid);
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								stDL.setString(1, nodeRole);
+								int result = stDL.executeUpdate();
+	//							credential.postGroupRight(nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
+	//							System.out.println("DL "+nodeRole+" -> "+result+" : "+uuid);
+							}
+						}
+						att = attribMap.getNamedItem("editnoderoles");
+						if(att != null)
+						{
+							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+							stWR.setString(2, uuid);
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								stWR.setString(1, nodeRole);
+								int result = stWR.executeUpdate();
+	//							credential.postGroupRight(nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
+	//							System.out.println("WR "+nodeRole+" -> "+result+" : "+uuid);
+							}
+						}
+						att = attribMap.getNamedItem("submitroles");
+						if(att != null)
+						{
+							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+							stSB.setString(2, uuid);
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								stSB.setString(1, nodeRole);
+								int result = stSB.executeUpdate();
+	//							credential.postGroupRight(nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
+	//							System.out.println("SB "+nodeRole+" -> "+result+" : "+uuid);
+							}
+						}
+	//					/*
+						att = attribMap.getNamedItem("seeresroles");
+						if(att != null)
+						{
+							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								cred.postGroupRight(c, nodeRole,uuid,Credential.READ,portfolioUuid,userId);
+							}
+						}
+						att = attribMap.getNamedItem("delresroles");
+						if(att != null)
+						{
+							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								cred.postGroupRight(c, nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
+							}
+						}
+						att = attribMap.getNamedItem("editresroles");
+						if(att != null)
+						{
+							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+							stWR.setString(2, uuid);
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								stWR.setString(1, nodeRole);
+								int result = stWR.executeUpdate();
+	//							credential.postGroupRight(nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
+	//							System.out.println("WR2 "+nodeRole+" -> "+result+" : "+uuid);
+							}
+						}
+						att = attribMap.getNamedItem("submitresroles");
+						if(att != null)
+						{
+							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								cred.postGroupRight(c, nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
+							}
+						}
+						//*/
+						/// FIXME: Incomplete
+						/// FIXME: Incomplete
+						/// FIXME: Incomplete
+						Node actionroles = attribMap.getNamedItem("actionroles");
+						if(actionroles!=null)
+						{
+							/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
+							StringTokenizer tokens = new StringTokenizer(actionroles.getNodeValue(), ";");
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								StringTokenizer data = new StringTokenizer(nodeRole, ":");
+								String role = data.nextElement().toString();
+								String actions = data.nextElement().toString();
+								cred.postGroupRight(c, role,uuid,actions,portfolioUuid,userId);
+							}
+						}
+	
+						Node notifyroles = attribMap.getNamedItem("notifyroles");
+						if(notifyroles!=null)
+						{
+							/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
+							StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
+							String merge = "";
+							if( tokens.hasMoreElements() )
+								merge = tokens.nextElement().toString();
+							while (tokens.hasMoreElements())
+								merge += ","+tokens.nextElement().toString();
+							postNotifyRoles(c, userId, portfolioUuid, uuid, merge);
+						}
+	
+						meta = res.getString("metadata");
+						nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"/>";
+						is = new InputSource(new StringReader(nodeString));
+						doc = documentBuilder.parse(is);
+						attribNode = doc.getDocumentElement();
+						attribMap = attribNode.getAttributes();
+	
+						try
+						{
+							Node publicatt = attribMap.getNamedItem("public");
+							if( publicatt != null && "Y".equals(publicatt.getNodeValue()) )
+								setPublicState(c, userId, portfolioUuid, true);
+							else if ( "N".equals(publicatt) )
+								setPublicState(c, userId, portfolioUuid, false);
+						}
+						catch(Exception ex)
+						{
+							ex.printStackTrace();
+						}
+	
 					}
-					catch(Exception ex)
+					catch( Exception e )
 					{
-						ex.printStackTrace();
+						logger.error("Error when working on rights: "+e.getMessage());
+						e.printStackTrace();
 					}
-
 				}
-				catch( Exception e )
-				{
-					e.printStackTrace();
-				}
-			}
-			stRD.close();
-			stWR.close();
-			stDL.close();
-			stSB.close();
-			res.close();
-			st.close();
+				stRD.close();
+				stWR.close();
+				stDL.close();
+				stSB.close();
+				res.close();
+				st.close();
+			}	/// End of rights management
 
 			t19 = System.currentTimeMillis();
 
@@ -6610,8 +6641,6 @@ public class MysqlDataProvider implements DataProvider {
 				}
 
 				touchPortfolio(c, destUuid, null);
-
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -6653,10 +6682,13 @@ public class MysqlDataProvider implements DataProvider {
 
 	// Même chose que postImportNode, mais on ne prend pas en compte le parsage des droits
 	@Override
-	public Object postCopyNode( Connection c, MimeType inMimeType, String destUuid, String tag, String code, int userId, int groupId ) throws Exception
+	public Object postCopyNode( Connection c, MimeType inMimeType, String destUuid, String tag, String code, String srcuuid, int userId, int groupId ) throws Exception
 	{
 		if( "".equals(tag) || tag == null || "".equals(code) || code == null )
-			return "erreur";
+		{
+			if( srcuuid == null || "".equals(srcuuid) )
+				return "erreur";
+		}
 
 		String sql = "";
 		PreparedStatement st;
@@ -6675,10 +6707,22 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			/// Check/update cache
-			String portfolioCode = checkCache(c, code);
+			String portfolioCode = "";
 
-			if( portfolioCode == null )
-				return "Inexistant selection";
+			if( srcuuid != null )
+			{
+				// Check if user has right to read it
+				if( !cred.hasNodeRight(c, userId, groupId, srcuuid, Credential.READ) )
+						return "No rights";
+			}
+			else
+			{
+				/// Check/update cache
+				portfolioCode = checkCache(c, code);
+				
+				if( portfolioCode == null )
+					return "Inexistent selection";
+			}
 			
 //			t1 = System.currentTimeMillis();
 
@@ -6752,47 +6796,70 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
-			// Copie the whole portfolio from shared cache to local cache
-			/// Copie de la structure
-			sql = "INSERT INTO t_data_node ";
-			if (dbserveur.equals("mysql")){
-				sql += "SELECT uuid2bin(UUID()), ";
-			} else if (dbserveur.equals("oracle")){
-				sql += "SELECT sys_guid(), ";
-			}
-			sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
-					"FROM t_node_cache n " +
-					"WHERE portfolio_id=uuid2bin(?)";
-			st = c.prepareStatement(sql);
-			st.setString(1, portfolioCode);
-			st.executeUpdate();
-			st.close();
-
-//			t1a = System.currentTimeMillis();
-
-			/// Find the right starting node we want
-			sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
-					"FROM t_data_node n2 " +
-					"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
-			st = c.prepareStatement(sql);
-			st.setString(1, tag);
-			st.setString(2, portfolioCode);
-
-			ResultSet res = st.executeQuery();
 			String baseUuid="";
-			String pUuid="";
-			if( res.next() )	// Take the first one declared
+			ResultSet res = null;
+			if( srcuuid != null )	// Since we're not sure if those nodes have to be cached, do it from general table
 			{
-				baseUuid = res.getString("nUuid");
-				pUuid = res.getString("pUuid");
-				res.close();
+				sql = "INSERT INTO t_data_node ";
+				if (dbserveur.equals("mysql")){
+					sql += "SELECT uuid2bin(UUID()), ";
+				} else if (dbserveur.equals("oracle")){
+					sql += "SELECT sys_guid(), ";
+				}
+				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+						"FROM node n " +
+						"WHERE n.portfolio_id=(SELECT portfolio_id FROM node n1 WHERE n1.node_uuid=uuid2bin(?))";
+				st = c.prepareStatement(sql);
+				st.setString(1, srcuuid);
+				st.executeUpdate();
 				st.close();
+				
+				// Then skip tag searching since we know the uuid
+				baseUuid = srcuuid;
 			}
 			else
 			{
-				res.close();
+				// Copie the whole portfolio from shared cache to local cache
+				/// Copie de la structure
+				sql = "INSERT INTO t_data_node ";
+				if (dbserveur.equals("mysql")){
+					sql += "SELECT uuid2bin(UUID()), ";
+				} else if (dbserveur.equals("oracle")){
+					sql += "SELECT sys_guid(), ";
+				}
+				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+						"FROM t_node_cache n " +
+						"WHERE portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, portfolioCode);
+				st.executeUpdate();
 				st.close();
-				return "Selection non existante.";
+	
+	//			t1a = System.currentTimeMillis();
+	
+				/// Find the right starting node we want
+				sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
+						"FROM t_data_node n2 " +
+						"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, tag);
+				st.setString(2, portfolioCode);
+
+				res = st.executeQuery();
+				String pUuid="";
+				if( res.next() )	// Take the first one declared
+				{
+					baseUuid = res.getString("nUuid");
+					pUuid = res.getString("pUuid");
+					res.close();
+					st.close();
+				}
+				else
+				{
+					res.close();
+					st.close();
+					return "Selection non existante.";
+				}
 			}
 			
 //			t2 = System.currentTimeMillis();
@@ -7177,8 +7244,6 @@ public class MysqlDataProvider implements DataProvider {
 				}
 
 				touchPortfolio(c, destUuid, null);
-
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -7290,7 +7355,6 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				c.setAutoCommit(true);
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -7360,7 +7424,6 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				c.setAutoCommit(true);
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -9121,8 +9184,7 @@ public class MysqlDataProvider implements DataProvider {
 		finally
 		{
 			try
-			{ c.setAutoCommit(true);
-			c.close(); }
+			{ c.setAutoCommit(true); }
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
@@ -9172,8 +9234,7 @@ public class MysqlDataProvider implements DataProvider {
 		finally
 		{
 			try
-			{ c.setAutoCommit(true);
-			c.close(); }
+			{ c.setAutoCommit(true); }
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
@@ -9220,8 +9281,7 @@ public class MysqlDataProvider implements DataProvider {
 		finally
 		{
 			try
-			{ c.setAutoCommit(true);
-			c.close(); }
+			{ c.setAutoCommit(true); }
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
@@ -12198,8 +12258,6 @@ public class MysqlDataProvider implements DataProvider {
 					st.execute();
 					st.close();
 				}
-
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -12870,11 +12928,6 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		finally
 		{
-			try
-			{
-				c.close();
-			}
-			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
 
@@ -13036,7 +13089,6 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				c.setAutoCommit(true);
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -13098,7 +13150,6 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				c.setAutoCommit(true);
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -13252,7 +13303,6 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				c.setAutoCommit(true);
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -13297,7 +13347,6 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				c.setAutoCommit(true);
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -13336,7 +13385,6 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				c.setAutoCommit(true);
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
@@ -13379,7 +13427,6 @@ public class MysqlDataProvider implements DataProvider {
 			try
 			{
 				c.setAutoCommit(true);
-				c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}

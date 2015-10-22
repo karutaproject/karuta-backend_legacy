@@ -2921,7 +2921,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/nodes/node/copy/{dest-id}")
 	@POST
-	public String postCopyNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code)
+	public String postCopyNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -2931,7 +2931,7 @@ public class RestServicePortfolio
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			String returnValue = dataProvider.postCopyNode(c, new MimeType("text/xml"), parentId, semtag, code, ui.userId, groupId).toString();
+			String returnValue = dataProvider.postCopyNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")

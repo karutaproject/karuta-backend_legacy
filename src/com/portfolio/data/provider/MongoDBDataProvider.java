@@ -171,7 +171,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object postCopyNode( Connection c, MimeType inMimeType, String destUuid, String tag,
-			String code, int userId, int groupId ) throws Exception
+			String code, String srcuuid, int userId, int groupId ) throws Exception
 			{
 		// TODO Auto-generated method stub
 		return null;

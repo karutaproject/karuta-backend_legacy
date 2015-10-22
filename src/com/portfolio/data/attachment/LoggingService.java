@@ -43,6 +43,7 @@ import org.w3c.dom.NodeList;
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
+import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.SqlUtils;
 
 public class LoggingService  extends HttpServlet
@@ -54,7 +55,6 @@ public class LoggingService  extends HttpServlet
 	 */
 
 	DataProvider dataProvider = null;
-	String path;
 
 	@Override
 	public void init( ServletConfig config ) throws ServletException
@@ -62,17 +62,7 @@ public class LoggingService  extends HttpServlet
 		super.init(config);
 		try
 		{
-			/// Checking Log folder
-			String servName = getServletContext().getContextPath();
-			path = getServletContext().getRealPath("/");
-			File base = new File(path+".."+File.separatorChar+"..");
-			String tomcatRoot = base.getCanonicalPath();
-			path = tomcatRoot + servName +"_logs"+File.separatorChar;
-			
-			/// Check if folder exists
-			File logFolder = new File(path);
-			if( !logFolder.exists() )
-				logFolder.mkdirs();
+			LogUtils.initDirectory(getServletContext());
 			
 			dataProvider = SqlUtils.initProvider(getServletContext(), logger);
 		}
@@ -149,13 +139,12 @@ public class LoggingService  extends HttpServlet
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 			
 			/// Complete path
-			FileOutputStream fos = new FileOutputStream(path+filename, true);
-			OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8");
 			Date date = new Date();
 			String datestring = dateFormat.format(date);
 			InputStreamReader bis = new InputStreamReader(request.getInputStream(), "UTF-8");
 			BufferedReader bread = new BufferedReader(bis);
-			BufferedWriter bwrite = new BufferedWriter(osw);
+			
+			BufferedWriter bwrite = LogUtils.getLog(filename);
 			bwrite.write(datestring+" : "+context+" - '"+username+"' -- ");
 			String s;
 			while( (s=bread.readLine())!=null )

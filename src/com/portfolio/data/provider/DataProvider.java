@@ -126,7 +126,7 @@ public interface DataProvider {
 	public Object postNode(Connection c, MimeType inMimeType,String parentNodeUuid,String in, int userId, int groupId) throws Exception;
 	public Object postNodeFromModelBySemanticTag(Connection c, MimeType mimeType, String nodeUuid, String semantictag, int userId, int groupId) throws Exception;
 	public Object postImportNode(Connection c, MimeType inMimeType,String destUuid,String tag, String code, String srcuuid, int userId, int groupId) throws Exception;
-	public Object postCopyNode(Connection c, MimeType inMimeType,String destUuid,String tag, String code, int userId, int groupId) throws Exception;
+	public Object postCopyNode(Connection c, MimeType inMimeType,String destUuid,String tag, String code, String srcuuid, int userId, int groupId) throws Exception;
 
 	/**
 	 * @return:
