@@ -4509,8 +4509,9 @@ public class RestServicePortfolio
 
 				if( result )
 				{
+					String cc_email = ConfigUtils.get("sys_email");
 					// Send email
-					MailUtils.postMail(sc, email, "", "Password change for Karuta", content, logger);
+					MailUtils.postMail(sc, email, cc_email, "Password change for Karuta", content, logger);
 					retVal = 200;
 					retText = "sent";
 				}
