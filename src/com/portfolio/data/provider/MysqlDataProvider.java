@@ -8620,6 +8620,7 @@ public class MysqlDataProvider implements DataProvider {
 		PreparedStatement st;
 		String sql;
 		ResultSet res;
+		String ret = null;
 
 		try
 		{
@@ -8627,14 +8628,14 @@ public class MysqlDataProvider implements DataProvider {
 			st = c.prepareStatement(sql);
 			st.setString(1, login);
 			res = st.executeQuery();
-			res.next();
-			return res.getString("userid");
+			if( res.next() )
+				ret = res.getString("userid");
 		}
 		catch(Exception ex)
 		{
 			ex.printStackTrace();
-			return null;
 		}
+		return ret;
 	}
 
 	@Override

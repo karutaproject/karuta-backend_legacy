@@ -25,6 +25,8 @@ import java.net.NetworkInterface;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -61,8 +63,6 @@ public class DirectURLService  extends HttpServlet {
 	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	int userId;
-	int groupId = -1;
 	HttpSession session;
 	ArrayList<String> ourIPs = new ArrayList<String>();
 
@@ -130,16 +130,17 @@ public class DirectURLService  extends HttpServlet {
 		/// Check case we are in, act accordingly
 		
 		String[] splitData = output.split(" ");
-		String uuid = "";
+		String uuid = splitData[0];
 		String email = splitData[1];
 		String role = splitData[2];
-		
+
 		/// Keeping access log
 		BufferedWriter log = LogUtils.getLog("directAccess.log");
 		Date date = new Date();
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String datestring = dateFormat.format(date);
 		log.write("["+datestring+"] Direct link access by: "+email+ " ("+role+") for uuid: "+uuid);
+		log.newLine();
 		log.flush();
 		log.close();
 		
@@ -151,7 +152,7 @@ public class DirectURLService  extends HttpServlet {
 			c = SqlUtils.getConnection(getServletContext());
 			String[] login = dataProvider.logViaEmail(c, email);
 
-			if( login != null )
+			if( login != null )	// If account exists
 			{
 				/// Init DB connection
 
@@ -184,21 +185,34 @@ public class DirectURLService  extends HttpServlet {
 					int rrgid = dataProvider.getRoleByNode(c, 1, uuid, role);
 
 					/// Put person in specified group
-					String userInfo = "<users><user id='"+uid+"'></users>";
+					String userInfo = "<users><user id='"+uid+"' /></users>";
 					dataProvider.postRRGUsers(c, 1, rrgid, userInfo);
 
 					/// Log person
 					session.setAttribute("user", login[1]);
 					session.setAttribute("uid", uid);
-					uuid = splitData[0];
 				}
-
 //				dataProvider.disconnect();
 			}
+			else	// User doesn't exists
+			{
+				int pubid = 0;
+				/// Find public id and log as such
+				String sql = "SELECT userid FROM credential WHERE login='public'";
+				PreparedStatement st = c.prepareStatement(sql);
+				ResultSet rs = st.executeQuery();
+				rs.next();
+				pubid = rs.getInt(1);
+				
+				session.setAttribute("user", "public");
+				session.setAttribute("uid", pubid);
+			}
+			
 		}
 		catch( Exception e )
 		{
 			e.printStackTrace();
+			uuid = "";
 		}
 		finally
 		{
@@ -240,6 +254,7 @@ public class DirectURLService  extends HttpServlet {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String datestring = dateFormat.format(date);
 		log.write("["+datestring+"] Direct link creation for user: "+uid+" for access at: "+uuid+" with email: "+email+ " ("+role+")");
+		log.newLine();
 		log.flush();
 		log.close();
 		
