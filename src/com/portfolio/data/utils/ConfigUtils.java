@@ -63,6 +63,9 @@ public class ConfigUtils
 			fichierSrce.close();
 			hasLoaded = true;
 			logger.info("Configuration file loaded: "+filePath);
+			
+			/// While we're at it, init logger
+			LogUtils.initDirectory(context);
 		}
 		catch(Exception e)
 		{
