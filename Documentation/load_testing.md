@@ -106,8 +106,6 @@ Load : Importing time
 
 ## Conclusion
 
-We see that if it exists a minimum of 2 seconds between user login, there is no problem of load.
-
-
-
+This rough result shows that the system is stable with 2 seconds between running each scenario. Of course that will mean that a user will log in, fetch its portfolio, add two elements in those 2 seconds.
+Additional testing and graphs are needed since we have some rough number on the backend capabilities, but nothing concerning the average usage on the client side for now.
 
