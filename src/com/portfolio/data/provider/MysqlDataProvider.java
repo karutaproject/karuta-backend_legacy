@@ -3545,19 +3545,14 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_endLoop = System.currentTimeMillis();
 
+			boolean queryied=false;
 			if( cred.isDesigner(c, userId, nodeUuid) || cred.isAdmin(c, userId) )
 			{
 				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD) " +
 						"SELECT 0, ts.uuid, 1, 1, 1, 0, 0 " +
 						"FROM t_struc_parentid ts";
 				st = c.prepareStatement(sql);
-			}
-			else if ( cred.isPublic(c, nodeUuid, null) )
-			{
-				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD) " +
-						"SELECT 0, ts.uuid, 1, 0, 0, 0, 0 " +
-						"FROM t_struc_parentid ts";
-				st = c.prepareStatement(sql);
+				queryied=true;
 			}
 			else
 			{
@@ -3601,10 +3596,20 @@ public class MysqlDataProvider implements DataProvider {
 				st.setString(4, nodeUuid);
 				st.setInt(5, userId);
 //				System.out.println("VALUES: "+portfolioid+" "+rrgId+" "+nodeUuid+" "+userId);
+				queryied=true;
 			}
 			st.executeUpdate();
 			st.close();
 
+			if ( queryied==false && cred.isPublic(c, nodeUuid, null) )
+			{
+				sql = "INSERT INTO t_rights_22(grid, id, RD, WR, DL, SB, AD) " +
+						"SELECT 0, ts.uuid, 1, 0, 0, 0, 0 " +
+						"FROM t_struc_parentid ts";
+				st = c.prepareStatement(sql);
+			}
+
+			
 			long t_allRights = System.currentTimeMillis();
 
 			// Sélectionne les données selon la filtration
