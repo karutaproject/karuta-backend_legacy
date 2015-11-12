@@ -40,11 +40,9 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
-import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.MailUtils;
-import com.portfolio.security.Credential;
 
 public class MailService  extends HttpServlet {
 
@@ -54,10 +52,8 @@ public class MailService  extends HttpServlet {
 	final Logger logger = LoggerFactory.getLogger(MailService.class);
 	private static final long serialVersionUID = 9188067506635747901L;
 
-	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	Credential credential;
 	int userId;
 	int groupId = -1;
 	HttpSession session;
@@ -97,11 +93,17 @@ public class MailService  extends HttpServlet {
 		/// Check if user is logged in
 		HttpSession session = request.getSession(false);
 		if( session == null )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
+		}
 
 		int uid = (Integer) session.getAttribute("uid");
 		if( uid == 0 )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
+		}
 
 		logger.trace("Sending mail for user: "+uid);
 
@@ -148,6 +150,7 @@ public class MailService  extends HttpServlet {
 		{
 			e.printStackTrace();
 			logger.error(e.getMessage());
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 			return;
 		}
 
@@ -185,6 +188,7 @@ public class MailService  extends HttpServlet {
 		{
 			e.printStackTrace();
 			logger.error(e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 		try
 		{
@@ -195,6 +199,7 @@ public class MailService  extends HttpServlet {
 		{
 			e.printStackTrace();
 			logger.error(e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 	}
 

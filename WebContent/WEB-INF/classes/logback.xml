@@ -19,8 +19,9 @@
 
 	<logger name="org.apache" level="WARN" />
 	<logger name="httpclient" level="WARN" /> 
+	<logger name="o.j.c.c.v" level="WARN" /> 
 
-	<root level="ERROR">	<!-- TRACE/DEBUG/INFO/WARN/ERROR -->
+	<root level="INFO">	<!-- TRACE/DEBUG/INFO/WARN/ERROR -->
 		<appender-ref ref="STDOUT" />
 		<appender-ref ref="LOGFILE" />
 	</root>

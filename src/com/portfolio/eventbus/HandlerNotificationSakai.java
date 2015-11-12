@@ -23,6 +23,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.sql.Connection;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -39,6 +40,8 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.SqlUtils;
+import com.portfolio.security.Credential;
 
 
 public class HandlerNotificationSakai implements KEventHandler
@@ -51,11 +54,20 @@ public class HandlerNotificationSakai implements KEventHandler
 	DataProvider dataProvider;
 	String ticket;
 	String sessionCookie;
+	Connection connection;
 
 	public HandlerNotificationSakai( HttpServletRequest request, DataProvider provider )
 	{
 		httpServletRequest = request;
 		dataProvider = provider;
+		try
+		{
+			connection = SqlUtils.getConnection(request.getSession().getServletContext());
+		}
+		catch( Exception e )
+		{
+			e.printStackTrace();
+		}
 
 		this.session = request.getSession(true);
 		Integer val = (Integer) session.getAttribute("uid");
@@ -81,12 +93,12 @@ public class HandlerNotificationSakai implements KEventHandler
 						case NODE:
 
 							/// Récupère la liste des roles à notifier
-							Set<String[]> notif = dataProvider.getNotificationUserList(userId, groupId, event.uuid);
+							Set<String[]> notif = dataProvider.getNotificationUserList(connection, userId, groupId, event.uuid);
 
 							if( notif.isEmpty() )
 								return false;
 
-							String context = dataProvider.getNode(new MimeType("text/xml"),event.uuid,true,this.userId,this.groupId, null).toString();
+							String context = dataProvider.getNode(connection, new MimeType("text/xml"),event.uuid,true,this.userId,this.groupId, null).toString();
 							Document docContext = parseString(context);
 							NodeList res = docContext.getElementsByTagName("asmResource");
 							String blah = "";
@@ -121,7 +133,7 @@ public class HandlerNotificationSakai implements KEventHandler
 							doc.getElementsByTagName("");
 							String type = "";
 
-							String portfolio = dataProvider.getPortfolioUuidByNodeUuid(event.uuid);
+							String portfolio = dataProvider.getPortfolioUuidByNodeUuid(connection, event.uuid);
 
 							getSakaiTicket();
 

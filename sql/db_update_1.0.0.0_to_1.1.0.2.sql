@@ -1,4 +1,4 @@
--- Updating tables from Karuta 1.0.0.0 to Karuta 1.1.0.0
+-- Updating tables from Karuta 1.0.0.0 to Karuta 1.1.0.2
 
 USE `karuta-backend`;
 
@@ -19,6 +19,4 @@ DROP TABLE `definition_info`;
 DROP TABLE `definition_type`;
 DROP TABLE `rule_info`;
 DROP TABLE `rule_table`;
--- Not used, will be removed next time
--- isCompleteShare still fail gracefully
--- DROP TABLE `complete_share`;
+DROP TABLE `complete_share`;

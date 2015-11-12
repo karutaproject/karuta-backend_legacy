@@ -15,6 +15,8 @@
 
 package com.portfolio.data.attachment;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Inet4Address;
@@ -22,7 +24,13 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 
 import javax.crypto.Cipher;
@@ -39,6 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.ConfigUtils;
+import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.security.Credential;
 
@@ -53,9 +63,6 @@ public class DirectURLService  extends HttpServlet {
 	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;
-	Credential credential;
-	int userId;
-	int groupId = -1;
 	HttpSession session;
 	ArrayList<String> ourIPs = new ArrayList<String>();
 
@@ -66,6 +73,7 @@ public class DirectURLService  extends HttpServlet {
 		/// List possible local address
 		try
 		{
+			dataProvider = SqlUtils.initProvider(getServletContext(), logger);
 			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
 			while (interfaces.hasMoreElements()){
 				NetworkInterface current = interfaces.nextElement();
@@ -77,6 +85,7 @@ public class DirectURLService  extends HttpServlet {
 						ourIPs.add(current_addr.getHostAddress());
 				}
 			}
+			
 		}
 		catch( Exception e )
 		{
@@ -98,7 +107,8 @@ public class DirectURLService  extends HttpServlet {
 		try
 		{
 			rc4 = Cipher.getInstance("RC4");
-			SecretKeySpec key = new SecretKeySpec("testkey".getBytes(), "RC4");
+			String secretkey = ConfigUtils.get("directkey");
+			SecretKeySpec key = new SecretKeySpec(secretkey.getBytes(), "RC4");
 			rc4.init(Cipher.DECRYPT_MODE, key);
 
 			byte[] ciphertext = rc4.update(data);
@@ -117,32 +127,38 @@ public class DirectURLService  extends HttpServlet {
 			e.printStackTrace();
 		}
 
+		/// Check case we are in, act accordingly
+		
 		String[] splitData = output.split(" ");
-		String uuid = "";
+		String uuid = splitData[0];
 		String email = splitData[1];
 		String role = splitData[2];
-		/// log person with associated email
+
+		/// Keeping access log
+		BufferedWriter log = LogUtils.getLog("directAccess.log");
+		Date date = new Date();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		String datestring = dateFormat.format(date);
+		log.write("["+datestring+"] Direct link access by: "+email+ " ("+role+") for uuid: "+uuid);
+		log.newLine();
+		log.flush();
+		log.close();
+		
+		/// log in person with associated email
+		Connection c = null;
 		try
 		{
 			session = request.getSession(true);
-			dataProvider = SqlUtils.initProvider(getServletContext(), logger);
-			String[] login = dataProvider.logViaEmail(email);
+			c = SqlUtils.getConnection(getServletContext());
+			String[] login = dataProvider.logViaEmail(c, email);
 
-			if( login != null )
+			if( login != null )	// If account exists
 			{
 				/// Init DB connection
-				DataProvider dataProvider = null;
-				try
-				{
-					dataProvider = SqlUtils.initProvider(getServletContext(), logger);
-				}
-				catch( Exception e1 )
-				{
-					e1.printStackTrace();
-				}
-				if( dataProvider == null )
-					return;
 
+				///// TODO: Log email, uuid, role access, hour, ip, date
+				
+				//// FIXME: Make it so we create account and put this new account in the uuid/role group
 
 				// TODO
 				/*
@@ -166,24 +182,45 @@ public class DirectURLService  extends HttpServlet {
 				if( uid > 0 )
 				{
 					/// Find group for this node
-					int rrgid = dataProvider.getRoleByNode(1, uuid, role);
+					int rrgid = dataProvider.getRoleByNode(c, 1, uuid, role);
 
 					/// Put person in specified group
-					String userInfo = "<users><user id='"+uid+"'></users>";
-					dataProvider.postRRGUsers(1, rrgid, userInfo);
+					String userInfo = "<users><user id='"+uid+"' /></users>";
+					dataProvider.postRRGUsers(c, 1, rrgid, userInfo);
 
 					/// Log person
 					session.setAttribute("user", login[1]);
 					session.setAttribute("uid", uid);
-					uuid = splitData[0];
 				}
-
-				dataProvider.disconnect();
+//				dataProvider.disconnect();
 			}
+			else	// User doesn't exists
+			{
+				int pubid = 0;
+				/// Find public id and log as such
+				String sql = "SELECT userid FROM credential WHERE login='public'";
+				PreparedStatement st = c.prepareStatement(sql);
+				ResultSet rs = st.executeQuery();
+				rs.next();
+				pubid = rs.getInt(1);
+				
+				session.setAttribute("user", "public");
+				session.setAttribute("uid", pubid);
+			}
+			
 		}
 		catch( Exception e )
 		{
 			e.printStackTrace();
+			uuid = "";
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
 		PrintWriter writer = response.getWriter();
@@ -205,22 +242,33 @@ public class DirectURLService  extends HttpServlet {
 		if( uid == 0 )
 			return;
 
+		/// TODO: From UUID, check metadata attribute "secure" and redirect to specific url for direct log in
+		/// Manage and keep different case number
 		String uuid = request.getParameter("uuid");
 		String email = request.getParameter("email");
 		String role = request.getParameter("role");
 
+		/// Keeping creation log
+		BufferedWriter log = LogUtils.getLog("directAccess.log");
+		Date date = new Date();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		String datestring = dateFormat.format(date);
+		log.write("["+datestring+"] Direct link creation for user: "+uid+" for access at: "+uuid+" with email: "+email+ " ("+role+")");
+		log.newLine();
+		log.flush();
+		log.close();
+		
 		/// Encrypt nodeuuid email role
 		String output = "";
 		try
 		{
 			String data = uuid+" "+email+" "+role;
 			Cipher rc4 = Cipher.getInstance("RC4");
-			SecretKeySpec key = new SecretKeySpec("testkey".getBytes(), "RC4");
+			String secretkey = ConfigUtils.get("directkey");
+			SecretKeySpec key = new SecretKeySpec(secretkey.getBytes(), "RC4");
 			rc4.init(Cipher.ENCRYPT_MODE, key);
 			byte[] clear = rc4.update(data.getBytes());
-	    output = bytesToHex(clear);
-
-			System.out.println(output);
+			output = bytesToHex(clear);
 		}
 		catch( NoSuchAlgorithmException e )
 		{

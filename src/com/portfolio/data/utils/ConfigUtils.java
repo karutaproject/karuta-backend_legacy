@@ -15,10 +15,13 @@
 
 package com.portfolio.data.utils;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.HashMap;
 
 import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,21 +31,24 @@ public class ConfigUtils
 	static final Logger logger = LoggerFactory.getLogger(ConfigUtils.class);
 	static boolean hasLoaded = false;
 	static HashMap<String, String> attributes = new HashMap<String, String>();
-	public static boolean loadConfigFile( ServletConfig config ) throws Exception
+	static String filePath = "";
+	
+	public static boolean loadConfigFile( ServletContext context ) throws Exception
 	{
 		if( hasLoaded ) return true;
 		String path = "";
 		try
 		{
-			String servName = config.getServletContext().getContextPath();
-			path = config.getServletContext().getRealPath("/");
-			File base = new File(path+"../..");
+			String servName = context.getContextPath();
+			path = context.getRealPath("/");
+			File base = new File(path+".."+File.separatorChar+"..");
 			String tomcatRoot = base.getCanonicalPath();
 			path = tomcatRoot + servName +"_config"+File.separatorChar;
 
 			attributes = new HashMap<String, String>();
-			java.io.FileInputStream fichierSrce =  new java.io.FileInputStream(path+"configKaruta.properties");
-			java.io.BufferedReader readerSrce = new java.io.BufferedReader(new java.io.InputStreamReader(fichierSrce,"UTF-8"));
+			filePath = path+"configKaruta.properties";
+			FileInputStream fichierSrce =  new FileInputStream(filePath);
+			BufferedReader readerSrce = new BufferedReader(new java.io.InputStreamReader(fichierSrce,"UTF-8"));
 			String line = null;
 			String variable = null;
 			String value = null;
@@ -56,10 +62,15 @@ public class ConfigUtils
 			}
 			fichierSrce.close();
 			hasLoaded = true;
+			logger.info("Configuration file loaded: "+filePath);
+			
+			/// While we're at it, init logger
+			LogUtils.initDirectory(context);
 		}
 		catch(Exception e)
 		{
-			logger.error("ERROR, can't load file :"+path+"configKaruta.properties ("+e.getMessage()+")");
+//			e.printStackTrace();
+			logger.error("Can't load file :"+filePath+" ("+e.getMessage()+")");
 		}
 		finally
 		{

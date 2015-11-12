@@ -18,6 +18,7 @@ package com.portfolio.eventbus;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.sql.Connection;
 
 import javax.activation.MimeType;
 import javax.servlet.http.HttpServletRequest;
@@ -31,7 +32,9 @@ import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.rest.RestWebApplicationException;
+import com.portfolio.security.Credential;
 
 
 public class HandlerDatabase implements KEventHandler
@@ -41,11 +44,20 @@ public class HandlerDatabase implements KEventHandler
 	int userId;
 	int groupId;
 	DataProvider dataProvider;
+	Connection connection;
 
 	public HandlerDatabase( HttpServletRequest request, DataProvider provider )
 	{
 		httpServletRequest = request;
 		dataProvider = provider;
+		try
+		{
+			connection = SqlUtils.getConnection(request.getSession().getServletContext());
+		}
+		catch( Exception e )
+		{
+			e.printStackTrace();
+		}
 
 		this.session = request.getSession(true);
 		Integer val = (Integer) session.getAttribute("uid");
@@ -66,7 +78,7 @@ public class HandlerDatabase implements KEventHandler
 			switch( event.eventType )
 			{
 				case LOGIN:
-					String[] resultCredential = dataProvider.postCredentialFromXml(this.userId, event.inputData, "", null);
+					String[] resultCredential = dataProvider.postCredentialFromXml(connection, this.userId, event.inputData, "", null);
 					if (resultCredential != null)
 					{
 						String login1 = resultCredential[0];
@@ -92,7 +104,7 @@ public class HandlerDatabase implements KEventHandler
 					switch( event.requestType )
 					{
 						case POST:
-							String returnValue = dataProvider.postNode(new MimeType("text/xml"), event.uuid, event.inputData, this.userId, this.groupId).toString();
+							String returnValue = dataProvider.postNode(connection, new MimeType("text/xml"), event.uuid, event.inputData, this.userId, this.groupId).toString();
 							if( "faux".equals(returnValue) )
 							{
 								event.message = "Vous n'avez pas les droits d'acces";
