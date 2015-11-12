@@ -93,11 +93,17 @@ public class MailService  extends HttpServlet {
 		/// Check if user is logged in
 		HttpSession session = request.getSession(false);
 		if( session == null )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
+		}
 
 		int uid = (Integer) session.getAttribute("uid");
 		if( uid == 0 )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
+		}
 
 		logger.trace("Sending mail for user: "+uid);
 
@@ -144,6 +150,7 @@ public class MailService  extends HttpServlet {
 		{
 			e.printStackTrace();
 			logger.error(e.getMessage());
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
 			return;
 		}
 
@@ -181,6 +188,7 @@ public class MailService  extends HttpServlet {
 		{
 			e.printStackTrace();
 			logger.error(e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 		try
 		{
@@ -191,6 +199,7 @@ public class MailService  extends HttpServlet {
 		{
 			e.printStackTrace();
 			logger.error(e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 	}
 

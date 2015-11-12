@@ -485,12 +485,9 @@ public class Credential
 			if( node_uuid != null )
 			{
 				sql = "SELECT gu.userid " +
-						"FROM node n " +
-						"LEFT JOIN group_right_info gri ON n.portfolio_id=gri.portfolio_id " +
-						"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
-						"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
-						"LEFT JOIN credential c ON gu.userid=gu.userid " +
-						"WHERE n.node_uuid=uuid2bin(?) " +
+						"FROM group_rights gr, group_right_info gri, group_info gi, group_user gu, credential c " +
+						"WHERE gr.grid=gri.grid AND gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
+						"gr.id=uuid2bin(?) " +
 						"AND gri.label='all' " +
 						"AND c.login='public'";
 				st = c.prepareStatement(sql);
@@ -499,11 +496,9 @@ public class Credential
 			else
 			{
 				sql = "SELECT gu.userid " +
-						"FROM group_right_info gri " +
-						"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
-						"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
-						"LEFT JOIN credential c ON gu.userid=gu.userid " +
-						"WHERE gri.portfolio_id=uuid2bin(?) " +
+						"FROM group_right_info gri, group_info gi, group_user gu, credential c " +
+						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
+						"gri.portfolio_id=uuid2bin(?) " +
 						"AND gri.label='all' " +
 						"AND c.login='public'";
 				st = c.prepareStatement(sql);
