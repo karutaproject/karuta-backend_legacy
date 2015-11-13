@@ -7288,8 +7288,8 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public int postMoveNodeUp( Connection c, int userid, String uuid )
 	{
-		if(!cred.isAdmin(c, userid) && !cred.isDesigner(c, userid, uuid) )
-			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
+//		if(!cred.isAdmin(c, userid) && !cred.isDesigner(c, userid, uuid) )
+//			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String sql = "";
 		PreparedStatement st;
