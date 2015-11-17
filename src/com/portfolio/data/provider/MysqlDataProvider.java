@@ -2435,6 +2435,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			end = System.currentTimeMillis();
 
+			/*
 			long d_start = metaxml - start;
 			long d_metaxml = resource - metaxml;
 			long d_resource = children - resource;
@@ -2444,6 +2445,7 @@ public class MysqlDataProvider implements DataProvider {
 			System.out.println("METAXML: "+d_metaxml);
 			System.out.println("RESOURCE: "+d_resource);
 			System.out.println("CHILDREN: "+d_children);
+			//*/
 		}
 
 		resNode.close();
@@ -11940,90 +11942,6 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			/// Pour retrouver les enfants du noeud et affecter les droits
-			if (dbserveur.equals("mysql")){
-				sql = "CREATE TEMPORARY TABLE t_struc_nodeid(" +
-						"uuid binary(16) UNIQUE NOT NULL, " +
-						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = c.prepareStatement(sql);
-				st.execute();
-				st.close();
-			} else if (dbserveur.equals("oracle")){
-				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_nodeid(" +
-						"uuid RAW(16) NOT NULL, " +
-						"t_level NUMBER(10,0)"+
-						",  CONSTRAINT t_struc_nodeid_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
-				sql = "{call create_or_empty_table('t_struc_nodeid','"+v_sql+"')}";
-				CallableStatement ocs = c.prepareCall(sql) ;
-				ocs.execute();
-				ocs.close();
-			}
-
-			// En double car on ne peut pas faire d'update/select d'une même table temporaire
-			if (dbserveur.equals("mysql")){
-				sql = "CREATE TEMPORARY TABLE t_struc_nodeid_2(" +
-						"uuid binary(16) UNIQUE NOT NULL, " +
-						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = c.prepareStatement(sql);
-				st.execute();
-				st.close();
-			} else if (dbserveur.equals("oracle")){
-				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_nodeid_2(" +
-						"uuid RAW(16) NOT NULL, " +
-						"t_level NUMBER(10,0)"+
-						",  CONSTRAINT t_struc_nodeid_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
-				sql = "{call create_or_empty_table('t_struc_nodeid_2','"+v_sql+"')}";
-				CallableStatement ocs = c.prepareCall(sql) ;
-				ocs.execute();
-				ocs.close();
-			}
-
-			/// Dans la table temporaire on retrouve les noeuds concernés
-			/// (assure une convergence de la récursion et limite le nombre de lignes dans la recherche)
-			/// Init table
-			sql = "INSERT INTO t_struc_nodeid(uuid, t_level) " +
-					"SELECT n.node_uuid, 0 " +
-					"FROM node n " +
-					"WHERE n.node_uuid=uuid2bin(?)";
-			st = c.prepareStatement(sql);
-			st.setString(1, nodeUuid);
-			st.executeUpdate();
-			st.close();
-
-//			/*
-			/// On boucle, récursion par niveau
-			int level = 0;
-			int added = 1;
-			if (dbserveur.equals("mysql")){
-			    sql = "INSERT IGNORE INTO t_struc_nodeid_2(uuid, t_level) ";
-			} else if (dbserveur.equals("oracle")){
-			    sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_nodeid_2,t_struc_nodeid_2_UK_uuid)*/ INTO t_struc_nodeid_2(uuid, t_level) ";
-			}
-			sql += "SELECT n.node_uuid, ? " +
-					"FROM node n WHERE n.node_parent_uuid IN (SELECT uuid FROM t_struc_nodeid t " +
-					"WHERE t.t_level=?)";
-
-			String sqlTemp=null;
-			if (dbserveur.equals("mysql")){
-				sqlTemp = "INSERT IGNORE INTO t_struc_nodeid SELECT * FROM t_struc_nodeid_2;";
-			} else if (dbserveur.equals("oracle")){
-				sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_nodeid,t_struc_nodeid_UK_uuid)*/ INTO t_struc_nodeid SELECT * FROM t_struc_nodeid_2";
-			}
-			PreparedStatement stTemp = c.prepareStatement(sqlTemp);
-
-			st = c.prepareStatement(sql);
-			while( added != 0 )
-			{
-				st.setInt(1, level+1);
-				st.setInt(2, level);
-				st.executeUpdate();
-				added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
-				level = level + 1;    // Prochaine étape
-			}
-			st.close();
-			stTemp.close();
-			//*/
-
 			/// Selection du grid de l'utilisateur
 			sql = "SELECT gr.grid, gi.label " +
 					"FROM group_rights gr, group_info gi, group_user gu " +
@@ -12073,7 +11991,6 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			else if( "show".equals(macroName) || "hide".equals(macroName) )
 			{
-				/// FIXME: Could only change the needed rights
 				// Check if current group can show stuff
 				Node roleitem = metaAttr.getNamedItem("showroles");
 				String roles = roleitem.getNodeValue();
@@ -12081,25 +11998,23 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					String showto = metaAttr.getNamedItem("showtoroles").getNodeValue();
 					showto = showto.replace(" ", "','");
-					showto = "('" + showto +"')";	/// XXX Might mess up Mysql, but works in Oracle
+//					showto = "('" + showto +"')";
 
 					//// Il faut qu'il y a un showtorole
-					if( !"('')".equals(showto) )
+					if( !"".equals(showto) )
 					{
-						// Update rights
-						/// Ajoute/remplace les droits
-						// FIXME: Je crois que quelque chose manque
-						sql = "INSERT INTO group_rights(grid, id, RD, WR, DL, AD, types_id, rules_id) " +
-								"SELECT gr.grid, gr.id, ?, 0, 0, 0, NULL, NULL " +
-								"FROM group_right_info gri, group_rights gr " +
-								"WHERE gri.label IN "+showto+" AND gri.grid=gr.grid AND gr.id IN (SELECT uuid FROM t_struc_nodeid) " +
-								"ON DUPLICATE KEY UPDATE RD=?, WR=gr.WR, DL=gr.DL, AD=gr.AD, types_id=gr.types_id, rules_id=gr.rules_id";
+						// Update rights, have to make it work with Oracle too...
+						sql = "UPDATE group_rights SET RD=? " +
+								"WHERE id=uuid2bin(?) AND grid IN " +
+								"(SELECT gri.grid FROM group_right_info gri, node n " +
+							"WHERE gri.label IN (?) AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?) ) ";
 
+						/*
 						if (dbserveur.equals("oracle")){
 							sql = "MERGE INTO group_rights d USING (" +
 									"SELECT gr.grid, gr.id, ? AS RD, 0 AS WR, 0 AS DL, 0 AS AD, NULL AS types_id, NULL AS rules_id " +
 									"FROM group_right_info gri, group_rights gr " +
-									"WHERE gri.label IN "+showto+" " +	/// Might not be safe
+									"WHERE gri.label IN ? " +
 											"AND gri.grid=gr.grid " +
 											"AND gr.id IN (SELECT uuid FROM t_struc_nodeid)) s " +
 									"ON (d.id=s.id AND d.grid=s.grid) "+
@@ -12109,18 +12024,22 @@ public class MysqlDataProvider implements DataProvider {
 									"INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.AD, d.types_id, d.rules_id) " +
 									"VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.AD, s.types_id, s.rules_id)";
 						}
+						//*/
 						st = c.prepareStatement(sql);
 						if( "hide".equals(macroName) )
 						{
 							st.setInt(1, 0);
-							st.setInt(2, 0);
+							st.setString(2, nodeUuid);
+							st.setString(3, showto);
+							st.setString(4, nodeUuid);
 						}
 						else if( "show".equals(macroName) )
 						{
 							st.setInt(1, 1);
-							st.setInt(2, 1);
+							st.setString(2, nodeUuid);
+							st.setString(3, showto);
+							st.setString(4, nodeUuid);
 						}
-		//				st.setString(2, showto);
 						st.executeUpdate();
 						st.close();
 
@@ -12155,26 +12074,112 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			else if( "submit".equals(macroName) )
 			{
+				/// Find all children nodes where we will remove editing rights for current group rights
+				/// Pour retrouver les enfants du noeud et affecter les droits
+				if (dbserveur.equals("mysql")){
+					sql = "CREATE TEMPORARY TABLE t_struc_nodeid(" +
+							"uuid binary(16) UNIQUE NOT NULL, " +
+							"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+					st = c.prepareStatement(sql);
+					st.execute();
+					st.close();
+				} else if (dbserveur.equals("oracle")){
+					String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_nodeid(" +
+							"uuid RAW(16) NOT NULL, " +
+							"t_level NUMBER(10,0)"+
+							",  CONSTRAINT t_struc_nodeid_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
+					sql = "{call create_or_empty_table('t_struc_nodeid','"+v_sql+"')}";
+					CallableStatement ocs = c.prepareCall(sql) ;
+					ocs.execute();
+					ocs.close();
+				}
+
+				// En double car on ne peut pas faire d'update/select d'une même table temporaire
+				if (dbserveur.equals("mysql")){
+					sql = "CREATE TEMPORARY TABLE t_struc_nodeid_2(" +
+							"uuid binary(16) UNIQUE NOT NULL, " +
+							"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+					st = c.prepareStatement(sql);
+					st.execute();
+					st.close();
+				} else if (dbserveur.equals("oracle")){
+					String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_nodeid_2(" +
+							"uuid RAW(16) NOT NULL, " +
+							"t_level NUMBER(10,0)"+
+							",  CONSTRAINT t_struc_nodeid_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
+					sql = "{call create_or_empty_table('t_struc_nodeid_2','"+v_sql+"')}";
+					CallableStatement ocs = c.prepareCall(sql) ;
+					ocs.execute();
+					ocs.close();
+				}
+
+				/// Dans la table temporaire on retrouve les noeuds concernés
+				/// (assure une convergence de la récursion et limite le nombre de lignes dans la recherche)
+				/// Init table
+				sql = "INSERT INTO t_struc_nodeid(uuid, t_level) " +
+						"SELECT n.node_uuid, 0 " +
+						"FROM node n " +
+						"WHERE n.node_uuid=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, nodeUuid);
+				st.executeUpdate();
+				st.close();
+
+//				/*
+				/// On boucle, récursion par niveau
+				int level = 0;
+				int added = 1;
+				if (dbserveur.equals("mysql")){
+				    sql = "INSERT IGNORE INTO t_struc_nodeid_2(uuid, t_level) ";
+				} else if (dbserveur.equals("oracle")){
+				    sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_nodeid_2,t_struc_nodeid_2_UK_uuid)*/ INTO t_struc_nodeid_2(uuid, t_level) ";
+				}
+				sql += "SELECT n.node_uuid, ? " +
+						"FROM node n WHERE n.node_parent_uuid IN (SELECT uuid FROM t_struc_nodeid t " +
+						"WHERE t.t_level=?)";
+
+				String sqlTemp=null;
+				if (dbserveur.equals("mysql")){
+					sqlTemp = "INSERT IGNORE INTO t_struc_nodeid SELECT * FROM t_struc_nodeid_2;";
+				} else if (dbserveur.equals("oracle")){
+					sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_nodeid,t_struc_nodeid_UK_uuid)*/ INTO t_struc_nodeid SELECT * FROM t_struc_nodeid_2";
+				}
+				PreparedStatement stTemp = c.prepareStatement(sqlTemp);
+
+				st = c.prepareStatement(sql);
+				while( added != 0 )
+				{
+					st.setInt(1, level+1);
+					st.setInt(2, level);
+					st.executeUpdate();
+					added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+					level = level + 1;    // Prochaine étape
+				}
+				st.close();
+				stTemp.close();
+				//*/
+				
+				
+				/// Apply changes
 				System.out.println("ACTION: "+macroName+" grid: "+grid+" -> uuid: "+nodeUuid);
-				// Update rights
-				/// Ajoute/remplace les droits
-				sql = "INSERT INTO group_rights(grid, id, RD, WR, DL, AD, SB, types_id, rules_id) " +
-						"SELECT gr.grid, gr.id, 1, 0, 0, 0, 0, NULL, NULL " +
+				/// Insert/replace existing editing related rights
+				sql = "INSERT INTO group_rights(grid, id, WR, DL, AD, SB, types_id, rules_id) " +
+						"SELECT gr.grid, gr.id, 0, 0, 0, 0, NULL, NULL " +
 						"FROM group_rights gr " +
 						"WHERE gr.id IN (SELECT uuid FROM t_struc_nodeid) AND gr.grid=? " +
-						"ON DUPLICATE KEY UPDATE RD=1, WR=0, DL=0, AD=0, SB=0, types_id=null, rules_id=null";
+						"ON DUPLICATE KEY UPDATE WR=0, DL=0, AD=0, SB=0, types_id=null, rules_id=null";
 
 				if (dbserveur.equals("oracle")){
 					sql = "MERGE INTO group_rights d USING (" +
-							"SELECT gr.grid, gr.id, 1 RD, 0 WR, 0 DL, 0 AD, 0 SB, NULL types_id, NULL rules_id " +
+							"SELECT gr.grid, gr.id, 0 WR, 0 DL, 0 AD, 0 SB, NULL types_id, NULL rules_id " +
 							"FROM group_rights gr " +
 							"WHERE gr.id IN (SELECT uuid FROM t_struc_nodeid) AND gr.grid=? ) s " +
 							"ON (d.grid=s.grid AND d.id=s.id) " +
 							"WHEN MATCHED THEN UPDATE " +
-							"SET d.RD=1, d.WR=0, d.DL=0, d.AD=0, d.SB=0, d.types_id=s.types_id, d.rules_id=s.rules_id " +
+							"SET d.WR=0, d.DL=0, d.AD=0, d.SB=0, d.types_id=s.types_id, d.rules_id=s.rules_id " +
 							"WHEN NOT MATCHED THEN " +
-							"INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.AD, d.SB, d.types_id, d.rules_id) " +
-							"VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.AD, s.SB, s.types_id, s.rules_id)";
+							"INSERT (d.grid, d.id, d.WR, d.DL, d.AD, d.SB, d.types_id, d.rules_id) " +
+							"VALUES (s.grid, s.id, s.WR, s.DL, s.AD, s.SB, s.types_id, s.rules_id)";
 				}
 				st = c.prepareStatement(sql);
 				st.setInt(1, grid);
@@ -12184,22 +12189,26 @@ public class MysqlDataProvider implements DataProvider {
 				if( rows == 0 )
 					return "unchanged";
 
+				/// FIXME: This part might be deprecated in the near future
 				/// Vérifie le showtoroles
 				Node showtonode = metaAttr.getNamedItem("showtoroles");
 				String showto = "";
 				if( showtonode != null )
 					showto = showtonode.getNodeValue();
 				showto = showto.replace(" ", "','");
-				showto = "('" + showto +"')";
+//				showto = "('" + showto +"')";
 
 				//// Il faut qu'il y a un showtorole
 				System.out.println("SHOWTO: "+showto);
-				if( !"('')".equals(showto) )
+				if( !"".equals(showto) )
 				{
 					System.out.println("SHOWING TO: "+showto);
 					// Update rights
-					/// Ajoute/remplace les droits
-					// FIXME: Je crois que quelque chose manque
+					sql = "UPDATE group_rights SET RD=? " +
+							"WHERE id=uuid2bin(?) AND grid IN " +
+							"(SELECT gri.grid FROM group_right_info gri, node n " +
+							"WHERE gri.label IN (?) AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?) ) ";
+					/*
 					sql = "INSERT INTO group_rights(grid, id, RD, WR, DL, AD, types_id, rules_id) " +
 							"SELECT gri.grid, gr.id, 1, 0, 0, 0, NULL, NULL " +
 							"FROM group_right_info gri, group_rights gr " +
@@ -12223,8 +12232,12 @@ public class MysqlDataProvider implements DataProvider {
 								"INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.AD, d.types_id, d.rules_id) " +
 								"VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.AD, s.types_id, s.rules_id)";
 					}
+					//*/
 					st = c.prepareStatement(sql);
-					st.setString(1, nodeUuid);
+					st.setInt(1, 1);
+					st.setString(2, nodeUuid);
+					st.setString(3, showto);
+					st.setString(4, nodeUuid);
 					st.executeUpdate();
 					st.close();
 
