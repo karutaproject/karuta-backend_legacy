@@ -5694,16 +5694,29 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// We'll put all node cached dated the same than portfolio. Related to checking cache validity
 			if (dbserveur.equals("mysql")){
-				sql = "INSERT IGNORE INTO t_node_cache ";
+				sql = "INSERT INTO t_node_cache(node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) ";
+				sql += "SELECT SQL_NO_CACHE n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
+						"FROM node n, portfolio p " +
+						"WHERE n.portfolio_id=p.portfolio_id AND p.portfolio_id=(" +
+						"SELECT n1.portfolio_id " +
+						"FROM node n1, portfolio p " +
+						"WHERE n1.portfolio_id=p.portfolio_id AND n1.code=? AND p.active=1) " +
+						"ON DUPLICATE KEY UPDATE node_parent_uuid=n.node_parent_uuid, node_order=n.node_order, metadata_wad=n.metadata_wad, res_node_uuid=n.res_node_uuid, res_res_node_uuid=n.res_res_node_uuid, res_context_node_uuid=n.res_context_node_uuid, shared_res=n.shared_res, shared_node=n.shared_node, shared_node_res=n.shared_node_res, shared_res_uuid=n.shared_res_uuid, shared_node_uuid=n.shared_node_uuid, shared_node_res_uuid=n.shared_node_res_uuid, asm_type=n.asm_type, xsi_type=n.xsi_type, semtag=n.semtag, semantictag=n.semantictag, label=n.label, code=n.code, descr=n.descr, format=n.format, modif_user_id=n.modif_user_id, modif_date=n.modif_date, portfolio_id=n.portfolio_id";
 			} else if (dbserveur.equals("oracle")){
-				sql = "INSERT /*+ ignore_row_on_dupkey_index(node_uuid)*/ INTO t_node_cache ";
+				/// FIXME: Not entirely sure it works...
+				sql = "MERGE INTO t_node_cache t USING(";
+				sql += "SELECT SQL_NO_CACHE n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
+						"FROM node n, portfolio p " +
+						"WHERE n.portfolio_id=p.portfolio_id AND p.portfolio_id=(" +
+						"SELECT n1.portfolio_id " +
+						"FROM node n1, portfolio p " +
+						"WHERE n1.portfolio_id=p.portfolio_id AND n1.code=? AND p.active=1) n " +
+						"WHEN MATCHED THEN UPDATE " +
+						"SET t.node_parent_uuid=n.node_parent_uuid, t.node_order=n.node_order, t.metadata_wad=n.metadata_wad, t.res_node_uuid=n.res_node_uuid, t.res_res_node_uuid=n.res_res_node_uuid, t.res_context_node_uuid=n.res_context_node_uuid, t.shared_res=n.shared_res, t.shared_node=n.shared_node, t.shared_node_res=n.shared_node_res, t.shared_res_uuid=n.shared_res_uuid, t.shared_node_uuid=n.shared_node_uuid, t.shared_node_res_uuid=n.shared_node_res_uuid, t.asm_type=n.asm_type, t.xsi_type=n.xsi_type, t.semtag=n.semtag, t.semantictag=n.semantictag, t.label=n.label, t.code=n.code, t.descr=n.descr, t.format=n.format, t.modif_user_id=n.modif_user_id, t.modif_date=n.modif_date, t.portfolio_id=n.portfolio_id " +
+						"WHEN NOT MATCHED THEN " +
+						"INSERT (t.node_parent_uuid, t.node_order, t.metadata_wad, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id) " +
+						"VALUES (n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, n.portfolio_id)";
 			}
-			sql += "SELECT SQL_NO_CACHE n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
-					"FROM node n, portfolio p " +
-					"WHERE n.portfolio_id=p.portfolio_id AND p.portfolio_id=(" +
-					"SELECT n1.portfolio_id " +
-					"FROM node n1, portfolio p " +
-					"WHERE n1.portfolio_id=p.portfolio_id AND n1.code=? AND p.active=1)";
 
 			st = c.prepareStatement(sql);
 			st.setString(1, code);
@@ -5713,7 +5726,7 @@ public class MysqlDataProvider implements DataProvider {
 			if( insertData == 0 )	// Code isn't found, no need to go further
 				return null;
 
-			/// Redundant
+			/// Re-select portfolio id, case is when the portfolio has been deleted and recreated with same code
 			sql = "SELECT bin2uuid(portfolio_id) FROM t_node_cache WHERE code=?";
 			st = c.prepareStatement(sql);
 			st.setString(1, code);
