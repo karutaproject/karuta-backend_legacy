@@ -1910,11 +1910,6 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
-	public void genererPortfolioUuidPreliminaire()
-	{
-		this.portfolioUuidPreliminaire = UUID.randomUUID().toString();
-	}
-
 	@Override
 	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String portfolioModelId, int substid, boolean parseRights) throws Exception
 	{
@@ -1930,10 +1925,7 @@ public class MysqlDataProvider implements DataProvider {
 			in = getPortfolio(c, inMimeType,portfolioModelId,userId, groupId, null, null, null, substid, true).toString();
 
 		// On génère un nouvel uuid
-		if(this.portfolioUuidPreliminaire!=null)
-			portfolioUuid = portfolioUuidPreliminaire;
-		else
-			portfolioUuid = UUID.randomUUID().toString();
+		portfolioUuid = UUID.randomUUID().toString();
 		//On vérifie l'existence du portfolio. Si le portfolio existe, on ne l'écrase pas
 		//if(getPortfolioRootNode(portfolioUuid)==null)
 		//{
@@ -9474,7 +9466,8 @@ public class MysqlDataProvider implements DataProvider {
 		}
 
 		//Creation du zip
-		filename = outsideDir+"xml_"+this.portfolioUuidPreliminaire+".zip";
+		String portfolioUuidPreliminaire = UUID.randomUUID().toString();
+		filename = outsideDir+"xml_"+portfolioUuidPreliminaire+".zip";
 		FileOutputStream outZip = new FileOutputStream(filename);
 
 		int len;
@@ -9487,11 +9480,16 @@ public class MysqlDataProvider implements DataProvider {
 		outZip.close();
 
 		//-- unzip --
-		foldersfiles = unzip(filename,outsideDir+this.portfolioUuidPreliminaire+File.separator);
-		//TODO Attention si plusieurs XML dans le fichier
-		xmlFiles = findFiles(outsideDir+this.portfolioUuidPreliminaire+File.separator, "xml");
-		allFiles = findFiles(outsideDir+this.portfolioUuidPreliminaire+File.separator, null);
-
+		foldersfiles = unzip(filename,outsideDir+portfolioUuidPreliminaire+File.separator);
+		// Unzip just the next zip level. I hope there will be no zipped documents...
+		String[] zipFiles = findFiles(outsideDir+portfolioUuidPreliminaire+File.separator, "zip");
+		for( int i=0; i<zipFiles.length; ++i )
+		{
+			unzip(zipFiles[i], outsideDir+portfolioUuidPreliminaire+File.separator);
+		}
+		
+		xmlFiles = findFiles(outsideDir+portfolioUuidPreliminaire+File.separator, "xml");
+		allFiles = findFiles(outsideDir+portfolioUuidPreliminaire+File.separator, null);
 
 		////// Lecture du fichier de portfolio
 		StringBuffer outTrace = new StringBuffer();
@@ -9650,7 +9648,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		File zipfile = new File(filename);
 		zipfile.delete();
-		File zipdir = new File(outsideDir+this.portfolioUuidPreliminaire+File.separator);
+		File zipdir = new File(outsideDir+portfolioUuidPreliminaire+File.separator);
 		zipdir.delete();
 
 		return portfolioUuid;
