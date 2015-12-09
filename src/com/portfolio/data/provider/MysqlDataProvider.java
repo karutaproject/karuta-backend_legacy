@@ -11958,7 +11958,109 @@ public class MysqlDataProvider implements DataProvider {
 	 *  ##   ## ##   ##  #####  ##   ##  #####
 	 **/
 	/*****************************/
+	/// List children uuid nodes inside a temporary table, don't forget to clean up afterwards
+	private boolean queryChildren( Connection c, String nodeUuid )
+	{
+		try
+		{
+			String sql;
+			PreparedStatement st;
+			
+			/// Find all children nodes where we will remove editing rights for current group rights
+			/// Pour retrouver les enfants du noeud et affecter les droits
+			if (dbserveur.equals("mysql")){
+				sql = "CREATE TEMPORARY TABLE t_struc_nodeid(" +
+						"uuid binary(16) UNIQUE NOT NULL, " +
+						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+				st = c.prepareStatement(sql);
+				st.execute();
+				st.close();
+			} else if (dbserveur.equals("oracle")){
+				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_nodeid(" +
+						"uuid RAW(16) NOT NULL, " +
+						"t_level NUMBER(10,0)"+
+						",  CONSTRAINT t_struc_nodeid_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
+				sql = "{call create_or_empty_table('t_struc_nodeid','"+v_sql+"')}";
+				CallableStatement ocs = c.prepareCall(sql) ;
+				ocs.execute();
+				ocs.close();
+			}
 
+			// En double car on ne peut pas faire d'update/select d'une même table temporaire
+			if (dbserveur.equals("mysql")){
+				sql = "CREATE TEMPORARY TABLE t_struc_nodeid_2(" +
+						"uuid binary(16) UNIQUE NOT NULL, " +
+						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+				st = c.prepareStatement(sql);
+				st.execute();
+				st.close();
+			} else if (dbserveur.equals("oracle")){
+				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_nodeid_2(" +
+						"uuid RAW(16) NOT NULL, " +
+						"t_level NUMBER(10,0)"+
+						",  CONSTRAINT t_struc_nodeid_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
+				sql = "{call create_or_empty_table('t_struc_nodeid_2','"+v_sql+"')}";
+				CallableStatement ocs = c.prepareCall(sql) ;
+				ocs.execute();
+				ocs.close();
+			}
+
+			/// Dans la table temporaire on retrouve les noeuds concernés
+			/// (assure une convergence de la récursion et limite le nombre de lignes dans la recherche)
+			/// Init table
+			sql = "INSERT INTO t_struc_nodeid(uuid, t_level) " +
+					"SELECT n.node_uuid, 0 " +
+					"FROM node n " +
+					"WHERE n.node_uuid=uuid2bin(?)";
+			st = c.prepareStatement(sql);
+			st.setString(1, nodeUuid);
+			st.executeUpdate();
+			st.close();
+
+//			/*
+			/// On boucle, récursion par niveau
+			int level = 0;
+			int added = 1;
+			if (dbserveur.equals("mysql")){
+			    sql = "INSERT IGNORE INTO t_struc_nodeid_2(uuid, t_level) ";
+			} else if (dbserveur.equals("oracle")){
+			    sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_nodeid_2,t_struc_nodeid_2_UK_uuid)*/ INTO t_struc_nodeid_2(uuid, t_level) ";
+			}
+			sql += "SELECT n.node_uuid, ? " +
+					"FROM node n WHERE n.node_parent_uuid IN (SELECT uuid FROM t_struc_nodeid t " +
+					"WHERE t.t_level=?)";
+
+			String sqlTemp=null;
+			if (dbserveur.equals("mysql")){
+				sqlTemp = "INSERT IGNORE INTO t_struc_nodeid SELECT * FROM t_struc_nodeid_2;";
+			} else if (dbserveur.equals("oracle")){
+				sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_nodeid,t_struc_nodeid_UK_uuid)*/ INTO t_struc_nodeid SELECT * FROM t_struc_nodeid_2";
+			}
+			PreparedStatement stTemp = c.prepareStatement(sqlTemp);
+
+			st = c.prepareStatement(sql);
+			while( added != 0 )
+			{
+				st.setInt(1, level+1);
+				st.setInt(2, level);
+				st.executeUpdate();
+				added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+				level = level + 1;    // Prochaine étape
+			}
+			st.close();
+			stTemp.close();
+			//*/
+			
+		}
+		catch( Exception e )
+		{
+			logger.error(e.getMessage());
+		}
+		
+		return true;
+	}
+	
+	
 	@Override
 	public String postMacroOnNode( Connection c, int userId, String nodeUuid, String macroName )
 	{
@@ -12018,6 +12120,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				/// if reset and admin
 				// Call specific function to process current temporary table
+				queryChildren(c, nodeUuid);
 				resetRights(c);
 			}
 			else if( "show".equals(macroName) || "hide".equals(macroName) )
@@ -12105,91 +12208,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			else if( "submit".equals(macroName) )
 			{
-				/// Find all children nodes where we will remove editing rights for current group rights
-				/// Pour retrouver les enfants du noeud et affecter les droits
-				if (dbserveur.equals("mysql")){
-					sql = "CREATE TEMPORARY TABLE t_struc_nodeid(" +
-							"uuid binary(16) UNIQUE NOT NULL, " +
-							"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-					st = c.prepareStatement(sql);
-					st.execute();
-					st.close();
-				} else if (dbserveur.equals("oracle")){
-					String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_nodeid(" +
-							"uuid RAW(16) NOT NULL, " +
-							"t_level NUMBER(10,0)"+
-							",  CONSTRAINT t_struc_nodeid_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
-					sql = "{call create_or_empty_table('t_struc_nodeid','"+v_sql+"')}";
-					CallableStatement ocs = c.prepareCall(sql) ;
-					ocs.execute();
-					ocs.close();
-				}
-
-				// En double car on ne peut pas faire d'update/select d'une même table temporaire
-				if (dbserveur.equals("mysql")){
-					sql = "CREATE TEMPORARY TABLE t_struc_nodeid_2(" +
-							"uuid binary(16) UNIQUE NOT NULL, " +
-							"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-					st = c.prepareStatement(sql);
-					st.execute();
-					st.close();
-				} else if (dbserveur.equals("oracle")){
-					String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_nodeid_2(" +
-							"uuid RAW(16) NOT NULL, " +
-							"t_level NUMBER(10,0)"+
-							",  CONSTRAINT t_struc_nodeid_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
-					sql = "{call create_or_empty_table('t_struc_nodeid_2','"+v_sql+"')}";
-					CallableStatement ocs = c.prepareCall(sql) ;
-					ocs.execute();
-					ocs.close();
-				}
-
-				/// Dans la table temporaire on retrouve les noeuds concernés
-				/// (assure une convergence de la récursion et limite le nombre de lignes dans la recherche)
-				/// Init table
-				sql = "INSERT INTO t_struc_nodeid(uuid, t_level) " +
-						"SELECT n.node_uuid, 0 " +
-						"FROM node n " +
-						"WHERE n.node_uuid=uuid2bin(?)";
-				st = c.prepareStatement(sql);
-				st.setString(1, nodeUuid);
-				st.executeUpdate();
-				st.close();
-
-//				/*
-				/// On boucle, récursion par niveau
-				int level = 0;
-				int added = 1;
-				if (dbserveur.equals("mysql")){
-				    sql = "INSERT IGNORE INTO t_struc_nodeid_2(uuid, t_level) ";
-				} else if (dbserveur.equals("oracle")){
-				    sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_nodeid_2,t_struc_nodeid_2_UK_uuid)*/ INTO t_struc_nodeid_2(uuid, t_level) ";
-				}
-				sql += "SELECT n.node_uuid, ? " +
-						"FROM node n WHERE n.node_parent_uuid IN (SELECT uuid FROM t_struc_nodeid t " +
-						"WHERE t.t_level=?)";
-
-				String sqlTemp=null;
-				if (dbserveur.equals("mysql")){
-					sqlTemp = "INSERT IGNORE INTO t_struc_nodeid SELECT * FROM t_struc_nodeid_2;";
-				} else if (dbserveur.equals("oracle")){
-					sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_nodeid,t_struc_nodeid_UK_uuid)*/ INTO t_struc_nodeid SELECT * FROM t_struc_nodeid_2";
-				}
-				PreparedStatement stTemp = c.prepareStatement(sqlTemp);
-
-				st = c.prepareStatement(sql);
-				while( added != 0 )
-				{
-					st.setInt(1, level+1);
-					st.setInt(2, level);
-					st.executeUpdate();
-					added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
-					level = level + 1;    // Prochaine étape
-				}
-				st.close();
-				stTemp.close();
-				//*/
-				
+				queryChildren(c, nodeUuid);
 				
 				/// Apply changes
 				System.out.println("ACTION: "+macroName+" grid: "+grid+" -> uuid: "+nodeUuid);
