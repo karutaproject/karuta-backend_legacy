@@ -6274,6 +6274,12 @@ public class MysqlDataProvider implements DataProvider {
 	
 				/// FIXME: Would be better to parse all and insert in one go
 				/// Prepare statement
+				// Horrible
+				String sqlUpdateNoRD = "INSERT INTO t_group_rights(grid,id, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 0) ON DUPLICATE KEY UPDATE RD = 0 ";
+				if( dbserveur.equals("oracle") )
+					sqlUpdateNoRD = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.RD=0 WHEN NOT MATCHED THEN INSERT (grid, id, RD) VALUES (t.grid, t.id, t.RD)";
+				PreparedStatement stNoRD = c.prepareStatement(sqlUpdateNoRD);
+				
 				String sqlUpdateRD = "INSERT INTO t_group_rights(grid,id, RD) VALUES((SELECT grid FROM t_group_right_info WHERE label=?), uuid2bin(?), 1) ON DUPLICATE KEY UPDATE RD = 1 ";
 				if( dbserveur.equals("oracle") )
 					sqlUpdateRD = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.RD=1 WHEN NOT MATCHED THEN INSERT (grid, id, RD) VALUES (t.grid, t.id, t.RD)";
@@ -6374,6 +6380,18 @@ public class MysqlDataProvider implements DataProvider {
 								int result = stRD.executeUpdate();
 	//							System.out.println("RD "+nodeRole+" -> "+result+" : "+uuid);
 	//							credential.postGroupRight(nodeRole,uuid,Credential.READ,portfolioUuid,userId);
+							}
+						}
+						att = attribMap.getNamedItem("showtoroles");
+						if(att != null)
+						{
+							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+							stNoRD.setString(2, uuid);
+							while (tokens.hasMoreElements())
+							{
+								nodeRole = tokens.nextElement().toString();
+								stNoRD.setString(1, nodeRole);
+								int result = stNoRD.executeUpdate();
 							}
 						}
 						att = attribMap.getNamedItem("delnoderoles");
@@ -6522,6 +6540,7 @@ public class MysqlDataProvider implements DataProvider {
 						e.printStackTrace();
 					}
 				}
+				stNoRD.close();
 				stRD.close();
 				stWR.close();
 				stDL.close();
@@ -12255,8 +12274,7 @@ public class MysqlDataProvider implements DataProvider {
 					st.executeUpdate();
 					st.close();
 
-//					Node isPriv = metaAttr.getNamedItem("private");
-//					isPriv.setNodeValue("Y");
+					metaAttr.removeNamedItem("private");
 				}
 				
 				/// We then update the metadata notifying it was submitted
