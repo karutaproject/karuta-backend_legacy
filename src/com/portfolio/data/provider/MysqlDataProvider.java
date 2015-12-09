@@ -1453,7 +1453,7 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception
+	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, boolean limitView) throws Exception
 	{
 		long t1=0, t2=0, t3=0, t4=0, t5=0;
 		long t0 = System.currentTimeMillis();
@@ -1522,7 +1522,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t2 = System.currentTimeMillis();
 			 
-			String data = getLinearXml(c, portfolioUuid, rootNodeUuid, null, true, null, userId, nodeRight.rrgId, nodeRight.groupLabel);
+			String data = getLinearXml(c, portfolioUuid, rootNodeUuid, null, true, null, userId, nodeRight.rrgId, nodeRight.groupLabel, limitView);
 
 			t3 = System.currentTimeMillis();
 			
@@ -1638,7 +1638,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(withResources)
 		{
-			return this.getPortfolio(c, new MimeType("text/xml"),pid,userId, groupId, null, null, null, substid).toString();
+			return this.getPortfolio(c, new MimeType("text/xml"),pid,userId, groupId, null, null, null, substid, true).toString();
 		}
 		else
 		{
@@ -1927,7 +1927,7 @@ public class MysqlDataProvider implements DataProvider {
 		// Si le modele est renseigné, on ignore le XML posté et on récupere le contenu du modele
 		// à la place
 		if(portfolioModelId!=null)
-			in = getPortfolio(c, inMimeType,portfolioModelId,userId, groupId, null, null, null, substid).toString();
+			in = getPortfolio(c, inMimeType,portfolioModelId,userId, groupId, null, null, null, substid, true).toString();
 
 		// On génère un nouvel uuid
 		if(this.portfolioUuidPreliminaire!=null)
@@ -2460,8 +2460,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 
-	private String getLinearXml(Connection c, String portfolioUuid, String rootuuid, Node portfolio, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role) throws SQLException, SAXException, IOException, ParserConfigurationException
-//	private String getLinearXml(String portfolioUuid, String rootuuid, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role) throws SQLException, SAXException, IOException, ParserConfigurationException
+	private String getLinearXml(Connection c, String portfolioUuid, String rootuuid, Node portfolio, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role, boolean limitView) throws SQLException, SAXException, IOException, ParserConfigurationException
 	{
 		DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
 		DocumentBuilder parse=newInstance.newDocumentBuilder();
@@ -2488,7 +2487,7 @@ public class MysqlDataProvider implements DataProvider {
 		/// Node -> parent
 		HashMap<String, t_tree> entries = new HashMap<String, t_tree>();
 
-		processQuery(resNode, resolve, entries, null, parse, role);
+		processQuery(resNode, resolve, entries, null, parse, role, limitView);
 		resNode.close();
 
 		time2 = System.currentTimeMillis();
@@ -2499,7 +2498,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		if( resNode != null )
 		{
-			processQuery(resNode, resolve, entries, null, parse, role);
+			processQuery(resNode, resolve, entries, null, parse, role, limitView);
 			resNode.close();
 		}
 
@@ -2596,7 +2595,7 @@ public class MysqlDataProvider implements DataProvider {
 		data.append("</").append(node.type).append(">");
 	}
 
-	private void processQuery( ResultSet result, HashMap<String, Object[]> resolve, HashMap<String, t_tree> entries, Document document, DocumentBuilder parse, String role ) throws UnsupportedEncodingException, DOMException, SQLException, SAXException, IOException
+	private void processQuery( ResultSet result, HashMap<String, Object[]> resolve, HashMap<String, t_tree> entries, Document document, DocumentBuilder parse, String role, boolean limitView ) throws UnsupportedEncodingException, DOMException, SQLException, SAXException, IOException
 	{
 		long t_01 = 0;
 		long t_02 = 0;
@@ -2624,6 +2623,8 @@ public class MysqlDataProvider implements DataProvider {
 
 				String type = result.getString("asm_type");
 
+				if( limitView && "asmUnit".equals(type) ) continue;
+				
 				data.append("<");
 				data.append(type);
 				data.append(" ");
@@ -3814,7 +3815,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_initContruction = System.currentTimeMillis();
 
-			processQuery(result, resolve, entries, document, documentBuilder, nodeRight.groupLabel);
+			processQuery(result, resolve, entries, document, documentBuilder, nodeRight.groupLabel, true);
 			result.close();
 
 			long t_processQuery = System.currentTimeMillis();

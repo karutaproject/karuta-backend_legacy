@@ -75,7 +75,7 @@ public interface DataProvider {
 	public boolean isAdmin( Connection c, String uid );
 
 	/// Relatif aux portfolios
-	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception;
+	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, boolean limitView) throws Exception;
 	public Object getPortfolios(Connection c, MimeType outMimeType,int userId,int groupId,Boolean portfolioActive, int substid) throws Exception;
 	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception;
 	public String getPortfolioUuidByNodeUuid(Connection c, String nodeUuid) throws Exception ;

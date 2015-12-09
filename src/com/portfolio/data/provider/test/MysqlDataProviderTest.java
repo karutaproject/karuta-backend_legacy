@@ -116,7 +116,7 @@ public class MysqlDataProviderTest {
 
 			// getPortfolio
 			System.out.println("--- getPortfolio() ------");
-			String xml_out = dataProvider.getPortfolio(connection, xmlMimeType,portfolioUuid,userId, groupId, null, null, null, 0).toString();
+			String xml_out = dataProvider.getPortfolio(connection, xmlMimeType,portfolioUuid,userId, groupId, null, null, null, 0, true).toString();
 			DomUtils.saveString(xml_out, "c:\\temp\\out2.xml");
 
 			//getPortfolios

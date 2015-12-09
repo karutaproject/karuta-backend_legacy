@@ -103,7 +103,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid,
-			int userId, int groupId, String label, String resource, String files, int substid) throws Exception {
+			int userId, int groupId, String label, String resource, String files, int substid, boolean limitView) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
