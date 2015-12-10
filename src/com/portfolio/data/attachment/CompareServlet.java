@@ -74,12 +74,6 @@ import org.xml.sax.SAXException;
 
 import java.io.*;
 
-import org.jdom2.*;
-import org.jdom2.output.*;
-import org.jdom2.filter.*;
-import org.jdom2.input.*;
-import org.jdom2.Content;
-
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.SqlUtils;
