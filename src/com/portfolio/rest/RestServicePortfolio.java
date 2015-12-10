@@ -27,6 +27,7 @@ import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
@@ -868,6 +869,8 @@ public class RestServicePortfolio
 			{
 				/// Finding back code. Not really pretty
 				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
 				Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
 				NodeList codes = doc.getDocumentElement().getElementsByTagName("code");
 				// Le premier c'est celui du root
@@ -875,12 +878,14 @@ public class RestServicePortfolio
 				String code = "";
 				if( codenode != null )
 					code = codenode.getTextContent();
+				// Sanitize code
+				code = code.replace("_", "");
 
 				if( export != null )
 				{
 					response = Response
 							.ok(portfolio)
-							.header("content-disposition","attachment; filename = \""+code+"-"+time+".xml\"")
+							.header("content-disposition","attachment; filename = \""+code+"-"+timeFormat+".xml\"")
 							.build();
 				}
 				else if(resource != null && files != null)
@@ -1029,7 +1034,7 @@ public class RestServicePortfolio
 
 					response = Response
 							.ok(b, MediaType.APPLICATION_OCTET_STREAM)
-							.header("content-disposition","attachment; filename = \""+code+"-"+time+".zip")
+							.header("content-disposition","attachment; filename = \""+code+"-"+timeFormat+".zip")
 							.build();
 
 					// Temp file cleanup
