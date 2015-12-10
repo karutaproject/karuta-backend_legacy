@@ -18,6 +18,7 @@ package com.portfolio.data.provider;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -77,6 +78,11 @@ import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpMethod;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.http.HttpResponse;
+import org.apache.http.impl.client.HttpClients;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +92,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -11640,6 +11648,211 @@ public class MysqlDataProvider implements DataProvider {
 	 *  ##   ## ##   ##  #####  ##   ##  #####
 	 **/
 	/*****************************/
+	
+
+public String executeAction(Connection c, int userId, String nodeUuid, String action, String role) throws SQLException, ParserConfigurationException, SAXException, IOException
+	{
+		
+		String val = "erreur";
+		String sql = "";
+		PreparedStatement st;
+		
+		if( "showto".equals(action))
+		{
+			
+			if(cred.isAdmin(c,userId))	// Can activate it
+			{
+				String showto = role;
+				showto = showto.replace(" ", "','");
+
+				//// Il faut qu'il y a un showtorole
+				if( !"('')".equals(showto) )
+				{
+					// Update rights
+					/// Ajoute/remplace les droits
+					// FIXME: Je crois que quelque chose manque
+					sql = "UPDATE group_rights SET RD=? " +
+							"WHERE id=uuid2bin(?) AND grid IN " +
+							"(SELECT gri.grid FROM group_right_info gri, node n " +
+						"WHERE gri.label IN (?) AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?) ) ";
+
+					if (dbserveur.equals("oracle"))
+					{
+						sql = "MERGE INTO group_rights d USING (" +
+								"SELECT gr.grid, gr.id, ? AS RD, 0 AS WR, 0 AS DL, 0 AS AD, NULL AS types_id, NULL AS rules_id " +
+								"FROM group_right_info gri, group_rights gr " +
+								"WHERE gri.label IN "+showto+" " +	/// Might not be safe
+										"AND gri.grid=gr.grid " +
+										"AND gr.id IN (SELECT uuid FROM t_struc_nodeid)) s " +
+								"ON (d.id=s.id AND d.grid=s.grid) "+
+								"WHEN MATCHED THEN " +
+								"UPDATE SET d.RD=?, d.WR=s.WR, d.DL=s.DL, d.AD=s.AD, d.types_id=s.types_id, d.rules_id=s.rules_id " +
+								"WHEN NOT MATCHED THEN " +
+								"INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.AD, d.types_id, d.rules_id) " +
+								"VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.AD, s.types_id, s.rules_id)";
+					}
+					st = c.prepareStatement(sql);
+					if( "hide".equals(action) )
+					{
+						st.setInt(1, 0);
+						st.setString(2, nodeUuid);
+						st.setString(3, showto);
+						st.setString(4, nodeUuid);
+					}
+					else if( "showto".equals(action) )
+					{
+						st.setInt(1, 1);
+						st.setString(2, nodeUuid);
+						st.setString(3, showto);
+						st.setString(4, nodeUuid);
+					}
+					st.executeUpdate();
+					st.close();
+
+				}
+			}
+
+			val = "OK";
+		}
+		  
+		return val;
+	}
+	
+	
+	
+public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_parent) throws SQLException
+	{
+		
+		PreparedStatement st = null;
+		String sql;
+		PreparedStatement st2 = null;
+		String sql2;
+		ResultSet res = null;
+		String result = null;
+		
+		try{
+		if (dbserveur.equals("mysql")){
+			sql = "CREATE TEMPORARY TABLE t_node(" +
+					"node_uuid binary(16) UNIQUE NOT NULL, " +
+					"semantictag varchar(250) DEFAULT NULL, "+
+					"res_node_uuid binary(16) DEFAULT NULL, " +
+					"res_res_node_uuid binary(16) DEFAULT NULL, " +
+					"res_context_node_uuid binary(16) DEFAULT NULL, "+
+					"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+			st = c.prepareStatement(sql);
+			st.execute();
+			st.close();
+		} else if (dbserveur.equals("oracle")){
+			String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_node(" +
+					"node_uuid RAW(16) UNIQUE NOT NULL, " +
+					"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
+					"res_node_uuid RAW(16) DEFAULT NULL, " +
+					"res_res_node_uuid RAW(16) DEFAULT NULL, " +
+					"res_context_node_uuid RAW(16) DEFAULT NULL, " +
+					"t_level NUMBER(10,0)) ON COMMIT PRESERVE ROWS";
+			sql = "{call create_or_empty_table('t_node','"+v_sql+"')}";
+			CallableStatement ocs = c.prepareCall(sql) ;
+			ocs.execute();
+			ocs.close();
+		}
+		
+		//deuxieme fois pour pouvoir lire et ecrire
+		
+		if (dbserveur.equals("mysql")){
+			sql = "CREATE TEMPORARY TABLE t_node_2(" +
+					"node_uuid binary(16) UNIQUE NOT NULL, " +
+					"semantictag varchar(250) DEFAULT NULL, "+
+					"res_node_uuid binary(16) DEFAULT NULL, " +
+					"res_res_node_uuid binary(16) DEFAULT NULL, " +
+					"res_context_node_uuid binary(16) DEFAULT NULL, "+
+					"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+			st = c.prepareStatement(sql);
+			st.execute();
+			st.close();
+		} else if (dbserveur.equals("oracle")){
+			String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_node_2(" +
+					"node_uuid RAW(16) UNIQUE NOT NULL, " +
+					"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
+					"res_node_uuid RAW(16) DEFAULT NULL, " +
+					"res_res_node_uuid RAW(16) DEFAULT NULL, " +
+					"res_context_node_uuid RAW(16) DEFAULT NULL, " +
+					"t_level NUMBER(10,0)) ON COMMIT PRESERVE ROWS";
+			sql = "{call create_or_empty_table('t_node','"+v_sql+"')}";
+			CallableStatement ocs = c.prepareCall(sql) ;
+			ocs.execute();
+			ocs.close();
+		}
+		
+		// Init table
+		sql = "INSERT INTO t_node(node_uuid, semantictag, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) " +
+				"SELECT n.node_uuid, n.semantictag, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, 0 " +
+				"FROM node n " +
+				"WHERE n.node_uuid=uuid2bin(\""+uuid_parent+"\")";
+		st = c.prepareStatement(sql);
+		st.executeUpdate();
+		st.close();
+		
+		sql = "INSERT INTO t_node_2(node_uuid, semantictag, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) " +
+				"SELECT n.node_uuid, n.semantictag, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, 0 " +
+				"FROM node n " +
+				"WHERE n.node_uuid=uuid2bin(\""+uuid_parent+"\")";
+		st = c.prepareStatement(sql);
+		st.executeUpdate();
+		st.close();
+
+		/// On boucle, sera toujours <= au "nombre de noeud du portfolio"
+		int level = 0;
+		int added = 1;
+		if (dbserveur.equals("mysql")){
+        	sql = "INSERT IGNORE INTO t_node_2(node_uuid, semantictag, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) ";
+		} else if (dbserveur.equals("oracle")){
+			sql = "INSERT /*+ ignore_row_on_dupkey_index(t_node_2,t_node_2_UK_uuid)*/ INTO t_node_2(node_uuid, semanctictag, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) ";
+		}
+		sql += "SELECT n.node_uuid, n.semantictag, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, ? " +
+				"FROM node n WHERE n.node_parent_uuid IN (SELECT node_uuid FROM t_node t " +
+				"WHERE t.t_level=?)";
+
+		String sqlTemp=null;
+		if (dbserveur.equals("mysql")){
+			sqlTemp = "INSERT IGNORE INTO t_node SELECT * FROM t_node_2;";
+		} else if (dbserveur.equals("oracle")){
+			sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_node,t_node_UK_uuid)*/ INTO t_node SELECT * FROM t_node_2";
+		}
+		PreparedStatement stTemp = c.prepareStatement(sqlTemp);
+
+		st = c.prepareStatement(sql);
+		while( added != 0 )
+		{
+			st.setInt(1, level+1);
+			st.setInt(2, level);
+			st.executeUpdate();
+			added = stTemp.executeUpdate();   // On s'arrÍte quand rien a ete ajoute
+			level = level + 1;    // Prochaine Ètape
+		}
+		
+		sql2="SELECT bin2uuid(node_uuid) FROM t_node WHERE semantictag LIKE \"" + semtag +"\"";
+		st2 = c.prepareStatement(sql2);
+		res = st2.executeQuery();
+		res.next();
+		result=res.getString(1);
+		st2.close();
+		st.close();
+		stTemp.close();
+
+		
+		
+		}
+		catch (Exception E){
+		}
+		finally{
+			sql="DROP TEMPORARY TABLE IF EXISTS t_node,t_node_2";
+			st=c.prepareStatement(sql);
+			st.execute();
+			st.close();
+		}
+		return result;
+	}
+	
 	/// List children uuid nodes inside a temporary table, don't forget to clean up afterwards
 	private boolean queryChildren( Connection c, String nodeUuid )
 	{
@@ -11988,7 +12201,170 @@ public class MysqlDataProvider implements DataProvider {
 				st.executeUpdate();
 				st.close();
 			}
+			else if( "submitQuizz".equals(macroName) )
+			{
+               
+            	sql = "DROP TEMPORARY TABLE IF EXISTS t_struc_nodeid, t_struc_nodeid_2";
+				st = c.prepareStatement(sql);
+				st.execute();
+				st.close();
+            	
+				//Comparaison rÈponses
+                //sql="SELECT bin2uuid(node_parent_uuid) " + "FROM node n " + "WHERE node_uuid=uuid2bin(\""+nodeUuid+"\")";
+				
+				//uuid1
+				sql="SELECT bin2uuid(node_uuid) " + "FROM node n "+"WHERE semantictag LIKE \"quizz\"" + " AND node_parent_uuid=uuid2bin(\""+nodeUuid+"\")";
+				st = c.prepareStatement(sql);
+                ResultSet rs1 = st.executeQuery();
+                rs1.next();
+                //String uuidParent = rs.getString(1);
+                String uuidREP=rs1.getString(1);
+                st.close();
+                
+                //uuid2
+                sql="SELECT content " + "FROM resource_table r_t " + "WHERE xsi_type " + "LIKE \"Proxy\" " + 
+                "AND node_uuid " + "IN (SELECT res_node_uuid FROM node n WHERE semantictag LIKE \"proxy-quizz\" " + 
+                "AND node_parent_uuid=uuid2bin(\"" + nodeUuid + "\")) ";
+                st = c.prepareStatement(sql);
+                ResultSet rs2 = st.executeQuery();
+                rs2.next();
+                String ContentUuid2=rs2.getString(1);
+                String uuidSOL = ContentUuid2.substring(6,42);
+                st.close();
+                
+                String uuids=uuidREP+uuidSOL+nodeUuid;
+                
+                
+                HttpClient client = new HttpClient();
+                HttpMethod method = new GetMethod("http://localhost:8080/karuta-backend/compare/"+uuids);
+                int obj = client.executeMethod(method);
+                String rep = method.getResponseBodyAsString();
+                int prctElv = Integer.parseInt(rep);
+                
+             
+                
+                //Recherche noeud pourcentage mini
+                String nodePrct = getNodeUuidBySemtag(c, "level", nodeUuid);	//recuperation noeud avec semantictag "mini"
+                
+                //parse le noeud
+                String lbl = null;
+                Object ndSol = getNode(c, new MimeType("text/xml"), nodePrct, true, 1, 0, lbl);
+				
+                DocumentBuilderFactory documentBuilderFactory2 = DocumentBuilderFactory.newInstance();
+				DocumentBuilder documentBuilder2 = documentBuilderFactory2.newDocumentBuilder();
+				ByteArrayInputStream is2 = new ByteArrayInputStream(ndSol.toString().getBytes("UTF-8"));
+				Document doc2 = documentBuilder2.parse(is2);
+				
+				DOMImplementationLS impl = (DOMImplementationLS)doc2.getImplementation().getFeature("LS", "3.0");
+				LSSerializer serial = impl.createLSSerializer();
+				serial.getDomConfig().setParameter("xml-declaration", true);
+				
+				//recuperation valeur seuil
+				Element root = doc2.getDocumentElement();
+				
+				//root.getElementsByTagName("semantictag");
+				Node ndValeur = root.getFirstChild().getNextSibling().getNextSibling().getNextSibling().getNextSibling().getNextSibling();
+				Node essai = ndValeur.getFirstChild().getNextSibling().getNextSibling();
+				String seuil = ndValeur.getFirstChild().getNextSibling().getNextSibling().getTextContent().trim();
+				int prctMini = Integer.parseInt(seuil);
+				
+				//recuperation asmContext contenant l'action
+				sql="SELECT bin2uuid(node_uuid) " + "FROM node n " + "WHERE node_uuid  IN (SELECT uuid2bin(node_children_uuid) " 
+						+ "FROM node n " +"WHERE semantictag LIKE \"action\" AND node_parent_uuid "
+						+ "LIKE uuid2bin(\"" + nodeUuid + "\")) ";
+				st=c.prepareStatement(sql);
+				ResultSet rsa =st.executeQuery();
+				rsa.next();
+                String contextActionNodeUuid=rsa.getString(1);
+                st.close();
+				
+                //Recuperation uuidNoeud sur lequel effectuer l'action, role et action
+                String lbl2 = null;
+                Object nd = getNode(c, new MimeType("text/xml"), contextActionNodeUuid, true, 1, 0, lbl2);
+				
+                DocumentBuilderFactory documentBuilderFactory3 = DocumentBuilderFactory.newInstance();
+				DocumentBuilder documentBuilder3 = documentBuilderFactory3.newDocumentBuilder();
+				ByteArrayInputStream is3 = new ByteArrayInputStream(nd.toString().getBytes("UTF-8"));
+				Document doc3 = documentBuilder3.parse(is3);
+				
+				DOMImplementationLS imple = (DOMImplementationLS)doc3.getImplementation().getFeature("LS", "3.0");
+				LSSerializer seriale = imple.createLSSerializer();
+				seriale.getDomConfig().setParameter("xml-declaration", true);
+				
+				Element racine = doc3.getDocumentElement();
+				
+				String action=null;
+				String nodeAction=null;
+				String role=null;
+				
+				NodeList valueList = racine.getElementsByTagName("value");
+				nodeAction = valueList.item(0).getFirstChild().getNodeValue();
+				
+				NodeList actionList = racine.getElementsByTagName("action");
+				action = actionList.item(0).getFirstChild().getNodeValue();
+				
+				NodeList roleList = racine.getElementsByTagName("role");
+				role = roleList.item(0).getFirstChild().getNodeValue();
+				
+				sql = "SELECT gu.userid FROM group_rights gr, group_right_info gri, "
+						+ "group_info gi, group_user gu WHERE gr.id LIKE uuid2bin(\""
+						+ nodeAction + "\") AND gri.grid LIKE gr.grid AND gi.label LIKE gri.label AND gi.grid LIKE gr.grid "
+								+ "AND gu.gid LIKE gi.gid";
+				st=c.prepareStatement(sql);
+				ResultSet rsr =st.executeQuery();
+				rsr.next();
+                String usId=rsr.getString(1);
+                st.close();
+				
+				userId=Integer.parseInt(usId);
+                
+				//comparaison
+				if(prctElv >= prctMini)
+				{
+					//postMacroOnNode(c, 1, nodeAction, "show");//dire de modifier showto en show
+					executeAction(c, 1, nodeAction, action, role);
+					
+					sql = "SELECT metadata_wad FROM node WHERE node_uuid=uuid2bin(?)";
+					st = c.prepareStatement(sql);
+					st.setString(1, nodeAction);
+					res = st.executeQuery();
+					String metaA = "";
+					if( res.next() )
+					metaA = res.getString("metadata_wad");
+					res.close();
+					st.close();
 
+					// Parsage meta
+					DocumentBuilderFactory documentBuilderFactorys =DocumentBuilderFactory.newInstance();
+					DocumentBuilder documentBuilders = documentBuilderFactorys.newDocumentBuilder();
+					metaA = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><metadata-wad "+metaA+"></metadata-wad>";
+					System.out.println("ACTION OUT: "+metaA);
+					InputSource iss = new InputSource(new StringReader(metaA));
+					Document docs = documentBuilders.parse(iss);
+					Element rootMetaA = docs.getDocumentElement();
+					boolean doUpdatee = true;
+					
+					NamedNodeMap metaAttrs = rootMetaA.getAttributes();
+					Node isPriv = metaAttrs.removeNamedItem("private");
+					
+					String updatedMeta = DomUtils.getNodeAttributesString(rootMetaA);
+					sql = "UPDATE node SET metadata_wad=? WHERE node_uuid=uuid2bin(?)";
+					st = c.prepareStatement(sql);
+					st.setString(1, updatedMeta);
+					st.setString(2, nodeAction);
+					st.executeUpdate();
+					st.close();	
+					
+					postMacroOnNode(c, userId, nodeUuid, "submit");
+				}
+				else 
+				{
+					postMacroOnNode(c, userId, uuidREP, "submit");
+				}
+				
+               
+            }
+			
 			val = "OK";
 		}
 		catch( SQLException e )
