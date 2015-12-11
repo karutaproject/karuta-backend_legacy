@@ -281,7 +281,7 @@ public class XSLService  extends HttpServlet {
 				for( int i=0; i<portfolioid.length; ++i )
 				{
 					String p = portfolioid[i];
-					String portfolioxml = dataProvider.getPortfolio(c, new MimeType("text/xml"), p, userId, groupId, "", null, null, 0, true).toString();
+					String portfolioxml = dataProvider.getPortfolio(c, new MimeType("text/xml"), p, userId, groupId, "", null, null, 0, null).toString();
 					aggregate.append(portfolioxml);
 				}
 			}
