@@ -131,25 +131,6 @@ public class MysqlDataProvider implements DataProvider {
 		dbserveur = ConfigUtils.get("serverType");
 	}
 
-	@Override
-	public void setConnection( Connection c )
-	{
-//		this.connection = c;
-//		credential = new Credential(connection);
-	}
-
-	/*
-	@Override
-	public void disconnect(){
-
-		try {
-			connection.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-		//*/
-
 	public Integer getMysqlNodeNextOrderChildren(Connection c, String nodeUuid)  throws Exception
 	{
 		PreparedStatement st;
@@ -178,8 +159,6 @@ public class MysqlDataProvider implements DataProvider {
 		PreparedStatement st;
 		String sql;
 
-		//try
-		//{
 		// On recupere d'abord les informations dans la table structures
 		sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid,  node_children_uuid as node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid,  bin2uuid(res_res_node_uuid) as res_res_node_uuid,  bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, shared_node_res,bin2uuid(shared_res_uuid) AS shared_res_uuid, bin2uuid(shared_node_uuid) AS shared_node_uuid, bin2uuid(shared_node_res_uuid) AS shared_node_res_uuid,asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date,  bin2uuid(portfolio_id) as portfolio_id FROM node WHERE node_uuid = uuid2bin(?) ";
 		st = c.prepareStatement(sql);
@@ -253,8 +232,6 @@ public class MysqlDataProvider implements DataProvider {
 		PreparedStatement st;
 		String sql;
 
-		//try
-		//{
 		// On recupere d'abord les informations dans la table structures
 		sql = "SELECT bin2uuid(res_node_uuid) AS res_node_uuid  FROM node WHERE portfolio_id= uuid2bin(?) AND res_node_uuid IS NOT NULL AND res_node_uuid<>'' ";
 		if (dbserveur.equals("oracle")){
@@ -353,8 +330,6 @@ public class MysqlDataProvider implements DataProvider {
 			if(portfolioActive) sql += "  AND p.active = 1 "; else sql += "  AND p.active = 0 ";
 			/// FIXME might need to check active from substitute too
 
-			//						  sql += " GROUP BY portfolio_id,root_node_uuid,modif_user_id,modif_date,active, user_id ";
-			//sql += " ORDER BY modif_date ASC ";
 			/// Closing top level query and sorting
 			if( "mysql".equals(dbserveur) )
 				sql += ") t GROUP BY portfolio_id ORDER BY content";
@@ -417,15 +392,11 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			// On recupere d'abord les informations dans la table structures
-
 			sql = "SELECT * FROM credential c " +
 					"LEFT JOIN credential_substitution cs " +
 					"ON c.userid=cs.userid " +
 					"ORDER BY c.userid";
-			//if(userId!=null) sql += "  AND cr.userid = ? ";
-			//sql += " ORDER BY display_name ASC ";
 			st = c.prepareStatement(sql);
-			// if(userId!=null) st.setInt(1, userId);
 
 			return st.executeQuery();
 		}
@@ -445,10 +416,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			// On recupere d'abord les informations dans la table structures
-
 			sql = "SELECT bin2uuid(id) as id,RD,WR,DL,SB,AD,types_id,gid,gr.grid,gi.owner,gi.label FROM group_rights gr, group_info gi WHERE  gr.grid = gi.grid AND gi.gid = ?";
-			//if(userId!=null) sql += "  AND cr.userid = ? ";
-			//sql += " ORDER BY display_name ASC ";
 			st = c.prepareStatement(sql);
 			st.setInt(1, groupId);
 
@@ -472,6 +440,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid,  node_children_uuid as node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid,  bin2uuid(res_res_node_uuid) as res_res_node_uuid,  bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, asm_type, xsi_type, semtag, label, code, descr, format, modif_user_id, modif_date,  bin2uuid(portfolio_id) as portfolio_id FROM node WHERE node_uuid = uuid2bin(?) ";
 			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
+			
 			return st.executeQuery();
 		}
 		catch(Exception ex)
@@ -491,6 +460,7 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "SELECT bin2uuid(portfolio_id) AS portfolio_id,bin2uuid(model_id) AS model_id,bin2uuid(root_node_uuid) as root_node_uuid,modif_user_id,modif_date,active user_id FROM portfolio WHERE portfolio_id = uuid2bin(?) ";
 			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
+			
 			return st.executeQuery();
 		}
 		catch(Exception ex)
@@ -549,11 +519,8 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql  = "UPDATE  portfolio SET active = ?  WHERE portfolio_id = uuid2bin(?) ";
-
 			Integer iActive = (active) ? 1 : 0;
-
 			st = c.prepareStatement(sql);
-
 			st.setInt(1, iActive);
 			st.setString(2, portfolioUuid);
 
@@ -561,7 +528,6 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch(Exception ex)
 		{
-			//System.out.println("root_node_uuid : "+uuid);
 			ex.printStackTrace();
 			return -1;
 		}
@@ -584,7 +550,6 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch(Exception ex)
 		{
-			//System.out.println("root_node_uuid : "+uuid);
 			ex.printStackTrace();
 			return -1;
 		}
@@ -1094,13 +1059,11 @@ public class MysqlDataProvider implements DataProvider {
 				st.setTimestamp(4, SqlUtils.getCurrentTimeStamp2());
 			}
 			st.setString(5,nodeUuid);
-			// st.setString(6,xsiType);
 
 			return st.executeUpdate();
 		}
 		catch(Exception ex)
 		{
-			//System.out.println("root_node_uuid : "+uuid);
 			ex.printStackTrace();
 			return -1;
 		}
@@ -1241,7 +1204,6 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch(Exception ex)
 		{
-			//System.out.println("root_node_uuid : "+uuid);
 			ex.printStackTrace();
 			return false;
 		}
@@ -1331,14 +1293,7 @@ public class MysqlDataProvider implements DataProvider {
 			st = c.prepareStatement(sql);
 			st.setString(1, portfolioCode);
 			res = st.executeQuery();
-/*
-			sql  = "SELECT bin2uuid(portfolio_id) AS portfolio_id FROM portfolio WHERE active=1 AND root_node_uuid IN (";
-			sql += " SELECT node_uuid  FROM node WHERE asm_type='asmRoot' AND res_res_node_uuid ";
-			sql += " IN ( SELECT node_uuid FROM resource_table WHERE content LIKE ? AND xsi_type='nodeRes') ) ";
-			st = connection.prepareStatement(sql);
-			st.setString(1, "%<code>"+portfolioCode+"</code>%");
-			res = st.executeQuery();
-//*/
+			
 			if( res.next() )
 				return res.getString("portfolio_id");
 			else
@@ -1445,39 +1400,6 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(outMimeType.getSubType().equals("xml"))
 		{
-			//			header = "<portfolio xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' schemaVersion='1.0'>";
-			//			footer = "</portfolio>";
-			/*
-			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
-			DocumentBuilder documentBuilder;
-			Document document=null;
-			try
-			{
-				documentBuilder = documentBuilderFactory.newDocumentBuilder();
-				document = documentBuilder.newDocument();
-				document.setXmlStandalone(true);
-			}
-			catch( ParserConfigurationException e )
-			{
-				e.printStackTrace();
-			}
-
-			Element root = document.createElement("portfolio");
-			root.setAttribute("id", portfolioUuid);
-			root.setAttribute("code", "0");
-
-			//// Noeuds supplémentaire pour WAD
-			// Version
-			Element verNode = document.createElement("version");
-			Text version = document.createTextNode("4");
-			verNode.appendChild(version);
-			root.appendChild(verNode);
-			// metadata-wad
-//			Element metawad = document.createElement("metadata-wad");
-//			metawad.setAttribute("prog", "main.jsp");
-//			metawad.setAttribute("owner", "N");
-//			root.appendChild(metawad);
-			//*/
 			int owner = cred.getOwner(c, userId, portfolioUuid);
 			String isOwner = "N";
 			if( owner == userId )
@@ -1579,8 +1501,6 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception
 	{
-		//return this.getPortfolio(mimeType, this.getPortfolioUuidByPortfolioCode(portfolioCode), userId, groupId, null);
-
 		PreparedStatement st = null;
 		String sql;
 		ResultSet res = null;
@@ -1885,25 +1805,15 @@ public class MysqlDataProvider implements DataProvider {
 
 		// On génère un nouvel uuid
 		portfolioUuid = UUID.randomUUID().toString();
-		//On vérifie l'existence du portfolio. Si le portfolio existe, on ne l'écrase pas
-		//if(getPortfolioRootNode(portfolioUuid)==null)
-		//{
-		//	throw new Exception("Le portfolio dont l'uuid="+portfolioUuid+" existe");
-		//}
-		//else
-		//			putPortfolio(inMimeType,outMimeType,in, portfolioUuid,userId,true,groupId, portfolioModelId);
 
 
 
 		if(in.length()>0)
 		{
-			//if(resPortfolio!=null) deleteMySqlPortfolio(portfolioUuid,userId, groupId);
-
 			Document doc = DomUtils.xmlString2Document(in, outTrace);
 
 			/// Check if portfolio code is already used
 			XPath xPath = XPathFactory.newInstance().newXPath();
-//			String filterRes = "//asmRoot/asmResource/code";
 			String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
 			NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 
@@ -2103,10 +2013,6 @@ public class MysqlDataProvider implements DataProvider {
 
 			if(!resNode.getString("asm_type").equals("asmResource"))
 			{
-				//obsolete
-				//result.append(DomUtils.getJsonElementOutput("code", resNode.getString("code"))+", ");
-				//result.append(DomUtils.getJsonElementOutput("label", resNode.getString("label"))+", ");
-				//result.append(DomUtils.getJsonElementOutput("description", resNode.getString("descr"))+" ");
 			}
 			else
 			{
@@ -2271,18 +2177,6 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				else
 				{
-					/*// si asmResource
-						try
-						{
-							resResource = getMysqlResource(nodeUuid);
-							if(resResource.next())
-								result.append(resResource.getString("content"));
-						}
-						catch(Exception ex)
-						{
-							ex.printStackTrace();
-						}*/
-
 				}
 
 				resource = System.currentTimeMillis();
@@ -2887,43 +2781,6 @@ public class MysqlDataProvider implements DataProvider {
 				res.close();
 				st.close();
 				///*/
-				/*
-				if (dbserveur.equals("mysql")){
-					sql = "INSERT INTO t_rights(grid,id,RD,WR,DL,SB,AD) ";
-					sql += "SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
-						"FROM group_right_info gri " +
-						"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
-						"LEFT JOIN group_rights gr ON gri.grid=gr.grid " +
-						"WHERE gri.portfolio_id=uuid2bin(?) " +
-						"AND gi.label=(SELECT login FROM credential WHERE userid=?) " +
-						"ON DUPLICATE KEY " +
-						"UPDATE t_rights.RD=GREATEST(t_rights.RD,gr.RD), " +
-						"t_rights.WR=GREATEST(t_rights.WR,gr.WR), " +
-						"t_rights.DL=GREATEST(t_rights.DL,gr.DL), " +
-						"t_rights.SB=GREATEST(t_rights.SB,gr.SB), " +
-						"t_rights.AD=GREATEST(t_rights.AD,gr.AD)";
-				} else if (dbserveur.equals("oracle")){
-		        	sql = "MERGE INTO t_rights d USING (";
-			        sql += "SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
-						"FROM group_right_info gri " +
-						"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
-						"LEFT JOIN group_rights gr ON gri.grid=gr.grid " +
-						"WHERE gri.portfolio_id=uuid2bin(?) " +
-						"AND gi.label=(SELECT login FROM credential WHERE userid=?) ";
-		        	sql += ") s ON (d.grid = s.grid AND d.id = s.id) WHEN MATCHED THEN UPDATE SET " +
-							"d.RD=GREATEST(d.RD,gr.RD), " +
-							"d.WR=GREATEST(d.WR,gr.WR), " +
-							"d.DL=GREATEST(d.DL,gr.DL), " +
-							"d.SB=GREATEST(d.SB,gr.SB), " +
-							"d.AD=GREATEST(d.AD,gr.AD)";
-		        	sql += " WHEN NOT MATCHED THEN INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.SB, d.AD) VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.SB, s.AD)";
-				}
-				st = connection.prepareStatement(sql);
-				st.setString(1, portfolioUuid);
-				st.setInt(2, userId);
-				st.executeUpdate();
-				st.close();
-				//*/
 
 				time5 = System.currentTimeMillis();
 
@@ -3178,11 +3035,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "CREATE TEMPORARY TABLE t_node(" +
 						"node_uuid binary(16)  NOT NULL, " +
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
-//						"node_children_uuid varchar(8000), " +	/// FIXME Will break if we try to import a really wide tree, or if there's a large number of nodes under one parent
 						"node_order int(12) NOT NULL, " +
-//						"metadata varchar(255) NOT NULL, " +
-//						"metadata_wad varchar(255) NOT NULL, " +
-//						"metadata_epm varchar(255) NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -3242,11 +3095,7 @@ public class MysqlDataProvider implements DataProvider {
 				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_node(" +
 						"node_uuid RAW(16)  NOT NULL, " +
 						"node_parent_uuid RAW(16) DEFAULT NULL, " +
-//						"node_children_uuid CLOB, " +
 						"node_order NUMBER(12) NOT NULL, " +
-//						"metadata CLOB DEFAULT NULL, " +
-//						"metadata_wad CLOB DEFAULT NULL, " +
-//						"metadata_epm CLOB DEFAULT NULL, " +
 						"res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_context_node_uuid RAW(16)  DEFAULT NULL, " +
@@ -3441,7 +3290,6 @@ public class MysqlDataProvider implements DataProvider {
 				st.setInt(3, rrgId);
 				st.setString(4, nodeUuid);
 				st.setInt(5, userId);
-//				System.out.println("VALUES: "+portfolioid+" "+rrgId+" "+nodeUuid+" "+userId);
 			}
 			st.executeUpdate();
 			st.close();
@@ -3536,39 +3384,26 @@ public class MysqlDataProvider implements DataProvider {
 			if(resNode.next())
 			{
 				result.append(indentation+"<"+resNode.getString("asm_type")+" "+DomUtils.getXmlAttributeOutput("id",resNode.getString("node_uuid"))+" ");
-				//if(resNodes.getString("node_parent_uuid").length()>0)
-				//	result.append(getXmlAttributeOutput("parent-uuid",resNodes.getString("node_parent_uuid"))+" ");
-				//if(resNodes.getString("semtag")!=null)
-				//if(resNodes.getString("semtag").length()>0)
 				result.append(DomUtils.getXmlAttributeOutput("semantictag",resNode.getString("semtag"))+" ");
 
 				if(resNode.getString("xsi_type")!=null)
 					if(resNode.getString("xsi_type").length()>0)
 						result.append(DomUtils.getXmlAttributeOutput("xsi_type",resNode.getString("xsi_type"))+" ");
 
-				//if(resNodes.getString("format")!=null)
-				//	if(resNodes.getString("format").length()>0)
 				result.append(DomUtils.getXmlAttributeOutput("format",resNode.getString("format"))+" ");
 
-				//if(resNodes.getTimestamp("modif_date")!=null)
 				result.append(DomUtils.getXmlAttributeOutput("modified",resNode.getTimestamp("modif_date").toGMTString())+" ");
 
 				result.append("/>");
 
 				if(!resNode.getString("asm_type").equals("asmResource"))
 				{
-					//result.append(DomUtils.getXmlElementOutput("code", resNode.getString("code")));
-					//result.append(DomUtils.getXmlElementOutput("label", resNode.getString("label")));
-					//result.append(DomUtils.getXmlElementOutput("description", resNode.getString("descr")));
 				}
 				else
 				{
 					// si asmResource
 					try
 					{
-						//resResource = getMysqlResource(nodeUuid);
-						//resResource.next();
-						//result.append(resResource.getString("content"));
 					}
 					catch(Exception ex)
 					{
@@ -3596,7 +3431,6 @@ public class MysqlDataProvider implements DataProvider {
 					}
 				}
 
-				//result.append("</"+resNode.getString("asm_type")+">");
 			}
 		}
 		catch(Exception ex)
@@ -3658,42 +3492,9 @@ public class MysqlDataProvider implements DataProvider {
 			StringBuilder out = new StringBuilder(256);
 			reconstructTree( out, root, entries );
 
-			/// Reconstruct data
-//			String output = reconstructData(root);
-
-			/*
-			for( int i=0; i<entries.size(); ++i )
-			{
-				Object[] obj = entries.get(i);
-				Node node = (Node) obj[0];
-				String childsId = (String) obj[1];
-
-				String[] tok = childsId.split(",");
-				for( int j=0; j<tok.length; ++j )
-				{
-					String id = tok[j];
-					Node child = resolve.get(id);
-					if( child != null )
-						node.appendChild(child);
-
-				}
-			}
-			//*/
-
 			nodexml.append(out.toString());
 			long t_buildXML = System.currentTimeMillis();
 
-			/*
-			Node root = resolve.get(nodeUuid);
-			Node node = document.createElement("node");
-			node.appendChild(root);
-			document.appendChild(node);
-
-			StringWriter stw = new StringWriter();
-			Transformer serializer = TransformerFactory.newInstance().newTransformer();
-			serializer.transform(new DOMSource(document), new StreamResult(stw));
-			nodexml.append(stw.toString());
-			//*/
 
 			long t_convertString = System.currentTimeMillis();
 
@@ -3713,11 +3514,6 @@ public class MysqlDataProvider implements DataProvider {
 			System.out.println("Convert XML: "+d_convertString);
 			//*/
 
-			//		  StringBuffer sb = getNodeXmlOutput(nodeUuid,withChildren,null,userId, groupId, label,true);
-			//          StringBuffer sb = getLinearNodeXml(nodeUuid,withChildren,null,userId, groupId, label,true);
-
-			//		  sb.insert(0, "<node>");
-			//		  sb.append("</node>");
 			return nodexml;
 		}
 		else if(outMimeType.getSubType().equals("json"))
@@ -4575,19 +4371,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			resolver resolve = new resolver();
 
-			/// Crée les groupes de droits en les copiants dans la table d'origine
-			// Sélectionne les groupes concernés
-			/*
-			sql = "SELECT login FROM credential c WHERE c.userid=?";
-			st = connection.prepareStatement(sql);
-			st.setInt(1, userId);
-			ResultSet res = st.executeQuery();
-
-			String login="";
-			if( res.next() )
-				login = res.getString("login");
-			//*/
-
+			/// FIXME might want to regroup it with the import node I think
 			// Selection des metadonnées
 			sql = "SELECT bin2uuid(t.new_uuid) AS uuid, bin2uuid(t.portfolio_id) AS puuid, t.metadata, t.metadata_wad, t.metadata_epm " +
 					"FROM t_data t";
@@ -4813,38 +4597,6 @@ public class MysqlDataProvider implements DataProvider {
 			res.close();
 			st.close();
 
-			/*
-			sql = "SELECT grid FROM group_right_info " +
-					"WHERE portfolio_id=uuid2bin(?)";
-			st = connection.prepareStatement(sql);
-			st.setString(1, portfolioUuid);
-			ResultSet res = st.executeQuery();
-
-			/// Pour chaque grid, on en créé un nouveau et met à jour nos nouveaux droits
-			sql = "INSERT INTO group_right_info(owner, label, change_rights, portfolio_id) " +
-					"SELECT owner, label, change_rights, uuid2bin(?) FROM group_right_info WHERE grid=?";
-			st = connection.prepareStatement(sql);
-			st.setString(1, newPortfolioUuid);
-
-			if (dbserveur.equals("mysql")){
-				sql = "UPDATE t_rights SET grid=LAST_INSERT_ID() WHERE grid=?";
-			} else if (dbserveur.equals("oracle")){
-				sql = "UPDATE t_rights SET grid=group_right_info_SEQ.CURRVAL WHERE grid=?";
-			}
-			PreparedStatement stUpd = connection.prepareStatement(sql);
-
-			while( res.next() )
-			{
-				int grid = res.getInt("grid");
-				st.setInt(2, grid);
-				st.executeUpdate();   // Ajout du nouveau rrg
-
-				stUpd.setInt(1, grid);
-				stUpd.executeUpdate();  /// Met a jour la table de droit temporaire
-			}
-			st.close();
-			//*/
-
 			c.setAutoCommit(false);
 
 			/// On insère les données pré-compilé
@@ -4948,21 +4700,6 @@ public class MysqlDataProvider implements DataProvider {
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
-
-			/*
-			/// Ajout du portfolio dans le groupe de portfolio
-			if( null == portfGroupName || "".equals(portfGroupName) )
-				portfGroupName = "default";
-
-			sql = "INSERT INTO portfolio_group(owner, portfolio_id, group_name) VALUES(?,uuid2bin(?),?)";
-
-			st = c.prepareStatement(sql);
-			st.setInt(1, userId);
-			st.setString(2, newPortfolioUuid);
-			st.setString(3, portfGroupName);
-			st.executeUpdate();
-			st.close();
-			//*/
 
 			/// Finalement on crée un rôle designer
 			int groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);
@@ -5400,11 +5137,8 @@ public class MysqlDataProvider implements DataProvider {
 			sql = "CREATE TABLE IF NOT EXISTS t_node_cache(" +
 					"node_uuid binary(16)  NOT NULL, " +
 					"node_parent_uuid binary(16) DEFAULT NULL, " +
-//					"node_children_uuid varchar(10000), " +	/// FIXME Will break if we try to import a really wide tree
 					"node_order int(12) NOT NULL, " +
-//					"metadata varchar(255) NOT NULL, " +
 					"metadata_wad varchar(2048) NOT NULL, " +
-//					"metadata_epm varchar(255) NOT NULL, " +
 					"res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -5433,11 +5167,8 @@ public class MysqlDataProvider implements DataProvider {
 			String v_sql = "CREATE GLOBAL TABLE t_node_cache(" +
 					"node_uuid RAW(16)  NOT NULL, " +
 					"node_parent_uuid RAW(16) DEFAULT NULL, " +
-//					"node_children_uuid CLOB, " +
 					"node_order NUMBER(12) NOT NULL, " +
-//					"metadata CLOB DEFAULT NULL, " +
 					"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
-//					"metadata_epm CLOB DEFAULT NULL, " +
 					"res_node_uuid RAW(16) DEFAULT NULL, " +
 					"res_res_node_uuid RAW(16) DEFAULT NULL, " +
 					"res_context_node_uuid RAW(16)  DEFAULT NULL, " +
@@ -5575,7 +5306,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		t1d = System.currentTimeMillis();
 
-		System.out.println((t1a-t1)+","+(t1b-t1a)+","+(t1c-t1b)+","+(t1d-t1c));
+//		System.out.println((t1a-t1)+","+(t1b-t1a)+","+(t1c-t1b)+","+(t1d-t1c));
 		
 		return portfolioCode;
 	}
@@ -5629,11 +5360,8 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid binary(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
 						"node_uuid binary(16)  NOT NULL, " +
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
-//						"node_children_uuid varchar(10000), " +	/// FIXME Will break if we try to import a really wide tree
 						"node_order int(12) NOT NULL, " +
-//						"metadata varchar(255) NOT NULL, " +
 						"metadata_wad varchar(2048) NOT NULL, " +
-//						"metadata_epm varchar(255) NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -5662,11 +5390,8 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid RAW(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
 						"node_uuid RAW(16)  NOT NULL, " +
 						"node_parent_uuid RAW(16) DEFAULT NULL, " +
-//						"node_children_uuid CLOB, " +
 						"node_order NUMBER(12) NOT NULL, " +
-//						"metadata CLOB DEFAULT NULL, " +
 						"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
-//						"metadata_epm CLOB DEFAULT NULL, " +
 						"res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_context_node_uuid RAW(16)  DEFAULT NULL, " +
@@ -5769,7 +5494,6 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid binary(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
 						"node_uuid binary(16) NOT NULL, " +
 						"xsi_type varchar(50) DEFAULT NULL, " +
-//						"content text, " +
 						"user_id int(11) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
@@ -5781,7 +5505,6 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid RAW(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
 						"node_uuid RAW(16) NOT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
-//						"content CLOB, " +
 						"user_id NUMBER(11) DEFAULT NULL, " +
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL) ON COMMIT PRESERVE ROWS";
@@ -6567,11 +6290,8 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid binary(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
 						"node_uuid binary(16)  NOT NULL, " +
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
-//						"node_children_uuid blob, " +
 						"node_order int(12) NOT NULL, " +
-//						"metadata text NOT NULL, " +
 						"metadata_wad varchar(2048) NOT NULL, " +
-//						"metadata_epm text NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -6601,9 +6321,7 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid RAW(16)  NOT NULL, " +
 						"node_parent_uuid RAW(16) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
-//					"metadata CLOB DEFAULT NULL, " +
 						"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
-//					"metadata_epm CLOB DEFAULT NULL, " +
 						"res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_res_node_uuid RAW(16) DEFAULT NULL, " +
 						"res_context_node_uuid RAW(16)  DEFAULT NULL, " +
@@ -6704,7 +6422,6 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid binary(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
 						"node_uuid binary(16) NOT NULL, " +
 						"xsi_type varchar(50) DEFAULT NULL, " +
-//						"content text, " +
 						"user_id int(11) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
@@ -6716,7 +6433,6 @@ public class MysqlDataProvider implements DataProvider {
 						"new_uuid RAW(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
 						"node_uuid RAW(16) NOT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
-//						"content CLOB, " +
 						"user_id NUMBER(11) DEFAULT NULL, " +
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL) ON COMMIT PRESERVE ROWS";
@@ -7268,9 +6984,6 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object postNode(Connection c, MimeType inMimeType, String parentNodeUuid, String in,int userId, int groupId) throws Exception {
 
-		/// FIXME On devrait vérifier le droit d'ajouter.
-		/// Mais dans WAD il n'y a pas ce type de droit
-		// Retrait le temps de corriger ça, sinon un étudiant ne peux pas ajouter des auto-évaluations/commentaires, etc
 		/*
 	  NodeRight noderight = credential.getNodeRight(userId,groupId, parentNodeUuid, credential.ADD);
       if(!noderight.add)
@@ -7287,8 +7000,6 @@ public class MysqlDataProvider implements DataProvider {
 		String portfolioModelId = getPortfolioModelUuid(c, portfolioUid);
 
 		//TODO getNodeRight postNode
-
-		//	return "faux";
 
 		String inPars = DomUtils.cleanXMLData(in);
 		Document doc = DomUtils.xmlString2Document(inPars, new StringBuffer());
@@ -7335,7 +7046,6 @@ public class MysqlDataProvider implements DataProvider {
 		//TODO putNode getNodeRight
 		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
-		//return "faux";
 
 		long t_rights = System.currentTimeMillis();
 
@@ -7519,11 +7229,10 @@ public class MysqlDataProvider implements DataProvider {
 	public Object getResource(Connection c, MimeType outMimeType, String nodeParentUuid, int userId, int groupId) throws Exception
 	{
 		String[] data = getMysqlResourceByNodeParentUuid(c, nodeParentUuid);
-//		java.sql.ResultSet res =
-//		res.next();
+		
 		if(!cred.hasNodeRight(c, userId,groupId, nodeParentUuid, Credential.READ))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No READ credential ");
-		//return "faux";
+
 		String result = "<asmResource id=\""+data[0]+"\" contextid=\""+nodeParentUuid+"\"  >"+data[1]+"</asmResource>";
 
 		return result;
@@ -7695,10 +7404,6 @@ public class MysqlDataProvider implements DataProvider {
 			returnValue += "<resources>";
 			while(res.next())
 			{
-				if(!cred.hasNodeRight(c, userId,groupId, res.getString("res_node_uuid"),Credential.READ ))
-				{
-					//returnValue += null;
-				}
 				returnValue += "<resource "+DomUtils.getXmlAttributeOutput("id", res.getString("res_node_uuid"))+" />";
 			}
 			returnValue += "</resources>";
@@ -7711,14 +7416,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				if(firstNode) firstNode = false;
 				else returnValue +=" , ";
-				if(!cred.hasNodeRight(c, userId,groupId, res.getString("res_node_uuid"), Credential.READ))
-				{
-					//returnValue += null;
-				}
-				else
-				{
-					returnValue += "resource: { "+DomUtils.getJsonAttributeOutput("id", res.getString("res_node_uuid"))+" } ";
-				}
+				returnValue += "resource: { "+DomUtils.getJsonAttributeOutput("id", res.getString("res_node_uuid"))+" } ";
 			}
 			returnValue += "}";
 		}
@@ -7731,32 +7429,14 @@ public class MysqlDataProvider implements DataProvider {
 		if(!cred.isAdmin(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		//TODO GENERER Uuid
-		//String resourceUuid = UUID.randomUUID().toString();
-		//return this.insertMysqlResourceByNodeParentUuid(nodeParentUuid,in,userId);
 		in = DomUtils.filterXmlResource(in);
 
-		/*String resource;
-		try
-		{
-			resource = getResource(inMimeType, nodeParentUuid, userId).toString();
-		}
-		catch(Exception ex)
-		{
-			resource = null;
-		}*/
-
-		//if(resource==null)
-
-//		java.sql.ResultSet res = getMysqlResourceByNodeParentUuid(nodeParentUuid);
-//		res.next();
 		if(!cred.hasNodeRight(c, userId,groupId, nodeParentUuid, Credential.WRITE))
 		{
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
-			//return "faux";
 		}
 		else postNode(c, inMimeType, nodeParentUuid, in, userId, groupId);
-		//else throw new Exception("le noeud contient déjà un enfant de type asmResource !");
+		
 		return "";
 	}
 
@@ -7785,12 +7465,10 @@ public class MysqlDataProvider implements DataProvider {
 
 //		long t_convertXML = System.currentTimeMillis();
 
-		//	nodeType = rootNode.getNodeName();
 			node = (doc.getElementsByTagName("asmResource")).item(0);
 
 			if(!cred.hasNodeRight(c, userId,groupId, nodeParentUuid, Credential.WRITE))
 				throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
-		//return "faux";
 
 //		long t_checkRights = System.currentTimeMillis();
 
@@ -7798,10 +7476,8 @@ public class MysqlDataProvider implements DataProvider {
 
 //		long t_upddatePortTime = System.currentTimeMillis();
 
-		//putNode(inMimeType, nodeUuid, in, userId);
 			retVal = updateMysqlResource(c, nodeUuid,null,DomUtils.getInnerXml(node),userId);
 		}
-//		int retVal = updateMysqlResource(nodeParentUuid,null,DomUtils.getInnerXml(node),userId);
 
 //		long t_end = System.currentTimeMillis();
 
@@ -7938,12 +7614,9 @@ public class MysqlDataProvider implements DataProvider {
 				if( "#text".equals(child.getNodeName()) )
 					continue;
 
-				//if(!children.item(i).getNodeName().equals("#text"))
-				//	nodeChildren.add(children.item(i).getAttributes().getNamedItem("id").getNodeValue());
 				if(children.item(i).getNodeName().equals("metadata-wad"))
 				{
-					metadataWad = DomUtils.getNodeAttributesString(children.item(i));// " attr1=\"wad1\" attr2=\"wad2\" ";
-//					metadataWad = processMeta(userId, metadataWad);
+					metadataWad = DomUtils.getNodeAttributesString(children.item(i));
 
 					if( parseRights )
 					{
@@ -8180,12 +7853,6 @@ public class MysqlDataProvider implements DataProvider {
 					try
 					{
 						semanticTag = children.item(i).getAttributes().getNamedItem("semantictag").getNodeValue();
-						/*
-						else if(children.item(i).getNodeName().equals("semanticTag"))
-						{
-							semanticTag = DomUtils.getInnerXml(children.item(i));
-						}
-						//*/
 					}
 					catch(Exception ex)   {}
 
@@ -8213,17 +7880,6 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				else if(children.item(i).getAttributes()!=null)
 				{
-					/*
-					if(children.item(i).getAttributes().getNamedItem("id")!=null)
-					{
-
-						if(nodeChildrenUuid==null) nodeChildrenUuid = "";
-						if(j>0) nodeChildrenUuid += ",";
-						nodeChildrenUuid += children.item(i).getAttributes().getNamedItem("id").getNodeValue().toString();
-
-						j++;
-					}
-					//*/
 				}
 			}
 		}
@@ -8232,8 +7888,6 @@ public class MysqlDataProvider implements DataProvider {
 			// Pas d'enfants
 			ex.printStackTrace();
 		}
-
-		//System.out.println(uuid+":"+node.getNodeName()+":"+parentUuid+":"+nodeChildrenUuid);
 
 		// Si on est au debut de l'arbre, on stocke la définition du portfolio
 		// dans la table portfolio
@@ -8312,26 +7966,6 @@ public class MysqlDataProvider implements DataProvider {
 			else insertMysqlResource(c, uuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
 
 		}
-
-		// On vérifie enfin si on a importé des ressources fichiers dont l'UID correspond
-		// pour remplacer l'UID d'origine par l'UID generé
-		/*
-		if(portfolioRessourcesImportUuid.size()>0)
-		{
-			for(int k=0;k<portfolioRessourcesImportUuid.size();k++)
-			{
-				if(portfolioRessourcesImportUuid.get(k).equals(originUuid))
-				{
-					String portfolioRessourcesDestPath = portfolioRessourcesImportPath.get(k).replace(originUuid, uuid);
-					File f = new File(portfolioRessourcesImportPath.get(k));
-					f.renameTo(new File(portfolioRessourcesDestPath));
-					//System.out.println();
-					updateMysqlFileUuid(originUuid,uuid);
-				}
-
-			}
-		}
-		//*/
 
 		// On reparcourt ensuite les enfants pour continuer la recursivité
 		//		if(children!=null && sharedNode!=1)
@@ -9101,10 +8735,6 @@ public class MysqlDataProvider implements DataProvider {
 	{
 		String sql = "";
 		PreparedStatement st;
-		//try
-		//{
-		//if(credential.getPortfolioRight(userId, groupId, portfolioUuid, Credential.DELETE))
-		//{
 
 		try {
 
@@ -10927,31 +10557,8 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(resNode.next())
 		{
-			//					result.append(indentation+"<"+resNode.getString("asm_type")+" "+DomUtils.getXmlAttributeOutput("id",resNode.getString("node_uuid"))+" ");
-			//					//if(resNodes.getString("node_parent_uuid").length()>0)
-			//					//	result.append(getXmlAttributeOutput("parent-uuid",resNodes.getString("node_parent_uuid"))+" ");
-			//					//		result.append(DomUtils.getXmlAttributeOutput("semantictag",resNode.getString("semtag"))+" ");
-			//					String readRight= (nodeRight.read) ? "Y" : "N";
-			//					String writeRight= (nodeRight.write) ? "Y" : "N";
-			//					String submitRight= (nodeRight.submit) ? "Y" : "N";
-			//					String deleteRight= (nodeRight.delete) ? "Y" : "N";
-			//
-			//
-			//					result.append(DomUtils.getXmlAttributeOutput("read",readRight)+" ");
-			//					result.append(DomUtils.getXmlAttributeOutput("write",writeRight)+" ");
-			//					result.append(DomUtils.getXmlAttributeOutput("submit",submitRight)+" ");
-			//					result.append(DomUtils.getXmlAttributeOutput("delete",deleteRight)+" ");
-
-
-			//							result.append(DomUtils.getXmlAttributeOutput("xsi_type",resNode.getString("xsi_type"))+" ");
-
-			//		result.append(DomUtils.getXmlAttributeOutput("format",resNode.getString("format"))+" ");
-
-			//		result.append(DomUtils.getXmlAttributeOutput("modified",resNode.getTimestamp("modif_date").toGMTString())+" ");
-
 			if(!resNode.getString("asm_type").equals("asmResource"))
 			{
-//				if(!resNode.getString("metadata_wad").equals("") )
 				if(resNode.getString("metadata_wad")!=null && !resNode.getString("metadata_wad").equals("") )
 					result.append("<metadata-wad "+resNode.getString("metadata_wad")+"/>");
 				else
@@ -11098,7 +10705,6 @@ public class MysqlDataProvider implements DataProvider {
 		//TODO putNode getNodeRight
 		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
-		//return "faux";
 
 		t1=System.currentTimeMillis();
 		
@@ -11212,11 +10818,6 @@ public class MysqlDataProvider implements DataProvider {
 		System.out.println("Attribute manipulation: "+attrManip);
 		System.out.println("Update metadata: "+updateMeta);
 
-		//*/
-		//		if (1 == updatetMySqlNodeMetadata(nodeUuid,metadata)){
-		//			return ;
-		//		}
-
 		return status;
 	}
 
@@ -11281,7 +10882,6 @@ public class MysqlDataProvider implements DataProvider {
 		//TODO putNode getNodeRight
 		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
-		//return "faux";
 
 		// D'abord on supprime les noeuds existants
 		//deleteNode(nodeUuid, userId);
@@ -11294,8 +10894,6 @@ public class MysqlDataProvider implements DataProvider {
 		if(node.getNodeName().equals("metadata-wad"))
 		{
 			metadatawad = DomUtils.getNodeAttributesString(node);// " attr1=\"wad1\" attr2=\"wad2\" ";
-//			metadatawad = StringEscapeUtils.escapeXml10(metadatawad);
-//			metadatawad = processMeta(userId, metadatawad);
 		}
 
 		if (1 == updatetMySqlNodeMetadatawad(c, nodeUuid,metadatawad)){
@@ -11311,7 +10909,6 @@ public class MysqlDataProvider implements DataProvider {
 	{
 		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
-		//return "faux";
 
 		xmlNode = DomUtils.cleanXMLData(xmlNode);
 		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
@@ -11322,7 +10919,6 @@ public class MysqlDataProvider implements DataProvider {
 		if(node.getNodeName().equals("metadata-epm"))
 		{
 			metadataepm = DomUtils.getNodeAttributesString(node);// " attr1=\"wad1\" attr2=\"wad2\" ";
-//			metadataepm = processMeta(userId, metadataepm);
 		}
 
 		String sql = "";
@@ -11349,7 +10945,6 @@ public class MysqlDataProvider implements DataProvider {
 	{
 		if(!cred.hasNodeRight(c, userId,groupId,nodeUuid, Credential.WRITE))
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
-		//return "faux";
 
 		xmlNode = DomUtils.cleanXMLData(xmlNode);
 		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
@@ -11569,29 +11164,6 @@ public class MysqlDataProvider implements DataProvider {
 						{
 							portfolio_id = DomUtils.getInnerXml(children2.item(y));
 						}
-
-						//requete sql à refaire
-
-						//								  sqlInsert = "REPLACE INTO portfolio_(login, display_firstname, display_lastname,email, password) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)))";
-						//								  stInsert = connection.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
-						//						if (dbserveur.equals("oracle")){
-						//						}
-						//
-						//								  stInsert.setString(1, pm_label);
-						//								  stInsert.setString(2, portfolio_id);
-						//								  stInsert.executeUpdate();
-						//		  						  ResultSet rs = stInsert.getGeneratedKeys();
-						//									if (rs.next()) {
-						//										  id = rs.getInt(1);
-						//										}
-						//
-						//
-						//									result += "<model ";
-						//									result += DomUtils.getXmlAttributeOutputInt("id", id)+" ";
-						//									result += ">";
-						//									result += DomUtils.getXmlElementOutput("label", pm_label);
-						//									result += DomUtils.getXmlElementOutput("treeid", portfolio_id);
-						//									result += "</user>";
 					}
 				}
 			}
@@ -11960,11 +11532,6 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		String val = "erreur";
 		String sql = "";
 		PreparedStatement st;
-		/// SELECT grid, role, RD,WR,DL,AD,types_id,rules_id FROM rule_table rt LEFT JOIN group_right_info gri ON rt.role=gri.label LEFT JOIN node n ON n.portfolio_id=gri.portfolio_id WHERE rule_id=1 AND n.node_uuid=uuid2bin('d48cafa1-5180-4c83-9e22-5d4d45bbf6e2');
-		/// SELECT grid,bin2uuid(id),RD,WR,DL,SB,AD,types_id,rules_id FROM group_rights WHERE id=uuid2bin('d48cafa1-5180-4c83-9e22-5d4d45bbf6e2');
-
-		// If admin
-		// and reset is called
 
 		try
 		{
@@ -12038,22 +11605,6 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 								"(SELECT gri.grid FROM group_right_info gri, node n " +
 							"WHERE gri.label IN (?) AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?) ) ";
 
-						/*
-						if (dbserveur.equals("oracle")){
-							sql = "MERGE INTO group_rights d USING (" +
-									"SELECT gr.grid, gr.id, ? AS RD, 0 AS WR, 0 AS DL, 0 AS AD, NULL AS types_id, NULL AS rules_id " +
-									"FROM group_right_info gri, group_rights gr " +
-									"WHERE gri.label IN ? " +
-											"AND gri.grid=gr.grid " +
-											"AND gr.id IN (SELECT uuid FROM t_struc_nodeid)) s " +
-									"ON (d.id=s.id AND d.grid=s.grid) "+
-									"WHEN MATCHED THEN " +
-									"UPDATE SET d.RD=?, d.WR=s.WR, d.DL=s.DL, d.AD=s.AD, d.types_id=s.types_id, d.rules_id=s.rules_id " +
-									"WHEN NOT MATCHED THEN " +
-									"INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.AD, d.types_id, d.rules_id) " +
-									"VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.AD, s.types_id, s.rules_id)";
-						}
-						//*/
 						st = c.prepareStatement(sql);
 						if( "hide".equals(macroName) )
 						{
@@ -12153,31 +11704,6 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 							"WHERE id=uuid2bin(?) AND grid IN " +
 							"(SELECT gri.grid FROM group_right_info gri, node n " +
 							"WHERE gri.label IN (?) AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?) ) ";
-					/*
-					sql = "INSERT INTO group_rights(grid, id, RD, WR, DL, AD, types_id, rules_id) " +
-							"SELECT gri.grid, gr.id, 1, 0, 0, 0, NULL, NULL " +
-							"FROM group_right_info gri, group_rights gr " +
-							"WHERE gri.label IN "+showto+" " +
-							"AND gri.portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?)) " +
-							"AND gr.id IN (SELECT uuid FROM t_struc_nodeid) " +
-							"ON DUPLICATE KEY UPDATE RD=1, WR=0, DL=0, AD=0, types_id=NULL, rules_id=NULL";
-
-					if (dbserveur.equals("oracle")){
-						sql = "MERGE INTO group_rights d USING (" +
-								"SELECT gri.grid, gr.id, 1 AS RD, 0 AS WR, 0 AS DL, 0 AS AD, NULL AS types_id, NULL AS rules_id " +
-								"FROM group_right_info gri, group_rights gr " +
-								"WHERE gri.label IN "+showto+" " +
-								"AND gri.grid=gr.grid " +
-								"AND gri.portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?)) " +
-								"AND gr.id IN (SELECT uuid FROM t_struc_nodeid)) s " +
-								"ON (d.grid = s.grid AND d.id = s.id) " +
-								"WHEN MATCHED THEN " +
-								"UPDATE SET d.RD=s.RD, d.WR=s.WR, d.DL=s.DL, d.AD=s.AD, d.types_id=s.types_id, d.rules_id=s.rules_id " +
-								"WHEN NOT MATCHED THEN " +
-								"INSERT (d.grid, d.id, d.RD, d.WR, d.DL, d.AD, d.types_id, d.rules_id) " +
-								"VALUES (s.grid, s.id, s.RD, s.WR, s.DL, s.AD, s.types_id, s.rules_id)";
-					}
-					//*/
 					st = c.prepareStatement(sql);
 					st.setInt(1, 1);
 					st.setString(2, nodeUuid);
@@ -13173,9 +12699,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				rrgst = c.prepareStatement(sqlRRG, new String[]{"grid"});
 			}
 			rrgst.setInt(1, userId);
-			//      String sqlGU = "INSERT INTO group_info(grid,owner,label) VALUES(?,?,?)";
-			//      PreparedStatement gust = connection.prepareStatement(sqlGU);
-			//      gust.setInt(2, userId);
+
 			if( labelNode != null )
 			{
 				Node labelText = labelNode.getFirstChild();
@@ -14215,7 +13739,6 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					if(resNode.getString("res_node_uuid").length()>0)
 					{
 						result += "<asmResource id='"+resNode.getString("res_node_uuid")+"' contextid='"+resNode.getString("node_uuid")+"' xsi_type='"+resResource.getString("xsi_type")+"'>";
-						//String text = "<node>"+resResource.getString("content")+"</node>";
 						result += resResource.getString("content");
 						result += "</asmResource>";
 
@@ -14243,7 +13766,6 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					if(resNode.getString("res_context_node_uuid").length()>0)
 					{
 						result += "<asmResource id='"+resNode.getString("res_context_node_uuid")+"' contextid='"+resNode.getString("node_uuid")+"' xsi_type='"+resResource.getString("xsi_type")+"'>";
-						//String text = "<node>"+resResource.getString("content")+"</node>";
 						result += resResource.getString("content");
 						result += "</asmResource>";
 
@@ -14439,88 +13961,6 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					ex.printStackTrace();
 					return null;
 				}
-
-					/*
-					while(res3.next())
-					{
-					ResultSet resResource = getMysqlResource(res3.getString("res_res_node_uuid"));
-
-					if (resResource.next())
-					{String a = resResource.getString("xsi_type");
-					if((resResource.getString("xsi_type")).equals("nodeRes"))
-					{
-						if(res3.getString("res_res_node_uuid")!=null)
-							if(res3.getString("res_res_node_uuid").length()>0)
-							{
-								DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
-								DocumentBuilder documentBuilder = null;
-								Document document = null;
-
-								try {
-									documentBuilder = documentBuilderFactory.newDocumentBuilder();
-								} catch (ParserConfigurationException e) {
-									e.printStackTrace();
-								}
-
-								String text = "<node>"+resResource.getString("content")+"</node>";
-
-								try {
-									document = documentBuilder.parse(new ByteArrayInputStream(text.getBytes("UTF-8")));
-									//document = documentBuilder.parse(new InputSource(new StringReader(text)));
-								} catch (SAXException e) {
-									e.printStackTrace();
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-
-								String nom = document.getElementsByTagName("code").item(0).getTextContent();
-
-								/// FIXME: Search 3 levels down
-								if(nom != null)
-								{
-									if(nom.equals(code_parent))
-									{
-										String children = res3.getString("node_children_uuid");
-										String delim = ",";
-										String[] listChildren = null;
-										listChildren = children.split(delim);
-										result += "<nodes>";
-										for(int i = 0; i < listChildren.length; i++){
-											sql = "SELECT bin2uuid(node_uuid) AS node_uuid, metadata, asm_type "
-													+ "FROM node "
-													+ "WHERE node_uuid = uuid2bin(?) and metadata LIKE ?";
-											st = connection.prepareStatement(sql);
-											st.setString(1, listChildren[i]);
-											st.setString(2, "%semantictag=%"+semtag+"%");
-											res4 = st.executeQuery();
-
-											if(res4.next()){
-												result += "<node ";
-												result += DomUtils.getXmlAttributeOutput("id", res4.getString("node_uuid"));
-												result += ">";
-												if (res4.getString("asm_type").equalsIgnoreCase("asmContext"))
-												{
-													result += getRessource(res4.getString("node_uuid"), userId, groupId, "Context");
-												}
-												else{
-
-													result += getRessource(res4.getString("node_uuid"), userId, groupId, "nonContext");
-												}
-												result += "</node>";
-
-											}
-
-										}
-
-										result += "</nodes>";
-									}
-								}
-							}
-
-					}
-					}
-				}
-					//*/
 
 				return result;
 			}

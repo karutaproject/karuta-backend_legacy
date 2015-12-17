@@ -89,7 +89,6 @@ public class LTIServletUtils {
 		}
 
 		Connection connection = DriverManager.getConnection(url, info);
-		dataProvider.setConnection(connection);
 
 		return connection;
 	}

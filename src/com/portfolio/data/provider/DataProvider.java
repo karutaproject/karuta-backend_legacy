@@ -42,18 +42,6 @@ public interface DataProvider {
 	 */
 	public void dataProvider();
 
-//	public void setDataSource( DataSource source );
-
-//	public void disconnect();
-
-	public void setConnection( Connection c );
-
-//	public void connect(Properties connectionProperties) throws Exception;
-
-//	Connection getConnection();
-
-//	Credential getCredential();
-
 	/**
 	 * @param porfolioId Id du portfolio
 	 * @param semtag Filtre sur le tag semantique

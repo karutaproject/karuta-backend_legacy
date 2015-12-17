@@ -50,13 +50,6 @@ public class MongoDBDataProvider implements DataProvider {
 		// TODO Auto-generated method stub
 	}
 
-	@Override
-	public void setConnection( Connection c )
-	{
-
-	}
-
-
 	/*
 	@Override
 	public void setDataSource( DataSource source )
