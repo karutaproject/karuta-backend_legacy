@@ -485,9 +485,9 @@ public class Credential
 			if( node_uuid != null )
 			{
 				sql = "SELECT gu.userid " +
-						"FROM group_rights gr, group_right_info gri, group_info gi, group_user gu, credential c " +
-						"WHERE gr.grid=gri.grid AND gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
-						"gr.id=uuid2bin(?) " +
+						"FROM node n, group_right_info gri, group_info gi, group_user gu, credential c " +
+						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
+						"n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id " +
 						"AND gri.label='all' " +
 						"AND c.login='public'";
 				st = c.prepareStatement(sql);
