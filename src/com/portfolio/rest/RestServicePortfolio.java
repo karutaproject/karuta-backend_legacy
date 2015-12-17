@@ -27,6 +27,7 @@ import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
@@ -844,7 +845,7 @@ public class RestServicePortfolio
 	@Path("/portfolios/portfolio/{portfolio-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, "application/zip", MediaType.APPLICATION_OCTET_STREAM})
-	public Object getPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resource, @QueryParam("files") String files, @QueryParam("export") String export, @QueryParam("lang") String lang, @QueryParam("unit") String untilUnit)
+	public Object getPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resource, @QueryParam("files") String files, @QueryParam("export") String export, @QueryParam("lang") String lang, @QueryParam("level") String cutoff)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
@@ -852,12 +853,8 @@ public class RestServicePortfolio
 		Response response = null;
 		try
 		{
-			boolean limit = false;
-			if( null != untilUnit && "true".equals(untilUnit) )
-				limit = true;
-			
 			c = SqlUtils.getConnection(servContext);
-			String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, resource, "", ui.subId, limit).toString();
+			String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, resource, "", ui.subId, cutoff).toString();
 
 			if( "faux".equals(portfolio) )
 			{
@@ -868,6 +865,8 @@ public class RestServicePortfolio
 			{
 				/// Finding back code. Not really pretty
 				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
 				Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
 				NodeList codes = doc.getDocumentElement().getElementsByTagName("code");
 				// Le premier c'est celui du root
@@ -875,12 +874,14 @@ public class RestServicePortfolio
 				String code = "";
 				if( codenode != null )
 					code = codenode.getTextContent();
+				// Sanitize code
+				code = code.replace("_", "");
 
 				if( export != null )
 				{
 					response = Response
 							.ok(portfolio)
-							.header("content-disposition","attachment; filename = \""+code+"-"+time+".xml\"")
+							.header("content-disposition","attachment; filename = \""+code+"-"+timeFormat+".xml\"")
 							.build();
 				}
 				else if(resource != null && files != null)
@@ -1029,7 +1030,7 @@ public class RestServicePortfolio
 
 					response = Response
 							.ok(b, MediaType.APPLICATION_OCTET_STREAM)
-							.header("content-disposition","attachment; filename = \""+code+"-"+time+".zip")
+							.header("content-disposition","attachment; filename = \""+code+"-"+timeFormat+".zip")
 							.build();
 
 					// Temp file cleanup
@@ -1223,7 +1224,7 @@ public class RestServicePortfolio
 	@GET
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("unit") String untilUnit )
+	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") String cutoff )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -1233,11 +1234,7 @@ public class RestServicePortfolio
 			c = SqlUtils.getConnection(servContext);
 			if(portfolioUuid!=null)
 			{
-				boolean limit = false;
-				if( null != untilUnit && "true".equals(untilUnit) )
-					limit = true;
-
-				String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, groupId, this.label, null, null, ui.subId, limit).toString();
+				String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, groupId, this.label, null, null, ui.subId, cutoff).toString();
 				if(accept.equals(MediaType.APPLICATION_JSON))
 					returnValue = XML.toJSONObject(returnValue).toString();
 
@@ -5556,7 +5553,7 @@ public class RestServicePortfolio
 			for( int i=0; i<portfolio.size(); ++i )	// For all portfolio
 			{
 				String portfolioUuid = portfolio.get(i);
-				String portfolioStr = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, null, null, ui.subId, true).toString();
+				String portfolioStr = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, null, null, ui.subId, null).toString();
 				Document docPort = documentBuilder.parse(new ByteArrayInputStream(portfolioStr.getBytes("UTF-8")));
 
 				/// Fetch nodes inside those portfolios
