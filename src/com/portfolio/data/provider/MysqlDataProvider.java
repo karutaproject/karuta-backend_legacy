@@ -4554,14 +4554,19 @@ public class MysqlDataProvider implements DataProvider {
 						while( menuline.hasMoreTokens() )
 						{
 							String line = menuline.nextToken();
-							/// Format pour l'instant: mi6-parts,mission,Ajouter une mission,secret_agent
-							StringTokenizer tokens = new StringTokenizer(line, ",");
+							/// Format pour l'instant: code_portfolio,tag_sémantique,label@en/libellé@fr,rôles[;autre menu]
+							String[] tokens = line.split(",");
 							String menurolename = null;
 							for( int t=0; t<4; ++t )
-								menurolename = tokens.nextToken();
+								menurolename = tokens[3];
 
 							if( menurolename != null )
-								resolve.groups.put(menurolename.trim(), 0);
+							{
+								// Break down list of roles
+								String[] roles = menurolename.split(" ");
+								for( int i=0; i<roles.length; ++i )
+								resolve.groups.put(roles[i].trim(), 0);
+							}
 						}
 					}
 					Node notifyroles = attribMap.getNamedItem("notifyroles");
@@ -6022,7 +6027,33 @@ public class MysqlDataProvider implements DataProvider {
 						//*/
 						/// FIXME: Incomplete
 						/// FIXME: Incomplete
-						/// FIXME: Incomplete
+						Node menuroles = attribMap.getNamedItem("menuroles");
+						if(menuroles!=null)
+						{
+							/// Pour les diffÃ©rents items du menu
+							StringTokenizer menuline = new StringTokenizer(menuroles.getNodeValue(), ";");
+
+							while( menuline.hasMoreTokens() )
+							{
+								String line = menuline.nextToken();
+								/// Format pour l'instant: code_portfolio,tag_sémantique,label@en/libellé@fr,rôles[;autre menu]
+								String[] tokens = line.split(",");
+								String menurolename = null;
+								for( int t=0; t<4; ++t )
+									menurolename = tokens[3];
+
+								if( menurolename != null )
+								{
+									// Break down list of roles
+									String[] roles = menurolename.split(" ");
+									for( int i=0; i<roles.length; ++i )
+									{
+										// Ensure roles exists
+										postCreateRole(c, portfolioCode, roles[i], 1 );
+									}
+								}
+							}
+						}
 						Node actionroles = attribMap.getNamedItem("actionroles");
 						if(actionroles!=null)
 						{
@@ -12159,14 +12190,19 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						while( menuline.hasMoreTokens() )
 						{
 							String line = menuline.nextToken();
-							/// Format pour l'instant: mi6-parts,mission,Ajouter une mission,secret_agent
-							StringTokenizer tokens = new StringTokenizer(line, ",");
+							/// Format pour l'instant: code_portfolio,tag_sémantique,label@en/libellé@fr,rôles[;autre menu]
+							String[] tokens = line.split(",");
 							String menurolename = null;
 							for( int t=0; t<4; ++t )
-								menurolename = tokens.nextToken();
+								menurolename = tokens[3];
 
 							if( menurolename != null )
-								resolve.groups.put(menurolename.trim(), 0);
+							{
+								// Break down list of roles
+								String[] roles = menurolename.split(" ");
+								for( int i=0; i<roles.length; ++i )
+								resolve.groups.put(roles[i].trim(), 0);
+							}
 						}
 					}
 					Node notifyroles = attribMap.getNamedItem("notifyroles");
