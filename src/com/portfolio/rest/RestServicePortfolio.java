@@ -203,22 +203,6 @@ public class RestServicePortfolio
 			servConfig = sc;
 			servContext = context;
 			dataProvider = SqlUtils.initProvider(context, null);
-//			String dataProviderName  =  ConfigUtils.get("dataProviderClass");
-//			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
-
-			// Try to initialize Datasource
-			/*
-			InitialContext cxt = new InitialContext();
-			if ( cxt == null ) {
-				throw new Exception("no context found!");
-			}
-
-			/// Init this here, might fail depending on server hosting
-			ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
-			if ( ds == null ) {
-				throw new Exception("Data  jdbc/portfolio-backend source not found!");
-			}
-			//*/
 		}
 		catch( NullPointerException e )
 		{
@@ -238,24 +222,6 @@ public class RestServicePortfolio
 
 		try
 		{
-			/*
-			Connection c = SqlUtils.getConnection(servContext);
-			if(logRestRequests==1)
-			{
-				String httpHeaders = "";
-				Enumeration headerNames = httpServletRequest.getHeaderNames();
-				while(headerNames.hasMoreElements()) {
-					String headerName = (String)headerNames.nextElement();
-					httpHeaders += headerName+": "+httpServletRequest.getHeader(headerName)+"\n";
-				}
-				String url = httpServletRequest.getRequestURL().toString();
-				if(httpServletRequest.getQueryString()!=null) url += "?" + httpServletRequest.getQueryString().toString();
-				dataProvider.writeLog(c, url,
-						httpServletRequest.getMethod().toString(),
-						httpHeaders,
-						inBody, outBody, httpCode);
-			}
-				//*/
 		}
 		catch(Exception ex)
 		{
@@ -271,43 +237,6 @@ public class RestServicePortfolio
 	{
 		try
 		{
-//			Connection con = SqlUtils.getConnection(servContext);
-			/*
-			if( ds == null )	// Case where we can't deploy context.xml
-			{
-				con = SqlUtils.getConnection(servContext);
-				dataProvider.setConnection(con);
-			}
-			else
-			{
-				con = ds.getConnection();
-				dataProvider.setConnection(con);
-			}
-			//*/
-//			dataProvider.setConnection(con);
-//			dataProvider.setDataSource(ds);
-
-//			credential = new Credential(con);
-
-			/// Configure session
-			/// FIXME: Oracle part might be missing
-			/*
-			if( "mysql".equals(ConfigUtils.get("serverType")) )
-			{
-				PreparedStatement st = con.prepareStatement("SET SESSION group_concat_max_len = 1048576");	// 1MB
-				st.execute();
-				st.close();
-			}
-			//*/
-
-			/// Configure eventbus
-			//	    KEventHandler handlerDB = new HandlerDatabase(request, dataProvider);
-//			KEventHandler handlerLog = new HandlerLogging(request, dataProvider);
-//			KEventHandler handlerSakaiNotification = new HandlerNotificationSakai(request, dataProvider);
-
-			//        eventbus.addChain( handlerDB );
-//			eventbus.addChain( handlerLog );
-//			eventbus.addChain( handlerSakaiNotification );
 		}
 		catch ( Exception e )
 		{
@@ -391,7 +320,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -438,7 +366,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -493,7 +420,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -550,7 +476,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -614,7 +539,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -659,7 +583,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -708,7 +631,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -765,7 +687,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -813,7 +734,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -894,9 +814,6 @@ public class RestServicePortfolio
 
 					FileOutputStream fos = new FileOutputStream(tempZip);
 					ZipOutputStream zos = new ZipOutputStream(fos);
-//					BufferedOutputStream bos = new BufferedOutputStream(zos);
-
-					/// zos.setComment("Some comment");
 
 					/// Write xml file to zip
 					ZipEntry ze = new ZipEntry(portfolioUuid+".xml");
@@ -912,17 +829,6 @@ public class RestServicePortfolio
 //					String filterRes = "//asmResource/fileid[text()]";	// fileid which has something in it
 					String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
 					NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
-
-					/// Direct link to data
-					// String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
-
-					/*
-					String langatt = "";
-					if( lang != null )
-						langatt = "?lang="+lang;
-					else
-						langatt = "?lang=fr";
-					//*/
 
 					/// Fetch all files
 					for( int i=0; i<nodelist.getLength(); ++i )
@@ -987,11 +893,7 @@ public class RestServicePortfolio
 						filenameext = uuid +"_"+ lang +"."+ filenameext.substring(extindex);
 
 						// Save it to zip file
-//						int length = (int) entity.getContentLength();
 						InputStream content = entity.getContent();
-
-//						BufferedInputStream bis = new BufferedInputStream(entity.getContent());
-
 						ze = new ZipEntry(filenameext);
 						try
 						{
@@ -999,7 +901,6 @@ public class RestServicePortfolio
 							zos.putNextEntry(ze);
 							int inByte;
 							byte[] buf = new byte[4096];
-//							zos.write(bytes,0,inByte);
 							while( (inByte = content.read(buf)) != -1 )
 							{
 								totalread += inByte;
@@ -1007,7 +908,6 @@ public class RestServicePortfolio
 							}
 							System.out.println("FILE: "+filenameext+" -> "+totalread);
 							content.close();
-//							bis.close();
 							zos.closeEntry();
 						}
 						catch( Exception e )
@@ -1038,8 +938,6 @@ public class RestServicePortfolio
 				}
 				else
 				{
-					//try { this.userId = userId; } catch(Exception ex) { this.userId = -1; };
-					//	        	String returnValue = dataProvider.getPortfolio(new MimeType("text/xml"),portfolioUuid,this.userId, this.groupId, this.label, resource, files).toString();
 					if(portfolio.equals("faux")){
 
 						throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -1081,57 +979,10 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			if( dataProvider != null )
-//				dataProvider.disconnect();
 		}
 
 		return response;
 	}
-
-	/*@Path("/portfolios/portfolio/{portfolio-id}")
-	@GET
-	@Produces("application/zip")
-	public String getPortfolioZip( @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @PathParam("resource") Boolean resource, @PathParam("files") Boolean files)
-	{
-		initialize(httpServletRequest,true);
-		//httpServletRequest.setHeader("Content-Disposition", "attachment; filename=\""+code+"_"+now+".xml\";");
-        try
-		{
-        	//try { this.userId = userId; } catch(Exception ex) { this.userId = -1; };
-        	String returnValue = dataProvider.getPortfolioZip(new MimeType("text/xml"),portfolioUuid,this.userId, this.groupId, this.label, resource, files).toString();
-        	if(returnValue.equals("faux")){
-
-				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
-			}
-        	if(accept.equals(MediaType.APPLICATION_JSON))
-				returnValue = XML.toJSONObject(returnValue).toString();
-
-        	logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
-//        	dataProvider.disconnect();
-        	return returnValue;
-		}
-        catch(RestWebApplicationException ex)
-        {
-        	throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
-        }
-        catch(SQLException ex)
-        {
-        	logRestRequest(httpServletRequest, null, "Portfolio "+portfolioUuid+" not found",Status.NOT_FOUND.getStatusCode());
-//        	dataProvider.disconnect();
-        	throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio "+portfolioUuid+" not found");
-        }
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, null,ex.getMessage()+"\n\n"+ex.getStackTrace(), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-        finally
-        {
-          dataProvider.disconnect();
-        }
-	}*/
 
 	/**
 	 *	Return the portfolio from its code
@@ -1189,7 +1040,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1301,7 +1151,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1352,7 +1201,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1399,7 +1247,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1461,7 +1308,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1639,7 +1485,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1687,7 +1532,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 		return null;
 	}
@@ -1757,7 +1601,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1812,7 +1655,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1960,7 +1802,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2006,7 +1847,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2059,7 +1899,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2128,7 +1967,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2189,7 +2027,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2244,7 +2081,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2315,7 +2151,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2400,7 +2235,6 @@ public class RestServicePortfolio
 				}
 			}
 
-//			returnValue = dataProvider.postRRGCreate(ui.userId, xmlNode);
 			logRestRequest(httpServletRequest, xmlNode, "Change rights", Status.OK.getStatusCode());
 		}
 		catch(RestWebApplicationException ex)
@@ -2427,7 +2261,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return "";
@@ -2482,7 +2315,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2536,7 +2368,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2602,7 +2433,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2656,7 +2486,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2710,7 +2539,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2767,7 +2595,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2815,7 +2642,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2867,7 +2693,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2916,7 +2741,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2970,7 +2794,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3017,7 +2840,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getNodes",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			//            dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -3027,7 +2849,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3095,7 +2916,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3166,7 +2986,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return response;
@@ -3230,7 +3049,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3279,7 +3097,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3335,7 +3152,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3409,7 +3225,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3453,7 +3268,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3512,7 +3326,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3561,7 +3374,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3610,7 +3422,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3659,7 +3470,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3708,7 +3518,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3750,7 +3559,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3780,8 +3588,6 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role "+roleId+" not found");
 			}
 
-			//			if(accept.equals(MediaType.APPLICATION_JSON))
-			//				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -3806,7 +3612,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3836,8 +3641,6 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role "+" not found");
 			}
 
-			//			if(accept.equals(MediaType.APPLICATION_JSON))
-			//				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -3862,7 +3665,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3892,8 +3694,6 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role "+" not found");
 			}
 
-			//			if(accept.equals(MediaType.APPLICATION_JSON))
-			//				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -3918,7 +3718,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3948,8 +3747,6 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role "+" not found");
 			}
 
-			//			if(accept.equals(MediaType.APPLICATION_JSON))
-			//				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -3974,7 +3771,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4026,7 +3822,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4076,7 +3871,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4126,7 +3920,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4148,10 +3941,6 @@ public class RestServicePortfolio
 		{
 			c = SqlUtils.getConnection(servContext);
 			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteUsers(c, ui.userId, userid).toString());
-			//			 if(nbResourceDeleted==0)
-			//			 {
-			//				 System.out.print("supprim�");
-			//			 }
 			logRestRequest(httpServletRequest, null,null, Status.OK.getStatusCode());
 
 			return "user "+userid+" deleted";
@@ -4176,7 +3965,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4216,7 +4004,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4255,14 +4042,10 @@ public class RestServicePortfolio
 				String gid = groupnode.getAttributes().getNamedItem("id").getNodeValue();
 				if( gid != null )
 				{
-//					ui.groupId = Integer.parseInt(gid);
-//					session.setAttribute("gid", ui.groupId);
 				}
 			}
 			else if( groups.getLength() == 0 )	// Pas de groupe, on rend invalide le choix
 			{
-//				ui.groupId = -1;
-//				session.setAttribute("gid", ui.groupId);
 			}
 
 			return xmlGroups;
@@ -4281,58 +4064,8 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
-
-	/*
-	@Path("/resources/resource/file/{lang}/{node-id}")
-	@POST
-	@Produces(MediaType.APPLICATION_XML)
-	public String postFile( @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("node-id") String nodeParentUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		try
-		{
-			String filename = "";
-			MultipartRequest multi= new MultipartRequest(httpServletRequest,"c:\\temp\\upload",5*1024*1024);
-			Enumeration files = multi.getFileNames();
-			java.io.File f = null;
-			while(files.hasMoreElements()) {
-				String name=(String)files.nextElement();
-				filename = multi.getFilesystemName(name);
-				String type = multi.getContentType(name);
-				f = multi.getFile(name);
-			}
-			if (f!=null) {
-				InputStream is = new FileInputStream(f);
-				byte b[]=new byte[is.available()];
-				is.read(b);
-				String extension = filename.substring(filename.lastIndexOf(".")+1);
-				//PreparedStatement ps = new P
-				//String resId = wadbackend.WadNode.getResId(connexion,nodeId);
-				//outTrace.append("<br/>nodeId :"+nodeId+" resId:"+resId);
-				//wadbackend.WadFile.saveDocumentBD (connexion, resId, b, filename, extension, username, lang, outTrace) ;
-				//outTrace.append("<br/>filename :|"+filename+"|");
-				System.out.println(filename+" : "+extension+" : "+b.length);
-				//outPrint.append("<span id='file-filename'>"+filename+"</span>"+uploadFile_jsp[LANG][1]);
-				// ============================
-			} else {
-				//outPrint.append("<span id='file-filename'>"+uploadFile_jsp[LANG][2]+"</span>"+uploadFile_jsp[LANG][1]);
-				//outTrace.append("<br/>aucun fichier");
-			}
-			return "";
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, null,ex.getMessage()+"\n\n"+ex.getStackTrace(), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-	//*/
 
 	/**
 	 *	Send login information
@@ -4422,8 +4155,6 @@ public class RestServicePortfolio
 					session.setAttribute("subuser", "");
 					session.setAttribute("subuid", 0);
 				}
-				//				if(tokenID==null) throw new RestWebApplicationException(Status.FORBIDDEN, "invalid credential or invalid group member");
-				//				else if(tokenID.length()==0) throw new RestWebApplicationException(Status.FORBIDDEN, "invalid credential or invalid group member");
 
 				event.status = 200;
 				retVal = resultCredential[0];
@@ -4444,9 +4175,7 @@ public class RestServicePortfolio
 			status = 500;
 			retVal = ex.getMessage();
 			logger.error(ex.getMessage());
-//			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlCredential, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
@@ -4455,8 +4184,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			if( dataProvider != null )
-//				dataProvider.disconnect();
 		}
 		
 		return Response.status(status).entity(retVal).type(MediaType.APPLICATION_XML).build();
@@ -4545,7 +4272,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return Response.status(retVal).entity(retText).build();
@@ -4600,11 +4326,9 @@ public class RestServicePortfolio
 			{
 				session.setAttribute("user", sv.getUser());
 				session.setAttribute("uid",Integer.parseInt(userId));
-//				dataProvider.disconnect();
 			}
 			else
 			{
-//				dataProvider.disconnect();
 				return Response.status(403).entity("Login "+sv.getUser()+" not found or bad CAS auth (bad ticket or bad url service : "+completeURL+") : "+sv.getErrorMessage()).build();
 			}
 
@@ -4623,12 +4347,10 @@ public class RestServicePortfolio
 			}
 
 			return response;
-			//return Response.ok(xmlResponse).build();
 		}
 		catch(Exception ex)
 		{
 			ex.printStackTrace();
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :"+casUrlValidation);
 		}
 		finally
@@ -4724,7 +4446,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4774,7 +4495,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4814,74 +4534,9 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return returnValue;
-		/*
-		String xmlPortfolio = "";
-		try
-		{
-			MultipartRequest multi;
-			String os = System.getProperty("os.name").toLowerCase();
-			// windows
-			if(os.indexOf("win") >= 0)
-			{
-				multi = new MultipartRequest(httpServletRequest,"c:\\windows\\temp",5*1024*1024);
-			}
-			else
-			{
-				multi = new MultipartRequest(httpServletRequest,"/tmp",5*1024*1024);
-			}
-			Enumeration files = multi.getFileNames();
-			java.io.File f = null;
-			String type = "";
-			String name= "";
-
-			while(files.hasMoreElements()) {
-				name=(String)files.nextElement();
-				String filename = multi.getFilesystemName(name);
-				type = multi.getContentType(name);
-				f = multi.getFile(name);
-			}
-			if (f!=null)
-			{
-
-				xmlPortfolio = DomUtils.file2String(f.getPath(), new StringBuffer());
-			}
-		}
-		catch (Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlPortfolio, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		//*/
-
-//		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
-		/*
-		try
-		{
-			//try { this.userId = userId; } catch(Exception ex) { this.userId = -1; };
-			String returnValue = dataProvider.postPortfolio(new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId).toString();
-			logRestRequest(httpServletRequest, xmlPortfolio, returnValue, Status.OK.getStatusCode());
-			//	 				 	                        dataProvider.disconnect();
-			return returnValue;
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlPortfolio, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-		//*/
 	}
 
 	/**
@@ -4920,7 +4575,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4960,7 +4614,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5014,7 +4667,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return response;
@@ -5059,7 +4711,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5114,7 +4765,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return xmlUsers;
@@ -5161,7 +4811,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 		return response;
 	}
@@ -5206,7 +4855,6 @@ public class RestServicePortfolio
 			{
 				return Response.status(Status.NOT_MODIFIED).entity("Error in creation").build();
 			}
-//				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Error in creation");
 		}
 		catch(Exception ex)
 		{
@@ -5430,7 +5078,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5440,7 +5087,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5521,10 +5167,6 @@ public class RestServicePortfolio
 			if( portgroupnode != null )
 			{
 				String portgroupname = portgroupnode.getAttributes().getNamedItem("name").getNodeValue();
-				// Query portfolio group for list of uuid
-
-				// while( res.next() )
-				// portfolio.add(portfolio);
 
 				Node xpathNode = (Node) findXpath.evaluate(portgroupnode, XPathConstants.NODE);
 				nodefilter = xpathNode.getNodeValue();
@@ -5637,7 +5279,6 @@ public class RestServicePortfolio
 				}
 			}
 
-//			returnValue = dataProvider.postRRGCreate(ui.userId, xmlNode);
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -5655,7 +5296,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5665,7 +5305,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5706,7 +5345,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getRightsGroup",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5716,7 +5354,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5761,7 +5398,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getPortfolioRightInfo",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5771,7 +5407,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5816,7 +5451,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getRightInfo",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5826,7 +5460,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5871,7 +5504,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5881,7 +5513,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5925,7 +5556,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5935,7 +5565,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5975,7 +5604,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5985,7 +5613,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6025,7 +5652,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -6035,7 +5661,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6075,7 +5700,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -6085,7 +5709,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6125,7 +5748,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -6135,7 +5757,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6180,7 +5801,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -6190,7 +5810,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6235,7 +5854,6 @@ public class RestServicePortfolio
 		}
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		System.out.println(ui.User);
-		// checkCredential(httpServletRequest, user, token, group);
 		try
 		{
 			Elgg elgg = new Elgg(elggDefaultApiUrl,elggDefaultSiteUrl,elggApiKey,ui.User,  elggDefaultUserPassword);
@@ -6245,7 +5863,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "",javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 	}
@@ -6264,7 +5881,6 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
-		// checkCredential(httpServletRequest, user, token, group);
 		try
 		{
 			Elgg elgg = new Elgg(elggDefaultApiUrl,elggDefaultSiteUrl,elggApiKey,ui.User, elggDefaultUserPassword);
@@ -6274,7 +5890,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "",javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 	}
