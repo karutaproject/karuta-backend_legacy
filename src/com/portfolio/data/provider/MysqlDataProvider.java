@@ -2416,6 +2416,7 @@ public class MysqlDataProvider implements DataProvider {
 				String submitRight= result.getInt("SB")==1 ? "Y" : "N";
 				String deleteRight= result.getInt("DL")==1 ? "Y" : "N";
 				String macro = result.getString("rules_id");
+				String nodeDate = result.getString("modif_date");
 				
 				if( macro != null )
 				{
@@ -2438,6 +2439,8 @@ public class MysqlDataProvider implements DataProvider {
 				data.append(submitRight);
 				data.append("\" write=\"");
 				data.append(writeRight);
+				data.append("\" last_modif=\"");
+				data.append(nodeDate);
 				data.append("\" xsi_type=\"");
 				data.append(xsi_type);
 				data.append("\">");
@@ -2482,12 +2485,15 @@ public class MysqlDataProvider implements DataProvider {
 				if( res_res_node_uuid!=null && res_res_node_uuid.length()>0 )
 				{
 					String nodeContent = result.getString("r2_content");
+					String resModifdate = result.getString("r2_modif_date");
 					if( nodeContent != null )
 					{
 						data.append("<asmResource contextid=\"");
 						data.append(nodeUuid);
 						data.append("\" id=\"");
 						data.append(res_res_node_uuid);
+						data.append("\" last_modif=\"");
+						data.append(resModifdate);
 						data.append("\" xsi_type=\"nodeRes\">");
 						data.append(nodeContent.trim());
 						data.append("</asmResource>");
@@ -2498,12 +2504,15 @@ public class MysqlDataProvider implements DataProvider {
 				if( res_context_node_uuid!=null && res_context_node_uuid.length()>0 )
 				{
 					String nodeContent = result.getString("r3_content");
+					String resModifdate = result.getString("r3_modif_date");
 					if( nodeContent != null )
 					{
 						data.append("<asmResource contextid=\"");
 						data.append(nodeUuid);
 						data.append("\" id=\"");
 						data.append(res_context_node_uuid);
+						data.append("\" last_modif=\"");
+						data.append(resModifdate);
 						data.append("\" xsi_type=\"context\">");
 						data.append(nodeContent.trim());
 						data.append("</asmResource>");
@@ -2520,12 +2529,15 @@ public class MysqlDataProvider implements DataProvider {
 				if( res_node_uuid!=null && res_node_uuid.length()>0 )
 				{
 					String nodeContent = result.getString("r1_content");
+					String resModifdate = result.getString("r1_modif_date");
 					if( nodeContent != null )
 					{
 						data.append("<asmResource contextid=\"");
 						data.append(nodeUuid);
 						data.append("\" id=\"");
 						data.append(res_node_uuid);
+						data.append("\" last_modif=\"");
+						data.append(resModifdate);
 						data.append("\" xsi_type=\"");
 						data.append(result.getString("r1_type"));
 						data.append("\">");
@@ -2641,10 +2653,10 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
-						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, " +
-						"r1.xsi_type AS r1_type, r1.content AS r1_content, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
-						"r2.content AS r2_content, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
-						"r3.content AS r3_content, n.asm_type, n.xsi_type, " +
+						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, n.modif_date, " +
+						"r1.xsi_type AS r1_type, r1.content AS r1_content, r1.modif_date AS r1_modif_date, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
+						"r2.content AS r2_content, r2.modif_date AS r2_modif_date, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
+						"r3.content AS r3_content, r3.modif_date AS r3_modif_date, n.asm_type, n.xsi_type, " +
 						"1 AS RD, 1 AS WR, 1 AS SB, 1 AS DL, NULL AS types_id, NULL AS rules_id " +
 						"FROM node n " +
 						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +
@@ -2658,10 +2670,10 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
-						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, " +
-						"r1.xsi_type AS r1_type, r1.content AS r1_content, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
-						"r2.content AS r2_content, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
-						"r3.content AS r3_content, n.asm_type, n.xsi_type, " +
+						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, n.modif_date, " +
+						"r1.xsi_type AS r1_type, r1.content AS r1_content, r1.modif_date AS r1_modif_date, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
+						"r2.content AS r2_content, r2.modif_date AS r2_modif_date, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
+						"r3.content AS r3_content, r3.modif_date AS r3_modif_date, n.asm_type, n.xsi_type, " +
 						"1 AS RD, 0 AS WR, 0 AS SB, 0 AS DL, NULL AS types_id, NULL AS rules_id " +
 						"FROM node n " +
 						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +
@@ -2787,10 +2799,10 @@ public class MysqlDataProvider implements DataProvider {
 				/// Actuelle sélection des données
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
-						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, " +
-						"r1.xsi_type AS r1_type, r1.content AS r1_content, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
-						"r2.content AS r2_content, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
-						"r3.content AS r3_content, n.asm_type, n.xsi_type, " +
+						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, n.modif_date, " +
+						"r1.xsi_type AS r1_type, r1.content AS r1_content, r1.modif_date AS r1_modif_date, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
+						"r2.content AS r2_content, r2.modif_date AS r2_modif_date, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
+						"r3.content AS r3_content, r3.modif_date AS r3_modif_date, n.asm_type, n.xsi_type, " +
 						"tr.RD, tr.WR, tr.SB, tr.DL, gr.types_id, gr.rules_id " +
 						"FROM group_rights gr, t_rights tr " +
 						"LEFT JOIN node n ON tr.id=n.node_uuid " +
@@ -2801,10 +2813,10 @@ public class MysqlDataProvider implements DataProvider {
 						"UNION ALL " +	/// Union pour les données appartenant au créateur
 						"SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
-						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, " +
-						"r1.xsi_type AS r1_type, r1.content AS r1_content, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
-						"r2.content AS r2_content, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
-						"r3.content AS r3_content, n.asm_type, n.xsi_type, " +
+						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, n.modif_date, " +
+						"r1.xsi_type AS r1_type, r1.content AS r1_content, r1.modif_date AS r1_modif_date, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
+						"r2.content AS r2_content, r2.modif_date AS r2_modif_date, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
+						"r3.content AS r3_content, r3.modif_date AS r3_modif_date, n.asm_type, n.xsi_type, " +
 						"1 AS RD, 1 AS WR, 1 AS SB, 1 AS DL, NULL AS types_id, NULL AS rules_id " +
 						"FROM node n " +
 						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +
