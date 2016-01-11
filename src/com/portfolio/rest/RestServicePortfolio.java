@@ -4409,7 +4409,7 @@ public class RestServicePortfolio
 			String returnValue = dataProvider.getNodeWithXSL(c, new MimeType("text/xml"),nodeUuid,xslFile, parameters, ui.userId, groupId).toString();
 			if(returnValue.length() != 0)
 			{
-				if(accept.equals(MediaType.APPLICATION_JSON))
+				if(MediaType.APPLICATION_JSON.equals(accept))
 					returnValue = XML.toJSONObject(returnValue).toString();
 				logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 			}

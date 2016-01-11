@@ -3316,11 +3316,15 @@ public class MysqlDataProvider implements DataProvider {
 					" n.shared_node AS shared_node," +
 					" bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid," +
 					" bin2uuid(n.res_node_uuid) AS res_node_uuid," +
+					" n.modif_date," +
 					" r1.xsi_type AS r1_type, r1.content AS r1_content," +     // donnée res_node
 					" bin2uuid(n.res_res_node_uuid) as res_res_node_uuid," +
+					" r1.modif_date AS r1_modif_date, " +
 					" r2.content AS r2_content," +     // donnée res_res_node
 					" bin2uuid(n.res_context_node_uuid) as res_context_node_uuid," +
+					" r2.modif_date AS r2_modif_date, " +
 					" r3.content AS r3_content," +     // donnée res_context
+					" r3.modif_date AS r3_modif_date, " +
 					" n.asm_type, n.xsi_type," +
 					" tr.RD, tr.WR, tr.SB, tr.DL, NULL AS types_id, NULL AS rules_id," +   // info sur les droits
 					" bin2uuid(n.portfolio_id) AS portfolio_id" +
