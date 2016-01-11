@@ -37,6 +37,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -11764,6 +11765,11 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				
 				/// We then update the metadata notifying it was submitted
 				rootMeta.setAttribute("submitted", "Y");
+				/// Submitted date
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				String timeFormat = dt.format(time);
+				rootMeta.setAttribute("submitteddate", timeFormat);
 				String updatedMeta = DomUtils.getNodeAttributesString(rootMeta);
 				sql = "UPDATE node SET metadata_wad=? WHERE node_uuid=uuid2bin(?)";
 				st = c.prepareStatement(sql);
@@ -12236,6 +12242,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 
 					/// Now remove mention to being submitted
 					attribNode.removeAttribute("submitted");
+					attribNode.removeAttribute("submitteddate");
 					String resetMeta = DomUtils.getNodeAttributesString(attribNode);
 					sql = "UPDATE node SET metadata_wad=? WHERE node_uuid=uuid2bin(?)";
 					PreparedStatement stu = c.prepareStatement(sql);
