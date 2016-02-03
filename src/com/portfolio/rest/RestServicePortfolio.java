@@ -994,7 +994,7 @@ public class RestServicePortfolio
 	@Path("/portfolios/portfolio/code/{code}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public String getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources )
+	public Object getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -1005,9 +1005,13 @@ public class RestServicePortfolio
 				resources = "false";
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"),code,ui.userId, groupId, resources, ui.subId).toString();
-			if(returnValue.equals("faux")){
+			if( "faux".equals(returnValue)){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
+			}
+			if( "".equals(returnValue) )
+			{
+				return Response.status(Status.NOT_FOUND).entity("").build();
 			}
 			if(MediaType.APPLICATION_JSON.equals(accept))	// Not really used
 				returnValue = XML.toJSONObject(returnValue).toString();
@@ -1550,7 +1554,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfolios/instanciate/{portfolio-id}")
 	@POST
-	public String postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname, @QueryParam("owner") String setowner)
+	public Object postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname, @QueryParam("owner") String setowner)
 	{
 		String value = "Instanciate: "+portfolioId;
 
@@ -1583,6 +1587,10 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, returnValue);
 			else if( returnValue.startsWith("erreur") )
 				throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, returnValue);
+			else if( "".equals(returnValue) )
+			{
+				return Response.status(Status.NOT_FOUND).build();
+			}
 
 			return returnValue;
 		}

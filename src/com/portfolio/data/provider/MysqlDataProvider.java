@@ -3874,6 +3874,8 @@ public class MysqlDataProvider implements DataProvider {
 				ResultSet res = st.executeQuery();
 				if( res.next() )
 					portfolioUuid = res.getString("uuid");
+				else
+					portfolioUuid = null;
 			}
 
 			if( portfolioUuid == null )
