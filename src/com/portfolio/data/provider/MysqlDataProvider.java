@@ -5104,7 +5104,6 @@ public class MysqlDataProvider implements DataProvider {
 					"SELECT d.portfolio_id, d.new_uuid, p.user_id, p.model_id, d.modif_user_id, p.modif_date, p.active " +
 					"FROM t_data d INNER JOIN portfolio p " +
 					"ON d.node_uuid=p.root_node_uuid";
-
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
@@ -5114,6 +5113,29 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
+			
+			/// Check public state and act accordingly, it's in the root node
+			sql = "SELECT n.metadata FROM node n, portfolio p " +
+					"WHERE n.node_uuid=p.root_node_uuid AND p.portfolio_id=uuid2bin(?)";
+			st = c.prepareStatement(sql);
+			st.setString(1, newPortfolioUuid);
+			ResultSet res = st.executeQuery();
+			String rootmeta = "";
+			if( res.next() )
+				rootmeta = res.getString("n.metadata");
+			st.close();
+
+			try
+			{
+				/// Raw attribute parsing, I don't want to create a bunch of xml related objects just for that
+				if( rootmeta.contains("public=\"Y\"") )
+					setPublicState(c, userId, newPortfolioUuid, true);
+			}
+			catch(Exception ex)
+			{
+				ex.printStackTrace();
+			}
+
 		}
 		catch( Exception e )
 		{
