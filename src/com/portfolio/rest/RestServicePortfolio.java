@@ -1078,7 +1078,7 @@ public class RestServicePortfolio
 	@GET
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") String cutoff )
+	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") String cutoff, @QueryParam("public") String public_var )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -1112,11 +1112,16 @@ public class RestServicePortfolio
 				}
 				else
 				{
-					if( userId != null && credential.isAdmin(c, ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
+					if( public_var != null )
+					{
+						int publicid = credential.getMysqlUserUid(c, "public");
+						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, portfolioActive, 0).toString();
+					}
+					else if( userId != null && credential.isAdmin(c, ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
 					{
 						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId).toString();
 					}
-					else
+					else	/// For user logged in
 					{
 						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId).toString();
 					}

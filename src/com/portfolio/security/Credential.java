@@ -210,29 +210,27 @@ public class Credential
 		/// Create account
 	}
 
-	public String getMysqlUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception
+	public int getMysqlUserUid(Connection c, String login) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
 		ResultSet res;
+		int uid=0;
 
 		try
 		{
-			sql = "SELECT userid FROM credential WHERE login = ? and token = ?";
+			sql = "SELECT userid FROM credential WHERE login = ?";
 			st = c.prepareStatement(sql);
 			st.setString(1, login);
-			st.setString(2, token);
 			res = st.executeQuery();
 			if( res.next() )
-				return res.getString("userid");
-			else
-				return "0";
+				uid = res.getInt("userid");
 		}
 		catch(Exception ex)
 		{
 			ex.printStackTrace();
-			return null;
 		}
+		return uid;
 	}
 
 
@@ -473,7 +471,8 @@ public class Credential
 
 	}
 
-	/// From node, check if portoflio has user 'public' in group 'all'
+	/// From node, check if portoflio has user 'sys_public' in group 'all'
+	/// To differentiate between 'public' to the world, and 'public' to people with an account
 	public boolean isPublic( Connection c, String node_uuid, String portfolio_uuid )
 	{
 		PreparedStatement st = null;
@@ -489,7 +488,7 @@ public class Credential
 						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
 						"n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id " +
 						"AND gri.label='all' " +
-						"AND c.login='public'";
+						"AND c.login='sys_public'";
 				st = c.prepareStatement(sql);
 				st.setString(1, node_uuid);
 			}
@@ -500,7 +499,7 @@ public class Credential
 						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
 						"gri.portfolio_id=uuid2bin(?) " +
 						"AND gri.label='all' " +
-						"AND c.login='public'";
+						"AND c.login='sys_public'";
 				st = c.prepareStatement(sql);
 				st.setString(1, portfolio_uuid);
 			}
@@ -533,8 +532,8 @@ public class Credential
 
 		try
 		{
-			// Récupération du userid de 'public'
-			sql = "SELECT userid FROM credential WHERE login='public'";
+			// Fetching 'sys_public' userid
+			sql = "SELECT userid FROM credential WHERE login='sys_public'";
 			st = c.prepareStatement(sql);
 			res = st.executeQuery();
 			if(res.next())

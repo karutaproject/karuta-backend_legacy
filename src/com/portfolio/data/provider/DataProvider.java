@@ -58,6 +58,7 @@ public interface DataProvider {
 	public String[] postCredentialFromXml(Connection c, Integer userId, String username, String password, String substitute) throws ServletException, IOException;
 	public void getCredential(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException;
 	public String getMysqlUserUid (Connection c, String login) throws Exception;
+	@Deprecated
 	public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception;
 	public int deleteCredential(Connection c, int userId);
 	public boolean isAdmin( Connection c, String uid );

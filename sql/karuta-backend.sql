@@ -307,7 +307,8 @@ CREATE TABLE IF NOT EXISTS `data_table` (
 
 
 INSERT IGNORE INTO `credential` VALUES (1, 'root', 0, 1, 0, 1, 'root', '', NULL, UNHEX(SHA1('mati')), NULL, NULL);
-INSERT IGNORE INTO `credential` VALUES (2, 'public', 0, 0, 0, 1, 'Public account', '', NULL, UNHEX(SHA1('public')), NULL, NULL);
+INSERT IGNORE INTO `credential` VALUES (2, 'sys_public', 0, 0, 0, 1, 'System public account (users with account)', '', NULL, UNHEX(SHA1('THIS NEEDS TO BE CHANGED')), NULL, NULL);
+INSERT IGNORE INTO `credential` VALUES (3, 'public', 0, 0, 0, 1, 'Public account (World)', '', NULL, UNHEX(SHA1('public')), NULL, NULL);
 
 INSERT INTO `group_info` VALUES (1,1,1,'all'),(2,2,1,'designer');
 
