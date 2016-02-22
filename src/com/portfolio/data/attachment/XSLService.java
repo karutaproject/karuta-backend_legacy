@@ -627,6 +627,10 @@ public class XSLService  extends HttpServlet {
 			usefop = true;
 			ext = ".rtf";
 		}
+		else if( "application/csv".equals(format) )
+		{
+			ext = ".csv";
+		}
 
 		try
 		{
