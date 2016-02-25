@@ -174,6 +174,7 @@ public interface DataProvider {
 	public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId);
 	public Integer getRoleByNode( Connection c, int userId, String nodeUuid, String role );
 
+	public Integer putUserGroupLabel(Connection c, int user, int siteGroupId, String label);
 	public Integer putUserGroup(Connection c, String siteGroupId, String userId);
 	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid);
 

@@ -581,6 +581,12 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
+	public Integer putUserGroupLabel(Connection c, int user, int siteGroupId, String label)
+	{
+		return 0;
+	}
+
+	@Override
 	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid)
 	{
 		// TODO Auto-generated method stub

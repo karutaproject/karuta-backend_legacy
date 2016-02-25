@@ -962,7 +962,7 @@ public class RestServicePortfolio
 		catch(SQLException ex)
 		{
 			logRestRequest(httpServletRequest, null, "Portfolio "+portfolioUuid+" not found",Status.NOT_FOUND.getStatusCode());
-
+			logger.info("Portfolio "+portfolioUuid+" not found");
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio "+portfolioUuid+" not found");
 		}
 		catch(Exception ex)
@@ -4691,7 +4691,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/usersgroups")
 	@PUT
-	public String putUserInUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user)
+	public String putUserInUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user, @QueryParam("label") String label)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
@@ -4700,8 +4700,17 @@ public class RestServicePortfolio
 		{
 			int response = -1;
 			c = SqlUtils.getConnection(servContext);
-			response = dataProvider.putUserInUserGroup(c, user, group, ui.userId);
-			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
+			if( label != null )
+			{
+				// Rename group
+				response = dataProvider.putUserGroupLabel(c, user, group, label);
+			}
+			else
+			{
+				// Add user in group
+				response = dataProvider.putUserInUserGroup(c, user, group, ui.userId);
+				logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
+			}
 
 			return "";
 		}
@@ -4779,7 +4788,7 @@ public class RestServicePortfolio
 	}
 
 	/**
-	 *	Remote a user from a user group, or remove a usergroup
+	 *	Remove a user from a user group, or remove a usergroup
 	 *	DELETE /rest/api/usersgroups
 	 *	parameters:
 	 *	 - group: group id

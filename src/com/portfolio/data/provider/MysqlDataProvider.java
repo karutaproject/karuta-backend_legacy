@@ -13337,6 +13337,37 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 
 	@Override
+	public Integer putUserGroupLabel(Connection c, int user, int siteGroupId, String label)
+	{
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		try
+		{
+			sql = "UPDATE credential_group SET label=? WHERE cg=?";
+			st = c.prepareStatement(sql);
+			st.setString(1, label);
+			st.setInt(2, siteGroupId);
+			res = st.executeQuery();
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
+		return 0;
+	}
+	
+	@Override
 	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid)
 	{
 		String sql = "";
