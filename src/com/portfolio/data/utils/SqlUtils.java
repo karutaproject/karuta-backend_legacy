@@ -28,6 +28,8 @@ import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.dbcp2.cpdsadapter.DriverAdapterCPDS;
+import org.apache.commons.dbcp2.datasources.SharedPoolDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -75,16 +77,74 @@ public class SqlUtils
 	{
 		if( !loaded )
 		{
+			String dbdriver = ConfigUtils.get("DBDriver");
+			ConfigUtils.clear("DBDriver");
+			String dbuser = ConfigUtils.get("DBUser");
+			ConfigUtils.clear("DBUser");
+			String dbpass = ConfigUtils.get("DBPass");
+			ConfigUtils.clear("DBPass");
+			String dburl = ConfigUtils.get("DBUrl");
+			ConfigUtils.clear("DBUrl");
+
+			try
+			{
+				DriverAdapterCPDS cpds = new DriverAdapterCPDS();
+				cpds.setDriver(dbdriver);
+				cpds.setUrl(dburl);
+//				cpds.setUser(dbuser);
+//				cpds.setPassword(dbpass);
+				
+				Properties info = new Properties();
+				info.put("user", dbuser);
+				info.put("password", dbpass);
+				cpds.setConnectionProperties(info);
+				
+				SharedPoolDataSource tds = new SharedPoolDataSource();
+				tds.setConnectionPoolDataSource(cpds);
+				
+				/// TODO: Complete it with other parameters, also, benchmark
+				/// Configuring other stuff
+				tds.setValidationQuery("SELECT 1");
+				tds.setDefaultTestOnBorrow(true);
+				tds.setDefaultTestWhileIdle(true);
+				
+				String maxwait = ConfigUtils.get("DB.MaxWait");
+				String maxtotal = ConfigUtils.get("DB.MaxTotal");
+				String minidle = ConfigUtils.get("DB.MinIdle");
+				String maxidle = ConfigUtils.get("DB.MaxIdle");
+				String waiteviction = ConfigUtils.get("DB.WaitEviction");
+				/// In case something hasn't been set
+				if( maxwait == null ) maxwait = "1000";
+				if( maxtotal == null ) maxtotal = "1000";
+				if( minidle == null ) minidle = "1";
+				if( maxidle == null ) maxidle = "1000";
+				if( waiteviction == null ) waiteviction = "60000";
+				
+				tds.setDefaultMaxWaitMillis(Integer.decode(maxwait));
+				tds.setDefaultMaxTotal(Integer.decode(maxtotal));
+				tds.setDefaultMinIdle(Integer.decode(minidle));
+				tds.setDefaultMaxIdle(Integer.decode(maxidle));
+				tds.setDefaultTimeBetweenEvictionRunsMillis(Integer.decode(waiteviction));
+				
+				ds = tds;
+			}
+			catch( Exception e )
+			{
+				e.printStackTrace();
+			}
+
 			// Try to initialize Datasource
+			/*
 			cxt = new InitialContext();
 			if ( cxt == null ) {
 				throw new Exception("no context found!");
 			}
+			//*/
 	
 			/// Init this here, might fail depending on server hosting
 			try
 			{
-				ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
+//				ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
 			}
 			catch( Exception e )
 			{
@@ -92,11 +152,13 @@ public class SqlUtils
 			}
 			loaded = true;
 		}
-		
-		if( ds != null )	// Return the connection directly
+
+//		if( ds != null )	// Return the connection directly
 			return ds.getConnection();
-		
-		//// Case where we can't deploy context.xml
+
+		/// Deprecated with hosting
+		/*
+		//// Case where we can't deploy context.xml, load it raw via the DriverManager
 		// Open META-INF/context.xml
 		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
@@ -129,8 +191,9 @@ public class SqlUtils
 			st.execute();
 			st.close();
 		}
-
+		
 		return connection;
+		//*/
 	}
 
 	public static void close()
