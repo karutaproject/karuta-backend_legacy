@@ -198,7 +198,7 @@ public class DirectURLService  extends HttpServlet {
 			{
 				int pubid = 0;
 				/// Find public id and log as such
-				String sql = "SELECT userid FROM credential WHERE login='public'";
+				String sql = "SELECT userid FROM credential WHERE login='guest'";
 				PreparedStatement st = c.prepareStatement(sql);
 				ResultSet rs = st.executeQuery();
 				rs.next();

@@ -4601,7 +4601,10 @@ public class MysqlDataProvider implements DataProvider {
 						role.setNotify(merge);
 					}
 
-					// Check if we have to put the portfolio as public
+					// Check if base portfolio is public
+					if( cred.isPublic(c, null, portfolioUuid) )
+						setPublic = true;
+//					/*
 					meta = res.getString("metadata");
 					nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"/>";
 					is = new InputSource(new StringReader(nodeString));
@@ -4611,6 +4614,7 @@ public class MysqlDataProvider implements DataProvider {
 					Node publicatt = attribMap.getNamedItem("public");
 					if( publicatt != null && "Y".equals(publicatt.getNodeValue()) )
 						setPublic = true;
+					//*/
 				}
 				catch( Exception e )
 				{
@@ -5114,7 +5118,10 @@ public class MysqlDataProvider implements DataProvider {
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
 			
-			/// Check public state and act accordingly, it's in the root node
+			/// Check base portfolio's public state and act accordingly
+			if( cred.isPublic(c, null, portfolioUuid) )
+				setPublicState(c, userId, newPortfolioUuid, true);
+			/*
 			sql = "SELECT n.metadata FROM node n, portfolio p " +
 					"WHERE n.node_uuid=p.root_node_uuid AND p.portfolio_id=uuid2bin(?)";
 			st = c.prepareStatement(sql);
@@ -5135,6 +5142,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				ex.printStackTrace();
 			}
+			//*/
 
 		}
 		catch( Exception e )
@@ -6123,6 +6131,8 @@ public class MysqlDataProvider implements DataProvider {
 							postNotifyRoles(c, userId, portfolioUuid, uuid, merge);
 						}
 	
+						/// FIXME? Not sure why importing a node should check if the portfolio is public or not
+						/*
 						meta = res.getString("metadata");
 						nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"/>";
 						is = new InputSource(new StringReader(nodeString));
@@ -6142,6 +6152,7 @@ public class MysqlDataProvider implements DataProvider {
 						{
 							ex.printStackTrace();
 						}
+						//*/
 	
 					}
 					catch( Exception e )
@@ -7891,6 +7902,7 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				else if(children.item(i).getNodeName().equals("metadata"))
 				{
+//					/*
 					try
 					{
 						String publicatt = children.item(i).getAttributes().getNamedItem("public").getNodeValue();
@@ -7900,6 +7912,7 @@ public class MysqlDataProvider implements DataProvider {
 							setPublicState(c, userId, portfolioUuid, false);
 					}
 					catch(Exception ex) {}
+					//*/
 
 					String tmpSharedRes = "";
 					try
@@ -8161,15 +8174,11 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
+	@Deprecated
 	@Override
 	public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception
 	{
-		try{
-			return cred.getMysqlUserUidByTokenAndLogin(c, login, token);
-		}catch (ServletException e) {
-			e.printStackTrace();
-			return null;
-		}
+		return null;
 	}
 
 	@Override
@@ -8530,19 +8539,19 @@ public class MysqlDataProvider implements DataProvider {
 				c.commit();
 			}
 
-			if( isPublic )	// Insère ou retire 'public' dans le groupe 'all' du portfolio
+			if( isPublic )	// Insère ou retire 'sys_public' dans le groupe 'all' du portfolio
 			{
 				sql = "INSERT IGNORE INTO group_user(gid, userid) " +
-						"VALUES( ?, (SELECT userid FROM credential WHERE login='public'))";
+						"VALUES( ?, (SELECT userid FROM credential WHERE login='sys_public'))";
 				if (dbserveur.equals("oracle")){
 					sql = "INSERT /*+ ignore_row_on_dupkey_index(group_user,group_user_PK)*/ INTO group_user(gid, userid) " +
-							"VALUES(?,(SELECT userid FROM credential WHERE login='public'))";
+							"VALUES(?,(SELECT userid FROM credential WHERE login='sys_public'))";
 				}
 			}
 			else
 			{
 				sql = "DELETE FROM group_user " +
-						"WHERE userid=(SELECT userid FROM credential WHERE login='public') " +
+						"WHERE userid=(SELECT userid FROM credential WHERE login='sys_public') " +
 						"AND gid=?";
 			}
 
@@ -10803,6 +10812,8 @@ public class MysqlDataProvider implements DataProvider {
 			String tag = "";
 			NamedNodeMap attr = node.getAttributes();
 
+			/// Public has to be managed via the group/user function
+//			/*
 			try
 			{
 				String publicatt = attr.getNamedItem("public").getNodeValue();
@@ -10812,6 +10823,7 @@ public class MysqlDataProvider implements DataProvider {
 					setPublicState(c, userId, portfolioUid,false);
 			}
 			catch(Exception ex) {}
+			//*/
 
 			try
 			{
