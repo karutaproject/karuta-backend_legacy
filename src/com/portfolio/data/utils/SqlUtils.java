@@ -28,8 +28,8 @@ import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.commons.dbcp2.cpdsadapter.DriverAdapterCPDS;
-import org.apache.commons.dbcp2.datasources.SharedPoolDataSource;
+import org.apache.commons.dbcp.cpdsadapter.DriverAdapterCPDS;
+import org.apache.commons.dbcp.datasources.SharedPoolDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -62,7 +62,7 @@ public class SqlUtils
 	public static DataProvider initProvider(ServletContext application, Logger logger) throws Exception
 	{
 	//============= init servers ===============================
-//		String dataProviderName = ConfigUtils.get("dataProviderClass");
+		String dataProviderName = ConfigUtils.get("dataProviderClass");
 		if( dp == null )
 			dp = (DataProvider)Class.forName(dataProviderName).newInstance();
 
@@ -105,26 +105,29 @@ public class SqlUtils
 				/// TODO: Complete it with other parameters, also, benchmark
 				/// Configuring other stuff
 				tds.setValidationQuery("SELECT 1");
-				tds.setDefaultTestOnBorrow(true);
-				tds.setDefaultTestWhileIdle(true);
+				tds.setTestOnBorrow(false);
+				tds.setTestWhileIdle(true);
 				
 				String maxwait = ConfigUtils.get("DB.MaxWait");
 				String maxtotal = ConfigUtils.get("DB.MaxTotal");
 				String minidle = ConfigUtils.get("DB.MinIdle");
 				String maxidle = ConfigUtils.get("DB.MaxIdle");
 				String waiteviction = ConfigUtils.get("DB.WaitEviction");
+				String numtesteviction =  ConfigUtils.get("DB.NumTestEviction");
 				/// In case something hasn't been set
 				if( maxwait == null ) maxwait = "1000";
 				if( maxtotal == null ) maxtotal = "1000";
 				if( minidle == null ) minidle = "1";
 				if( maxidle == null ) maxidle = "1000";
 				if( waiteviction == null ) waiteviction = "60000";
+				if( numtesteviction == null ) numtesteviction = "10";
 				
-				tds.setDefaultMaxWaitMillis(Integer.decode(maxwait));
-				tds.setDefaultMaxTotal(Integer.decode(maxtotal));
-				tds.setDefaultMinIdle(Integer.decode(minidle));
-				tds.setDefaultMaxIdle(Integer.decode(maxidle));
-				tds.setDefaultTimeBetweenEvictionRunsMillis(Integer.decode(waiteviction));
+				tds.setMaxWait(Integer.decode(maxwait));
+				tds.setMaxActive(Integer.decode(maxtotal));
+//				tds.setDefaultMinIdle(Integer.decode(minidle));
+				tds.setMaxIdle(Integer.decode(maxidle));
+				tds.setTimeBetweenEvictionRunsMillis(Integer.decode(waiteviction));
+				tds.setNumTestsPerEvictionRun(Integer.decode(numtesteviction));
 				
 				ds = tds;
 			}
@@ -142,6 +145,7 @@ public class SqlUtils
 			//*/
 	
 			/// Init this here, might fail depending on server hosting
+			/*
 			try
 			{
 //				ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
@@ -150,11 +154,12 @@ public class SqlUtils
 			{
 				logger.info("Might not be possible to load context.xml: "+e.getMessage());
 			}
+			//*/
 			loaded = true;
 		}
 
 //		if( ds != null )	// Return the connection directly
-			return ds.getConnection();
+		return ds.getConnection();
 
 		/// Deprecated with hosting
 		/*
