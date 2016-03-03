@@ -864,13 +864,14 @@ public class RestServicePortfolio
 							if( "".equals(lang) ) lang = "fr";
 						}
 
+						String scheme = httpServletRequest.getScheme();	// http/https
 						String servlet = httpServletRequest.getRequestURI();
 						servlet = servlet.substring(0, servlet.indexOf("/", 7));
 						String server = httpServletRequest.getServerName();
 						int port = httpServletRequest.getServerPort();
 //						"http://"+ server + /resources/resource/file/ uuid ? lang= size=
 						// String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
-						String url = "http://"+server+":"+port+servlet+"/resources/resource/file/"+uuid+"?lang="+lang;
+						String url = scheme+"://"+server+":"+port+servlet+"/resources/resource/file/"+uuid+"?lang="+lang;
 						HttpGet get = new HttpGet(url);
 
 						// Transfer sessionid so that local request still get security checked
