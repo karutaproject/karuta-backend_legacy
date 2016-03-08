@@ -10762,12 +10762,17 @@ public class MysqlDataProvider implements DataProvider {
 
 
 		sql  = "UPDATE node SET ";
-		sql += "metadata_wad = ?";
+		sql += "metadata_wad=?, modif_date=?";
 		sql += " WHERE node_uuid = uuid2bin(?) ";
 		st = c.prepareStatement(sql);
 
 		st.setString(1, metadatawad);
-		st.setString(2, nodeUuid);
+		if (dbserveur.equals("mysql")){
+			st.setString(2, SqlUtils.getCurrentTimeStamp());
+		} else if (dbserveur.equals("oracle")){
+			st.setTimestamp(2, SqlUtils.getCurrentTimeStamp2());
+		}
+		st.setString(3, nodeUuid);
 
 		return st.executeUpdate();
 	}
