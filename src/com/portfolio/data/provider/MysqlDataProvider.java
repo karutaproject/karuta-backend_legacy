@@ -5117,7 +5117,10 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
-			
+
+			/// Force 'all' role creation
+			groupid = postCreateRole(c, newPortfolioUuid, "all", userId);
+
 			/// Check base portfolio's public state and act accordingly
 			if( cred.isPublic(c, null, portfolioUuid) )
 				setPublicState(c, userId, newPortfolioUuid, true);
