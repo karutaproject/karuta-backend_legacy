@@ -581,16 +581,16 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Integer putUserGroupLabel(Connection c, int user, int siteGroupId, String label)
+	public Boolean putUserGroupLabel(Connection c, Integer user, int siteGroupId, String label)
 	{
-		return 0;
+		return false;
 	}
 
 	@Override
-	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid)
+	public Boolean putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid)
 	{
 		// TODO Auto-generated method stub
-		return 0;
+		return false;
 	}
 
 	@Override
@@ -607,15 +607,15 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String deleteUsersGroups(Connection c, int usersgroup, int currentUid) {
+	public Boolean deleteUsersGroups(Connection c, int usersgroup, int currentUid) {
 		// TODO Auto-generated method stub
-		return null;
+		return false;
 	}
 
 	@Override
-	public String deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid) {
+	public Boolean deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid) {
 		// TODO Auto-generated method stub
-		return null;
+		return false;
 	}
 
 	@Override

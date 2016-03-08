@@ -175,16 +175,16 @@ public interface DataProvider {
 	public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId);
 	public Integer getRoleByNode( Connection c, int userId, String nodeUuid, String role );
 
-	public Integer putUserGroupLabel(Connection c, int user, int siteGroupId, String label);
+	public Boolean putUserGroupLabel(Connection c, Integer user, int siteGroupId, String label);
 	public Integer putUserGroup(Connection c, String siteGroupId, String userId);
-	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid);
+	public Boolean putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid);
 
 	public Object postGroup(Connection c, String xmlgroup, int userId) throws Exception ;
 	public boolean postGroupsUsers(Connection c, int user, int userId, int groupId);
 	public int postUserGroup(Connection c, String label, int userid);
 
-	public String deleteUsersGroups(Connection c, int usersgroup, int currentUid);
-	public String deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid);
+	public Boolean deleteUsersGroups(Connection c, int usersgroup, int currentUid);
+	public Boolean deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid);
 
 	/// Related to portfolio groups
 	public int postPortfolioGroup( Connection c, String groupname, String type, Integer parent, int userId );

@@ -4646,13 +4646,13 @@ public class RestServicePortfolio
 	 *	Create a new user group
 	 *	POST /rest/api/usersgroups
 	 *	parameters:
-	 *	 - name: Name of the group we are creating
+	 *	 - label: Name of the group we are creating
 	 *	return:
 	 *   - groupid
 	 **/
 	@Path("/usersgroups")
 	@POST
-	public int postUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname)
+	public String postUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("label") String groupname)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		int response = -1;
@@ -4683,7 +4683,7 @@ public class RestServicePortfolio
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 
-		return response;
+		return Integer.toString(response);
 	}
 
 	/**
@@ -4697,28 +4697,29 @@ public class RestServicePortfolio
 	 **/
 	@Path("/usersgroups")
 	@PUT
-	public String putUserInUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user, @QueryParam("label") String label)
+	public Response putUserInUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user, @QueryParam("label") String label)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
-
 		try
 		{
-			int response = -1;
 			c = SqlUtils.getConnection(servContext);
+			boolean isOK=false;
 			if( label != null )
 			{
 				// Rename group
-				response = dataProvider.putUserGroupLabel(c, user, group, label);
+				isOK = dataProvider.putUserGroupLabel(c, user, group, label);
 			}
 			else
 			{
 				// Add user in group
-				response = dataProvider.putUserInUserGroup(c, user, group, ui.userId);
+				isOK = dataProvider.putUserInUserGroup(c, user, group, ui.userId);
 				logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
 			}
-
-			return "";
+			if( isOK )
+				return Response.status(200).entity("Changed").build();
+			else
+				return Response.status(200).entity("Not OK").build();
 		}
 		catch(Exception ex)
 		{
@@ -4809,14 +4810,15 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		String response = "";
 		Connection c = null;
+		Boolean isOK=false;
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 			if( user == null )
-				response = dataProvider.deleteUsersGroups(c, group, ui.userId);
+				isOK = dataProvider.deleteUsersGroups(c, group, ui.userId);
 			else
-				response = dataProvider.deleteUsersFromUserGroups(c, user, group, ui.userId);
+				isOK = dataProvider.deleteUsersFromUserGroups(c, user, group, ui.userId);
 			logRestRequest(httpServletRequest, "", response, Status.OK.getStatusCode());
 
 		}

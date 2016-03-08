@@ -13233,7 +13233,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 
 		try
 		{
-			sql = "INSERT INTO  * FROM credential_group(label) VALUE(?)";
+			sql = "INSERT INTO credential_group(label) VALUE(?)";
 			if (dbserveur.equals("oracle"))
 				st = c.prepareStatement(sql, new String[]{"cg"});
 			else
@@ -13349,11 +13349,12 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 
 	@Override
-	public Integer putUserGroupLabel(Connection c, int user, int siteGroupId, String label)
+	public Boolean putUserGroupLabel(Connection c, Integer user, int siteGroupId, String label)
 	{
 		String sql = "";
 		PreparedStatement st = null;
 		ResultSet res = null;
+		boolean isOK=true;
 
 		try
 		{
@@ -13361,7 +13362,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			st = c.prepareStatement(sql);
 			st.setString(1, label);
 			st.setInt(2, siteGroupId);
-			res = st.executeQuery();
+			st.execute();
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -13376,15 +13377,16 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
       catch( SQLException e ){ e.printStackTrace(); }
 		}
 		
-		return 0;
+		return isOK;
 	}
 	
 	@Override
-	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid)
+	public Boolean putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid)
 	{
 		String sql = "";
 		PreparedStatement st = null;
 		ResultSet res = null;
+		boolean isOK=true;
 
 		try
 		{
@@ -13392,7 +13394,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			st = c.prepareStatement(sql);
 			st.setInt(1, siteGroupId);
 			st.setInt(2, user);
-			res = st.executeQuery();
+			st.execute();
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -13407,15 +13409,16 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
       catch( SQLException e ){ e.printStackTrace(); }
 		}
 		
-		return 0;
+		return isOK;
 	}
 	
 	@Override
-	public String deleteUsersGroups(Connection c, int usersgroup, int currentUid)
+	public Boolean deleteUsersGroups(Connection c, int usersgroup, int currentUid)
 	{
 		String sql = "";
 		PreparedStatement st = null;
 		ResultSet res = null;
+		Boolean isOK=true;
 
 		try
 		{
@@ -13424,12 +13427,12 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			sql = "DELETE FROM credential_group WHERE cg=?";
 			st = c.prepareStatement(sql);
 			st.setInt(1, usersgroup);
-			res = st.executeQuery();
+			st.execute();
 			
 			sql = "DELETE FROM credential_group_members WHERE cg=?";
 			st = c.prepareStatement(sql);
 			st.setInt(1, usersgroup);
-			res = st.executeQuery();
+			st.execute();
 			
 			c.setAutoCommit(true);
 
@@ -13448,15 +13451,16 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
       catch( SQLException e ){ e.printStackTrace(); }
 		}
 		
-		return null;
+		return isOK;
 	}
 
 	@Override
-	public String deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid)
+	public Boolean deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid)
 	{
 		String sql = "";
 		PreparedStatement st = null;
 		ResultSet res = null;
+		Boolean isOK=true;
 
 		try
 		{
@@ -13464,7 +13468,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			st = c.prepareStatement(sql);
 			st.setInt(1, usersgroup);
 			st.setInt(2, userId);
-			res = st.executeQuery();
+			st.execute();
 		}
 		catch (SQLException e)
 		{
@@ -13480,7 +13484,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
       catch( SQLException e ){ e.printStackTrace(); }
 		}
 		
-		return null;
+		return isOK;
 	}
 
 	
