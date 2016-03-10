@@ -13289,7 +13289,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			while(res.next())
 			{
 				result +="<group ";
-				result += DomUtils.getXmlAttributeOutput("cg", res.getString("cg"))+" ";
+				result += DomUtils.getXmlAttributeOutput("id", res.getString("cg"))+" ";
 				result += ">";
 				result += DomUtils.getXmlElementOutput("label", res.getString("label"));
 				result += "</group>";
