@@ -11728,8 +11728,14 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				if( roles.contains(grlabl) )	// Can activate it
 				{
 					String showto = metaAttr.getNamedItem("showtoroles").getNodeValue();
-					showto = showto.replace(" ", "','");
-//					showto = "('" + showto +"')";
+					String vallist = "?";
+					String[] valarray = showto.split(" ");
+					for(int i=0; i<valarray.length-1; ++i)
+					{
+						vallist += ",?";
+					}
+//					showto = showto.replace(" ", ",");
+//					showto = "'" + showto +"'";
 
 					//// Il faut qu'il y a un showtorole
 					if( !"".equals(showto) )
@@ -11738,23 +11744,25 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						sql = "UPDATE group_rights SET RD=? " +
 								"WHERE id=uuid2bin(?) AND grid IN " +
 								"(SELECT gri.grid FROM group_right_info gri, node n " +
-							"WHERE gri.label IN (?) AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?) ) ";
+							"WHERE gri.label IN ("+vallist+") AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?) ) ";
 
 						st = c.prepareStatement(sql);
 						if( "hide".equals(macroName) )
 						{
 							st.setInt(1, 0);
-							st.setString(2, nodeUuid);
-							st.setString(3, showto);
-							st.setString(4, nodeUuid);
 						}
 						else if( "show".equals(macroName) )
 						{
 							st.setInt(1, 1);
-							st.setString(2, nodeUuid);
-							st.setString(3, showto);
-							st.setString(4, nodeUuid);
 						}
+						st.setString(2, nodeUuid);
+						for( int i=0; i<valarray.length; ++i )
+						{
+							st.setString(3+i, valarray[i]);
+						}
+//						st.setString(3, showto);
+						st.setString(3+valarray.length, nodeUuid);
+
 						st.executeUpdate();
 						st.close();
 
