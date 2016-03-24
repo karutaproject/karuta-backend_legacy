@@ -436,7 +436,7 @@ public class XSLService  extends HttpServlet {
 			{
 
 				// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
-				String urlTarget = "http://"+ server + "/resources/resource/file/" + documentid;
+				String urlTarget = server + "/resources/resource/file/" + documentid;
 				System.out.println("Redirect @ "+urlTarget);
 				logger.error("Redirect @ "+urlTarget);
 
