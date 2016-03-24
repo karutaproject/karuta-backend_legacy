@@ -105,7 +105,7 @@ public class SqlUtils
 				/// TODO: Complete it with other parameters, also, benchmark
 				/// Configuring other stuff
 				tds.setValidationQuery("SELECT 1");
-				tds.setTestOnBorrow(false);
+				tds.setTestOnBorrow(true);
 				tds.setTestWhileIdle(true);
 				
 				String maxwait = ConfigUtils.get("DB.MaxWait");
