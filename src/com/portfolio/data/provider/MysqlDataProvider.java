@@ -5967,12 +5967,19 @@ public class MysqlDataProvider implements DataProvider {
 						if(att != null)
 						{
 							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							stRD.setString(2, uuid);
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
 								stRD.setString(1, nodeRole);
-								int result = stRD.executeUpdate();
+								stRD.setString(2, uuid);
+								try
+								{
+									int result = stRD.executeUpdate();
+								}
+								catch( Exception e )
+								{
+									logger.error("Role '"+nodeRole+"' might not exist in destination portfolio. (seenoderoles)");
+								}
 	//							System.out.println("RD "+nodeRole+" -> "+result+" : "+uuid);
 	//							credential.postGroupRight(nodeRole,uuid,Credential.READ,portfolioUuid,userId);
 							}
@@ -5981,24 +5988,39 @@ public class MysqlDataProvider implements DataProvider {
 						if(att != null)
 						{
 							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							stNoRD.setString(2, uuid);
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
 								stNoRD.setString(1, nodeRole);
-								int result = stNoRD.executeUpdate();
+								stNoRD.setString(2, uuid);
+								try
+								{
+									int result = stNoRD.executeUpdate();
+								}
+								catch( Exception e )
+								{
+									logger.error("Role '"+nodeRole+"' might not exist in destination portfolio. (showtoroles)");
+								}
 							}
 						}
 						att = attribMap.getNamedItem("delnoderoles");
 						if(att != null)
 						{
 							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							stDL.setString(2, uuid);
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
 								stDL.setString(1, nodeRole);
-								int result = stDL.executeUpdate();
+								stDL.setString(2, uuid);
+								try
+								{
+									int result = stDL.executeUpdate();
+								}
+								catch( Exception e )
+								{
+									logger.error("Role '"+nodeRole+"' might not exist in destination portfolio. (delroles)");
+								}
+
 	//							credential.postGroupRight(nodeRole,uuid,Credential.DELETE,portfolioUuid,userId);
 	//							System.out.println("DL "+nodeRole+" -> "+result+" : "+uuid);
 							}
@@ -6007,12 +6029,19 @@ public class MysqlDataProvider implements DataProvider {
 						if(att != null)
 						{
 							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							stWR.setString(2, uuid);
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
 								stWR.setString(1, nodeRole);
-								int result = stWR.executeUpdate();
+								stWR.setString(2, uuid);
+								try
+								{
+									int result = stWR.executeUpdate();
+								}
+								catch( Exception e )
+								{
+									logger.error("Role '"+nodeRole+"' might not exist in destination portfolio. (editnoderoles)");
+								}
 	//							credential.postGroupRight(nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
 	//							System.out.println("WR "+nodeRole+" -> "+result+" : "+uuid);
 							}
@@ -6021,12 +6050,19 @@ public class MysqlDataProvider implements DataProvider {
 						if(att != null)
 						{
 							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							stSB.setString(2, uuid);
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
 								stSB.setString(1, nodeRole);
-								int result = stSB.executeUpdate();
+								stSB.setString(2, uuid);
+								try
+								{
+									int result = stSB.executeUpdate();
+								}
+								catch( Exception e )
+								{
+									logger.error("Role '"+nodeRole+"' might not exist in destination portfolio. (submitroles)");
+								}
 	//							credential.postGroupRight(nodeRole,uuid,Credential.SUBMIT,portfolioUuid,userId);
 	//							System.out.println("SB "+nodeRole+" -> "+result+" : "+uuid);
 							}
@@ -6056,12 +6092,19 @@ public class MysqlDataProvider implements DataProvider {
 						if(att != null)
 						{
 							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							stWR.setString(2, uuid);
 							while (tokens.hasMoreElements())
 							{
 								nodeRole = tokens.nextElement().toString();
 								stWR.setString(1, nodeRole);
-								int result = stWR.executeUpdate();
+								stWR.setString(2, uuid);
+								try
+								{
+									int result = stWR.executeUpdate();
+								}
+								catch( Exception e )
+								{
+									logger.error("Role '"+nodeRole+"' might not exist in destination portfolio. (editresroles)");
+								}
 	//							credential.postGroupRight(nodeRole,uuid,Credential.WRITE,portfolioUuid,userId);
 	//							System.out.println("WR2 "+nodeRole+" -> "+result+" : "+uuid);
 							}
