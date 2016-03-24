@@ -211,7 +211,7 @@ CREATE TABLE IF NOT EXISTS `credential_group_members` (
 -- Portfolio group
 CREATE TABLE IF NOT EXISTS `portfolio_group` (
   `pg` bigint(20) NOT NULL AUTO_INCREMENT,
-  `label` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `label` varchar(255) COLLATE utf8_unicode_ci NOT NULL UNIQUE,
   `type` enum('GROUP','PORTFOLIO') COLLATE utf8_unicode_ci NOT NULL,
   `pg_parent` bigint(20),
   PRIMARY KEY (`pg`)

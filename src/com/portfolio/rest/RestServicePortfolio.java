@@ -4692,6 +4692,7 @@ public class RestServicePortfolio
 	 *	parameters:
 	 *	 - group: group id
 	 *	 - user: user id
+	 *	 - label: label
 	 *	return:
 	 *	 Code 200
 	 **/
@@ -4760,7 +4761,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/usersgroups")
 	@GET
-	public String getUsersByUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group)
+	public String getUsersByUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
@@ -4769,7 +4770,9 @@ public class RestServicePortfolio
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			if( group == null )
+			if( user != null )
+				xmlUsers = dataProvider.getGroupByUser(c, user, ui.userId);
+			else if( group == null )
 				xmlUsers = dataProvider.getUserGroupList(c, ui.userId);
 			else
 				xmlUsers = dataProvider.getUsersByUserGroup(c, group, ui.userId);
@@ -4855,7 +4858,7 @@ public class RestServicePortfolio
 	 *	Create a new portfolio group
 	 *	POST /rest/api/portfoliogroups
 	 *	parameters:
-	 *	 - name: Name of the group we are creating
+	 *	 - label: Name of the group we are creating
 	 *	 - parent: parentid
 	 *	 - type: group/portfolio
 	 *	return:
@@ -4863,7 +4866,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@POST
-	public Response postPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname, @QueryParam("type") String type, @QueryParam("parent") Integer parent)
+	public Response postPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("label") String groupname, @QueryParam("type") String type, @QueryParam("parent") Integer parent)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		int response = -1;
@@ -4911,7 +4914,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@PUT
-	public String putPortfolioInPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String uuid)
+	public Response putPortfolioInPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String uuid, @QueryParam("label") String label )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
@@ -4920,10 +4923,10 @@ public class RestServicePortfolio
 		{
 			c = SqlUtils.getConnection(servContext);
 			int response = -1;
-			response = dataProvider.putPortfolioInGroup(c, uuid, group, ui.userId);
+			response = dataProvider.putPortfolioInGroup(c, uuid, group, label, ui.userId);
 			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
 
-			return "";
+			return Response.ok(Integer.toString(response)).build();
 		}
 		catch(Exception ex)
 		{
@@ -4964,7 +4967,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@GET
-	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group)
+	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("portfolioid") String portfolioid)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
@@ -4973,7 +4976,11 @@ public class RestServicePortfolio
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			if( group == null )
+			if( portfolioid != null )
+			{
+				xmlUsers = dataProvider.getPortfolioGroupListFromPortfolio(c, portfolioid, ui.userId);
+			}
+			else if( group == null )
 				xmlUsers = dataProvider.getPortfolioGroupList(c, ui.userId);
 			else
 				xmlUsers = dataProvider.getPortfolioByPortfolioGroup(c, group, ui.userId);

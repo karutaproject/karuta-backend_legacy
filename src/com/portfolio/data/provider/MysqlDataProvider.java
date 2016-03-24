@@ -13358,6 +13358,50 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 	
 	@Override
+	public String getGroupByUser(Connection c, int user, int userId)
+	{
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		String result = "<groups>";
+		try
+		{
+			sql = "SELECT * FROM credential_group cg, credential_group_members cgm " +
+					"WHERE cg.cg=cgm.cg AND cgm.userid=?";
+			st = c.prepareStatement(sql);
+			st.setInt(1, user);
+			res = st.executeQuery();
+
+			while(res.next())
+			{
+				result +="<group ";
+				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("cg.cg"))+" ";
+				result += ">";
+				result += "<label>"+res.getString("cg.label")+"</label>";
+				result += "</group>";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		result += "</groups>";
+
+		return result;
+	}
+
+	@Override
 	public String getUsersByUserGroup(Connection c, int userGroupId, int userId)
 	{
 		String sql = "";
@@ -13374,7 +13418,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 
 			while(res.next())
 			{
-				result +="<user";
+				result +="<user ";
 				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("userid"))+" ";
 				result += ">";
 				result += "</user>";
@@ -13612,6 +13656,56 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 	
 	@Override
+	public String getPortfolioGroupListFromPortfolio(Connection c, String portfolioid,  int userId )
+	{
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		StringBuilder result = new StringBuilder();
+		result.append("<portfolio id=\"").append(portfolioid).append("\">");
+//		String result = "<group id=\""+portfolioGroupId+"\">";
+		try
+		{
+			sql = "SELECT pg, label FROM portfolio_group_members pgm, portfolio_group pg " +
+					"WHERE pg.pg=pgm.pg AND portfolio_id=uuid2bin(?)";
+			st = c.prepareStatement(sql);
+			st.setString(1, portfolioid);
+			res = st.executeQuery();
+
+			while(res.next())
+			{
+				result.append("<group");
+				result.append(" id=\"");
+				result.append(res.getString("pg"));
+				result.append("\">");
+				result.append(res.getString("label"));
+//				result += ">";
+				result.append("</group>");
+//				result += "</portfolio>";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		result.append("</portfolio>");
+//		result += "</group>";
+
+		return result.toString();
+	}
+	
+	@Override
 	public String getPortfolioGroupList( Connection c, int userId )
 	{
 		String sql = "";
@@ -13645,7 +13739,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						reconstruct(data, child);
 					}
 					// Close node tag
-					data.append("</group").append(tree.type).append(">");
+					data.append("</group>");
 				}
 			}
 			
@@ -13660,7 +13754,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				currNode.setLength(0);
 				String pgStr = res.getString("pg");
 				String type = res.getString("type");
-				currNode.append("<group").append(type).append(" pg=\"");
+				currNode.append("<group type='").append(type.toLowerCase()).append("' id=\"");
 				currNode.append(pgStr);
 				currNode.append("\"><label>");
 				currNode.append(res.getString("label"));
@@ -13763,7 +13857,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 
 	@Override
-	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, int userId )
+	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, String label, int userId )
 	{
 		String sql = "";
 		PreparedStatement st = null;
@@ -13771,32 +13865,43 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 
 		try
 		{
-			/// Check if exist with correct type
-			sql = "SELECT pg FROM portfolio_group WHERE pg=? AND type='PORTFOLIO'";
-			st = c.prepareStatement(sql);
-			st.setInt(1, portfolioGroupId);
-			res = st.executeQuery();
-			if( !res.next() )
-				return -1;
-			
-			res.close();
-			st.close();
-			
-			sql = "SELECT portfolio_id FROM portfolio WHERE portfolio_id=uuid2bin(?)";
-			st = c.prepareStatement(sql);
-			st.setString(1, uuid);
-			res = st.executeQuery();
-			if( !res.next() )
-				return -1;
-			
-			res.close();
-			st.close();
-			
-			sql = "INSERT INTO portfolio_group_members(pg, portfolio_id) VALUES(?, uuid2bin(?))";
-			st = c.prepareStatement(sql);
-			st.setInt(1, portfolioGroupId);
-			st.setString(2, uuid);
-			st.executeUpdate();
+			if( label != null )
+			{
+				sql = "UPDATE portfolio_group SET label=? WHERE pg=?";
+				st = c.prepareStatement(sql);
+				st.setString(1, label);
+				st.setInt(2, portfolioGroupId);
+				st.execute();
+			}
+			else
+			{
+				/// Check if exist with correct type
+				sql = "SELECT pg FROM portfolio_group WHERE pg=? AND type='PORTFOLIO'";
+				st = c.prepareStatement(sql);
+				st.setInt(1, portfolioGroupId);
+				res = st.executeQuery();
+				if( !res.next() )
+					return -1;
+				
+				res.close();
+				st.close();
+				
+				sql = "SELECT portfolio_id FROM portfolio WHERE portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, uuid);
+				res = st.executeQuery();
+				if( !res.next() )
+					return -1;
+				
+				res.close();
+				st.close();
+				
+				sql = "INSERT INTO portfolio_group_members(pg, portfolio_id) VALUES(?, uuid2bin(?))";
+				st = c.prepareStatement(sql);
+				st.setInt(1, portfolioGroupId);
+				st.setString(2, uuid);
+				st.executeUpdate();
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -13820,7 +13925,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	{
 		String sql = "";
 		PreparedStatement st = null;
-		ResultSet res = null;
+		boolean res = false;
 
 		try
 		{
@@ -13829,12 +13934,12 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			sql = "DELETE FROM portfolio_group WHERE pg=?";
 			st = c.prepareStatement(sql);
 			st.setInt(1, portfolioGroupId);
-			res = st.executeQuery();
+			res = st.execute();
 			
 			sql = "DELETE FROM portfolio_group_members WHERE pg=?";
 			st = c.prepareStatement(sql);
 			st.setInt(1, portfolioGroupId);
-			res = st.executeQuery();
+			res = st.execute();
 			
 			c.setAutoCommit(true);
 
@@ -13847,8 +13952,6 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		{
 			try
 			{
-				if( res != null )
-					res.close();
 				if( st != null )
 					st.close();
       }

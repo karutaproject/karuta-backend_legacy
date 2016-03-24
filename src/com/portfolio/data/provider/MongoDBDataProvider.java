@@ -601,6 +601,12 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
+	public String getGroupByUser(Connection c, int user, int userId)
+	{
+		return null;
+	}
+
+	@Override
 	public String getUsersByUserGroup(Connection c, int userId, int groupId) {
 		// TODO Auto-generated method stub
 		return null;
@@ -624,9 +630,16 @@ public class MongoDBDataProvider implements DataProvider {
 		return -1;
 	}
 
+	@Override
 	public int postPortfolioGroup( Connection c, String groupname, String type, Integer parent, int userId )
 	{
 		return 0;
+	}
+	
+	@Override
+	public String getPortfolioGroupListFromPortfolio(Connection c, String portfolioid,  int userId )
+	{
+		return null;
 	}
 	
 	@Override
@@ -648,7 +661,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, int userId )
+	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, String label, int userId )
 	{
 		return 0;
 	}

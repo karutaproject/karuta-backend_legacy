@@ -170,6 +170,7 @@ public interface DataProvider {
 	public boolean isUserMemberOfGroup(Connection c, int userId, int groupId);
 	public String getRoleUser(Connection c, int userId, int userid2);
 	public String getUserGroupList(Connection c, int userId);
+	public String getGroupByUser(Connection c, int user, int userId);
 	public String getUsersByUserGroup(Connection c, int userGroupId, int userId);
 	public String getGroupsByRole(Connection c, int userId, String portfolioUuid, String role);
 	public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId);
@@ -188,10 +189,11 @@ public interface DataProvider {
 
 	/// Related to portfolio groups
 	public int postPortfolioGroup( Connection c, String groupname, String type, Integer parent, int userId );
+	public String getPortfolioGroupListFromPortfolio(Connection c, String portfolioid,  int userId );
 	public String getPortfolioGroupList( Connection c, int userId );
 	public String getPortfolioByPortfolioGroup( Connection c, Integer portfolioGroupId, int userId );
 	public String deletePortfolioGroups( Connection c, int portfolioGroupId, int userId );
-	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, int userId );
+	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, String label, int userId );
 	public String deletePortfolioFromPortfolioGroups( Connection c, String uuid, int portfolioGroupId, int userId );
 
 	/// Relatif aux groupe de droits
