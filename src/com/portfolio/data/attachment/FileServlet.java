@@ -302,7 +302,7 @@ public class FileServlet  extends HttpServlet
 			fileid = fileid.substring(last);
 	
 			/// écriture des données
-			String urlTarget = "http://"+ server + "/" + fileid+doCopy;
+			String urlTarget = server + "/" + fileid+doCopy;
 	//		String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
 	
 			// Unpack form, fetch binary data and send
@@ -659,7 +659,7 @@ public class FileServlet  extends HttpServlet
 			/// Envoie de la requête au servlet de fichiers
 			// http://localhost:8080/MiniRestFileServer/user/claudecoulombe/file/a8e0f07f-671c-4f6a-be6c-9dba12c519cf/ptype/sql
 			/// TODO: Ne plus avoir besoin du switch
-			String urlTarget = "http://"+ server + "/" + resolve;
+			String urlTarget = server + "/" + resolve;
 			
 			if( "T".equals(size) )
 				urlTarget = urlTarget + "/thumb";

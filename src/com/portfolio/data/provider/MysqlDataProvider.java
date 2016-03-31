@@ -11908,7 +11908,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
                 
                 
                 HttpClient client = new HttpClient();
-                HttpMethod method = new GetMethod("http://localhost:8080/karuta-backend/compare/"+uuids);
+                String backend = ConfigUtils.get("backendserver");
+                HttpMethod method = new GetMethod(backend+"/compare/"+uuids);
                 int obj = client.executeMethod(method);
                 String rep = method.getResponseBodyAsString();
                 int prctElv = Integer.parseInt(rep);
