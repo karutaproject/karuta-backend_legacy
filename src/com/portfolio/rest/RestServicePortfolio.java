@@ -4967,7 +4967,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@GET
-	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("portfolioid") String portfolioid)
+	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String portfolioid)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;

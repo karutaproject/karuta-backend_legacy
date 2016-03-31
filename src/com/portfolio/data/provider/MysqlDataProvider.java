@@ -13416,7 +13416,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		PreparedStatement st = null;
 		ResultSet res = null;
 
-		String result = "<group id=\""+userGroupId+"\">";
+		String result = "<group id=\""+userGroupId+"\"><users>";
 		try
 		{
 			sql = "SELECT * FROM credential_group_members WHERE cg=?";
@@ -13446,7 +13446,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
       catch( SQLException e ){ e.printStackTrace(); }
 		}
 
-		result += "</group>";
+		result += "</users></group>";
 
 		return result;
 	}
@@ -13675,7 +13675,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 //		String result = "<group id=\""+portfolioGroupId+"\">";
 		try
 		{
-			sql = "SELECT pg, label FROM portfolio_group_members pgm, portfolio_group pg " +
+			sql = "SELECT pg.pg, label FROM portfolio_group_members pgm, portfolio_group pg " +
 					"WHERE pg.pg=pgm.pg AND portfolio_id=uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setString(1, portfolioid);
@@ -13982,7 +13982,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			st = c.prepareStatement(sql);
 			st.setInt(1, portfolioGroupId);
 			st.setString(2, uuid);
-			res = st.executeQuery();
+			st.execute();
 		}
 		catch (SQLException e)
 		{
