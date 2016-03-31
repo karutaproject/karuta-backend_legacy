@@ -133,13 +133,16 @@ public class DirectURLService  extends HttpServlet {
 		String uuid = splitData[0];
 		String email = splitData[1];
 		String role = splitData[2];
+		int level = Integer.parseInt(splitData[3]);
+		int duration = Integer.parseInt(splitData[4]);	// In hours (minimum 1h)
 
 		/// Keeping access log
 		BufferedWriter log = LogUtils.getLog("directAccess.log");
 		Date date = new Date();
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String datestring = dateFormat.format(date);
-		log.write("["+datestring+"] Direct link access by: "+email+ " ("+role+") for uuid: "+uuid);
+		// Log connection attempt. email, uuid, role access, hour, ip, date
+		log.write("["+datestring+"] Direct link access by: "+email+ " ("+role+") for uuid: "+uuid+" level: "+level+" duration: "+duration);
 		log.newLine();
 		log.flush();
 		log.close();
@@ -148,16 +151,60 @@ public class DirectURLService  extends HttpServlet {
 		Connection c = null;
 		try
 		{
-			session = request.getSession(true);
+			/// Init DB connection
 			c = SqlUtils.getConnection(getServletContext());
-			String[] login = dataProvider.logViaEmail(c, email);
+			session = request.getSession(true);
+			String[] login = {"0","0","0"};
+			int uid = 0;
+			switch( level )
+			{
+				case 4:	// Just log as public (world)
+					int pubid = 0;
+					/// Find public id and log as such
+					String sql = "SELECT userid FROM credential WHERE login='guest'";
+					PreparedStatement st = c.prepareStatement(sql);
+					ResultSet rs = st.executeQuery();
+					rs.next();
+					pubid = rs.getInt(1);
+					
+					session.setAttribute("user", "public");
+					session.setAttribute("uid", pubid);
+					break;
+					
+				case 3:	// Create account for this person
+					login[2] = dataProvider.createUser(c, email);
+
+				case 2:	// Share portfolio 
+					uid = Integer.parseInt(login[2]);
+					if( uid > 0 )
+					{
+						/// Find group for this node
+						int rrgid = dataProvider.getRoleByNode(c, 1, uuid, role);
+
+						/// Put person in specified group
+						String userInfo = "<users><user id='"+uid+"' /></users>";
+						dataProvider.postRRGUsers(c, 1, rrgid, userInfo);
+
+					}
+//					dataProvider.disconnect();
+
+				case 1:	// Temp login
+					login = dataProvider.logViaEmail(c, email);
+					uid = Integer.parseInt(login[2]);
+					/// Log person
+					session.setAttribute("user", login[1]);
+					session.setAttribute("uid", uid);
+					session.setAttribute("source", "direct.htm");
+					break;
+					
+				case 0:	// Just ask for login
+					break;
+			}
+			
 
 			if( login != null )	// If account exists
 			{
-				/// Init DB connection
 
-				///// TODO: Log email, uuid, role access, hour, ip, date
-				
 				//// FIXME: Make it so we create account and put this new account in the uuid/role group
 
 				// TODO
@@ -178,34 +225,9 @@ public class DirectURLService  extends HttpServlet {
 				//*/
 
 				/// Check if person exist
-				int uid = Integer.parseInt(login[2]);
-				if( uid > 0 )
-				{
-					/// Find group for this node
-					int rrgid = dataProvider.getRoleByNode(c, 1, uuid, role);
-
-					/// Put person in specified group
-					String userInfo = "<users><user id='"+uid+"' /></users>";
-					dataProvider.postRRGUsers(c, 1, rrgid, userInfo);
-
-					/// Log person
-					session.setAttribute("user", login[1]);
-					session.setAttribute("uid", uid);
-				}
-//				dataProvider.disconnect();
 			}
 			else	// User doesn't exists
 			{
-				int pubid = 0;
-				/// Find public id and log as such
-				String sql = "SELECT userid FROM credential WHERE login='guest'";
-				PreparedStatement st = c.prepareStatement(sql);
-				ResultSet rs = st.executeQuery();
-				rs.next();
-				pubid = rs.getInt(1);
-				
-				session.setAttribute("user", "public");
-				session.setAttribute("uid", pubid);
 			}
 			
 		}
@@ -247,13 +269,15 @@ public class DirectURLService  extends HttpServlet {
 		String uuid = request.getParameter("uuid");
 		String email = request.getParameter("email");
 		String role = request.getParameter("role");
+		String level = request.getParameter("l");
+		String duration = request.getParameter("d");
 
 		/// Keeping creation log
 		BufferedWriter log = LogUtils.getLog("directAccess.log");
 		Date date = new Date();
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String datestring = dateFormat.format(date);
-		log.write("["+datestring+"] Direct link creation for user: "+uid+" for access at: "+uuid+" with email: "+email+ " ("+role+")");
+		log.write("["+datestring+"] Direct link creation for user: "+uid+" for access at: "+uuid+" with email: "+email+ " ("+role+"). Access level: '"+level+"' for duraction: '"+duration+"'");
 		log.newLine();
 		log.flush();
 		log.close();
@@ -262,7 +286,7 @@ public class DirectURLService  extends HttpServlet {
 		String output = "";
 		try
 		{
-			String data = uuid+" "+email+" "+role;
+			String data = uuid+" "+email+" "+role+" "+level+" "+duration;
 			Cipher rc4 = Cipher.getInstance("RC4");
 			String secretkey = ConfigUtils.get("directkey");
 			SecretKeySpec key = new SecretKeySpec(secretkey.getBytes(), "RC4");
