@@ -11875,55 +11875,53 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			}
 			else if( "submitQuizz".equals(macroName) )
 			{
-               
-            	sql = "DROP TEMPORARY TABLE IF EXISTS t_struc_nodeid, t_struc_nodeid_2";
+				sql = "DROP TEMPORARY TABLE IF EXISTS t_struc_nodeid, t_struc_nodeid_2";
 				st = c.prepareStatement(sql);
 				st.execute();
 				st.close();
-            	
+				
 				//Comparaison rÈponses
-                //sql="SELECT bin2uuid(node_parent_uuid) " + "FROM node n " + "WHERE node_uuid=uuid2bin(\""+nodeUuid+"\")";
+				//sql="SELECT bin2uuid(node_parent_uuid) " + "FROM node n " + "WHERE node_uuid=uuid2bin(\""+nodeUuid+"\")";
 				
 				//uuid1
-				sql="SELECT bin2uuid(node_uuid) " + "FROM node n "+"WHERE semantictag LIKE \"quizz\"" + " AND node_parent_uuid=uuid2bin(\""+nodeUuid+"\")";
+				sql="SELECT bin2uuid(node_uuid) " + "FROM node n "+"WHERE semantictag LIKE \"quizz\"" + " AND node_parent_uuid=uuid2bin(?)";
 				st = c.prepareStatement(sql);
-                ResultSet rs1 = st.executeQuery();
-                rs1.next();
-                //String uuidParent = rs.getString(1);
-                String uuidREP=rs1.getString(1);
-                st.close();
-                
-                //uuid2
-                sql="SELECT content " + "FROM resource_table r_t " + "WHERE xsi_type " + "LIKE \"Proxy\" " + 
-                "AND node_uuid " + "IN (SELECT res_node_uuid FROM node n WHERE semantictag LIKE \"proxy-quizz\" " + 
-                "AND node_parent_uuid=uuid2bin(\"" + nodeUuid + "\")) ";
-                st = c.prepareStatement(sql);
-                ResultSet rs2 = st.executeQuery();
-                rs2.next();
-                String ContentUuid2=rs2.getString(1);
-                String uuidSOL = ContentUuid2.substring(6,42);
-                st.close();
-                
-                String uuids=uuidREP+uuidSOL+nodeUuid;
-                
-                
-                HttpClient client = new HttpClient();
-                String backend = ConfigUtils.get("backendserver");
-                HttpMethod method = new GetMethod(backend+"/compare/"+uuids);
-                int obj = client.executeMethod(method);
-                String rep = method.getResponseBodyAsString();
-                int prctElv = Integer.parseInt(rep);
-                
-             
-                
-                //Recherche noeud pourcentage mini
-                String nodePrct = getNodeUuidBySemtag(c, "level", nodeUuid);	//recuperation noeud avec semantictag "mini"
-                
-                //parse le noeud
-                String lbl = null;
-                Object ndSol = getNode(c, new MimeType("text/xml"), nodePrct, true, 1, 0, lbl);
+				st.setString(1, nodeUuid);
+				ResultSet rs1 = st.executeQuery();
+				rs1.next();
+				//String uuidParent = rs.getString(1);
+				String uuidREP=rs1.getString(1);
+				st.close();
 				
-                DocumentBuilderFactory documentBuilderFactory2 = DocumentBuilderFactory.newInstance();
+				//uuid2
+				sql="SELECT content " + "FROM resource_table r_t " + "WHERE xsi_type " + "LIKE \"Proxy\" " + 
+						"AND node_uuid " + "IN (SELECT res_node_uuid FROM node n WHERE semantictag LIKE \"proxy-quizz\" " + 
+						"AND node_parent_uuid=uuid2bin(?)) ";
+				st = c.prepareStatement(sql);
+				st.setString(1, nodeUuid);
+				ResultSet rs2 = st.executeQuery();
+				rs2.next();
+				String ContentUuid2=rs2.getString(1);
+				String uuidSOL = ContentUuid2.substring(6,42);
+				st.close();
+				
+				String uuids=uuidREP+uuidSOL+nodeUuid;
+				
+				HttpClient client = new HttpClient();
+				String backend = ConfigUtils.get("backendserver");
+				HttpMethod method = new GetMethod(backend+"/compare/"+uuids);
+				int obj = client.executeMethod(method);
+				String rep = method.getResponseBodyAsString();
+				int prctElv = Integer.parseInt(rep);
+				
+				//Recherche noeud pourcentage mini
+				String nodePrct = getNodeUuidBySemtag(c, "level", nodeUuid);	//recuperation noeud avec semantictag "mini"
+				
+				//parse le noeud
+				String lbl = null;
+				Object ndSol = getNode(c, new MimeType("text/xml"), nodePrct, true, 1, 0, lbl);
+				
+				DocumentBuilderFactory documentBuilderFactory2 = DocumentBuilderFactory.newInstance();
 				DocumentBuilder documentBuilder2 = documentBuilderFactory2.newDocumentBuilder();
 				ByteArrayInputStream is2 = new ByteArrayInputStream(ndSol.toString().getBytes("UTF-8"));
 				Document doc2 = documentBuilder2.parse(is2);
@@ -11944,18 +11942,19 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				//recuperation asmContext contenant l'action
 				sql="SELECT bin2uuid(node_uuid) " + "FROM node n " + "WHERE node_uuid  IN (SELECT uuid2bin(node_children_uuid) " 
 						+ "FROM node n " +"WHERE semantictag LIKE \"action\" AND node_parent_uuid "
-						+ "LIKE uuid2bin(\"" + nodeUuid + "\")) ";
+						+ "LIKE uuid2bin(?)) ";
 				st=c.prepareStatement(sql);
+				st.setString(1, nodeUuid);
 				ResultSet rsa =st.executeQuery();
 				rsa.next();
-                String contextActionNodeUuid=rsa.getString(1);
-                st.close();
+				String contextActionNodeUuid=rsa.getString(1);
+				st.close();
 				
-                //Recuperation uuidNoeud sur lequel effectuer l'action, role et action
-                String lbl2 = null;
-                Object nd = getNode(c, new MimeType("text/xml"), contextActionNodeUuid, true, 1, 0, lbl2);
+				//Recuperation uuidNoeud sur lequel effectuer l'action, role et action
+				String lbl2 = null;
+				Object nd = getNode(c, new MimeType("text/xml"), contextActionNodeUuid, true, 1, 0, lbl2);
 				
-                DocumentBuilderFactory documentBuilderFactory3 = DocumentBuilderFactory.newInstance();
+				DocumentBuilderFactory documentBuilderFactory3 = DocumentBuilderFactory.newInstance();
 				DocumentBuilder documentBuilder3 = documentBuilderFactory3.newDocumentBuilder();
 				ByteArrayInputStream is3 = new ByteArrayInputStream(nd.toString().getBytes("UTF-8"));
 				Document doc3 = documentBuilder3.parse(is3);
@@ -11980,17 +11979,18 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				role = roleList.item(0).getFirstChild().getNodeValue();
 				
 				sql = "SELECT gu.userid FROM group_rights gr, group_right_info gri, "
-						+ "group_info gi, group_user gu WHERE gr.id LIKE uuid2bin(\""
-						+ nodeAction + "\") AND gri.grid LIKE gr.grid AND gi.label LIKE gri.label AND gi.grid LIKE gr.grid "
-								+ "AND gu.gid LIKE gi.gid";
+						+ "group_info gi, group_user gu WHERE gr.id LIKE uuid2bin(?) " +
+						"AND gri.grid LIKE gr.grid AND gi.label LIKE gri.label AND gi.grid LIKE gr.grid "
+						+ "AND gu.gid LIKE gi.gid";
 				st=c.prepareStatement(sql);
+				st.setString(1, nodeAction);
 				ResultSet rsr =st.executeQuery();
 				rsr.next();
-                String usId=rsr.getString(1);
-                st.close();
+				String usId=rsr.getString(1);
+				st.close();
 				
 				userId=Integer.parseInt(usId);
-                
+				
 				//comparaison
 				if(prctElv >= prctMini)
 				{
@@ -12034,10 +12034,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				{
 					postMacroOnNode(c, userId, uuidREP, "submit");
 				}
-				
-               
-            }
-			
+			}
 			val = "OK";
 		}
 		catch( SQLException e )
