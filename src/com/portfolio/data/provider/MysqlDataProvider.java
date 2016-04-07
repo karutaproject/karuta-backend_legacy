@@ -5273,10 +5273,11 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// Checking date
 			sql = "SELECT c.modif_date " +
-					"FROM t_node_cache c, portfolio p " +
-					"WHERE c.modif_date = p.modif_date " +
-					"AND c.portfolio_id=p.portfolio_id " +
-					"AND code=?";
+					"FROM portfolio p, node n, t_node_cache c " +
+					"WHERE p.root_node_uuid=n.node_uuid " +
+					"AND c.modif_date = p.modif_date " +
+					"AND c.code=n.code " +
+					"AND c.code=?";
 			st = c.prepareStatement(sql);
 			st.setString(1, code);
 			res = st.executeQuery();

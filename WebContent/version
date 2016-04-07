@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <versions>
 	<version id='backend'>
-		<number>1.2.1.5</number>
-		<date>2016-03-24</date>
+		<number>1.2.1.7</number>
+		<date>2016-04-07</date>
 	</version>
 	<version id='fileserver'>
 		<number>1.2.0.0</number>
