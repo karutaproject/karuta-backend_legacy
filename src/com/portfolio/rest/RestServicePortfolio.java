@@ -257,13 +257,24 @@ public class RestServicePortfolio
 		if( source != null )
 		{
 			if( referer == null )
+			{
 				session.invalidate();
+				session = request.getSession(true);
+			}
 			else
 			{
 				int last = referer.lastIndexOf("/");
-				String page = referer.substring(last+1);
+				int stop = referer.indexOf("?");
+				String page = "";
+				if(stop > 0)
+					page = referer.substring(last+1, stop);
+				else
+					page = referer.substring(last+1);
 				if( !page.equals(source) )
+				{
 					session.invalidate();
+					session = request.getSession(true);
+				}
 			}
 		}
 		
