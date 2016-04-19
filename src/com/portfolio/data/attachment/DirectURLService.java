@@ -146,7 +146,8 @@ public class DirectURLService  extends HttpServlet {
 		String datestring = dateFormat.format(date);
 		
 		/// Check if link is still valid
-		if( date.getTime()/1000 < endtime )
+		long currtime = date.getTime()/1000;
+		if( currtime > endtime )
 		{
 			log.write("["+datestring+"] Old link access by: "+email+ " ("+role+") for uuid: "+uuid+" level: "+level+" duration: "+duration+" ends at: "+endtime);
 			log.newLine();
@@ -189,7 +190,7 @@ public class DirectURLService  extends HttpServlet {
 					{
 						int pubid = 0;
 						/// Find public id and log as such
-						String sql = "SELECT userid FROM credential WHERE login='guest'";
+						String sql = "SELECT userid FROM credential WHERE login='public'";
 						PreparedStatement st = c.prepareStatement(sql);
 						ResultSet rs = st.executeQuery();
 						rs.next();
