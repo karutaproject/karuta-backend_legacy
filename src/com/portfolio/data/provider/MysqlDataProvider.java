@@ -7019,6 +7019,8 @@ public class MysqlDataProvider implements DataProvider {
 				updateMysqlNodeChildren(c, puuid);
 
 				status = 0;
+				
+				touchPortfolio(c, uuid, null);
 			}
 		}
 		catch(SQLException e)
@@ -7087,6 +7089,8 @@ public class MysqlDataProvider implements DataProvider {
 			/// Update children list, origin and destination
 			updateMysqlNodeChildren(c, puuid);
 			updateMysqlNodeChildren(c, uuidParent);
+
+			touchPortfolio(c, uuid, null);
 
 			status = true;
 		}
