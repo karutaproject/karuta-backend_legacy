@@ -834,122 +834,8 @@ public class RestServicePortfolio
 				else if(resource != null && files != null)
 				{
 					//// Cas du renvoi d'un ZIP
-
-					/// Temp file in temp directory
-					File tempDir = new File(System.getProperty("java.io.tmpdir", null));
-					File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
-
-					FileOutputStream fos = new FileOutputStream(tempZip);
-					ZipOutputStream zos = new ZipOutputStream(fos);
-
-					/// Write xml file to zip
-					ZipEntry ze = new ZipEntry(portfolioUuid+".xml");
-					zos.putNextEntry(ze);
-
-					byte[] bytes = portfolio.getBytes("UTF-8");
-					zos.write(bytes);
-
-					zos.closeEntry();
-
-					/// Find all fileid/filename
-					XPath xPath = XPathFactory.newInstance().newXPath();
-//					String filterRes = "//asmResource/fileid[text()]";	// fileid which has something in it
-					String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
-					NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
-
-					/// Fetch all files
-					for( int i=0; i<nodelist.getLength(); ++i )
-					{
-						Node res = nodelist.item(i);
-						/// Check if fileid has a lang
-						Node langAtt = res.getAttributes().getNamedItem("lang");
-						String filterName = "";
-						if( langAtt != null )
-						{
-							lang = langAtt.getNodeValue();
-//							filterName = "./filename[@lang='"+lang+"' and text()]";
-							filterName = "//*[local-name()='filename' and @lang='"+lang+"' and text()]";
-						}
-						else
-						{
-//							filterName = "./filename[@lang and text()]";
-							filterName = "//*[local-name()='filename' and @lang and text()]";
-						}
-
-						Node p = res.getParentNode();	// resource -> container
-						Node gp = p.getParentNode();	// container -> context
-						Node uuidNode = gp.getAttributes().getNamedItem("id");
-						String uuid = uuidNode.getTextContent();
-
-						NodeList textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
-						String filename = "";
-						if( textList.getLength() != 0 )
-						{
-							Element fileNode = (Element) textList.item(0);
-							filename = fileNode.getTextContent();
-							lang = fileNode.getAttribute("lang");	// In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
-							if( "".equals(lang) ) lang = "fr";
-						}
-
-						String backend = ConfigUtils.get("backendserver"); 
-//						String scheme = httpServletRequest.getScheme();	// http/https
-//						String servlet = httpServletRequest.getRequestURI();
-//						servlet = servlet.substring(0, servlet.indexOf("/", 7));
-//						String server = httpServletRequest.getServerName();
-//						int port = httpServletRequest.getServerPort();
-//						"http://"+ server + /resources/resource/file/ uuid ? lang= size=
-						// String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
-						String url = backend+"/resources/resource/file/"+uuid+"?lang="+lang;
-						HttpGet get = new HttpGet(url);
-
-						// Transfer sessionid so that local request still get security checked
-						HttpSession session = httpServletRequest.getSession(true);
-						get.addHeader("Cookie","JSESSIONID="+session.getId());
-
-						// Send request
-						CloseableHttpClient client = HttpClients.createDefault();
-						CloseableHttpResponse ret = client.execute(get);
-						HttpEntity entity = ret.getEntity();
-
-						// Put specific name for later recovery
-						if( "".equals(filename) )
-							continue;
-						int lastDot = filename.lastIndexOf(".");
-						if( lastDot < 0 )
-							lastDot = 0;
-						String filenameext = filename.substring(0);	/// find extension
-						int extindex = filenameext.lastIndexOf(".") + 1;
-						filenameext = uuid +"_"+ lang +"."+ filenameext.substring(extindex);
-
-						// Save it to zip file
-						InputStream content = entity.getContent();
-						ze = new ZipEntry(filenameext);
-						try
-						{
-							int totalread = 0;
-							zos.putNextEntry(ze);
-							int inByte;
-							byte[] buf = new byte[4096];
-							while( (inByte = content.read(buf)) != -1 )
-							{
-								totalread += inByte;
-								zos.write(buf, 0, inByte);
-							}
-							System.out.println("FILE: "+filenameext+" -> "+totalread);
-							content.close();
-							zos.closeEntry();
-						}
-						catch( Exception e )
-						{
-							e.printStackTrace();
-						}
-						EntityUtils.consume(entity);
-						ret.close();
-						client.close();
-					}
-
-					zos.close();
-					fos.close();
+					HttpSession session = httpServletRequest.getSession(true);
+					File tempZip = getZipFile(portfolioUuid, portfolio, lang, doc, session);
 
 					/// Return zip file
 					RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
@@ -1013,6 +899,117 @@ public class RestServicePortfolio
 		return response;
 	}
 
+	private File getZipFile( String portfolioUuid, String portfolioContent, String lang, Document doc, HttpSession session ) throws IOException, XPathExpressionException
+	{
+		/// Temp file in temp directory
+		File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+		File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
+
+		FileOutputStream fos = new FileOutputStream(tempZip);
+		ZipOutputStream zos = new ZipOutputStream(fos);
+
+		/// Write xml file to zip
+		ZipEntry ze = new ZipEntry(portfolioUuid+".xml");
+		zos.putNextEntry(ze);
+
+		byte[] bytes = portfolioContent.getBytes("UTF-8");
+		zos.write(bytes);
+
+		zos.closeEntry();
+
+		/// Find all fileid/filename
+		XPath xPath = XPathFactory.newInstance().newXPath();
+		String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
+		NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+
+		/// Fetch all files
+		for( int i=0; i<nodelist.getLength(); ++i )
+		{
+			Node res = nodelist.item(i);
+			/// Check if fileid has a lang
+			Node langAtt = res.getAttributes().getNamedItem("lang");
+			String filterName = "";
+			if( langAtt != null )
+			{
+				lang = langAtt.getNodeValue();
+				filterName = "//*[local-name()='filename' and @lang='"+lang+"' and text()]";
+			}
+			else
+			{
+				filterName = "//*[local-name()='filename' and @lang and text()]";
+			}
+
+			Node p = res.getParentNode();	// resource -> container
+			Node gp = p.getParentNode();	// container -> context
+			Node uuidNode = gp.getAttributes().getNamedItem("id");
+			String uuid = uuidNode.getTextContent();
+
+			NodeList textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
+			String filename = "";
+			if( textList.getLength() != 0 )
+			{
+				Element fileNode = (Element) textList.item(0);
+				filename = fileNode.getTextContent();
+				lang = fileNode.getAttribute("lang");	// In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
+				if( "".equals(lang) ) lang = "fr";
+			}
+
+			String backend = ConfigUtils.get("backendserver"); 
+			String url = backend+"/resources/resource/file/"+uuid+"?lang="+lang;
+			HttpGet get = new HttpGet(url);
+
+			// Transfer sessionid so that local request still get security checked
+			get.addHeader("Cookie","JSESSIONID="+session.getId());
+
+			// Send request
+			CloseableHttpClient client = HttpClients.createDefault();
+			CloseableHttpResponse ret = client.execute(get);
+			HttpEntity entity = ret.getEntity();
+
+			// Put specific name for later recovery
+			if( "".equals(filename) )
+				continue;
+			int lastDot = filename.lastIndexOf(".");
+			if( lastDot < 0 )
+				lastDot = 0;
+			String filenameext = filename.substring(0);	/// find extension
+			int extindex = filenameext.lastIndexOf(".") + 1;
+			filenameext = uuid +"_"+ lang +"."+ filenameext.substring(extindex);
+
+			// Save it to zip file
+			InputStream content = entity.getContent();
+			ze = new ZipEntry(filenameext);
+			try
+			{
+				int totalread = 0;
+				zos.putNextEntry(ze);
+				int inByte;
+				byte[] buf = new byte[4096];
+				while( (inByte = content.read(buf)) != -1 )
+				{
+					totalread += inByte;
+					zos.write(buf, 0, inByte);
+				}
+				System.out.println("FILE: "+filenameext+" -> "+totalread);
+				content.close();
+				zos.closeEntry();
+			}
+			catch( Exception e )
+			{
+				e.printStackTrace();
+			}
+			EntityUtils.consume(entity);
+			ret.close();
+			client.close();
+		}
+
+		zos.close();
+		fos.close();
+		
+		return tempZip;
+	}
+	
+	
 	/**
 	 *	Return the portfolio from its code
 	 *	GET /rest/api/portfolios/code/{code}
@@ -1847,6 +1844,116 @@ public class RestServicePortfolio
 		}
 	}
 
+	// GET /portfolios/zip ? portfolio={}, toujours avec files
+	// zip séparés
+	// zip des zip
+	/**
+	 *	Fetching multiple portfolio in a zip
+	 *	GET /rest/api/portfolios
+	 *	parameters:
+	 *	portfolio: separated with ','
+	 *	return:
+	 *	zipped portfolio (with files) inside zip file
+	 **/
+	@Path("/portfolios/zip")
+	@GET
+	@Consumes("application/zip")	// Envoie donnï¿½e brut
+	public Object getPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("portfolio") String portfolioList, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance, @QueryParam("lang") String lang )
+	{
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
+
+		try
+		{
+			HttpSession session = httpServletRequest.getSession(false);
+			String [] list = portfolioList.split(",");
+			File[] files = new File[list.length];
+
+			c = SqlUtils.getConnection(servContext);
+			
+			/// Create all the zip files
+			for( int i=0; i<list.length; ++i )
+			{
+				String portfolioUuid = list[i];
+				String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, "true", "", ui.subId, null).toString();
+	
+				Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
+				
+				files[i] = getZipFile(portfolioUuid, portfolio, lang, doc, session);
+				
+			}
+			
+			// Make a big zip of it
+			File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+			File bigZip = File.createTempFile("project_", ".zip", tempDir);
+			
+			// Add content to it
+			FileOutputStream fos = new FileOutputStream(bigZip);
+			ZipOutputStream zos = new ZipOutputStream(fos);
+
+			byte[] buffer = new byte[0x1000];
+			
+			for( int i=0; i<files.length; ++i )
+			{
+				File file = files[i];
+				FileInputStream fis = new FileInputStream(file);
+				String filename = file.getName();
+				
+				/// Write xml file to zip
+				ZipEntry ze = new ZipEntry(filename+".zip");
+				zos.putNextEntry(ze);
+				int read = 1;
+				while( read > 0 )
+				{
+					read = fis.read(buffer);
+					zos.write(buffer);
+				}
+				zos.closeEntry();
+			}
+			zos.close();
+
+			/// Return zip file
+			RandomAccessFile f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
+			byte[] b = new byte[(int)f.length()];
+			f.read(b);
+			f.close();
+
+			Date time = new Date();
+			SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+			String timeFormat = dt.format(time);
+
+			Response response = Response
+					.ok(b, MediaType.APPLICATION_OCTET_STREAM)
+					.header("content-disposition","attachment; filename = \"Project-"+timeFormat+".zip\"")
+					.build();
+
+			// Delete all zipped file
+			for( int i=0; i<files.length; ++i )
+				files[i].delete();
+			
+			// And the over-arching zip
+			bigZip.delete();
+
+			return response;
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), modelId, Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+	}
+
+	
 	/**
 	 *	As a form, import zip, extract data and put everything into the database
 	 *	POST /rest/api/portfolios
