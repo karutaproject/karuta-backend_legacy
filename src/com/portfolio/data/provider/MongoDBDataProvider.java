@@ -392,7 +392,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2,
-			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws FileNotFoundException, IOException
+			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws FileNotFoundException, IOException
 			{
 		// TODO Auto-generated method stub
 		return null;
