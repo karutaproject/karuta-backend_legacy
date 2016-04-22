@@ -17,6 +17,7 @@ package com.portfolio.rest;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,22 +26,18 @@ import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import javax.activation.MimeType;
-import javax.naming.InitialContext;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.sql.DataSource;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.DELETE;
@@ -69,6 +66,7 @@ import javax.xml.transform.stream.StreamSource;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.httpclient.Header;
@@ -98,10 +96,7 @@ import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.MailUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.data.utils.javaUtils;
-import com.portfolio.eventbus.HandlerLogging;
-import com.portfolio.eventbus.HandlerNotificationSakai;
 import com.portfolio.eventbus.KEvent;
-import com.portfolio.eventbus.KEventHandler;
 import com.portfolio.eventbus.KEventbus;
 import com.portfolio.security.Credential;
 import com.portfolio.security.NodeRight;
@@ -1705,11 +1700,12 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfolios")
 	@POST
+//	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_XML)
-	public String postFormPortfolio(@FormDataParam("uploadfile") String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @QueryParam("instance") String instance )
+	public String postFormPortfolio(@FormDataParam("uploadfile") String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @FormDataParam("instance") String instance, @FormDataParam("project") String projectName )
 	{
-		return postPortfolio(xmlPortfolio, user, token, groupId, sc, httpServletRequest, userId, modelId, srceType, srceUrl, xsl, instance);
+		return postPortfolio(xmlPortfolio, user, token, groupId, sc, httpServletRequest, userId, modelId, srceType, srceUrl, xsl, instance, projectName);
 	}
 
 	/**
@@ -1730,8 +1726,9 @@ public class RestServicePortfolio
 	@Path("/portfolios")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
+//	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_XML)
-	public String postPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @QueryParam("instance") String instance )
+	public String postPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @QueryParam("instance") String instance, @QueryParam("project") String projectName )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
@@ -1816,7 +1813,7 @@ public class RestServicePortfolio
 				instantiate = true;
 
 			c = SqlUtils.getConnection(servContext);
-			String returnValue = dataProvider.postPortfolio(c, new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
+			String returnValue = dataProvider.postPortfolio(c, new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
 			logRestRequest(httpServletRequest, xmlPortfolio, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1858,7 +1855,7 @@ public class RestServicePortfolio
 	@Path("/portfolios/zip")
 	@GET
 	@Consumes("application/zip")	// Envoie donn�e brut
-	public Object getPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("portfolio") String portfolioList, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance, @QueryParam("lang") String lang )
+	public Object getPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("portfolios") String portfolioList, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance, @QueryParam("lang") String lang )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -1964,8 +1961,9 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfolios/zip")
 	@POST
-	@Consumes("application/zip")	// Envoie donn�e brut
-	public String postPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance)
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+//	@Consumes("application/zip")	// Envoie donn�e brut
+	public String postPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @FormDataParam("instance") String instance, @FormDataParam("project") String projectName)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -1977,7 +1975,7 @@ public class RestServicePortfolio
 				instantiate = true;
 
 			c = SqlUtils.getConnection(servContext);
-			String returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
+			String returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
 			logRestRequest(httpServletRequest, returnValue, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -4657,7 +4655,7 @@ public class RestServicePortfolio
 	@POST
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.TEXT_PLAIN)
-	public String postPortfolioByForm( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance)
+	public String postPortfolioByForm( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @FormDataParam("instance") String instance, @FormDataParam("project") String projectName)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		String returnValue = "";
@@ -4670,7 +4668,7 @@ public class RestServicePortfolio
 				instantiate = true;
 
 			c = SqlUtils.getConnection(servContext);
-			returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
+			returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
 		}
 		catch( Exception e )
 		{

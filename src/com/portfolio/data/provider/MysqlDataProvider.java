@@ -1790,7 +1790,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String portfolioModelId, int substid, boolean parseRights) throws Exception
+	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String portfolioModelId, int substid, boolean parseRights, String projectName) throws Exception
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -1821,11 +1821,23 @@ public class MysqlDataProvider implements DataProvider {
 			if( nodelist.getLength() > 0 )
 			{
 				String code = nodelist.item(0).getTextContent();
+				if( projectName != null )
+				{
+					// Find if it contains a project name
+					int dot = code.indexOf(".");
+					if( dot < 0 )	// Doesn't exist, add it
+						code = projectName+"."+code;
+					else	// Replace
+						code = projectName+code.substring(dot);
+					
+				}
+				
 				// Simple query
 				if( isCodeExist(c, code) )
 					throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
+				
+				nodelist.item(0).setTextContent(code);
 			}
-
 
 			Node rootNode = (doc.getElementsByTagName("portfolio")).item(0);
 			if(rootNode==null)
@@ -8634,6 +8646,7 @@ public class MysqlDataProvider implements DataProvider {
 		return ret;
 	}
 
+	@Deprecated
 	@Override
 	public int postShareGroup(Connection c, String portfolio, int user, Integer userId, String write)
 	{
@@ -8926,7 +8939,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws IOException
+	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws IOException
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -9040,6 +9053,42 @@ public class MysqlDataProvider implements DataProvider {
 				if(xml.contains("<portfolio"))	// Le porfolio (peux mieux faire)
 				{
 					Document doc = DomUtils.xmlString2Document(xml, outTrace);
+					
+					// Find code
+					/// Cherche si on a déjà envoyé quelque chose
+					XPath xPath = XPathFactory.newInstance().newXPath();
+					String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
+					NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+
+					if( nodelist.getLength() > 0 )
+					{
+						String code = nodelist.item(0).getTextContent();
+						
+						if( projectName != null )	// If a new name has been specified
+						{
+							// Find if it contains a project name
+							int dot = code.indexOf(".");
+							if( dot < 0 )	// Doesn't exist, add it
+								code = projectName+"."+code;
+							else	// Replace
+								code = projectName+code.substring(dot);
+							
+							// Check if new code exists
+							if( isCodeExist(c, code) )
+								throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
+							
+							// Replace content
+							nodelist.item(0).setTextContent(code);
+						}
+						else	// Otherwise, check if it exists
+						{
+							// Simple query
+							if( isCodeExist(c, code) )
+								throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
+						}
+					}
+					
+					// Check if it needs replacing
 
 					Node rootNode = (doc.getElementsByTagName("portfolio")).item(0);
 					if(rootNode==null)
