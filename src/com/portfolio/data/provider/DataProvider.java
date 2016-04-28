@@ -73,9 +73,9 @@ public interface DataProvider {
 	public Object putPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String modelId) throws Exception;
 	public Object putPortfolioConfiguration(Connection c, String portfolioUuid,Boolean portfolioActive, Integer userId);
 
-	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid, boolean parseRights) throws Exception;
+	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws Exception;
 	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2,
-			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws FileNotFoundException, IOException;
+			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws FileNotFoundException, IOException;
 	public Object postInstanciatePortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception;
 	public Object postCopyPortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception;
 
@@ -209,6 +209,7 @@ public interface DataProvider {
 	public boolean postRightGroup(Connection c, int groupRightId, int groupId, Integer userId);
 	public boolean postNotifyRoles(Connection c, int userId, String portfolio, String uuid, String notify);
 	public boolean setPublicState(Connection c, int userId, String portfolio, boolean isPublic);
+	@Deprecated
 	public int postShareGroup(Connection c, String portfolio, int user, Integer userId, String write);
 
 	public int deleteShareGroup(Connection c, String portfolio, Integer userId);
