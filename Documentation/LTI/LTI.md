@@ -3,9 +3,20 @@ Karuta in Sakai via LTI 1.x
 
 Tested with Sakai 10.6
 
+## Karuta side
+
+1\. Configure the following lines in *configKaruta.properties*
+
+> basiclti.provider.{KEY}.secret={SECRET}
+> lti\_redirect\_location=/karuta/karuta/htm/list.htm
+
+You can change *lti\_redirect\_location* to something else if the UI is on another server, or under a different name
+
+## Sakai side
+
 1\. Editing the worksite
 
-Select the worksite you want to add Karuto to.
+Select the worksite you want to add Karuta to.
 
 ![Edit worksite](./lti_screenshot/01-edit_worksite_b.png)
 
@@ -57,3 +68,5 @@ When checking the debug view, the version shows 'LTI-1p0'
 
 ![Debug](./lti_screenshot/09-debug_c.png)
 
+## Side note
+You might have an empty page when first logging in from Sakai to Karuta, for this you can go as *admin* or an *editor* and create and share a portfolio with the user.
