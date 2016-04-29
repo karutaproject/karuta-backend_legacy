@@ -10366,7 +10366,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			// Check if role exists already
-			sql = "SELECT gid FROM group_info gi, group_right_info gri, node n " +
+			sql = "SELECT gri.grid FROM group_info gi, group_right_info gri, node n " +
 					"WHERE n.portfolio_id=gri.portfolio_id " +
 					"AND gri.grid=gi.grid " +
 					"AND n.node_uuid = uuid2bin(?) " +
@@ -10376,7 +10376,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.setString(2, role);
 			res = st.executeQuery();
 			if( res.next() )
-				group = res.getInt("gid");
+				group = res.getInt("grid");
 
 			// If not, create it
 			if( group == 0 )
@@ -14506,7 +14506,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 
 	@Override
-	public String createUser(Connection c, String username) throws Exception
+	public String createUser(Connection c, String username, String email) throws Exception
 	{
 		PreparedStatement st = null;
 		String sql;
@@ -14516,9 +14516,9 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		try
 		{
 			Date date = new Date();
-			sql = "INSERT INTO credential SET login=?, display_firstname=?, display_lastname='', password=UNHEX(SHA1(?))";
+			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=UNHEX(SHA1(?))";
 			if (dbserveur.equals("oracle")){
-				sql = "INSERT INTO credential SET login=?, display_firstname=?, display_lastname='', password=crypt(?)";
+				sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=crypt(?)";
 			}
 			st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
@@ -14526,7 +14526,11 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			}
 			st.setString(1, username);
 			st.setString(2, username);
-			st.setString(3, date.toString()+"somesalt");
+			if( email != null )
+				st.setString(3, email);
+			else
+				st.setString(3, "");
+			st.setString(4, date.toString()+"somesalt");
 			st.executeUpdate();
 			res = st.getGeneratedKeys();
 			if( res.next() )

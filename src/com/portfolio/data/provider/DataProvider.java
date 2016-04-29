@@ -239,7 +239,7 @@ public interface DataProvider {
 
 	//// LTI related
 	public String getUserId(Connection c, String username, String email) throws Exception;
-	public String createUser(Connection c, String username) throws Exception;
+	public String createUser(Connection c, String username, String email) throws Exception;
 	public String getGroupByName( Connection c, String name );
 	public String createGroup( Connection c, String name );
 	public boolean isUserInGroup( Connection c, String uid, String gid );

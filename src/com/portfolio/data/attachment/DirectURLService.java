@@ -204,8 +204,12 @@ public class DirectURLService  extends HttpServlet {
 				case 3:	// Create account for this person
 					if( !isLogged )
 					{
-						login[2] = dataProvider.createUser(c, email);
+						try
+						{
+						login[2] = dataProvider.createUser(c, email, email);
 						uid = Integer.parseInt(login[2]);
+						}
+						catch(Exception e){}	//
 					}
 
 				case 2:	// Share portfolio 

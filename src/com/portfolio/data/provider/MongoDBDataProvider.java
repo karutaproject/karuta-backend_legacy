@@ -890,7 +890,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String createUser(Connection c, String username) throws Exception
+	public String createUser(Connection c, String username, String email) throws Exception
 	{
 		return null;
 	}
