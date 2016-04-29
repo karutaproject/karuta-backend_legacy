@@ -76,6 +76,8 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileItemIterator;
+import org.apache.commons.fileupload.FileItemStream;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
@@ -8939,12 +8941,12 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws IOException
+	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws IOException
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		boolean isMultipart = ServletFileUpload.isMultipartContent(httpServletRequest);
+//		boolean isMultipart = ServletFileUpload.isMultipartContent(httpServletRequest);
 	// Create a factory for disk-based file items
 		DiskFileItemFactory factory = new DiskFileItemFactory();
 
@@ -8953,30 +8955,37 @@ public class MysqlDataProvider implements DataProvider {
 		File repository = (File) servletContext.getAttribute("javax.servlet.context.tempdir");
 		factory.setRepository(repository);
 
+		if( projectName == null )
+			projectName = "";
+		else
+			projectName = projectName.trim();
+		
 		// Create a new file upload handler
 		ServletFileUpload upload = new ServletFileUpload(factory);
 
-		DataInputStream inZip = null;
+		DataInputStream inZip = new DataInputStream(inputStream);
 		// Parse the request
+		System.out.println(inputStream);
+		/*
 		try
 		{
-			List<FileItem> items = upload.parseRequest(httpServletRequest);
+//			FileItemIterator items = upload.getItemIterator(httpServletRequest);
 		// Process the uploaded items
-			Iterator<FileItem> iter = items.iterator();
-			while (iter.hasNext())
-			{
-				FileItem item = iter.next();
-				if (!item.isFormField())
-				{
-					inZip = new DataInputStream(item.getInputStream());
-					break;
-				}
-			}
+//			Iterator<FileItem> iter = items.iterator();
+//			while (items.hasNext())
+//			{
+//				FileItemStream item = items.next();
+//				if (!item.isFormField())
+//				{
+//					break;
+//				}
+//			}
 		}
 		catch( FileUploadException e )
 		{
 			e.printStackTrace();
 		}
+		//*/
 
 		String foldersfiles= null;
 		String filename;
@@ -9064,14 +9073,14 @@ public class MysqlDataProvider implements DataProvider {
 					{
 						String code = nodelist.item(0).getTextContent();
 						
-						if( projectName != null )	// If a new name has been specified
+						if( !"".equals(projectName) )	// If a new name has been specified
 						{
 							// Find if it contains a project name
 							int dot = code.indexOf(".");
-							if( dot < 0 )	// Doesn't exist, add it
-								code = projectName+"."+code;
-							else	// Replace
+							if( dot > 0 )
 								code = projectName+code.substring(dot);
+							else	// If no dot, it's a project, skip it
+								continue;
 							
 							// Check if new code exists
 							if( isCodeExist(c, code) )
