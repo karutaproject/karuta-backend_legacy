@@ -1157,6 +1157,35 @@ public class Credential
 		return status;
 	}
 
+	public boolean isUserMemberOfRole(Connection c, int userId, int roleId) {
+		boolean status = false;
+		PreparedStatement st=null;
+		String sql;
+		ResultSet res=null;
+		try
+		{
+			sql = "SELECT userid FROM group_user gu, group_info gi WHERE gu.gid=gi.gid AND gu.userid = ? AND gi.grid = ?";
+			st = c.prepareStatement(sql);
+			st.setInt(1, userId);
+
+			st.setInt(2, roleId);
+
+			res = st.executeQuery();
+			if( res.next() )
+				status = true;;
+		}
+		catch (SQLException ex)
+		{
+			ex.printStackTrace();
+			status = false;
+		}
+		finally
+		{
+			if( st != null ) try{ st.close(); }catch( SQLException e ){ e.printStackTrace(); }
+			if( res != null ) try{ res.close(); }catch( SQLException e ){ e.printStackTrace(); }
+		}
+		return status;
+	}
 
 	public boolean isAdmin( Connection c, Integer userId)
 	{
