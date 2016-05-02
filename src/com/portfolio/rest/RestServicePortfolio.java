@@ -927,15 +927,15 @@ public class RestServicePortfolio
 			if( langAtt != null )
 			{
 				lang = langAtt.getNodeValue();
-				filterName = "//*[local-name()='filename' and @lang='"+lang+"' and text()]";
+				filterName = ".//*[local-name()='filename' and @lang='"+lang+"' and text()]";
 			}
 			else
 			{
-				filterName = "//*[local-name()='filename' and @lang and text()]";
+				filterName = ".//*[local-name()='filename' and @lang and text()]";
 			}
 
-			Node p = res.getParentNode();	// resource -> container
-			Node gp = p.getParentNode();	// container -> context
+			Node p = res.getParentNode();	// fileid -> resource
+			Node gp = p.getParentNode();	// resource -> context
 			Node uuidNode = gp.getAttributes().getNamedItem("id");
 			String uuid = uuidNode.getTextContent();
 
