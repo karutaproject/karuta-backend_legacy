@@ -210,29 +210,27 @@ public class Credential
 		/// Create account
 	}
 
-	public String getMysqlUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception
+	public int getMysqlUserUid(Connection c, String login) throws Exception
 	{
 		PreparedStatement st;
 		String sql;
 		ResultSet res;
+		int uid=0;
 
 		try
 		{
-			sql = "SELECT userid FROM credential WHERE login = ? and token = ?";
+			sql = "SELECT userid FROM credential WHERE login = ?";
 			st = c.prepareStatement(sql);
 			st.setString(1, login);
-			st.setString(2, token);
 			res = st.executeQuery();
 			if( res.next() )
-				return res.getString("userid");
-			else
-				return "0";
+				uid = res.getInt("userid");
 		}
 		catch(Exception ex)
 		{
 			ex.printStackTrace();
-			return null;
 		}
+		return uid;
 	}
 
 
@@ -473,7 +471,8 @@ public class Credential
 
 	}
 
-	/// From node, check if portoflio has user 'public' in group 'all'
+	/// From node, check if portoflio has user 'sys_public' in group 'all'
+	/// To differentiate between 'public' to the world, and 'public' to people with an account
 	public boolean isPublic( Connection c, String node_uuid, String portfolio_uuid )
 	{
 		PreparedStatement st = null;
@@ -485,11 +484,11 @@ public class Credential
 			if( node_uuid != null )
 			{
 				sql = "SELECT gu.userid " +
-						"FROM group_rights gr, group_right_info gri, group_info gi, group_user gu, credential c " +
-						"WHERE gr.grid=gri.grid AND gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
-						"gr.id=uuid2bin(?) " +
+						"FROM node n, group_right_info gri, group_info gi, group_user gu, credential c " +
+						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
+						"n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id " +
 						"AND gri.label='all' " +
-						"AND c.login='public'";
+						"AND c.login='sys_public'";
 				st = c.prepareStatement(sql);
 				st.setString(1, node_uuid);
 			}
@@ -500,7 +499,7 @@ public class Credential
 						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
 						"gri.portfolio_id=uuid2bin(?) " +
 						"AND gri.label='all' " +
-						"AND c.login='public'";
+						"AND c.login='sys_public'";
 				st = c.prepareStatement(sql);
 				st.setString(1, portfolio_uuid);
 			}
@@ -533,8 +532,8 @@ public class Credential
 
 		try
 		{
-			// Récupération du userid de 'public'
-			sql = "SELECT userid FROM credential WHERE login='public'";
+			// Fetching 'sys_public' userid
+			sql = "SELECT userid FROM credential WHERE login='sys_public'";
 			st = c.prepareStatement(sql);
 			res = st.executeQuery();
 			if(res.next())
@@ -1158,6 +1157,35 @@ public class Credential
 		return status;
 	}
 
+	public boolean isUserMemberOfRole(Connection c, int userId, int roleId) {
+		boolean status = false;
+		PreparedStatement st=null;
+		String sql;
+		ResultSet res=null;
+		try
+		{
+			sql = "SELECT userid FROM group_user gu, group_info gi WHERE gu.gid=gi.gid AND gu.userid = ? AND gi.grid = ?";
+			st = c.prepareStatement(sql);
+			st.setInt(1, userId);
+
+			st.setInt(2, roleId);
+
+			res = st.executeQuery();
+			if( res.next() )
+				status = true;;
+		}
+		catch (SQLException ex)
+		{
+			ex.printStackTrace();
+			status = false;
+		}
+		finally
+		{
+			if( st != null ) try{ st.close(); }catch( SQLException e ){ e.printStackTrace(); }
+			if( res != null ) try{ res.close(); }catch( SQLException e ){ e.printStackTrace(); }
+		}
+		return status;
+	}
 
 	public boolean isAdmin( Connection c, Integer userId)
 	{

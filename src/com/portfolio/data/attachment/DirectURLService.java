@@ -133,31 +133,121 @@ public class DirectURLService  extends HttpServlet {
 		String uuid = splitData[0];
 		String email = splitData[1];
 		String role = splitData[2];
+		int level = Integer.parseInt(splitData[3]);
+		int duration = Integer.parseInt(splitData[4]);	// In hours (minimum 1h)
+		long endtime = 0;
+		if( splitData.length == 6 )
+			endtime = Long.parseLong(splitData[5]);
 
 		/// Keeping access log
-		BufferedWriter log = LogUtils.getLog("directAccess.log");
 		Date date = new Date();
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		BufferedWriter log = LogUtils.getLog("directAccess.log");
 		String datestring = dateFormat.format(date);
-		log.write("["+datestring+"] Direct link access by: "+email+ " ("+role+") for uuid: "+uuid);
-		log.newLine();
-		log.flush();
-		log.close();
+		
+		/// Check if link is still valid
+		long currtime = date.getTime()/1000;
+		if( currtime > endtime )
+		{
+			log.write("["+datestring+"] Old link access by: "+email+ " ("+role+") for uuid: "+uuid+" level: "+level+" duration: "+duration+" ends at: "+endtime);
+			log.newLine();
+			log.flush();
+			log.close();
+			response.setStatus(403);
+			response.getWriter().close();
+			request.getInputStream().close();
+		}
+		else
+		{
+			// Log connection attempt. email, uuid, role access, hour, ip, date
+			log.write("["+datestring+"] Direct link access by: "+email+ " ("+role+") for uuid: "+uuid+" level: "+level+" duration: "+duration+" ends at: "+endtime);
+			log.newLine();
+			log.flush();
+			log.close();
+		}
 		
 		/// log in person with associated email
 		Connection c = null;
 		try
 		{
-			session = request.getSession(true);
+			/// Init DB connection
 			c = SqlUtils.getConnection(getServletContext());
-			String[] login = dataProvider.logViaEmail(c, email);
+			session = request.getSession(true);
+			boolean isLogged = false;
+			Integer uidcheck = (Integer) session.getAttribute("uid");
+			int uid = 0;
+			if( uidcheck != null )
+			{
+				uid = uidcheck;
+				isLogged = true;
+			}
+			
+			String[] login = {"0","0","0"};
+			switch( level )
+			{
+				case 4:	// Just log as public (world)
+					if( !isLogged )
+					{
+						int pubid = 0;
+						/// Find public id and log as such
+						String sql = "SELECT userid FROM credential WHERE login='public'";
+						PreparedStatement st = c.prepareStatement(sql);
+						ResultSet rs = st.executeQuery();
+						rs.next();
+						pubid = rs.getInt(1);
+						
+						session.setAttribute("user", "public");
+						session.setAttribute("uid", pubid);
+					}
+					break;
+					
+				case 3:	// Create account for this person
+					if( !isLogged )
+					{
+						try
+						{
+						login[2] = dataProvider.createUser(c, email, email);
+						uid = Integer.parseInt(login[2]);
+						}
+						catch(Exception e){}	//
+					}
+
+				case 2:	// Share portfolio 
+					if( uid > 0 )
+					{
+						/// Find group for this node
+						int rrgid = dataProvider.getRoleByNode(c, 1, uuid, role);
+
+						/// Put person in specified group
+						String userInfo = "<users><user id='"+uid+"' /></users>";
+						dataProvider.postRRGUsers(c, 1, rrgid, userInfo);
+
+					}
+//					dataProvider.disconnect();
+
+				case 1:	// Temp login
+					if( !isLogged )
+					{
+						login = dataProvider.logViaEmail(c, email);
+						uid = Integer.parseInt(login[2]);
+						/// Log person
+						session.setAttribute("user", login[1]);
+						session.setAttribute("uid", uid);
+						session.setAttribute("source", "public.htm");
+						
+						String referer = (String) request.getHeader("referer");	// Can be spoofed
+						System.out.println("Login from source: "+referer);
+					}
+					break;
+					
+				case 0:	// Just ask for login
+					break;
+			}
+			
 
 			if( login != null )	// If account exists
 			{
-				/// Init DB connection
 
-				///// TODO: Log email, uuid, role access, hour, ip, date
-				
 				//// FIXME: Make it so we create account and put this new account in the uuid/role group
 
 				// TODO
@@ -178,34 +268,9 @@ public class DirectURLService  extends HttpServlet {
 				//*/
 
 				/// Check if person exist
-				int uid = Integer.parseInt(login[2]);
-				if( uid > 0 )
-				{
-					/// Find group for this node
-					int rrgid = dataProvider.getRoleByNode(c, 1, uuid, role);
-
-					/// Put person in specified group
-					String userInfo = "<users><user id='"+uid+"' /></users>";
-					dataProvider.postRRGUsers(c, 1, rrgid, userInfo);
-
-					/// Log person
-					session.setAttribute("user", login[1]);
-					session.setAttribute("uid", uid);
-				}
-//				dataProvider.disconnect();
 			}
 			else	// User doesn't exists
 			{
-				int pubid = 0;
-				/// Find public id and log as such
-				String sql = "SELECT userid FROM credential WHERE login='public'";
-				PreparedStatement st = c.prepareStatement(sql);
-				ResultSet rs = st.executeQuery();
-				rs.next();
-				pubid = rs.getInt(1);
-				
-				session.setAttribute("user", "public");
-				session.setAttribute("uid", pubid);
 			}
 			
 		}
@@ -247,13 +312,26 @@ public class DirectURLService  extends HttpServlet {
 		String uuid = request.getParameter("uuid");
 		String email = request.getParameter("email");
 		String role = request.getParameter("role");
+		String level = request.getParameter("l");
+		String duration = request.getParameter("d");
+		
+		if(duration == null)
+			duration = "72";	// Default 72h
+		int durationInt = Integer.parseInt(duration);
+		if( durationInt < 1 )
+			durationInt = 1;
+		else if( durationInt > 24*30 )	// 720 hours, 30 days
+			durationInt = 24*30;
+		Date current = new Date();
+		long endtime = current.getTime()/1000 + durationInt*3600;	// Number of seconds
+		String endtimeString = Long.toString(endtime);
 
 		/// Keeping creation log
 		BufferedWriter log = LogUtils.getLog("directAccess.log");
 		Date date = new Date();
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 		String datestring = dateFormat.format(date);
-		log.write("["+datestring+"] Direct link creation for user: "+uid+" for access at: "+uuid+" with email: "+email+ " ("+role+")");
+		log.write("["+datestring+"] Direct link creation for user: "+uid+" for access at: "+uuid+" with email: "+email+ " ("+role+"). Access level: '"+level+"' for duraction: '"+duration+"' ending at: '"+endtimeString+"'");
 		log.newLine();
 		log.flush();
 		log.close();
@@ -262,7 +340,7 @@ public class DirectURLService  extends HttpServlet {
 		String output = "";
 		try
 		{
-			String data = uuid+" "+email+" "+role;
+			String data = uuid+" "+email+" "+role+" "+level+" "+duration+" "+endtimeString;
 			Cipher rc4 = Cipher.getInstance("RC4");
 			String secretkey = ConfigUtils.get("directkey");
 			SecretKeySpec key = new SecretKeySpec(secretkey.getBytes(), "RC4");

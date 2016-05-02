@@ -33,7 +33,18 @@
 		<servlet-name>Jersey REST Service</servlet-name>
 		<url-pattern>/rest/*</url-pattern>
 	</servlet-mapping>
-	 
+	
+	<servlet>
+		<description></description>
+		<display-name>CompareServlet</display-name>
+		<servlet-name>CompareServlet</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.CompareServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>CompareServlet</servlet-name>
+		<url-pattern>/compare/*</url-pattern>
+	</servlet-mapping>
+	
 	<servlet>
 		<description></description>
 		<display-name>FileServlet</display-name>

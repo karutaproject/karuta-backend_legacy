@@ -419,7 +419,7 @@ public class LTIServlet extends HttpServlet {
 		userId = dataProvider.getUserId( connexion, username, email );
 		if ( "0".equals(userId) ) {
 			//create it
-			userId = dataProvider.createUser(connexion, username);
+			userId = dataProvider.createUser(connexion, username, email);
 			outTrace.append("\nCreate User (self) results: " + userId);
 		}
 		else {

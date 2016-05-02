@@ -17,6 +17,7 @@ package com.portfolio.rest;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,21 +26,18 @@ import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import javax.activation.MimeType;
-import javax.naming.InitialContext;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.sql.DataSource;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.DELETE;
@@ -68,6 +66,7 @@ import javax.xml.transform.stream.StreamSource;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.httpclient.Header;
@@ -97,10 +96,7 @@ import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.MailUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.data.utils.javaUtils;
-import com.portfolio.eventbus.HandlerLogging;
-import com.portfolio.eventbus.HandlerNotificationSakai;
 import com.portfolio.eventbus.KEvent;
-import com.portfolio.eventbus.KEventHandler;
 import com.portfolio.eventbus.KEventbus;
 import com.portfolio.security.Credential;
 import com.portfolio.security.NodeRight;
@@ -202,22 +198,6 @@ public class RestServicePortfolio
 			servConfig = sc;
 			servContext = context;
 			dataProvider = SqlUtils.initProvider(context, null);
-//			String dataProviderName  =  ConfigUtils.get("dataProviderClass");
-//			dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
-
-			// Try to initialize Datasource
-			/*
-			InitialContext cxt = new InitialContext();
-			if ( cxt == null ) {
-				throw new Exception("no context found!");
-			}
-
-			/// Init this here, might fail depending on server hosting
-			ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
-			if ( ds == null ) {
-				throw new Exception("Data  jdbc/portfolio-backend source not found!");
-			}
-			//*/
 		}
 		catch( NullPointerException e )
 		{
@@ -237,24 +217,6 @@ public class RestServicePortfolio
 
 		try
 		{
-			/*
-			Connection c = SqlUtils.getConnection(servContext);
-			if(logRestRequests==1)
-			{
-				String httpHeaders = "";
-				Enumeration headerNames = httpServletRequest.getHeaderNames();
-				while(headerNames.hasMoreElements()) {
-					String headerName = (String)headerNames.nextElement();
-					httpHeaders += headerName+": "+httpServletRequest.getHeader(headerName)+"\n";
-				}
-				String url = httpServletRequest.getRequestURL().toString();
-				if(httpServletRequest.getQueryString()!=null) url += "?" + httpServletRequest.getQueryString().toString();
-				dataProvider.writeLog(c, url,
-						httpServletRequest.getMethod().toString(),
-						httpHeaders,
-						inBody, outBody, httpCode);
-			}
-				//*/
 		}
 		catch(Exception ex)
 		{
@@ -270,43 +232,6 @@ public class RestServicePortfolio
 	{
 		try
 		{
-//			Connection con = SqlUtils.getConnection(servContext);
-			/*
-			if( ds == null )	// Case where we can't deploy context.xml
-			{
-				con = SqlUtils.getConnection(servContext);
-				dataProvider.setConnection(con);
-			}
-			else
-			{
-				con = ds.getConnection();
-				dataProvider.setConnection(con);
-			}
-			//*/
-//			dataProvider.setConnection(con);
-//			dataProvider.setDataSource(ds);
-
-//			credential = new Credential(con);
-
-			/// Configure session
-			/// FIXME: Oracle part might be missing
-			/*
-			if( "mysql".equals(ConfigUtils.get("serverType")) )
-			{
-				PreparedStatement st = con.prepareStatement("SET SESSION group_concat_max_len = 1048576");	// 1MB
-				st.execute();
-				st.close();
-			}
-			//*/
-
-			/// Configure eventbus
-			//	    KEventHandler handlerDB = new HandlerDatabase(request, dataProvider);
-//			KEventHandler handlerLog = new HandlerLogging(request, dataProvider);
-//			KEventHandler handlerSakaiNotification = new HandlerNotificationSakai(request, dataProvider);
-
-			//        eventbus.addChain( handlerDB );
-//			eventbus.addChain( handlerLog );
-//			eventbus.addChain( handlerSakaiNotification );
 		}
 		catch ( Exception e )
 		{
@@ -321,6 +246,33 @@ public class RestServicePortfolio
 	public UserInfo checkCredential(HttpServletRequest request, String login, String token, String group )
 	{
 		HttpSession session = request.getSession(true);
+
+		String referer = (String) request.getHeader("referer");	// Can be spoofed
+		String source = (String) session.getAttribute("source");
+		if( source != null )
+		{
+			if( referer == null )
+			{
+				session.invalidate();
+				session = request.getSession(true);
+			}
+			else
+			{
+				int last = referer.lastIndexOf("/");
+				int stop = referer.indexOf("?");
+				String page = "";
+				if(stop > 0)
+					page = referer.substring(last+1, stop);
+				else
+					page = referer.substring(last+1);
+				if( !page.equals(source) )
+				{
+					session.invalidate();
+					session = request.getSession(true);
+				}
+			}
+		}
+		
 		UserInfo ui = new UserInfo();
 		initService(request);
 		Integer val = (Integer) session.getAttribute("uid");
@@ -390,7 +342,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -437,7 +388,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -492,7 +442,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -549,7 +498,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -613,7 +561,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -658,7 +605,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -707,7 +653,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -764,7 +709,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -812,7 +756,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -844,7 +787,7 @@ public class RestServicePortfolio
 	@Path("/portfolios/portfolio/{portfolio-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, "application/zip", MediaType.APPLICATION_OCTET_STREAM})
-	public Object getPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resource, @QueryParam("files") String files, @QueryParam("export") String export, @QueryParam("lang") String lang)
+	public Object getPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resource, @QueryParam("files") String files, @QueryParam("export") String export, @QueryParam("lang") String lang, @QueryParam("level") String cutoff)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
@@ -853,7 +796,7 @@ public class RestServicePortfolio
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, resource, "", ui.subId).toString();
+			String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, resource, "", ui.subId, cutoff).toString();
 
 			if( "faux".equals(portfolio) )
 			{
@@ -864,6 +807,8 @@ public class RestServicePortfolio
 			{
 				/// Finding back code. Not really pretty
 				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
 				Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
 				NodeList codes = doc.getDocumentElement().getElementsByTagName("code");
 				// Le premier c'est celui du root
@@ -871,151 +816,21 @@ public class RestServicePortfolio
 				String code = "";
 				if( codenode != null )
 					code = codenode.getTextContent();
+				// Sanitize code
+				code = code.replace("_", "");
 
 				if( export != null )
 				{
 					response = Response
 							.ok(portfolio)
-							.header("content-disposition","attachment; filename = \""+code+"-"+time+".xml\"")
+							.header("content-disposition","attachment; filename = \""+code+"-"+timeFormat+".xml\"")
 							.build();
 				}
 				else if(resource != null && files != null)
 				{
 					//// Cas du renvoi d'un ZIP
-
-					/// Temp file in temp directory
-					File tempDir = new File(System.getProperty("java.io.tmpdir", null));
-					File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
-
-					FileOutputStream fos = new FileOutputStream(tempZip);
-					ZipOutputStream zos = new ZipOutputStream(fos);
-//					BufferedOutputStream bos = new BufferedOutputStream(zos);
-
-					/// zos.setComment("Some comment");
-
-					/// Write xml file to zip
-					ZipEntry ze = new ZipEntry(portfolioUuid+".xml");
-					zos.putNextEntry(ze);
-
-					byte[] bytes = portfolio.getBytes("UTF-8");
-					zos.write(bytes);
-
-					zos.closeEntry();
-
-					/// Find all fileid/filename
-					XPath xPath = XPathFactory.newInstance().newXPath();
-//					String filterRes = "//asmResource/fileid[text()]";	// fileid which has something in it
-					String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
-					NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
-
-					/// Direct link to data
-					// String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
-
-					/*
-					String langatt = "";
-					if( lang != null )
-						langatt = "?lang="+lang;
-					else
-						langatt = "?lang=fr";
-					//*/
-
-					/// Fetch all files
-					for( int i=0; i<nodelist.getLength(); ++i )
-					{
-						Node res = nodelist.item(i);
-						/// Check if fileid has a lang
-						Node langAtt = res.getAttributes().getNamedItem("lang");
-						String filterName = "";
-						if( langAtt != null )
-						{
-							lang = langAtt.getNodeValue();
-//							filterName = "./filename[@lang='"+lang+"' and text()]";
-							filterName = "//*[local-name()='filename' and @lang='"+lang+"' and text()]";
-						}
-						else
-						{
-//							filterName = "./filename[@lang and text()]";
-							filterName = "//*[local-name()='filename' and @lang and text()]";
-						}
-
-						Node p = res.getParentNode();	// resource -> container
-						Node gp = p.getParentNode();	// container -> context
-						Node uuidNode = gp.getAttributes().getNamedItem("id");
-						String uuid = uuidNode.getTextContent();
-
-						NodeList textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
-						String filename = "";
-						if( textList.getLength() != 0 )
-						{
-							Element fileNode = (Element) textList.item(0);
-							filename = fileNode.getTextContent();
-							lang = fileNode.getAttribute("lang");	// In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
-							if( "".equals(lang) ) lang = "fr";
-						}
-
-						String servlet = httpServletRequest.getRequestURI();
-						servlet = servlet.substring(0, servlet.indexOf("/", 7));
-						String server = httpServletRequest.getServerName();
-						int port = httpServletRequest.getServerPort();
-//						"http://"+ server + /resources/resource/file/ uuid ? lang= size=
-						// String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
-						String url = "http://"+server+":"+port+servlet+"/resources/resource/file/"+uuid+"?lang="+lang;
-						HttpGet get = new HttpGet(url);
-
-						// Transfer sessionid so that local request still get security checked
-						HttpSession session = httpServletRequest.getSession(true);
-						get.addHeader("Cookie","JSESSIONID="+session.getId());
-
-						// Send request
-						CloseableHttpClient client = HttpClients.createDefault();
-						CloseableHttpResponse ret = client.execute(get);
-						HttpEntity entity = ret.getEntity();
-
-						// Put specific name for later recovery
-						if( "".equals(filename) )
-							continue;
-						int lastDot = filename.lastIndexOf(".");
-						if( lastDot < 0 )
-							lastDot = 0;
-						String filenameext = filename.substring(0);	/// find extension
-						int extindex = filenameext.lastIndexOf(".") + 1;
-						filenameext = uuid +"_"+ lang +"."+ filenameext.substring(extindex);
-
-						// Save it to zip file
-//						int length = (int) entity.getContentLength();
-						InputStream content = entity.getContent();
-
-//						BufferedInputStream bis = new BufferedInputStream(entity.getContent());
-
-						ze = new ZipEntry(filenameext);
-						try
-						{
-							int totalread = 0;
-							zos.putNextEntry(ze);
-							int inByte;
-							byte[] buf = new byte[4096];
-//							zos.write(bytes,0,inByte);
-							while( (inByte = content.read(buf)) != -1 )
-							{
-								totalread += inByte;
-								zos.write(buf, 0, inByte);
-							}
-							System.out.println("FILE: "+filenameext+" -> "+totalread);
-							content.close();
-//							bis.close();
-							zos.closeEntry();
-						}
-						catch( Exception e )
-						{
-							e.printStackTrace();
-						}
-						EntityUtils.consume(entity);
-						ret.close();
-						client.close();
-					}
-
-					zos.close();
-					fos.close();
+					HttpSession session = httpServletRequest.getSession(true);
+					File tempZip = getZipFile(portfolioUuid, portfolio, lang, doc, session);
 
 					/// Return zip file
 					RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
@@ -1025,7 +840,7 @@ public class RestServicePortfolio
 
 					response = Response
 							.ok(b, MediaType.APPLICATION_OCTET_STREAM)
-							.header("content-disposition","attachment; filename = \""+code+"-"+time+".zip")
+							.header("content-disposition","attachment; filename = \""+code+"-"+timeFormat+".zip")
 							.build();
 
 					// Temp file cleanup
@@ -1033,8 +848,6 @@ public class RestServicePortfolio
 				}
 				else
 				{
-					//try { this.userId = userId; } catch(Exception ex) { this.userId = -1; };
-					//	        	String returnValue = dataProvider.getPortfolio(new MimeType("text/xml"),portfolioUuid,this.userId, this.groupId, this.label, resource, files).toString();
 					if(portfolio.equals("faux")){
 
 						throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -1059,7 +872,7 @@ public class RestServicePortfolio
 		catch(SQLException ex)
 		{
 			logRestRequest(httpServletRequest, null, "Portfolio "+portfolioUuid+" not found",Status.NOT_FOUND.getStatusCode());
-
+			logger.info("Portfolio "+portfolioUuid+" not found");
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio "+portfolioUuid+" not found");
 		}
 		catch(Exception ex)
@@ -1076,58 +889,122 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			if( dataProvider != null )
-//				dataProvider.disconnect();
 		}
 
 		return response;
 	}
 
-	/*@Path("/portfolios/portfolio/{portfolio-id}")
-	@GET
-	@Produces("application/zip")
-	public String getPortfolioZip( @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @PathParam("resource") Boolean resource, @PathParam("files") Boolean files)
+	private File getZipFile( String portfolioUuid, String portfolioContent, String lang, Document doc, HttpSession session ) throws IOException, XPathExpressionException
 	{
-		initialize(httpServletRequest,true);
-		//httpServletRequest.setHeader("Content-Disposition", "attachment; filename=\""+code+"_"+now+".xml\";");
-        try
-		{
-        	//try { this.userId = userId; } catch(Exception ex) { this.userId = -1; };
-        	String returnValue = dataProvider.getPortfolioZip(new MimeType("text/xml"),portfolioUuid,this.userId, this.groupId, this.label, resource, files).toString();
-        	if(returnValue.equals("faux")){
+		/// Temp file in temp directory
+		File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+		File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
 
-				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
+		FileOutputStream fos = new FileOutputStream(tempZip);
+		ZipOutputStream zos = new ZipOutputStream(fos);
+
+		/// Write xml file to zip
+		ZipEntry ze = new ZipEntry(portfolioUuid+".xml");
+		zos.putNextEntry(ze);
+
+		byte[] bytes = portfolioContent.getBytes("UTF-8");
+		zos.write(bytes);
+
+		zos.closeEntry();
+
+		/// Find all fileid/filename
+		XPath xPath = XPathFactory.newInstance().newXPath();
+		String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
+		NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+
+		/// Fetch all files
+		for( int i=0; i<nodelist.getLength(); ++i )
+		{
+			Node res = nodelist.item(i);
+			/// Check if fileid has a lang
+			Node langAtt = res.getAttributes().getNamedItem("lang");
+			String filterName = "";
+			if( langAtt != null )
+			{
+				lang = langAtt.getNodeValue();
+				filterName = ".//*[local-name()='filename' and @lang='"+lang+"' and text()]";
 			}
-        	if(accept.equals(MediaType.APPLICATION_JSON))
-				returnValue = XML.toJSONObject(returnValue).toString();
+			else
+			{
+				filterName = ".//*[local-name()='filename' and @lang and text()]";
+			}
 
-        	logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
-//        	dataProvider.disconnect();
-        	return returnValue;
-		}
-        catch(RestWebApplicationException ex)
-        {
-        	throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
-        }
-        catch(SQLException ex)
-        {
-        	logRestRequest(httpServletRequest, null, "Portfolio "+portfolioUuid+" not found",Status.NOT_FOUND.getStatusCode());
-//        	dataProvider.disconnect();
-        	throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio "+portfolioUuid+" not found");
-        }
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, null,ex.getMessage()+"\n\n"+ex.getStackTrace(), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-        finally
-        {
-          dataProvider.disconnect();
-        }
-	}*/
+			Node p = res.getParentNode();	// fileid -> resource
+			Node gp = p.getParentNode();	// resource -> context
+			Node uuidNode = gp.getAttributes().getNamedItem("id");
+			String uuid = uuidNode.getTextContent();
 
+			NodeList textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
+			String filename = "";
+			if( textList.getLength() != 0 )
+			{
+				Element fileNode = (Element) textList.item(0);
+				filename = fileNode.getTextContent();
+				lang = fileNode.getAttribute("lang");	// In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
+				if( "".equals(lang) ) lang = "fr";
+			}
+
+			String backend = ConfigUtils.get("backendserver"); 
+			String url = backend+"/resources/resource/file/"+uuid+"?lang="+lang;
+			HttpGet get = new HttpGet(url);
+
+			// Transfer sessionid so that local request still get security checked
+			get.addHeader("Cookie","JSESSIONID="+session.getId());
+
+			// Send request
+			CloseableHttpClient client = HttpClients.createDefault();
+			CloseableHttpResponse ret = client.execute(get);
+			HttpEntity entity = ret.getEntity();
+
+			// Put specific name for later recovery
+			if( "".equals(filename) )
+				continue;
+			int lastDot = filename.lastIndexOf(".");
+			if( lastDot < 0 )
+				lastDot = 0;
+			String filenameext = filename.substring(0);	/// find extension
+			int extindex = filenameext.lastIndexOf(".") + 1;
+			filenameext = uuid +"_"+ lang +"."+ filenameext.substring(extindex);
+
+			// Save it to zip file
+			InputStream content = entity.getContent();
+			ze = new ZipEntry(filenameext);
+			try
+			{
+				int totalread = 0;
+				zos.putNextEntry(ze);
+				int inByte;
+				byte[] buf = new byte[4096];
+				while( (inByte = content.read(buf)) != -1 )
+				{
+					totalread += inByte;
+					zos.write(buf, 0, inByte);
+				}
+				System.out.println("FILE: "+filenameext+" -> "+totalread);
+				content.close();
+				zos.closeEntry();
+			}
+			catch( Exception e )
+			{
+				e.printStackTrace();
+			}
+			EntityUtils.consume(entity);
+			ret.close();
+			client.close();
+		}
+
+		zos.close();
+		fos.close();
+		
+		return tempZip;
+	}
+	
+	
 	/**
 	 *	Return the portfolio from its code
 	 *	GET /rest/api/portfolios/code/{code}
@@ -1138,20 +1015,26 @@ public class RestServicePortfolio
 	@Path("/portfolios/portfolio/code/{code}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public String getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources )
+	public Object getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		
 		try
 		{
+			if( resources == null )
+				resources = "false";
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"),code,ui.userId, groupId, resources, ui.subId).toString();
-			if(returnValue.equals("faux")){
+			if( "faux".equals(returnValue)){
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
-			if(accept.equals(MediaType.APPLICATION_JSON))
+			if( "".equals(returnValue) )
+			{
+				return Response.status(Status.NOT_FOUND).entity("").build();
+			}
+			if(MediaType.APPLICATION_JSON.equals(accept))	// Not really used
 				returnValue = XML.toJSONObject(returnValue).toString();
 
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
@@ -1182,7 +1065,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1217,7 +1099,7 @@ public class RestServicePortfolio
 	@GET
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult )
+	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") String cutoff, @QueryParam("public") String public_var )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -1227,7 +1109,7 @@ public class RestServicePortfolio
 			c = SqlUtils.getConnection(servContext);
 			if(portfolioUuid!=null)
 			{
-				String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, groupId, this.label, null, null, ui.subId).toString();
+				String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, groupId, this.label, null, null, ui.subId, cutoff).toString();
 				if(accept.equals(MediaType.APPLICATION_JSON))
 					returnValue = XML.toJSONObject(returnValue).toString();
 
@@ -1251,11 +1133,16 @@ public class RestServicePortfolio
 				}
 				else
 				{
-					if( userId != null && credential.isAdmin(c, ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
+					if( public_var != null )
+					{
+						int publicid = credential.getMysqlUserUid(c, "public");
+						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, portfolioActive, 0).toString();
+					}
+					else if( userId != null && credential.isAdmin(c, ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
 					{
 						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId).toString();
 					}
-					else
+					else	/// For user logged in
 					{
 						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId).toString();
 					}
@@ -1294,7 +1181,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1345,7 +1231,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1392,7 +1277,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1454,7 +1338,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1632,7 +1515,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1680,7 +1562,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 		return null;
 	}
@@ -1699,7 +1580,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfolios/instanciate/{portfolio-id}")
 	@POST
-	public String postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname, @QueryParam("owner") String setowner)
+	public Object postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname, @QueryParam("owner") String setowner)
 	{
 		String value = "Instanciate: "+portfolioId;
 
@@ -1732,6 +1613,10 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, returnValue);
 			else if( returnValue.startsWith("erreur") )
 				throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, returnValue);
+			else if( "".equals(returnValue) )
+			{
+				return Response.status(Status.NOT_FOUND).build();
+			}
 
 			return returnValue;
 		}
@@ -1750,7 +1635,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1805,7 +1689,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -1817,11 +1700,12 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfolios")
 	@POST
+//	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_XML)
-	public String postFormPortfolio(@FormDataParam("uploadfile") String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @QueryParam("instance") String instance )
+	public String postFormPortfolio(@FormDataParam("uploadfile") String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @FormDataParam("instance") String instance, @FormDataParam("project") String projectName )
 	{
-		return postPortfolio(xmlPortfolio, user, token, groupId, sc, httpServletRequest, userId, modelId, srceType, srceUrl, xsl, instance);
+		return postPortfolio(xmlPortfolio, user, token, groupId, sc, httpServletRequest, userId, modelId, srceType, srceUrl, xsl, instance, projectName);
 	}
 
 	/**
@@ -1842,8 +1726,9 @@ public class RestServicePortfolio
 	@Path("/portfolios")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
+//	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.APPLICATION_XML)
-	public String postPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @QueryParam("instance") String instance )
+	public String postPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @QueryParam("instance") String instance, @QueryParam("project") String projectName )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
@@ -1928,7 +1813,7 @@ public class RestServicePortfolio
 				instantiate = true;
 
 			c = SqlUtils.getConnection(servContext);
-			String returnValue = dataProvider.postPortfolio(c, new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
+			String returnValue = dataProvider.postPortfolio(c, new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
 			logRestRequest(httpServletRequest, xmlPortfolio, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1953,10 +1838,119 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
+	// GET /portfolios/zip ? portfolio={}, toujours avec files
+	// zip séparés
+	// zip des zip
+	/**
+	 *	Fetching multiple portfolio in a zip
+	 *	GET /rest/api/portfolios
+	 *	parameters:
+	 *	portfolio: separated with ','
+	 *	return:
+	 *	zipped portfolio (with files) inside zip file
+	 **/
+	@Path("/portfolios/zip")
+	@GET
+	@Consumes("application/zip")	// Envoie donnï¿½e brut
+	public Object getPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("portfolios") String portfolioList, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance, @QueryParam("lang") String lang )
+	{
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
+
+		try
+		{
+			HttpSession session = httpServletRequest.getSession(false);
+			String [] list = portfolioList.split(",");
+			File[] files = new File[list.length];
+
+			c = SqlUtils.getConnection(servContext);
+			
+			/// Create all the zip files
+			for( int i=0; i<list.length; ++i )
+			{
+				String portfolioUuid = list[i];
+				String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, "true", "", ui.subId, null).toString();
+	
+				Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
+				
+				files[i] = getZipFile(portfolioUuid, portfolio, lang, doc, session);
+				
+			}
+			
+			// Make a big zip of it
+			File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+			File bigZip = File.createTempFile("project_", ".zip", tempDir);
+			
+			// Add content to it
+			FileOutputStream fos = new FileOutputStream(bigZip);
+			ZipOutputStream zos = new ZipOutputStream(fos);
+
+			byte[] buffer = new byte[0x1000];
+			
+			for( int i=0; i<files.length; ++i )
+			{
+				File file = files[i];
+				FileInputStream fis = new FileInputStream(file);
+				String filename = file.getName();
+				
+				/// Write xml file to zip
+				ZipEntry ze = new ZipEntry(filename+".zip");
+				zos.putNextEntry(ze);
+				int read = 1;
+				while( read > 0 )
+				{
+					read = fis.read(buffer);
+					zos.write(buffer);
+				}
+				zos.closeEntry();
+			}
+			zos.close();
+
+			/// Return zip file
+			RandomAccessFile f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
+			byte[] b = new byte[(int)f.length()];
+			f.read(b);
+			f.close();
+
+			Date time = new Date();
+			SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+			String timeFormat = dt.format(time);
+
+			Response response = Response
+					.ok(b, MediaType.APPLICATION_OCTET_STREAM)
+					.header("content-disposition","attachment; filename = \"Project-"+timeFormat+".zip\"")
+					.build();
+
+			// Delete all zipped file
+			for( int i=0; i<files.length; ++i )
+				files[i].delete();
+			
+			// And the over-arching zip
+			bigZip.delete();
+
+			return response;
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), modelId, Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+	}
+
+	
 	/**
 	 *	As a form, import zip, extract data and put everything into the database
 	 *	POST /rest/api/portfolios
@@ -1967,8 +1961,9 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfolios/zip")
 	@POST
-	@Consumes("application/zip")	// Envoie donnï¿½e brut
-	public String postPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance)
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+//	@Consumes("application/zip")	// Envoie donnï¿½e brut
+	public String postPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @FormDataParam("fileupload") InputStream fileInputStream, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @FormDataParam("instance") String instance, @FormDataParam("project") String projectName)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -1980,7 +1975,7 @@ public class RestServicePortfolio
 				instantiate = true;
 
 			c = SqlUtils.getConnection(servContext);
-			String returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
+			String returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"), httpServletRequest, fileInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
 			logRestRequest(httpServletRequest, returnValue, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -1999,7 +1994,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2052,7 +2046,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2121,7 +2114,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2182,7 +2174,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2237,7 +2228,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2308,7 +2298,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2393,7 +2382,6 @@ public class RestServicePortfolio
 				}
 			}
 
-//			returnValue = dataProvider.postRRGCreate(ui.userId, xmlNode);
 			logRestRequest(httpServletRequest, xmlNode, "Change rights", Status.OK.getStatusCode());
 		}
 		catch(RestWebApplicationException ex)
@@ -2420,7 +2408,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return "";
@@ -2475,7 +2462,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2529,7 +2515,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2595,7 +2580,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2649,7 +2633,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2703,7 +2686,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2760,7 +2742,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2808,7 +2789,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2860,7 +2840,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2909,7 +2888,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -2963,7 +2941,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3010,7 +2987,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getNodes",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			//            dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -3020,7 +2996,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3088,7 +3063,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3159,7 +3133,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return response;
@@ -3223,7 +3196,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3272,7 +3244,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3328,7 +3299,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3402,7 +3372,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3446,7 +3415,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3505,7 +3473,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3554,7 +3521,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3603,7 +3569,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3652,7 +3617,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3701,7 +3665,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3743,7 +3706,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3773,8 +3735,6 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role "+roleId+" not found");
 			}
 
-			//			if(accept.equals(MediaType.APPLICATION_JSON))
-			//				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -3799,7 +3759,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3829,8 +3788,6 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role "+" not found");
 			}
 
-			//			if(accept.equals(MediaType.APPLICATION_JSON))
-			//				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -3855,7 +3812,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3885,8 +3841,6 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role "+" not found");
 			}
 
-			//			if(accept.equals(MediaType.APPLICATION_JSON))
-			//				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -3911,7 +3865,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -3941,8 +3894,6 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role "+" not found");
 			}
 
-			//			if(accept.equals(MediaType.APPLICATION_JSON))
-			//				returnValue = XML.toJSONObject(returnValue).toString();
 			logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -3967,7 +3918,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4019,7 +3969,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4069,7 +4018,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4119,7 +4067,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4141,10 +4088,6 @@ public class RestServicePortfolio
 		{
 			c = SqlUtils.getConnection(servContext);
 			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteUsers(c, ui.userId, userid).toString());
-			//			 if(nbResourceDeleted==0)
-			//			 {
-			//				 System.out.print("supprimï¿½");
-			//			 }
 			logRestRequest(httpServletRequest, null,null, Status.OK.getStatusCode());
 
 			return "user "+userid+" deleted";
@@ -4169,7 +4112,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4209,7 +4151,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4248,14 +4189,10 @@ public class RestServicePortfolio
 				String gid = groupnode.getAttributes().getNamedItem("id").getNodeValue();
 				if( gid != null )
 				{
-//					ui.groupId = Integer.parseInt(gid);
-//					session.setAttribute("gid", ui.groupId);
 				}
 			}
 			else if( groups.getLength() == 0 )	// Pas de groupe, on rend invalide le choix
 			{
-//				ui.groupId = -1;
-//				session.setAttribute("gid", ui.groupId);
 			}
 
 			return xmlGroups;
@@ -4274,58 +4211,8 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
-
-	/*
-	@Path("/resources/resource/file/{lang}/{node-id}")
-	@POST
-	@Produces(MediaType.APPLICATION_XML)
-	public String postFile( @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("node-id") String nodeParentUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
-	{
-		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-		try
-		{
-			String filename = "";
-			MultipartRequest multi= new MultipartRequest(httpServletRequest,"c:\\temp\\upload",5*1024*1024);
-			Enumeration files = multi.getFileNames();
-			java.io.File f = null;
-			while(files.hasMoreElements()) {
-				String name=(String)files.nextElement();
-				filename = multi.getFilesystemName(name);
-				String type = multi.getContentType(name);
-				f = multi.getFile(name);
-			}
-			if (f!=null) {
-				InputStream is = new FileInputStream(f);
-				byte b[]=new byte[is.available()];
-				is.read(b);
-				String extension = filename.substring(filename.lastIndexOf(".")+1);
-				//PreparedStatement ps = new P
-				//String resId = wadbackend.WadNode.getResId(connexion,nodeId);
-				//outTrace.append("<br/>nodeId :"+nodeId+" resId:"+resId);
-				//wadbackend.WadFile.saveDocumentBD (connexion, resId, b, filename, extension, username, lang, outTrace) ;
-				//outTrace.append("<br/>filename :|"+filename+"|");
-				System.out.println(filename+" : "+extension+" : "+b.length);
-				//outPrint.append("<span id='file-filename'>"+filename+"</span>"+uploadFile_jsp[LANG][1]);
-				// ============================
-			} else {
-				//outPrint.append("<span id='file-filename'>"+uploadFile_jsp[LANG][2]+"</span>"+uploadFile_jsp[LANG][1]);
-				//outTrace.append("<br/>aucun fichier");
-			}
-			return "";
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, null,ex.getMessage()+"\n\n"+ex.getStackTrace(), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-			dataProvider.disconnect();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-	//*/
 
 	/**
 	 *	Send login information
@@ -4415,8 +4302,6 @@ public class RestServicePortfolio
 					session.setAttribute("subuser", "");
 					session.setAttribute("subuid", 0);
 				}
-				//				if(tokenID==null) throw new RestWebApplicationException(Status.FORBIDDEN, "invalid credential or invalid group member");
-				//				else if(tokenID.length()==0) throw new RestWebApplicationException(Status.FORBIDDEN, "invalid credential or invalid group member");
 
 				event.status = 200;
 				retVal = resultCredential[0];
@@ -4437,9 +4322,7 @@ public class RestServicePortfolio
 			status = 500;
 			retVal = ex.getMessage();
 			logger.error(ex.getMessage());
-//			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlCredential, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
 		{
@@ -4448,8 +4331,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			if( dataProvider != null )
-//				dataProvider.disconnect();
 		}
 		
 		return Response.status(status).entity(retVal).type(MediaType.APPLICATION_XML).build();
@@ -4538,7 +4419,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return Response.status(retVal).entity(retText).build();
@@ -4593,11 +4473,9 @@ public class RestServicePortfolio
 			{
 				session.setAttribute("user", sv.getUser());
 				session.setAttribute("uid",Integer.parseInt(userId));
-//				dataProvider.disconnect();
 			}
 			else
 			{
-//				dataProvider.disconnect();
 				return Response.status(403).entity("Login "+sv.getUser()+" not found or bad CAS auth (bad ticket or bad url service : "+completeURL+") : "+sv.getErrorMessage()).build();
 			}
 
@@ -4616,12 +4494,10 @@ public class RestServicePortfolio
 			}
 
 			return response;
-			//return Response.ok(xmlResponse).build();
 		}
 		catch(Exception ex)
 		{
 			ex.printStackTrace();
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :"+casUrlValidation);
 		}
 		finally
@@ -4643,8 +4519,6 @@ public class RestServicePortfolio
 	 **/
 	@Path("/credential/logout")
 	@POST
-	@Produces(MediaType.APPLICATION_XML)
-	@Consumes(MediaType.APPLICATION_XML)
 	public Response logout(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest)
 	{
 		HttpSession session = httpServletRequest.getSession(false);
@@ -4682,7 +4556,7 @@ public class RestServicePortfolio
 			String returnValue = dataProvider.getNodeWithXSL(c, new MimeType("text/xml"),nodeUuid,xslFile, parameters, ui.userId, groupId).toString();
 			if(returnValue.length() != 0)
 			{
-				if(accept.equals(MediaType.APPLICATION_JSON))
+				if(MediaType.APPLICATION_JSON.equals(accept))
 					returnValue = XML.toJSONObject(returnValue).toString();
 				logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 			}
@@ -4719,7 +4593,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4769,7 +4642,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4783,7 +4655,7 @@ public class RestServicePortfolio
 	@POST
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces(MediaType.TEXT_PLAIN)
-	public String postPortfolioByForm( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance)
+	public String postPortfolioByForm( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @FormDataParam("uploadfile") InputStream uploadedInputStream, @FormDataParam("instance") String instance, @FormDataParam("project") String projectName)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		String returnValue = "";
@@ -4796,7 +4668,7 @@ public class RestServicePortfolio
 				instantiate = true;
 
 			c = SqlUtils.getConnection(servContext);
-			returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"),httpServletRequest, ui.userId, groupId, modelId, ui.subId, instantiate).toString();
+			returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"), httpServletRequest, uploadedInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
 		}
 		catch( Exception e )
 		{
@@ -4809,74 +4681,9 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return returnValue;
-		/*
-		String xmlPortfolio = "";
-		try
-		{
-			MultipartRequest multi;
-			String os = System.getProperty("os.name").toLowerCase();
-			// windows
-			if(os.indexOf("win") >= 0)
-			{
-				multi = new MultipartRequest(httpServletRequest,"c:\\windows\\temp",5*1024*1024);
-			}
-			else
-			{
-				multi = new MultipartRequest(httpServletRequest,"/tmp",5*1024*1024);
-			}
-			Enumeration files = multi.getFileNames();
-			java.io.File f = null;
-			String type = "";
-			String name= "";
-
-			while(files.hasMoreElements()) {
-				name=(String)files.nextElement();
-				String filename = multi.getFilesystemName(name);
-				type = multi.getContentType(name);
-				f = multi.getFile(name);
-			}
-			if (f!=null)
-			{
-
-				xmlPortfolio = DomUtils.file2String(f.getPath(), new StringBuffer());
-			}
-		}
-		catch (Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlPortfolio, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		//*/
-
-//		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
-		/*
-		try
-		{
-			//try { this.userId = userId; } catch(Exception ex) { this.userId = -1; };
-			String returnValue = dataProvider.postPortfolio(new MimeType("text/xml"),new MimeType("text/xml"),xmlPortfolio, ui.userId, groupId, modelId, ui.subId).toString();
-			logRestRequest(httpServletRequest, xmlPortfolio, returnValue, Status.OK.getStatusCode());
-			//	 				 	                        dataProvider.disconnect();
-			return returnValue;
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-			logRestRequest(httpServletRequest, xmlPortfolio, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-		finally
-		{
-			dataProvider.disconnect();
-		}
-		//*/
 	}
 
 	/**
@@ -4915,7 +4722,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4955,7 +4761,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -4974,13 +4779,13 @@ public class RestServicePortfolio
 	 *	Create a new user group
 	 *	POST /rest/api/usersgroups
 	 *	parameters:
-	 *	 - name: Name of the group we are creating
+	 *	 - label: Name of the group we are creating
 	 *	return:
 	 *   - groupid
 	 **/
 	@Path("/usersgroups")
 	@POST
-	public int postUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname)
+	public String postUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("label") String groupname)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		int response = -1;
@@ -5009,10 +4814,9 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
-		return response;
+		return Integer.toString(response);
 	}
 
 	/**
@@ -5021,24 +4825,35 @@ public class RestServicePortfolio
 	 *	parameters:
 	 *	 - group: group id
 	 *	 - user: user id
+	 *	 - label: label
 	 *	return:
 	 *	 Code 200
 	 **/
 	@Path("/usersgroups")
 	@PUT
-	public String putUserInUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user)
+	public Response putUserInUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user, @QueryParam("label") String label)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
-
 		try
 		{
-			int response = -1;
 			c = SqlUtils.getConnection(servContext);
-			response = dataProvider.putUserInUserGroup(c, user, group, ui.userId);
-			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
-
-			return "";
+			boolean isOK=false;
+			if( label != null )
+			{
+				// Rename group
+				isOK = dataProvider.putUserGroupLabel(c, user, group, label);
+			}
+			else
+			{
+				// Add user in group
+				isOK = dataProvider.putUserInUserGroup(c, user, group, ui.userId);
+				logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
+			}
+			if( isOK )
+				return Response.status(200).entity("Changed").build();
+			else
+				return Response.status(200).entity("Not OK").build();
 		}
 		catch(Exception ex)
 		{
@@ -5054,7 +4869,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5080,7 +4894,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/usersgroups")
 	@GET
-	public String getUsersByUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group)
+	public String getUsersByUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
@@ -5089,7 +4903,9 @@ public class RestServicePortfolio
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			if( group == null )
+			if( user != null )
+				xmlUsers = dataProvider.getGroupByUser(c, user, ui.userId);
+			else if( group == null )
 				xmlUsers = dataProvider.getUserGroupList(c, ui.userId);
 			else
 				xmlUsers = dataProvider.getUsersByUserGroup(c, group, ui.userId);
@@ -5109,14 +4925,13 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 
 		return xmlUsers;
 	}
 
 	/**
-	 *	Remote a user from a user group, or remove a usergroup
+	 *	Remove a user from a user group, or remove a usergroup
 	 *	DELETE /rest/api/usersgroups
 	 *	parameters:
 	 *	 - group: group id
@@ -5131,14 +4946,15 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		String response = "";
 		Connection c = null;
+		Boolean isOK=false;
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 			if( user == null )
-				response = dataProvider.deleteUsersGroups(c, group, ui.userId);
+				isOK = dataProvider.deleteUsersGroups(c, group, ui.userId);
 			else
-				response = dataProvider.deleteUsersFromUserGroups(c, user, group, ui.userId);
+				isOK = dataProvider.deleteUsersFromUserGroups(c, user, group, ui.userId);
 			logRestRequest(httpServletRequest, "", response, Status.OK.getStatusCode());
 
 		}
@@ -5156,7 +4972,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 		return response;
 	}
@@ -5176,7 +4991,7 @@ public class RestServicePortfolio
 	 *	Create a new portfolio group
 	 *	POST /rest/api/portfoliogroups
 	 *	parameters:
-	 *	 - name: Name of the group we are creating
+	 *	 - label: Name of the group we are creating
 	 *	 - parent: parentid
 	 *	 - type: group/portfolio
 	 *	return:
@@ -5184,7 +4999,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@POST
-	public Response postPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("name") String groupname, @QueryParam("type") String type, @QueryParam("parent") Integer parent)
+	public Response postPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("label") String groupname, @QueryParam("type") String type, @QueryParam("parent") Integer parent)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		int response = -1;
@@ -5201,7 +5016,6 @@ public class RestServicePortfolio
 			{
 				return Response.status(Status.NOT_MODIFIED).entity("Error in creation").build();
 			}
-//				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Error in creation");
 		}
 		catch(Exception ex)
 		{
@@ -5233,7 +5047,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@PUT
-	public String putPortfolioInPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String uuid)
+	public Response putPortfolioInPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String uuid, @QueryParam("label") String label )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
@@ -5242,10 +5056,10 @@ public class RestServicePortfolio
 		{
 			c = SqlUtils.getConnection(servContext);
 			int response = -1;
-			response = dataProvider.putPortfolioInGroup(c, uuid, group, ui.userId);
+			response = dataProvider.putPortfolioInGroup(c, uuid, group, label, ui.userId);
 			logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
 
-			return "";
+			return Response.ok(Integer.toString(response)).build();
 		}
 		catch(Exception ex)
 		{
@@ -5286,7 +5100,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@GET
-	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group)
+	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String portfolioid)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
@@ -5295,7 +5109,11 @@ public class RestServicePortfolio
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			if( group == null )
+			if( portfolioid != null )
+			{
+				xmlUsers = dataProvider.getPortfolioGroupListFromPortfolio(c, portfolioid, ui.userId);
+			}
+			else if( group == null )
 				xmlUsers = dataProvider.getPortfolioGroupList(c, ui.userId);
 			else
 				xmlUsers = dataProvider.getPortfolioByPortfolioGroup(c, group, ui.userId);
@@ -5425,7 +5243,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5435,7 +5252,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5516,10 +5332,6 @@ public class RestServicePortfolio
 			if( portgroupnode != null )
 			{
 				String portgroupname = portgroupnode.getAttributes().getNamedItem("name").getNodeValue();
-				// Query portfolio group for list of uuid
-
-				// while( res.next() )
-				// portfolio.add(portfolio);
 
 				Node xpathNode = (Node) findXpath.evaluate(portgroupnode, XPathConstants.NODE);
 				nodefilter = xpathNode.getNodeValue();
@@ -5548,7 +5360,7 @@ public class RestServicePortfolio
 			for( int i=0; i<portfolio.size(); ++i )	// For all portfolio
 			{
 				String portfolioUuid = portfolio.get(i);
-				String portfolioStr = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, null, null, ui.subId).toString();
+				String portfolioStr = dataProvider.getPortfolio(c, new MimeType("text/xml"),portfolioUuid,ui.userId, 0, this.label, null, null, ui.subId, null).toString();
 				Document docPort = documentBuilder.parse(new ByteArrayInputStream(portfolioStr.getBytes("UTF-8")));
 
 				/// Fetch nodes inside those portfolios
@@ -5632,7 +5444,6 @@ public class RestServicePortfolio
 				}
 			}
 
-//			returnValue = dataProvider.postRRGCreate(ui.userId, xmlNode);
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			if(returnValue == "faux")
@@ -5650,7 +5461,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5660,7 +5470,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5701,7 +5510,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getRightsGroup",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5711,7 +5519,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5756,7 +5563,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getPortfolioRightInfo",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5766,7 +5572,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5811,7 +5616,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "getRightInfo",ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5821,7 +5625,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5866,7 +5669,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5876,7 +5678,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5920,7 +5721,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5930,7 +5730,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -5970,7 +5769,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -5980,7 +5778,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6020,7 +5817,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -6030,7 +5826,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6070,7 +5865,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -6080,7 +5874,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6120,7 +5913,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -6130,7 +5922,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6175,7 +5966,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlNode,ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 		finally
@@ -6185,7 +5975,6 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
-//			dataProvider.disconnect();
 		}
 	}
 
@@ -6230,7 +6019,6 @@ public class RestServicePortfolio
 		}
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		System.out.println(ui.User);
-		// checkCredential(httpServletRequest, user, token, group);
 		try
 		{
 			Elgg elgg = new Elgg(elggDefaultApiUrl,elggDefaultSiteUrl,elggApiKey,ui.User,  elggDefaultUserPassword);
@@ -6240,7 +6028,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "",javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 	}
@@ -6259,7 +6046,6 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
-		// checkCredential(httpServletRequest, user, token, group);
 		try
 		{
 			Elgg elgg = new Elgg(elggDefaultApiUrl,elggDefaultSiteUrl,elggApiKey,ui.User, elggDefaultUserPassword);
@@ -6269,7 +6055,6 @@ public class RestServicePortfolio
 		{
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "",javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			dataProvider.disconnect();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 		}
 	}

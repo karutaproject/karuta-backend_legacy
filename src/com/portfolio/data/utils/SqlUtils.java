@@ -28,6 +28,8 @@ import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.dbcp.cpdsadapter.DriverAdapterCPDS;
+import org.apache.commons.dbcp.datasources.SharedPoolDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -60,7 +62,7 @@ public class SqlUtils
 	public static DataProvider initProvider(ServletContext application, Logger logger) throws Exception
 	{
 	//============= init servers ===============================
-//		String dataProviderName = ConfigUtils.get("dataProviderClass");
+		String dataProviderName = ConfigUtils.get("dataProviderClass");
 		if( dp == null )
 			dp = (DataProvider)Class.forName(dataProviderName).newInstance();
 
@@ -75,28 +77,93 @@ public class SqlUtils
 	{
 		if( !loaded )
 		{
+			String dbdriver = ConfigUtils.get("DBDriver");
+			ConfigUtils.clear("DBDriver");
+			String dbuser = ConfigUtils.get("DBUser");
+			ConfigUtils.clear("DBUser");
+			String dbpass = ConfigUtils.get("DBPass");
+			ConfigUtils.clear("DBPass");
+			String dburl = ConfigUtils.get("DBUrl");
+			ConfigUtils.clear("DBUrl");
+
+			try
+			{
+				DriverAdapterCPDS cpds = new DriverAdapterCPDS();
+				cpds.setDriver(dbdriver);
+				cpds.setUrl(dburl);
+//				cpds.setUser(dbuser);
+//				cpds.setPassword(dbpass);
+				
+				Properties info = new Properties();
+				info.put("user", dbuser);
+				info.put("password", dbpass);
+				cpds.setConnectionProperties(info);
+				
+				SharedPoolDataSource tds = new SharedPoolDataSource();
+				tds.setConnectionPoolDataSource(cpds);
+				
+				/// TODO: Complete it with other parameters, also, benchmark
+				/// Configuring other stuff
+				tds.setValidationQuery("SELECT 1");
+				tds.setTestOnBorrow(true);
+				tds.setTestWhileIdle(true);
+				
+				String maxwait = ConfigUtils.get("DB.MaxWait");
+				String maxtotal = ConfigUtils.get("DB.MaxTotal");
+				String minidle = ConfigUtils.get("DB.MinIdle");
+				String maxidle = ConfigUtils.get("DB.MaxIdle");
+				String waiteviction = ConfigUtils.get("DB.WaitEviction");
+				String numtesteviction =  ConfigUtils.get("DB.NumTestEviction");
+				/// In case something hasn't been set
+				if( maxwait == null ) maxwait = "1000";
+				if( maxtotal == null ) maxtotal = "1000";
+				if( minidle == null ) minidle = "1";
+				if( maxidle == null ) maxidle = "1000";
+				if( waiteviction == null ) waiteviction = "60000";
+				if( numtesteviction == null ) numtesteviction = "10";
+				
+				tds.setMaxWait(Integer.decode(maxwait));
+				tds.setMaxActive(Integer.decode(maxtotal));
+//				tds.setDefaultMinIdle(Integer.decode(minidle));
+				tds.setMaxIdle(Integer.decode(maxidle));
+				tds.setTimeBetweenEvictionRunsMillis(Integer.decode(waiteviction));
+				tds.setNumTestsPerEvictionRun(Integer.decode(numtesteviction));
+				
+				ds = tds;
+			}
+			catch( Exception e )
+			{
+				e.printStackTrace();
+			}
+
 			// Try to initialize Datasource
+			/*
 			cxt = new InitialContext();
 			if ( cxt == null ) {
 				throw new Exception("no context found!");
 			}
+			//*/
 	
 			/// Init this here, might fail depending on server hosting
+			/*
 			try
 			{
-				ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
+//				ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
 			}
 			catch( Exception e )
 			{
 				logger.info("Might not be possible to load context.xml: "+e.getMessage());
 			}
+			//*/
 			loaded = true;
 		}
-		
-		if( ds != null )	// Return the connection directly
-			return ds.getConnection();
-		
-		//// Case where we can't deploy context.xml
+
+//		if( ds != null )	// Return the connection directly
+		return ds.getConnection();
+
+		/// Deprecated with hosting
+		/*
+		//// Case where we can't deploy context.xml, load it raw via the DriverManager
 		// Open META-INF/context.xml
 		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
@@ -129,8 +196,9 @@ public class SqlUtils
 			st.execute();
 			st.close();
 		}
-
+		
 		return connection;
+		//*/
 	}
 
 	public static void close()

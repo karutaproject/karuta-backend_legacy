@@ -281,7 +281,7 @@ public class XSLService  extends HttpServlet {
 				for( int i=0; i<portfolioid.length; ++i )
 				{
 					String p = portfolioid[i];
-					String portfolioxml = dataProvider.getPortfolio(c, new MimeType("text/xml"), p, userId, groupId, "", null, null, 0).toString();
+					String portfolioxml = dataProvider.getPortfolio(c, new MimeType("text/xml"), p, userId, groupId, "", null, null, 0, null).toString();
 					aggregate.append(portfolioxml);
 				}
 			}
@@ -436,7 +436,7 @@ public class XSLService  extends HttpServlet {
 			{
 
 				// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
-				String urlTarget = "http://"+ server + "/resources/resource/file/" + documentid;
+				String urlTarget = server + "/resources/resource/file/" + documentid;
 				System.out.println("Redirect @ "+urlTarget);
 				logger.error("Redirect @ "+urlTarget);
 
@@ -626,6 +626,10 @@ public class XSLService  extends HttpServlet {
 		{
 			usefop = true;
 			ext = ".rtf";
+		}
+		else if( "application/csv".equals(format) )
+		{
+			ext = ".csv";
 		}
 
 		try

@@ -17,6 +17,7 @@ package com.portfolio.data.provider;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Set;
@@ -49,13 +50,6 @@ public class MongoDBDataProvider implements DataProvider {
 	public void dataProvider() {
 		// TODO Auto-generated method stub
 	}
-
-	@Override
-	public void setConnection( Connection c )
-	{
-
-	}
-
 
 	/*
 	@Override
@@ -103,7 +97,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid,
-			int userId, int groupId, String label, String resource, String files, int substid) throws Exception {
+			int userId, int groupId, String label, String resource, String files, int substid, String cutoff) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -198,7 +192,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object postPortfolio(Connection c, MimeType inMimeType, MimeType outMimeType,
-			String in, int userId, int groupId, String modelId, int substid, boolean parseRights ) throws Exception {
+			String in, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName ) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -399,7 +393,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2,
-			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws FileNotFoundException, IOException
+			HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws FileNotFoundException, IOException
 			{
 		// TODO Auto-generated method stub
 		return null;
@@ -588,10 +582,16 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid)
+	public Boolean putUserGroupLabel(Connection c, Integer user, int siteGroupId, String label)
+	{
+		return false;
+	}
+
+	@Override
+	public Boolean putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid)
 	{
 		// TODO Auto-generated method stub
-		return 0;
+		return false;
 	}
 
 	@Override
@@ -602,21 +602,27 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
+	public String getGroupByUser(Connection c, int user, int userId)
+	{
+		return null;
+	}
+
+	@Override
 	public String getUsersByUserGroup(Connection c, int userId, int groupId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String deleteUsersGroups(Connection c, int usersgroup, int currentUid) {
+	public Boolean deleteUsersGroups(Connection c, int usersgroup, int currentUid) {
 		// TODO Auto-generated method stub
-		return null;
+		return false;
 	}
 
 	@Override
-	public String deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid) {
+	public Boolean deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid) {
 		// TODO Auto-generated method stub
-		return null;
+		return false;
 	}
 
 	@Override
@@ -625,9 +631,16 @@ public class MongoDBDataProvider implements DataProvider {
 		return -1;
 	}
 
+	@Override
 	public int postPortfolioGroup( Connection c, String groupname, String type, Integer parent, int userId )
 	{
 		return 0;
+	}
+	
+	@Override
+	public String getPortfolioGroupListFromPortfolio(Connection c, String portfolioid,  int userId )
+	{
+		return null;
 	}
 	
 	@Override
@@ -649,7 +662,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, int userId )
+	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, String label, int userId )
 	{
 		return 0;
 	}
@@ -878,7 +891,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String createUser(Connection c, String username) throws Exception
+	public String createUser(Connection c, String username, String email) throws Exception
 	{
 		return null;
 	}

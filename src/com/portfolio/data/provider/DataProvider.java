@@ -16,6 +16,7 @@
 package com.portfolio.data.provider;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Set;
@@ -42,18 +43,6 @@ public interface DataProvider {
 	 */
 	public void dataProvider();
 
-//	public void setDataSource( DataSource source );
-
-//	public void disconnect();
-
-	public void setConnection( Connection c );
-
-//	public void connect(Properties connectionProperties) throws Exception;
-
-//	Connection getConnection();
-
-//	Credential getCredential();
-
 	/**
 	 * @param porfolioId Id du portfolio
 	 * @param semtag Filtre sur le tag semantique
@@ -70,12 +59,13 @@ public interface DataProvider {
 	public String[] postCredentialFromXml(Connection c, Integer userId, String username, String password, String substitute) throws ServletException, IOException;
 	public void getCredential(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException;
 	public String getMysqlUserUid (Connection c, String login) throws Exception;
+	@Deprecated
 	public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception;
 	public int deleteCredential(Connection c, int userId);
 	public boolean isAdmin( Connection c, String uid );
 
 	/// Relatif aux portfolios
-	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid) throws Exception;
+	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, String cutoff) throws Exception;
 	public Object getPortfolios(Connection c, MimeType outMimeType,int userId,int groupId,Boolean portfolioActive, int substid) throws Exception;
 	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception;
 	public String getPortfolioUuidByNodeUuid(Connection c, String nodeUuid) throws Exception ;
@@ -84,9 +74,9 @@ public interface DataProvider {
 	public Object putPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String modelId) throws Exception;
 	public Object putPortfolioConfiguration(Connection c, String portfolioUuid,Boolean portfolioActive, Integer userId);
 
-	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid, boolean parseRights) throws Exception;
+	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws Exception;
 	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2,
-			HttpServletRequest httpServletRequest, int userId, int groupId, String modelId, int substid, boolean parseRights) throws FileNotFoundException, IOException;
+			HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws FileNotFoundException, IOException;
 	public Object postInstanciatePortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception;
 	public Object postCopyPortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception;
 
@@ -181,27 +171,30 @@ public interface DataProvider {
 	public boolean isUserMemberOfGroup(Connection c, int userId, int groupId);
 	public String getRoleUser(Connection c, int userId, int userid2);
 	public String getUserGroupList(Connection c, int userId);
+	public String getGroupByUser(Connection c, int user, int userId);
 	public String getUsersByUserGroup(Connection c, int userGroupId, int userId);
 	public String getGroupsByRole(Connection c, int userId, String portfolioUuid, String role);
 	public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId);
 	public Integer getRoleByNode( Connection c, int userId, String nodeUuid, String role );
 
+	public Boolean putUserGroupLabel(Connection c, Integer user, int siteGroupId, String label);
 	public Integer putUserGroup(Connection c, String siteGroupId, String userId);
-	public Integer putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid);
+	public Boolean putUserInUserGroup(Connection c, int user, int siteGroupId, int currentUid);
 
 	public Object postGroup(Connection c, String xmlgroup, int userId) throws Exception ;
 	public boolean postGroupsUsers(Connection c, int user, int userId, int groupId);
 	public int postUserGroup(Connection c, String label, int userid);
 
-	public String deleteUsersGroups(Connection c, int usersgroup, int currentUid);
-	public String deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid);
+	public Boolean deleteUsersGroups(Connection c, int usersgroup, int currentUid);
+	public Boolean deleteUsersFromUserGroups(Connection c, int userId, int usersgroup, int currentUid);
 
 	/// Related to portfolio groups
 	public int postPortfolioGroup( Connection c, String groupname, String type, Integer parent, int userId );
+	public String getPortfolioGroupListFromPortfolio(Connection c, String portfolioid,  int userId );
 	public String getPortfolioGroupList( Connection c, int userId );
 	public String getPortfolioByPortfolioGroup( Connection c, Integer portfolioGroupId, int userId );
 	public String deletePortfolioGroups( Connection c, int portfolioGroupId, int userId );
-	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, int userId );
+	public int putPortfolioInGroup( Connection c, String uuid, Integer portfolioGroupId, String label, int userId );
 	public String deletePortfolioFromPortfolioGroups( Connection c, String uuid, int portfolioGroupId, int userId );
 
 	/// Relatif aux groupe de droits
@@ -217,6 +210,7 @@ public interface DataProvider {
 	public boolean postRightGroup(Connection c, int groupRightId, int groupId, Integer userId);
 	public boolean postNotifyRoles(Connection c, int userId, String portfolio, String uuid, String notify);
 	public boolean setPublicState(Connection c, int userId, String portfolio, boolean isPublic);
+	@Deprecated
 	public int postShareGroup(Connection c, String portfolio, int user, Integer userId, String write);
 
 	public int deleteShareGroup(Connection c, String portfolio, Integer userId);
@@ -246,7 +240,7 @@ public interface DataProvider {
 
 	//// LTI related
 	public String getUserId(Connection c, String username, String email) throws Exception;
-	public String createUser(Connection c, String username) throws Exception;
+	public String createUser(Connection c, String username, String email) throws Exception;
 	public String getGroupByName( Connection c, String name );
 	public String createGroup( Connection c, String name );
 	public boolean isUserInGroup( Connection c, String uid, String gid );

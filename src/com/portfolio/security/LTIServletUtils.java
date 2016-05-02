@@ -89,7 +89,6 @@ public class LTIServletUtils {
 		}
 
 		Connection connection = DriverManager.getConnection(url, info);
-		dataProvider.setConnection(connection);
 
 		return connection;
 	}
@@ -314,7 +313,7 @@ public class LTIServletUtils {
 		userId = dataProvider.getUserId(connexion, buildUsername(payload), null);
 		if ("0".equals(userId)) {
 			//create it
-			userId = dataProvider.createUser(connexion, buildUsername(payload));
+			userId = dataProvider.createUser(connexion, buildUsername(payload), null);
 			outTrace.append("\nCreate User (self) results: " + userId);
 		}
 		else {

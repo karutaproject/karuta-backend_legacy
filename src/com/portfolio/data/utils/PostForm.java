@@ -41,7 +41,7 @@ public class PostForm
 		{
 			// Server + "/resources/resource/file/" + uuid +"?lang="+ lang
 			// "http://"+backend+"/user/"+user+"/file/"+uuid+"/"+lang+"ptype/fs";
-			String url = "http://"+backend+"/resources/resource/file/"+uuid+"?lang="+ lang;
+			String url = backend+"/resources/resource/file/"+uuid+"?lang="+ lang;
 			HttpPost post = new HttpPost(url);
 			post.setHeader("Cookie","JSESSIONID="+sessionid);	// So that the receiving servlet allow us
 
