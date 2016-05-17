@@ -1648,7 +1648,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfolios/copy/{portfolio-id}")
 	@POST
-	public String postCopyPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("owner") String setowner )
+	public Response postCopyPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("owner") String setowner )
 	{
 		String value = "Instanciate: "+portfolioId;
 
@@ -1664,16 +1664,18 @@ public class RestServicePortfolio
 
 			/// Check if code exist, find a suitable one otherwise. Eh.
 			String newcode = tgtcode;
-			int num = 0;
 			c = SqlUtils.getConnection(servContext);
-			while( dataProvider.isCodeExist(c, newcode) )
-				newcode = tgtcode+" ("+ num++ +")";
+			if( dataProvider.isCodeExist(c, newcode) )
+			{
+				return Response.status(Status.CONFLICT).entity("code exist").build();
+			}
+
 			tgtcode = newcode;
 
 			String returnValue = dataProvider.postCopyPortfolio(c, new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, setOwner ).toString();
 			logRestRequest(httpServletRequest, value+" to: "+returnValue, returnValue, Status.OK.getStatusCode());
 
-			return returnValue;
+			return Response.status(Status.OK).entity(returnValue).build();
 		}
 		catch(Exception ex)
 		{
