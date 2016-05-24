@@ -87,7 +87,7 @@ public class LTIServlet extends HttpServlet {
 	  try
 	  {
 	  	ConfigUtils.loadConfigFile(sc.getServletContext());
-	    loadRoleMapAttributes(application);
+//	    loadRoleMapAttributes(application);
 	  }
 	  catch( Exception e ){ e.printStackTrace(); }
 	}
@@ -245,7 +245,7 @@ public class LTIServlet extends HttpServlet {
 				return;
 			}
 
-			loadRoleMapAttributes(application);
+//			loadRoleMapAttributes(application);
 
 			connexion = SqlUtils.getConnection(session.getServletContext());
 			String userId = getOrCreateUser(payload, cookies, connexion, outTrace);
