@@ -4749,6 +4749,9 @@ public class MysqlDataProvider implements DataProvider {
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
 
+			// Update time
+			touchPortfolio(c, null, newPortfolioUuid);
+			
 			/// Set portfolio public if needed
 			if( setPublic )
 				setPublicState(c, userId, newPortfolioUuid, setPublic);
