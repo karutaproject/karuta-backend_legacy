@@ -4329,13 +4329,13 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d " +
 					"LEFT JOIN t_res r ON d.res_res_node_uuid=r.new_uuid " +  // Il faut utiliser le nouveau uuid
-					"SET r.content=REPLACE(r.content, d.code, ?) " +
+					"SET r.content=REPLACE(r.content, CONCAT(\"<code>\",d.code,\"</code>\"), ?) " +
 					"WHERE d.asm_type='asmRoot'";
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_res r SET r.content=(SELECT REPLACE(r2.content, d.code, ?) FROM t_data d LEFT JOIN t_res r2 ON d.res_res_node_uuid=r2.new_uuid WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d WHERE d.res_res_node_uuid=r.new_uuid AND d.asm_type='asmRoot')";
 			}
 			st = c.prepareStatement(sql);
-			st.setString(1, newCode);
+			st.setString(1, "<code>"+newCode+"</code>");
 			st.executeUpdate();
 			st.close();
 
