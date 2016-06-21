@@ -109,7 +109,7 @@ public class FileServlet  extends HttpServlet
 			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
 			while (interfaces.hasMoreElements()){
 				NetworkInterface current = interfaces.nextElement();
-				if (!current.isUp() || current.isLoopback() || current.isVirtual()) continue;
+				if ( !current.isUp() ) continue;
 				Enumeration<InetAddress> addresses = current.getInetAddresses();
 				while (addresses.hasMoreElements()){
 					InetAddress current_addr = addresses.nextElement();
@@ -122,7 +122,7 @@ public class FileServlet  extends HttpServlet
 				}
 			}
 			// Force localhost ip to be set, sometime it isn't listed
-			ourIPs.add("127.0.0.1");
+//			ourIPs.add("127.0.0.1");
 		}
 		catch( Exception e )
 		{
@@ -283,6 +283,8 @@ public class FileServlet  extends HttpServlet
 			if( nodelist.getLength() > 0 )
 				filename = nodelist.item(0).getTextContent();
 
+			/// Ignore replacing file, just consider them all new one
+			/*
 			if( !"".equals(filename) )
 			{
 				/// Already have one, per language
@@ -300,6 +302,7 @@ public class FileServlet  extends HttpServlet
 			if( last < 0 )
 				last = 0;
 			fileid = fileid.substring(last);
+			//*/
 	
 			/// écriture des données
 			String urlTarget = server + "/" + fileid+doCopy;
@@ -544,7 +547,8 @@ public class FileServlet  extends HttpServlet
 
 			/// FIXME: Passe la sécurité si la source provient de localhost, il faudrait un échange afin de s'assurer que n'importe quel servlet ne puisse y accéder
 			String sourceip = request.getRemoteAddr();
-			System.out.println("IP: "+sourceip);
+//			System.out.println("IP: "+sourceip);
+//			System.out.println(ourIPs);
 
 			/// Vérification des droits d'accès
 			// TODO: Might be something special with proxy and export/PDF, to investigate
