@@ -15,6 +15,7 @@
 
 package com.portfolio.rest;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -93,6 +94,7 @@ import org.w3c.dom.NodeList;
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
+import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.MailUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.data.utils.javaUtils;
@@ -136,6 +138,8 @@ public class RestServicePortfolio
 	ServletConfig servConfig;
 
 	KEventbus eventbus = new KEventbus();
+	
+	static BufferedWriter editLog = null;
 
 	/**
 	 * Initialize service objects
@@ -147,6 +151,11 @@ public class RestServicePortfolio
 			// Loading configKaruta.properties
 			ConfigUtils.loadConfigFile(sc.getServletContext());
 
+			// User action logging
+			String editlog = ConfigUtils.get("edit_log");
+			if( editlog != "" )
+				editLog = LogUtils.getLog(editlog);
+			
 			// Initialize data provider and cas
 			try
 			{
@@ -2608,7 +2617,12 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
+			if( editLog!= null )
+			{
+				editLog.write(String.format("%s metadata: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
+			
 			return returnValue;
 		}
 		catch(RestWebApplicationException ex)
@@ -2661,6 +2675,11 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+			if( editLog!= null )
+			{
+				editLog.write(String.format("%s metadatawad: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 
 			return returnValue;
 		}
@@ -2716,6 +2735,11 @@ public class RestServicePortfolio
 			if( "erreur".equals(returnValue) )
 				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Erreur");
 
+			if( editLog!= null )
+			{
+				editLog.write(String.format("%s metadataepm: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -2770,6 +2794,11 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+			if( editLog!= null )
+			{
+				editLog.write(String.format("%s nodecontext: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 
 			return returnValue;
 		}
@@ -2821,6 +2850,11 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+			if( editLog!= null )
+			{
+				editLog.write(String.format("%s noderesource: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 
 			return returnValue;
 		}
@@ -3447,6 +3481,11 @@ public class RestServicePortfolio
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putResource(c, new MimeType("text/xml"),nodeParentUuid,xmlResource, ui.userId, groupId).toString();
 			logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
+			if( editLog!= null )
+			{
+				editLog.write(String.format("%s resource: %s -- %s\n", nodeParentUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 
 //			eventbus.processEvent(event);
 
