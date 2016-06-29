@@ -105,6 +105,7 @@ public class XSLService  extends HttpServlet {
 	private String server;
 	String baseDir;
 	String servletDir;
+	String internalServer;
 
 	private TransformerFactory transFactory;
 	private FopFactory fopFactory;
@@ -119,6 +120,9 @@ public class XSLService  extends HttpServlet {
 		last = servletDir.lastIndexOf(File.separator, last-1);
 		baseDir = servletDir.substring(0, last);
 		server = ConfigUtils.get("backendserver");
+		internalServer = ConfigUtils.get("XSLInternal");
+		if( internalServer == null )
+			internalServer = server;
 
 		//Setting up the JAXP TransformerFactory
 		this.transFactory = TransformerFactory.newInstance();
@@ -239,6 +243,7 @@ public class XSLService  extends HttpServlet {
 			if( nodes != null )
 				nodeid = nodes.split(";");
 	
+			parameters = parameters + ";urlimage:"+internalServer;
 			System.out.println("PARAMETERS: ");
 			System.out.println("xsl: "+xslfile);
 			System.out.println("format: "+format);
@@ -634,27 +639,6 @@ public class XSLService  extends HttpServlet {
 
 		try
 		{
-			// Est-ce qu'on a eu besoin d'aggr�ger les donn�es?
-			/*
-			String input = aggregate.toString();
-			String pattern = "<\\?xml[^>]*>";	// Purge previous xml declaration
-
-			input = input.replaceAll(pattern, "");
-
-			input = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-					"<!DOCTYPE xsl:stylesheet [" +
-					"<!ENTITY % lat1 PUBLIC \"-//W3C//ENTITIES Latin 1 for XHTML//EN\" \""+servletDir+"xhtml-lat1.ent\">" +
-					"<!ENTITY % symbol PUBLIC \"-//W3C//ENTITIES Symbols for XHTML//EN\" \""+servletDir+"xhtml-symbol.ent\">" +
-					"<!ENTITY % special PUBLIC \"-//W3C//ENTITIES Special for XHTML//EN\" \""+servletDir+"xhtml-special.ent\">" +
-					"%lat1;" +
-					"%symbol;" +
-					"%special;" +
-					"]>" + // For the pesky special characters
-					"<root>" + input + "</root>";
-			//*/
-
-//			System.out.println("INPUT DATA:"+ input);
-
 			// Setup a buffer to obtain the content length
 			ByteArrayOutputStream out = new ByteArrayOutputStream();	// Data to send back
 
