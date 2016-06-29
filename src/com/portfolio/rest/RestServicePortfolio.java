@@ -2619,7 +2619,10 @@ public class RestServicePortfolio
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format("%s metadata: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s metadata: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
 				editLog.flush();
 			}
 			
@@ -2677,7 +2680,10 @@ public class RestServicePortfolio
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format("%s metadatawad: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s metadatawad: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
 				editLog.flush();
 			}
 
@@ -2737,7 +2743,10 @@ public class RestServicePortfolio
 
 			if( editLog!= null )
 			{
-				editLog.write(String.format("%s metadataepm: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s metadataepm: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
 				editLog.flush();
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
@@ -2796,7 +2805,10 @@ public class RestServicePortfolio
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format("%s nodecontext: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s nodecontext: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
 				editLog.flush();
 			}
 
@@ -2852,7 +2864,10 @@ public class RestServicePortfolio
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format("%s noderesource: %s -- %s\n", nodeUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s noderesource: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
 				editLog.flush();
 			}
 
@@ -3483,7 +3498,10 @@ public class RestServicePortfolio
 			logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format("%s resource: %s -- %s\n", nodeParentUuid, ui.userId, httpServletRequest.getRemoteAddr() ));
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s resource: %s -- %s (%s)\n", nodeParentUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
 				editLog.flush();
 			}
 
