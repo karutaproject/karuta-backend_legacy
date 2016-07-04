@@ -153,7 +153,7 @@ public class RestServicePortfolio
 
 			// User action logging
 			String editlog = ConfigUtils.get("edit_log");
-			if( editlog != "" )
+			if( !"".equals(editlog) && editlog != null )
 				editLog = LogUtils.getLog(editlog);
 			
 			// Initialize data provider and cas
