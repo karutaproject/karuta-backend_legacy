@@ -7160,7 +7160,8 @@ public class MysqlDataProvider implements DataProvider {
 		rootNode = doc.getDocumentElement();
 		nodeType = rootNode.getNodeName();
 
-		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, false);
+//		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, false);
+		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, true);
 
 		result = "<nodes>";
 		result += "<"+nodeType+" ";
@@ -7716,6 +7717,11 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			uuid = forcedUuid;
 		}
+		
+		// Last state if nothing worked
+//		if( uuid == null || "".equals(uuid) )
+		// Force uuid rewrite
+			uuid = UUID.randomUUID().toString();
 
 		if( resolve != null )	// Mapping old id -> new id
 			resolve.put(currentid, uuid);

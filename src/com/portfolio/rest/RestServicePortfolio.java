@@ -3073,13 +3073,13 @@ public class RestServicePortfolio
 		Connection c = null;
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			if( ui.userId == 0 )
 			{
 				return Response.status(403).entity("Not logged in").build();
 			}
-			else
+			else // if( dataProvider.isAdmin(c, Integer.toString(ui.userId)) )
 			{
-				c = SqlUtils.getConnection(servContext);
 				String returnValue = dataProvider.postNode(c, new MimeType("text/xml"),parentId,xmlNode, ui.userId, groupId).toString();
 				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
@@ -3095,6 +3095,8 @@ public class RestServicePortfolio
 
 				return response;
 			}
+//			else
+//				return Response.status(403).entity("No").build();
 		}
 		catch(RestWebApplicationException ex)
 		{
