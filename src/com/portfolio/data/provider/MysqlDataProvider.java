@@ -4329,13 +4329,13 @@ public class MysqlDataProvider implements DataProvider {
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d " +
 					"LEFT JOIN t_res r ON d.res_res_node_uuid=r.new_uuid " +  // Il faut utiliser le nouveau uuid
-					"SET r.content=REPLACE(r.content, d.code, ?) " +
+					"SET r.content=REPLACE(r.content, CONCAT(\"<code>\",d.code,\"</code>\"), ?) " +
 					"WHERE d.asm_type='asmRoot'";
 			} else if (dbserveur.equals("oracle")){
 				sql = "UPDATE t_res r SET r.content=(SELECT REPLACE(r2.content, d.code, ?) FROM t_data d LEFT JOIN t_res r2 ON d.res_res_node_uuid=r2.new_uuid WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d WHERE d.res_res_node_uuid=r.new_uuid AND d.asm_type='asmRoot')";
 			}
 			st = c.prepareStatement(sql);
-			st.setString(1, newCode);
+			st.setString(1, "<code>"+newCode+"</code>");
 			st.executeUpdate();
 			st.close();
 
@@ -4749,6 +4749,9 @@ public class MysqlDataProvider implements DataProvider {
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
 
+			// Update time
+			touchPortfolio(c, null, newPortfolioUuid);
+			
 			/// Set portfolio public if needed
 			if( setPublic )
 				setPublicState(c, userId, newPortfolioUuid, setPublic);
@@ -7157,7 +7160,8 @@ public class MysqlDataProvider implements DataProvider {
 		rootNode = doc.getDocumentElement();
 		nodeType = rootNode.getNodeName();
 
-		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, false);
+//		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, false);
+		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, true);
 
 		result = "<nodes>";
 		result += "<"+nodeType+" ";
@@ -7713,6 +7717,11 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			uuid = forcedUuid;
 		}
+		
+		// Last state if nothing worked
+//		if( uuid == null || "".equals(uuid) )
+		// Force uuid rewrite
+			uuid = UUID.randomUUID().toString();
 
 		if( resolve != null )	// Mapping old id -> new id
 			resolve.put(currentid, uuid);

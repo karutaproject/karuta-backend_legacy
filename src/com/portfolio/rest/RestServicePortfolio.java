@@ -15,6 +15,7 @@
 
 package com.portfolio.rest;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -93,6 +94,7 @@ import org.w3c.dom.NodeList;
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
+import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.MailUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.data.utils.javaUtils;
@@ -136,6 +138,8 @@ public class RestServicePortfolio
 	ServletConfig servConfig;
 
 	KEventbus eventbus = new KEventbus();
+	
+	static BufferedWriter editLog = null;
 
 	/**
 	 * Initialize service objects
@@ -147,6 +151,11 @@ public class RestServicePortfolio
 			// Loading configKaruta.properties
 			ConfigUtils.loadConfigFile(sc.getServletContext());
 
+			// User action logging
+			String editlog = ConfigUtils.get("edit_log");
+			if( !"".equals(editlog) && editlog != null )
+				editLog = LogUtils.getLog(editlog);
+			
 			// Initialize data provider and cas
 			try
 			{
@@ -2608,7 +2617,15 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-
+			if( editLog!= null )
+			{
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s metadata: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
+			
 			return returnValue;
 		}
 		catch(RestWebApplicationException ex)
@@ -2661,6 +2678,14 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+			if( editLog!= null )
+			{
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s metadatawad: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 
 			return returnValue;
 		}
@@ -2716,6 +2741,14 @@ public class RestServicePortfolio
 			if( "erreur".equals(returnValue) )
 				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Erreur");
 
+			if( editLog!= null )
+			{
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s metadataepm: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
@@ -2770,6 +2803,14 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+			if( editLog!= null )
+			{
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s nodecontext: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 
 			return returnValue;
 		}
@@ -2821,6 +2862,14 @@ public class RestServicePortfolio
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+			if( editLog!= null )
+			{
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s noderesource: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 
 			return returnValue;
 		}
@@ -3024,13 +3073,13 @@ public class RestServicePortfolio
 		Connection c = null;
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
 			if( ui.userId == 0 )
 			{
 				return Response.status(403).entity("Not logged in").build();
 			}
-			else
+			else // if( dataProvider.isAdmin(c, Integer.toString(ui.userId)) )
 			{
-				c = SqlUtils.getConnection(servContext);
 				String returnValue = dataProvider.postNode(c, new MimeType("text/xml"),parentId,xmlNode, ui.userId, groupId).toString();
 				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
@@ -3046,6 +3095,8 @@ public class RestServicePortfolio
 
 				return response;
 			}
+//			else
+//				return Response.status(403).entity("No").build();
 		}
 		catch(RestWebApplicationException ex)
 		{
@@ -3447,6 +3498,14 @@ public class RestServicePortfolio
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putResource(c, new MimeType("text/xml"),nodeParentUuid,xmlResource, ui.userId, groupId).toString();
 			logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
+			if( editLog!= null )
+			{
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+				String timeFormat = dt.format(time);
+				editLog.write(String.format("%s resource: %s -- %s (%s)\n", nodeParentUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.flush();
+			}
 
 //			eventbus.processEvent(event);
 
