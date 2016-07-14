@@ -127,6 +127,12 @@ public class DirectURLService  extends HttpServlet {
 			e.printStackTrace();
 		}
 
+		/// Keeping access log
+		Date date = new Date();
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		BufferedWriter log = LogUtils.getLog("directAccess.log");
+		String datestring = dateFormat.format(date);
+		
 		/// Check case we are in, act accordingly
 		
 		String[] splitData = output.split(" ");
@@ -134,37 +140,40 @@ public class DirectURLService  extends HttpServlet {
 		String email = splitData[1];
 		String role = splitData[2];
 		int level = Integer.parseInt(splitData[3]);
-		int duration = Integer.parseInt(splitData[4]);	// In hours (minimum 1h)
-		long endtime = 0;
-		if( splitData.length == 6 )
-			endtime = Long.parseLong(splitData[5]);
-
-		/// Keeping access log
-		Date date = new Date();
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-		BufferedWriter log = LogUtils.getLog("directAccess.log");
-		String datestring = dateFormat.format(date);
-		
-		/// Check if link is still valid
-		long currtime = date.getTime()/1000;
-		if( currtime > endtime )
+		if( "unlimited".equals(splitData[4]) )
 		{
-			log.write("["+datestring+"] Old link access by: "+email+ " ("+role+") for uuid: "+uuid+" level: "+level+" duration: "+duration+" ends at: "+endtime);
-			log.newLine();
-			log.flush();
-			log.close();
-			response.setStatus(403);
-			response.getWriter().close();
-			request.getInputStream().close();
+			// Log access
+			log.write("["+datestring+"] Direct link access by: "+email+ " ("+role+") for uuid: "+uuid+" level: "+level+" duration: "+splitData[4]);
 		}
 		else
 		{
-			// Log connection attempt. email, uuid, role access, hour, ip, date
-			log.write("["+datestring+"] Direct link access by: "+email+ " ("+role+") for uuid: "+uuid+" level: "+level+" duration: "+duration+" ends at: "+endtime);
-			log.newLine();
-			log.flush();
-			log.close();
+			int duration = Integer.parseInt(splitData[4]);	// In hours (minimum 1h)
+			long endtime = 0;
+			if( splitData.length == 6 )
+				endtime = Long.parseLong(splitData[5]);
+			
+			/// Check if link is still valid
+			long currtime = date.getTime()/1000;
+			if( currtime > endtime )
+			{
+				log.write("["+datestring+"] Old link access by: "+email+ " ("+role+") for uuid: "+uuid+" level: "+level+" duration: "+duration+" ends at: "+endtime);
+				log.newLine();
+				log.flush();
+				log.close();
+				response.setStatus(403);
+				response.getWriter().close();
+				request.getInputStream().close();
+			}
+			else
+			{
+				// Log connection attempt. email, uuid, role access, hour, ip, date
+				log.write("["+datestring+"] Direct link access by: "+email+ " ("+role+") for uuid: "+uuid+" level: "+level+" duration: "+duration+" ends at: "+endtime);
+				log.newLine();
+				log.flush();
+				log.close();
+			}
 		}
+
 		
 		/// log in person with associated email
 		Connection c = null;
@@ -317,14 +326,22 @@ public class DirectURLService  extends HttpServlet {
 		
 		if(duration == null)
 			duration = "72";	// Default 72h
-		int durationInt = Integer.parseInt(duration);
-		if( durationInt < 1 )
-			durationInt = 1;
-		else if( durationInt > 24*30 )	// 720 hours, 30 days
-			durationInt = 24*30;
-		Date current = new Date();
-		long endtime = current.getTime()/1000 + durationInt*3600;	// Number of seconds
-		String endtimeString = Long.toString(endtime);
+		String endtimeString = "";
+		if( "unlimited".equals(duration) )
+		{
+			endtimeString = duration;
+		}
+		else
+		{
+			int durationInt = Integer.parseInt(duration);
+			if( durationInt < 1 )
+				durationInt = 1;
+			else if( durationInt > 24*30 )	// 720 hours, 30 days
+				durationInt = 24*30;
+			Date current = new Date();
+			long endtime = current.getTime()/1000 + durationInt*3600;	// Number of seconds
+			endtimeString = Long.toString(endtime);
+		}
 
 		/// Keeping creation log
 		BufferedWriter log = LogUtils.getLog("directAccess.log");
