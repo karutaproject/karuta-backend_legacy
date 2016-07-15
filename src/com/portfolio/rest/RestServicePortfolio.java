@@ -1879,12 +1879,29 @@ public class RestServicePortfolio
 
 			c = SqlUtils.getConnection(servContext);
 			
+			/// Suppose the first portfolio has the right name to be used
+			
+			String name = "";
+			
 			/// Create all the zip files
 			for( int i=0; i<list.length; ++i )
 			{
 				String portfolioUuid = list[i];
 				String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, "true", "", ui.subId, null).toString();
 	
+				// No name yet
+				if( "".equals(name) )
+				{
+					StringBuffer outTrace = new StringBuffer();
+					Document doc = DomUtils.xmlString2Document(portfolio, outTrace);
+					XPath xPath = XPathFactory.newInstance().newXPath();
+					String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
+					NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+
+					if( nodelist.getLength() > 0 )
+						name = nodelist.item(0).getTextContent();
+				}
+				
 				Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
 				
 				files[i] = getZipFile(portfolioUuid, portfolio, lang, doc, session);
@@ -1932,7 +1949,7 @@ public class RestServicePortfolio
 
 			Response response = Response
 					.ok(b, MediaType.APPLICATION_OCTET_STREAM)
-					.header("content-disposition","attachment; filename = \"Project-"+timeFormat+".zip\"")
+					.header("content-disposition","attachment; filename = \""+name+"-"+timeFormat+".zip\"")
 					.build();
 
 			// Delete all zipped file
