@@ -3097,7 +3097,7 @@ public class RestServicePortfolio
 			}
 			else // if( dataProvider.isAdmin(c, Integer.toString(ui.userId)) )
 			{
-				String returnValue = dataProvider.postNode(c, new MimeType("text/xml"),parentId,xmlNode, ui.userId, groupId).toString();
+				String returnValue = dataProvider.postNode(c, new MimeType("text/xml"),parentId,xmlNode, ui.userId, groupId, false).toString();
 				logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
 				Response response;
