@@ -9199,7 +9199,7 @@ public class MysqlDataProvider implements DataProvider {
 				if( resolved != null )
 				{
 					/// Have to send it in FORM, compatibility with regular file posting
-					PostForm.sendFile(sessionval, backend, user, resolved, lang, file);
+					PostForm.rewriteFile(sessionval, backend, user, resolved, lang, file);
 				}
 			}
 			catch(Exception ex)

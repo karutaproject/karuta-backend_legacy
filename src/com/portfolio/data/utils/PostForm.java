@@ -89,6 +89,62 @@ public class PostForm
 		return true;
 	}
 
+	public static boolean rewriteFile( String sessionid, String backend, String user, String uuid, String lang, File file ) throws Exception
+	{
+		CloseableHttpClient httpclient = HttpClients.createDefault();
+
+		try
+		{
+			// Server + "/resources/resource/file/" + uuid +"?lang="+ lang
+			// "http://"+backend+"/user/"+user+"/file/"+uuid+"/"+lang+"ptype/fs";
+			String url = backend+"/resources/resource/file/"+uuid+"?lang="+ lang;
+			HttpPut put = new HttpPut(url);
+			put.setHeader("Cookie","JSESSIONID="+sessionid);	// So that the receiving servlet allow us
+
+			/// Remove import language tag
+			String filename = file.getName();	/// NOTE: Since it's used with zip import, specific code.
+			int langindex = filename.lastIndexOf("_");
+			filename = filename.substring(0, langindex) + filename.substring(langindex+3);
+
+			FileBody bin = new FileBody(file, ContentType.DEFAULT_BINARY, filename);	// File from import
+
+			/// Form info
+			HttpEntity reqEntity = MultipartEntityBuilder.create()
+					.addPart("uploadfile", bin)
+					.build();
+			put.setEntity(reqEntity);
+
+			CloseableHttpResponse response = httpclient.execute(put);
+
+			/*
+			try
+			{
+				HttpEntity resEntity = response.getEntity();	/// Will be JSON
+				if( resEntity != null )
+				{
+					BufferedReader reader = new BufferedReader(new InputStreamReader(resEntity.getContent(), "UTF-8"));
+					StringBuilder builder = new StringBuilder();
+					for( String line = null; (line = reader.readLine()) != null; )
+						builder.append(line).append("\n");
+
+					updateResource( sessionid, backend, uuid, lang, builder.toString() );
+				}
+				EntityUtils.consume(resEntity);
+			}
+			finally
+			{
+				response.close();
+			}
+			//*/
+		}
+		finally
+		{
+			httpclient.close();
+		}
+
+		return true;
+	}
+
 	public static boolean updateResource( String sessionid, String backend, String uuid, String lang, String json ) throws Exception
 	{
 		/// Parse and create xml from JSON
