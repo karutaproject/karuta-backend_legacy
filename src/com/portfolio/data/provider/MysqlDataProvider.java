@@ -7133,7 +7133,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postNode(Connection c, MimeType inMimeType, String parentNodeUuid, String in,int userId, int groupId) throws Exception {
+	public Object postNode(Connection c, MimeType inMimeType, String parentNodeUuid, String in,int userId, int groupId, boolean forcedUuid) throws Exception {
 
 		/*
 	  NodeRight noderight = credential.getNodeRight(userId,groupId, parentNodeUuid, credential.ADD);
@@ -7161,7 +7161,7 @@ public class MysqlDataProvider implements DataProvider {
 		nodeType = rootNode.getNodeName();
 
 //		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, false);
-		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, true, null, true);
+		String nodeUuid = writeNode(c, rootNode, portfolioUid,  portfolioModelId,userId,nodeOrder,null,parentNodeUuid,0,0, forcedUuid, null, true);
 
 		result = "<nodes>";
 		result += "<"+nodeType+" ";
@@ -7587,7 +7587,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
 		}
-		else postNode(c, inMimeType, nodeParentUuid, in, userId, groupId);
+		else postNode(c, inMimeType, nodeParentUuid, in, userId, groupId, true);
 		
 		return "";
 	}
@@ -7713,15 +7713,16 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			uuid = currentid;
 		}
-		else
+		else if( forcedUuid != null && !"".equals(forcedUuid) )
 		{
 			uuid = forcedUuid;
 		}
+		else
+			uuid = UUID.randomUUID().toString();
 		
 		// Last state if nothing worked
 //		if( uuid == null || "".equals(uuid) )
 		// Force uuid rewrite
-			uuid = UUID.randomUUID().toString();
 
 		if( resolve != null )	// Mapping old id -> new id
 			resolve.put(currentid, uuid);
@@ -9198,7 +9199,7 @@ public class MysqlDataProvider implements DataProvider {
 				if( resolved != null )
 				{
 					/// Have to send it in FORM, compatibility with regular file posting
-					PostForm.sendFile(sessionval, backend, user, resolved, lang, file);
+					PostForm.rewriteFile(sessionval, backend, user, resolved, lang, file);
 				}
 			}
 			catch(Exception ex)
@@ -10307,7 +10308,7 @@ public class MysqlDataProvider implements DataProvider {
 		// C'est le noeud obtenu dans le modele indiqué par la table de correspondance
 		String otherParentNodeUuid = res.getString("node_uuid");
 
-		return postNode(c, inMimeType, otherParentNodeUuid, xml,userId, groupId);
+		return postNode(c, inMimeType, otherParentNodeUuid, xml,userId, groupId, true);
 	}
 
 	public ResultSet getMysqlGroupsPortfolio(Connection c, String portfolioUuid)

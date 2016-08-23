@@ -113,7 +113,7 @@ public interface DataProvider {
 	public Object putNodeNodeContext(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId)throws Exception;
 	public Object putNodeNodeResource(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId)throws Exception;
 
-	public Object postNode(Connection c, MimeType inMimeType,String parentNodeUuid,String in, int userId, int groupId) throws Exception;
+	public Object postNode(Connection c, MimeType inMimeType,String parentNodeUuid,String in, int userId, int groupId, boolean forcedUuid) throws Exception;
 	public Object postNodeFromModelBySemanticTag(Connection c, MimeType mimeType, String nodeUuid, String semantictag, int userId, int groupId) throws Exception;
 	public Object postImportNode(Connection c, MimeType inMimeType,String destUuid,String tag, String code, String srcuuid, int userId, int groupId) throws Exception;
 	public Object postCopyNode(Connection c, MimeType inMimeType,String destUuid,String tag, String code, String srcuuid, int userId, int groupId) throws Exception;

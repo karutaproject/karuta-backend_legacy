@@ -170,7 +170,298 @@ public class FileServlet  extends HttpServlet
 	@Override
 	protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		doPost(request, response);
+		// =====================================================================================
+		initialize(request);
+
+		String useragent = request.getHeader("User-Agent");
+		logger.error("Agent: "+useragent);
+
+//		DataProvider dataProvider = null;
+		Connection c = null;
+		try
+		{
+//			dataProvider = SqlUtils.initProvider(getServletContext(), logger);
+//			dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+			//On initialise le dataProvider
+			/*
+			if( ds == null )	// Case where we can't deploy context.xml
+			{ c = SqlUtils.getConnection(servContext); }
+			else
+			{ c = ds.getConnection(); }
+			dataProvider.setConnection(c);
+			//*/
+			c = SqlUtils.getConnection(getServletContext());
+
+			int userId = 0;
+			int groupId = 0;
+			String user = "";
+			boolean fromSakai = false;
+	
+			String doCopy = request.getParameter("copy");
+			if( doCopy != null )
+				doCopy = "?copy";
+			else
+				doCopy = "";
+	
+			HttpSession session = request.getSession(false);
+			if( session != null )
+			{
+				String srceType = request.getParameter("srce");
+				if( "sakai".equals(srceType) )
+				{
+					fromSakai = true;
+				}
+	
+				Integer val = (Integer) session.getAttribute("uid");
+				if( val != null )
+					userId = val;
+				val = (Integer) session.getAttribute("gid");
+				if( val != null )
+					groupId = val;
+				user = (String) session.getAttribute("user");
+			}
+			else
+			{
+				response.sendError(HttpServletResponse.SC_FORBIDDEN);
+				return;
+			}
+	
+			/// uuid: celui de la ressource
+			/// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
+	
+			String origin = request.getRequestURL().toString();
+	
+			/// Récupération des paramètres
+			String url = request.getPathInfo();
+			String[] token = url.split("/");
+			String uuid = token[1];
+	
+			String size = request.getParameter("size");
+			if(size == null)
+				size = "S";
+	
+			String lang = request.getParameter("lang");
+			if (lang==null){
+				lang = "fr";
+			}
+	
+			/// Vérification des droits d'accès
+			if(!credential.hasNodeRight(c, userId, groupId, uuid, Credential.WRITE))
+			{
+				response.sendError(HttpServletResponse.SC_FORBIDDEN);
+				//throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit WRITE sur le noeud "+nodeUuid);
+			}
+	
+			String data;
+			String fileid = "";
+			
+			data = dataProvider.getResNode(c, uuid, userId, groupId);
+
+			/// Parse les données
+			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
+			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			InputSource is = new InputSource(new StringReader("<node>"+data+"</node>"));
+			Document doc = documentBuilder.parse(is);
+			DOMImplementationLS impl = (DOMImplementationLS)doc.getImplementation().getFeature("LS", "3.0");
+			LSSerializer serial = impl.createLSSerializer();
+			serial.getDomConfig().setParameter("xml-declaration", false);
+
+			/// Cherche si on a déjà envoyé quelque chose
+			XPath xPath = XPathFactory.newInstance().newXPath();
+//			String filterRes = "//filename[@lang=\""+lang+"\"]";
+			String filterRes = "//*[local-name()='filename' and @lang='"+lang+"']";
+			NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+
+			String filename = "";
+			if( nodelist.getLength() > 0 )
+				filename = nodelist.item(0).getTextContent();
+
+			/// Ignore replacing file, just consider them all new one
+//			/*
+			if( !"".equals(filename) )
+			{
+				/// Already have one, per language
+//				String filterId = "//fileid[@lang='"+lang+"']";
+				String filterId = "//*[local-name()='fileid' and @lang='"+lang+"']";
+				NodeList idlist = (NodeList) xPath.compile(filterId).evaluate(doc, XPathConstants.NODESET);
+				if( idlist.getLength() != 0 )
+				{
+					Element fileNode = (Element) idlist.item(0);
+					fileid = fileNode.getTextContent();
+				}
+			}
+	
+			int last = fileid.lastIndexOf("/") +1;	// FIXME temp patch
+			if( last < 0 )
+				last = 0;
+			fileid = fileid.substring(last);
+			//*/
+	
+			/// écriture des données
+			String urlTarget = server + "/" + fileid+doCopy;
+	//		String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
+	
+			// Unpack form, fetch binary data and send
+		// Create a factory for disk-based file items
+			DiskFileItemFactory factory = new DiskFileItemFactory();
+	
+			// Create a new file upload handler
+			ServletFileUpload upload = new ServletFileUpload(factory);
+	
+			String json = "";
+			HttpURLConnection connection=null;
+			// Parse the request
+			InputStream inputData = null;
+			String fileName = "";
+			long filesize = 0;
+			String contentType = "";
+
+			if( fromSakai )
+			{
+				String sakai_session = (String) session.getAttribute("sakai_session");
+				String sakai_server = (String) session.getAttribute("sakai_server");	// Base server http://localhost:9090
+				String srceUrl = request.getParameter("srceurl");
+
+				HttpClient client = new HttpClient();
+
+				// Create connection to url
+				GetMethod get = new GetMethod(sakai_server+"/"+srceUrl);
+				// Set headers
+				Header header = new Header();
+				header.setName("JSESSIONID");
+				header.setValue(sakai_session);
+				get.setRequestHeader(header);
+
+				int status = client.executeMethod(get);
+				if (status != HttpStatus.SC_OK) {
+					System.err.println("Method failed: " + get.getStatusLine());
+				}
+
+				// Retrieve inputData
+				inputData = get.getResponseBodyAsStream();
+				// File detail
+				Header nameHeader = get.getResponseHeader("Content-Disposition");
+				Header sizeHeader = get.getResponseHeader("Content-Length");
+				Header typeHeader = get.getResponseHeader("Content-Type");
+
+				filesize = Integer.parseInt(sizeHeader.getValue());
+				contentType = typeHeader.getValue();
+				fileName = nameHeader.getValue().split("=")[1];
+				if( fileName.startsWith("\"") )
+					fileName = fileName.substring(1, fileName.length()-1);
+			}
+			else
+			{
+//				if( ServletFileUpload.isMultipartContent(request) )
+				if( true )
+				{
+					List<FileItem> items = upload.parseRequest(request);
+					// Process the uploaded items
+					Iterator<FileItem> iter = items.iterator();
+					while (iter.hasNext())
+					{
+						FileItem item = iter.next();
+
+						if ("uploadfile".equals(item.getFieldName()))
+						{
+							// Send raw data
+							inputData = item.getInputStream();
+
+							fileName = item.getName();
+							filesize = item.getSize();
+							contentType = item.getContentType();
+
+							break;
+						}
+					}
+				}
+				else
+				{
+					// List headers
+					Enumeration attributes = request.getAttributeNames();
+					while( attributes.hasMoreElements() )
+					{
+						Object elem = attributes.nextElement();
+						logger.error("Object: "+elem.toString());
+					}
+					logger.error("Not multipart");
+				}
+			}
+
+			if( inputData != null )
+			{
+				connection = CreateConnection( urlTarget, request );
+				connection.setRequestProperty("filename",uuid);
+				connection.setRequestProperty("content-type", "application/octet-stream");
+				connection.setRequestProperty("content-length", Long.toString(filesize));
+				connection.connect();
+
+				/// Send data to fileserver
+				OutputStream outputData = connection.getOutputStream();
+				IOUtils.copy(inputData, outputData);
+
+				/// Those 2 lines are needed, otherwise, no request sent
+				int code = connection.getResponseCode();
+				String msg = connection.getResponseMessage();
+
+				/// Retrieving info
+				InputStream objReturn = connection.getInputStream();
+				StringWriter idResponse = new StringWriter();
+				IOUtils.copy(objReturn, idResponse);
+				fileid = idResponse.toString();
+
+				connection.disconnect();
+
+				/// Construct Json
+				StringWriter StringOutput = new StringWriter();
+				JsonWriter writer = new JsonWriter(StringOutput);
+				writer.beginObject();
+				writer.name("files");
+				writer.beginArray();
+				writer.beginObject();
+
+				writer.name("name").value(fileName);
+				writer.name("size").value(filesize);
+				writer.name("type").value(contentType);
+				writer.name("url").value(origin);
+				writer.name("fileid").value(fileid);
+				//                               writer.name("deleteUrl").value(ref);
+				//                                       writer.name("deleteType").value("DELETE");
+				writer.endObject();
+
+				writer.endArray();
+				writer.endObject();
+
+				writer.close();
+
+				json = StringOutput.toString();
+			}
+	
+			connection.disconnect();
+			/// Renvoie le JSON au client
+			if( useragent.contains("MSIE 9.0") || useragent.contains("MSIE 8.0") || useragent.contains("MSIE 7.0") )
+				response.setContentType("text/html");
+			else	// The normal type
+				response.setContentType("application/json");
+			PrintWriter respWriter = response.getWriter();
+			respWriter.write(json);
+
+//		RetrieveAnswer(connection, response, ref);
+//		dataProvider.disconnect();
+		}
+		catch(Exception e)
+		{
+			logger.error("Binary transfer error: "+e.getMessage()+"");
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
 	}
 
 	// =====================================================================================

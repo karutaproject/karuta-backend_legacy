@@ -278,7 +278,7 @@ public class LTIServlet extends HttpServlet {
 			siteGroup.append(contextLabel);
 			siteGroup.append("-");
 			siteGroup.append(inputRole);
-			String wadRole = roleMapper(application, inputRole, outTrace);
+//			String wadRole = roleMapper(application, inputRole, outTrace);
 //			String siteRoleGroupId = getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
 
 			/// We can create a group and put the user in it, but there's no link to rights
@@ -319,7 +319,7 @@ public class LTIServlet extends HttpServlet {
 				userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
 			session.setAttribute("uid", Integer.parseInt(userId));
 			session.setAttribute("username", userName);
-			session.setAttribute("userRole", wadRole);
+//			session.setAttribute("userRole", wadRole);
 //			session.setAttribute("gid", Integer.parseInt(siteRoleGroupId));
 			session.setAttribute("useridentifier", userName);
 
