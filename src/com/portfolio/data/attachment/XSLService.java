@@ -81,6 +81,7 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
@@ -129,6 +130,26 @@ public class XSLService  extends HttpServlet {
 
 		//Setting up the FOP factory
 		this.fopFactory = FopFactory.newInstance();
+		
+		
+		String filename = "";
+		try	/// Try to load the configuration file "fopuserconfig.xml", if there isn't any, ignore
+		{
+			String servName = config.getServletContext().getContextPath();
+			String path = config.getServletContext().getRealPath("/");
+			File base = new File(path+".."+File.separatorChar+"..");
+			String tomcatRoot = base.getCanonicalPath();
+			path = tomcatRoot + servName +"_config"+File.separatorChar;
+			filename = path + "fopuserconfig.xml";
+			File userconfig = new File(filename);
+			this.fopFactory.setUserConfig(userconfig);
+			logger.info("File '"+filename+"' loaded");
+		}
+		catch( Exception e )
+		{
+			System.out.println("No configuration file found at '"+filename+"' using default values");
+			logger.error("No configuration file found at '"+filename+"' using default values");
+		}
 
 		try
 		{
@@ -179,7 +200,7 @@ public class XSLService  extends HttpServlet {
 			c = SqlUtils.getConnection(sc);
 
 			String origin = request.getRequestURL().toString();
-			logger.error("Is connection null "+c);
+			logger.trace("Is connection null "+c);
 	
 			/// Variable stuff
 			int userId = 0;
@@ -257,7 +278,7 @@ public class XSLService  extends HttpServlet {
 			{
 				redirectDoc = true;
 				System.out.println("documentid @ "+documentid);
-				logger.error("documentid @ "+documentid);
+				logger.trace("documentid @ "+documentid);
 			}
 	
 			boolean usefop = false;
@@ -387,7 +408,7 @@ public class XSLService  extends HttpServlet {
 			String basepath = xslfile.substring(0,xslfile.indexOf(File.separator));
 			String firstStage = baseDir+File.separator+basepath+File.separator+"karuta"+File.separator+"xsl"+File.separator+"html2xml.xsl";
 			System.out.println("FIRST: "+firstStage);
-			logger.error("FIRST: "+firstStage);
+			logger.trace("FIRST: "+firstStage);
 			Source xsltSrc1 = new StreamSource(new File(firstStage));
 			Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
 			StreamSource stageSource = new StreamSource(new ByteArrayInputStream( input.getBytes("UTF-8") ) );
@@ -443,7 +464,7 @@ public class XSLService  extends HttpServlet {
 				// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
 				String urlTarget = server + "/resources/resource/file/" + documentid;
 				System.out.println("Redirect @ "+urlTarget);
-				logger.error("Redirect @ "+urlTarget);
+				logger.trace("Redirect @ "+urlTarget);
 
 				HttpClientBuilder clientbuilder = HttpClientBuilder.create();
 				CloseableHttpClient client = clientbuilder.build();
@@ -492,7 +513,7 @@ public class XSLService  extends HttpServlet {
 
 				RetrieveAnswer(connection, response, origin);
 				//*/
-				logger.error("Done converting");
+				logger.trace("Done converting");
 			}
 			else
 			{
