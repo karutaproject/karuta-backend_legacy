@@ -1108,7 +1108,7 @@ public class RestServicePortfolio
 	@GET
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") String cutoff, @QueryParam("public") String public_var )
+	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") String cutoff, @QueryParam("public") String public_var, @QueryParam("project") String project )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -1132,8 +1132,17 @@ public class RestServicePortfolio
 				String portfolioCode = null;
 				String returnValue = "";
 				Boolean portfolioActive;
+				Boolean portfolioProject = null;
+				String portfolioProjectId = null;
 				try { if(active.equals("false") ||  active.equals("0")) portfolioActive = false; else portfolioActive = true; }
 				catch(Exception ex) { portfolioActive = true; };
+				
+				try { 
+						if(project.equals("false") ||  project.equals("0")) portfolioProject = false;
+						else if(project.equals("true") ||  project.equals("1")) portfolioProject = true;
+						else if(project.length()>0) portfolioProjectId = project;
+				}
+				catch(Exception ex) { portfolioProject = null; };
 
 				try { portfolioCode = code; } catch(Exception ex) { };
 				if(portfolioCode!=null)
@@ -1145,15 +1154,15 @@ public class RestServicePortfolio
 					if( public_var != null )
 					{
 						int publicid = credential.getMysqlUserUid(c, "public");
-						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, portfolioActive, 0).toString();
+						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, portfolioActive, 0, portfolioProject, portfolioProjectId).toString();
 					}
 					else if( userId != null && credential.isAdmin(c, ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
 					{
-						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId).toString();
+						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId, portfolioProject, portfolioProjectId).toString();
 					}
 					else	/// For user logged in
 					{
-						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId).toString();
+						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId, portfolioProject, portfolioProjectId).toString();
 					}
 
 					if(accept.equals(MediaType.APPLICATION_JSON))

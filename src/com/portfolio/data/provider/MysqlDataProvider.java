@@ -1552,7 +1552,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid) throws SQLException
+	public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId) throws SQLException
 	{
 		PreparedStatement st = null;
 		ResultSet res = null;
@@ -1566,6 +1566,21 @@ public class MysqlDataProvider implements DataProvider {
 					"LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid " +
 					"LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid " +
 					"WHERE p.root_node_uuid=n.node_uuid ";
+			//projects
+			if( portfolioProject!=null) 
+			{
+				if(portfolioProject)
+					sql += "AND n.semantictag LIKE '%karuta-project%' ";
+				//else
+					// On fait le filtre en Java car on doit recuperer les projets
+					//sql += "AND n.semantictag NOT LIKE '%karuta-project%' AND n.code NOT LIKE '%.%' ";
+			}
+			else if(projectId!=null)
+			{
+				if(projectId.length()>0)
+					sql += "AND n.code LIKE '"+projectId+".%' ";
+			}
+			//active
 			if( portfolioActive ) sql += "AND p.active=1 ";
 			else sql += "AND p.active=0 ";
 			sql += "ORDER BY r1.content;";
@@ -1582,6 +1597,22 @@ public class MysqlDataProvider implements DataProvider {
 					"LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid " +
 					"WHERE p.portfolio_id=gri.portfolio_id AND gri.grid=gi.grid AND gi.gid=gu.gid AND p.root_node_uuid=n.node_uuid AND " +
 					"(gu.userid=? OR p.modif_user_id=?) ";
+			
+			//projects
+			if( portfolioProject!=null) 
+			{
+				if(portfolioProject)
+					sql += "AND n.semantictag LIKE '%karuta-project%' ";
+				//else
+					// On fait le filtre en Java car on doit recuperer les projets
+					//sql += "AND n.semantictag NOT LIKE '%karuta-project%' AND n.code NOT LIKE '%.%' ";
+			}
+			else if(projectId!=null)
+			{
+				if(projectId.length()>0)
+					sql += "AND n.code LIKE '"+projectId+".%' ";
+			}
+			//active
 			if( portfolioActive ) sql += "AND p.active=1 ";
 			else sql += "AND p.active=0 ";
 			sql += "ORDER BY r1.content";
@@ -1591,6 +1622,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.setInt(2, userId);
 			res = st.executeQuery();
 		}
+		//TODO si portfolioProject=false parcourir une premiere fois pour extraire les projets, puis re-parcourir pour
 		
 		StringBuilder out = new StringBuilder();
 		if(outMimeType.getSubType().equals("xml"))
@@ -4587,7 +4619,7 @@ public class MysqlDataProvider implements DataProvider {
 						while( menuline.hasMoreTokens() )
 						{
 							String line = menuline.nextToken();
-							/// Format pour l'instant: code_portfolio,tag_sémantique,label@en/libellé@fr,rôles[;autre menu]
+							/// Format pour l'instant: code_portfolio,tag_sï¿½mantique,label@en/libellï¿½@fr,rï¿½les[;autre menu]
 							String[] tokens = line.split(",");
 							String menurolename = null;
 							for( int t=0; t<4; ++t )
@@ -6149,7 +6181,7 @@ public class MysqlDataProvider implements DataProvider {
 							while( menuline.hasMoreTokens() )
 							{
 								String line = menuline.nextToken();
-								/// Format pour l'instant: code_portfolio,tag_sémantique,label@en/libellé@fr,rôles[;autre menu]
+								/// Format pour l'instant: code_portfolio,tag_sï¿½mantique,label@en/libellï¿½@fr,rï¿½les[;autre menu]
 								String[] tokens = line.split(",");
 								String menurolename = null;
 								for( int t=0; t<4; ++t )
@@ -9074,7 +9106,7 @@ public class MysqlDataProvider implements DataProvider {
 					Document doc = DomUtils.xmlString2Document(xml, outTrace);
 					
 					// Find code
-					/// Cherche si on a déjà envoyé quelque chose
+					/// Cherche si on a dï¿½jï¿½ envoyï¿½ quelque chose
 					XPath xPath = XPathFactory.newInstance().newXPath();
 					String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
 					NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
@@ -11604,8 +11636,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			st.setInt(1, level+1);
 			st.setInt(2, level);
 			st.executeUpdate();
-			added = stTemp.executeUpdate();   // On s'arrÍte quand rien a ete ajoute
-			level = level + 1;    // Prochaine Ètape
+			added = stTemp.executeUpdate();   // On s'arrï¿½te quand rien a ete ajoute
+			level = level + 1;    // Prochaine ï¿½tape
 		}
 		
 		sql2="SELECT bin2uuid(node_uuid) FROM t_node WHERE semantictag LIKE \"" + semtag +"\"";
@@ -11954,7 +11986,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				st.execute();
 				st.close();
 				
-				//Comparaison rÈponses
+				//Comparaison rï¿½ponses
 				//sql="SELECT bin2uuid(node_parent_uuid) " + "FROM node n " + "WHERE node_uuid=uuid2bin(\""+nodeUuid+"\")";
 				
 				//uuid1
@@ -12379,7 +12411,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						while( menuline.hasMoreTokens() )
 						{
 							String line = menuline.nextToken();
-							/// Format pour l'instant: code_portfolio,tag_sémantique,label@en/libellé@fr,rôles[;autre menu]
+							/// Format pour l'instant: code_portfolio,tag_sï¿½mantique,label@en/libellï¿½@fr,rï¿½les[;autre menu]
 							String[] tokens = line.split(",");
 							String menurolename = null;
 							for( int t=0; t<4; ++t )
