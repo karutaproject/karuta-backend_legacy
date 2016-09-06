@@ -1552,25 +1552,36 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId) throws SQLException
+	public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly) throws SQLException
 	{
 		PreparedStatement st = null;
 		ResultSet res = null;
-		
+		Integer count = null;
 		String sql = "";
+		String sql_count = "";
+		String sql_suffix = "";
+		StringBuilder out = new StringBuilder();
 		if( cred.isAdmin(c, userId) )
 		{
-			sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.res_node_uuid) as res_node_uuid,  bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, r1.content, r1.xsi_type, r2.content, r2.xsi_type, r3.content, r3.xsi_type " +
-					"FROM portfolio p, node n " +
+			sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.res_node_uuid) as res_node_uuid,  bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, r1.content, r1.xsi_type, r2.content, r2.xsi_type, r3.content, r3.xsi_type ";
+			sql_count = " SELECT count(*) AS c ";
+			sql_suffix = " FROM portfolio p, node n " +
 					"LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid " +
 					"LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid " +
 					"LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid " +
 					"WHERE p.root_node_uuid=n.node_uuid ";
+			
+			sql += sql_suffix;
+			sql_count += sql_suffix;
+			
 			//projects
 			if( portfolioProject!=null) 
 			{
 				if(portfolioProject)
+				{
 					sql += "AND n.semantictag LIKE '%karuta-project%' ";
+					sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
+				}
 				//else
 					// On fait le filtre en Java car on doit recuperer les projets
 					//sql += "AND n.semantictag NOT LIKE '%karuta-project%' AND n.code NOT LIKE '%.%' ";
@@ -1578,31 +1589,73 @@ public class MysqlDataProvider implements DataProvider {
 			else if(projectId!=null)
 			{
 				if(projectId.length()>0)
+				{
 					sql += "AND n.code LIKE '"+projectId+".%' ";
+					sql_count += "AND n.code LIKE '"+projectId+".%' ";
+				}
 			}
 			//active
-			if( portfolioActive ) sql += "AND p.active=1 ";
-			else sql += "AND p.active=0 ";
+			if( portfolioActive ) 
+			{
+				sql += "AND p.active=1 ";
+				sql_count += "AND p.active=1 ";
+			}
+			else 
+			{
+				sql += "AND p.active=0 ";
+				sql_count += "AND p.active=1 ";
+			}
 			sql += "ORDER BY r1.content;";
 			
-			st = c.prepareStatement(sql);
+			st = c.prepareStatement(sql_count);
 			res = st.executeQuery();
+		    while(res.next()){
+		        count = res.getInt("c");
+		    }
+			
+		    if(countOnly)
+		    {
+				if(outMimeType.getSubType().equals("xml"))
+				{
+					out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\""+count+"\" />");
+				}
+				else if(outMimeType.getSubType().equals("json"))
+				{
+					String result = "";
+					result = "{ \"portfolios\": \"count\": "+count;
+					result += "  }";
+				}
+		    	
+		    }
+		    else
+		    {
+				st = c.prepareStatement(sql);
+				res = st.executeQuery();
+		    }
+
 		}
 		else
 		{
-			sql = "SELECT DISTINCT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.res_node_uuid) as res_node_uuid,  bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, r1.content, r1.xsi_type, r2.content, r2.xsi_type, r3.content, r3.xsi_type " +
-					"FROM portfolio p, group_right_info gri, group_info gi, group_user gu, node n " +
+			sql = "SELECT DISTINCT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.res_node_uuid) as res_node_uuid,  bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, r1.content, r1.xsi_type, r2.content, r2.xsi_type, r3.content, r3.xsi_type " ;
+			sql_count = " SELECT count(*) AS c ";
+			sql_suffix = " FROM portfolio p, group_right_info gri, group_info gi, group_user gu, node n " +
 					"LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid " +
 					"LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid " +
 					"LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid " +
 					"WHERE p.portfolio_id=gri.portfolio_id AND gri.grid=gi.grid AND gi.gid=gu.gid AND p.root_node_uuid=n.node_uuid AND " +
 					"(gu.userid=? OR p.modif_user_id=?) ";
+		
+			sql += sql_suffix;
+			sql_count += sql_suffix;
 			
 			//projects
 			if( portfolioProject!=null) 
 			{
 				if(portfolioProject)
+				{
 					sql += "AND n.semantictag LIKE '%karuta-project%' ";
+					sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
+				}
 				//else
 					// On fait le filtre en Java car on doit recuperer les projets
 					//sql += "AND n.semantictag NOT LIKE '%karuta-project%' AND n.code NOT LIKE '%.%' ";
@@ -1610,149 +1663,187 @@ public class MysqlDataProvider implements DataProvider {
 			else if(projectId!=null)
 			{
 				if(projectId.length()>0)
+				{
 					sql += "AND n.code LIKE '"+projectId+".%' ";
+					sql_count += "AND n.code LIKE '"+projectId+".%' ";
+				}
 			}
 			//active
-			if( portfolioActive ) sql += "AND p.active=1 ";
-			else sql += "AND p.active=0 ";
+			if( portfolioActive ) 
+			{
+				sql += "AND p.active=1 ";
+				sql_count += "AND p.active=1 ";
+			}
+			else
+			{
+				sql += "AND p.active=0 ";
+				sql_count += "AND p.active=1 ";
+			}
 			sql += "ORDER BY r1.content";
 			
-			st = c.prepareStatement(sql);
+			st = c.prepareStatement(sql_count);
 			st.setInt(1, userId);
 			st.setInt(2, userId);
 			res = st.executeQuery();
+		    while(res.next()){
+		        count = res.getInt("c");
+		    }
+		    
+		    if(countOnly)
+		    {
+				if(outMimeType.getSubType().equals("xml"))
+				{
+					out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\""+count+"\" />");
+				}
+				else if(outMimeType.getSubType().equals("json"))
+				{
+					String result = "";
+					result = "{ \"portfolios\": \"count\": "+count;
+					result += "  }";
+				}
+		    	
+		    }
+		    else
+		    {
+				st = c.prepareStatement(sql);
+				st.setInt(1, userId);
+				st.setInt(2, userId);
+				res = st.executeQuery();
+		    }
 		}
 		//TODO si portfolioProject=false parcourir une premiere fois pour extraire les projets, puis re-parcourir pour
 		
-		StringBuilder out = new StringBuilder();
-		if(outMimeType.getSubType().equals("xml"))
+		if(!countOnly)
 		{
-			out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios>");
-			while(res.next())
+			if(outMimeType.getSubType().equals("xml"))
 			{
-				String isOwner = "N";
-				String ownerId = res.getString("modif_user_id");
-				if( Integer.parseInt(ownerId) == userId )
-					isOwner = "Y";
-				
-				out.append("<portfolio id=\"").append(res.getString("portfolio_id"));
-				out.append("\" root_node_id=\"").append(res.getString("root_node_uuid"));
-				out.append("\" owner=\"").append(isOwner);
-				out.append("\" ownerid=\"").append(ownerId);
-				out.append("\" modified=\"").append(res.getString("p.modif_date")).append("\">");
-				
-				String nodeUuid = res.getString("root_node_uuid");
-				
-				if(res.getString("shared_node_uuid")!=null)	// FIXME, add to query
+				out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\""+count+"\" >");
+				while(res.next())
 				{
-					out.append(getNodeXmlOutput(c, res.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
-				}
-				else
-				{
-					String nodetype = res.getString("asm_type");
-					out.append("<").append(nodetype).append(" id=\"").append(res.getString("node_uuid")).append("\">");
+					String isOwner = "N";
+					String ownerId = res.getString("modif_user_id");
+					if( Integer.parseInt(ownerId) == userId )
+						isOwner = "Y";
 					
-					if(!"asmResource".equals(nodetype))
+					out.append("<portfolio id=\"").append(res.getString("portfolio_id"));
+					out.append("\" root_node_id=\"").append(res.getString("root_node_uuid"));
+					out.append("\" owner=\"").append(isOwner);
+					out.append("\" ownerid=\"").append(ownerId);
+					out.append("\" modified=\"").append(res.getString("p.modif_date")).append("\">");
+					
+					String nodeUuid = res.getString("root_node_uuid");
+					
+					if(res.getString("shared_node_uuid")!=null)	// FIXME, add to query
 					{
-						String metawad = res.getString("metadata_wad");
-						if(metawad!=null && !"".equals(metawad) )
+						out.append(getNodeXmlOutput(c, res.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
+					}
+					else
+					{
+						String nodetype = res.getString("asm_type");
+						out.append("<").append(nodetype).append(" id=\"").append(res.getString("node_uuid")).append("\">");
+						
+						if(!"asmResource".equals(nodetype))
 						{
-							out.append("<metadata-wad ").append(metawad).append("/>");
-						}
-						else
-							out.append("<metadata-wad/>");
-						
-						String metaepm = res.getString("metadata_epm");
-						if(metaepm!=null && !"".equals(metaepm) )
-							out.append("<metadata-epm "+metaepm+"/>");
-						else
-							out.append("<metadata-epm/>");
-						
-						String meta = res.getString("metadata");
-						if(meta!=null && !"".equals(meta))
-							out.append("<metadata "+meta+"/>");
-						else
-							out.append("<metadata/>");
-						
-						String code = res.getString("code");
-						if(meta!=null && !"".equals(meta))
-							out.append("<code>").append(code).append("</code>");
-						else
-							out.append("<code/>");
-						
-						String label = res.getString("label");
-						if(label!=null && !"".equals(label))
-							out.append("<label>").append(label).append("</label>");
-						else
-							out.append("<label/>");
+							String metawad = res.getString("metadata_wad");
+							if(metawad!=null && !"".equals(metawad) )
+							{
+								out.append("<metadata-wad ").append(metawad).append("/>");
+							}
+							else
+								out.append("<metadata-wad/>");
 							
-						String descr = res.getString("descr");
-						if(descr!=null && !"".equals(descr))
-							out.append("<description>").append(descr).append("</description>");
-						else
-							out.append("<description/>");
+							String metaepm = res.getString("metadata_epm");
+							if(metaepm!=null && !"".equals(metaepm) )
+								out.append("<metadata-epm "+metaepm+"/>");
+							else
+								out.append("<metadata-epm/>");
+							
+							String meta = res.getString("metadata");
+							if(meta!=null && !"".equals(meta))
+								out.append("<metadata "+meta+"/>");
+							else
+								out.append("<metadata/>");
+							
+							String code = res.getString("code");
+							if(meta!=null && !"".equals(meta))
+								out.append("<code>").append(code).append("</code>");
+							else
+								out.append("<code/>");
+							
+							String label = res.getString("label");
+							if(label!=null && !"".equals(label))
+								out.append("<label>").append(label).append("</label>");
+							else
+								out.append("<label/>");
+								
+							String descr = res.getString("descr");
+							if(descr!=null && !"".equals(descr))
+								out.append("<description>").append(descr).append("</description>");
+							else
+								out.append("<description/>");
+							
+							String semantic = res.getString("semantictag");
+							if(semantic!=null && !"".equals(semantic))
+								out.append("<semanticTag>").append(semantic).append("</semanticTag>");
+							else
+								out.append("<semanticTag/>");
+						}
 						
-						String semantic = res.getString("semantictag");
-						if(semantic!=null && !"".equals(semantic))
-							out.append("<semanticTag>").append(semantic).append("</semanticTag>");
-						else
-							out.append("<semanticTag/>");
+						String resresuuid = res.getString("res_res_node_uuid");
+						if( resresuuid != null && !"".equals(resresuuid) )
+						{
+							String xsitype = res.getString("r1.xsi_type");
+							out.append("<asmResource id='").append(resresuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+							String resrescont = res.getString("r1.content");
+							if( resrescont != null && !"".equals(resrescont) )
+								out.append(resrescont);
+							out.append("</asmResource>");
+						}
+						
+						String rescontuuid = res.getString("res_context_node_uuid");
+						if( rescontuuid != null && !"".equals(rescontuuid) )
+						{
+							String xsitype = res.getString("r2.xsi_type");
+							out.append("<asmResource id='").append(rescontuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+							String resrescont = res.getString("r2.content");
+							if( resrescont != null && !"".equals(resrescont) )
+								out.append(resrescont);
+							out.append("</asmResource>");
+						}
+						
+						String resnodeuuid = res.getString("res_node_uuid");
+						if( resnodeuuid != null && !"".equals(resnodeuuid) )
+						{
+							String xsitype = res.getString("r3.xsi_type");
+							out.append("<asmResource id='").append(resnodeuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+							String resrescont = res.getString("r3.content");
+							if( resrescont != null && !"".equals(resrescont) )
+								out.append(resrescont);
+							out.append("</asmResource>");
+						}
+						out.append("</"+nodetype+">");
+						out.append("</portfolio>");
 					}
-					
-					String resresuuid = res.getString("res_res_node_uuid");
-					if( resresuuid != null && !"".equals(resresuuid) )
-					{
-						String xsitype = res.getString("r1.xsi_type");
-						out.append("<asmResource id='").append(resresuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
-						String resrescont = res.getString("r1.content");
-						if( resrescont != null && !"".equals(resrescont) )
-							out.append(resrescont);
-						out.append("</asmResource>");
-					}
-					
-					String rescontuuid = res.getString("res_context_node_uuid");
-					if( rescontuuid != null && !"".equals(rescontuuid) )
-					{
-						String xsitype = res.getString("r2.xsi_type");
-						out.append("<asmResource id='").append(rescontuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
-						String resrescont = res.getString("r2.content");
-						if( resrescont != null && !"".equals(resrescont) )
-							out.append(resrescont);
-						out.append("</asmResource>");
-					}
-					
-					String resnodeuuid = res.getString("res_node_uuid");
-					if( resnodeuuid != null && !"".equals(resnodeuuid) )
-					{
-						String xsitype = res.getString("r3.xsi_type");
-						out.append("<asmResource id='").append(resnodeuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
-						String resrescont = res.getString("r3.content");
-						if( resrescont != null && !"".equals(resrescont) )
-							out.append(resrescont);
-						out.append("</asmResource>");
-					}
-					out.append("</"+nodetype+">");
-					out.append("</portfolio>");
 				}
+				out.append("</portfolios>");
 			}
-			out.append("</portfolios>");
-		}
-		else if(outMimeType.getSubType().equals("json"))
-		{
-			String result = "";
-			result = "{ \"portfolios\": { \"portfolio\": [";
-			boolean firstPass = false;
-			while(res.next())
+			else if(outMimeType.getSubType().equals("json"))
 			{
-				if(firstPass) result += ",";
-				result += "{ ";
-				result += DomUtils.getJsonAttributeOutput("id", res.getString("portfolio_id"))+", ";
-				result += DomUtils.getJsonAttributeOutput("root_node_id", res.getString("root_node_uuid"))+", ";
-				result += getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId,null,false);
-				result += "} ";
-				firstPass = true;
+				String result = "";
+				result = "{ \"portfolios\": { \"portfolio\": [";
+				boolean firstPass = false;
+				while(res.next())
+				{
+					if(firstPass) result += ",";
+					result += "{ ";
+					result += DomUtils.getJsonAttributeOutput("id", res.getString("portfolio_id"))+", ";
+					result += DomUtils.getJsonAttributeOutput("root_node_id", res.getString("root_node_uuid"))+", ";
+					result += getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId,null,false);
+					result += "} ";
+					firstPass = true;
+				}
+				result += "] } }";
 			}
-			result += "] } }";
 		}
 		res.close();
 		st.close();
