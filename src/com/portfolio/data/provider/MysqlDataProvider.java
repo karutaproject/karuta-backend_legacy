@@ -1603,7 +1603,7 @@ public class MysqlDataProvider implements DataProvider {
 			else 
 			{
 				sql += "AND p.active=0 ";
-				sql_count += "AND p.active=1 ";
+				sql_count += "AND p.active=0 ";
 			}
 			sql += "ORDER BY r1.content;";
 			
@@ -1637,7 +1637,7 @@ public class MysqlDataProvider implements DataProvider {
 		else
 		{
 			sql = "SELECT DISTINCT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.res_node_uuid) as res_node_uuid,  bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, r1.content, r1.xsi_type, r2.content, r2.xsi_type, r3.content, r3.xsi_type " ;
-			sql_count = " SELECT count(*) AS c ";
+			sql_count = " SELECT count(DISTINCT p.root_node_uuid) AS c ";
 			sql_suffix = " FROM portfolio p, group_right_info gri, group_info gi, group_user gu, node n " +
 					"LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid " +
 					"LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid " +
@@ -1677,7 +1677,7 @@ public class MysqlDataProvider implements DataProvider {
 			else
 			{
 				sql += "AND p.active=0 ";
-				sql_count += "AND p.active=1 ";
+				sql_count += "AND p.active=0 ";
 			}
 			sql += "ORDER BY r1.content";
 			
