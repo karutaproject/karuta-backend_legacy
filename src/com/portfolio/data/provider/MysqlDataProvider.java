@@ -1719,6 +1719,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.setInt(2, userId);
 			if(codeFilterProjectId) st.setString(3, projectId+"%");
 			else if(codeFilterSearch) st.setString(3, "%"+search+"%");
+			res = st.executeQuery();
 		    while(res.next()){
 		        count = res.getInt("c");
 		    }
