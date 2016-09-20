@@ -122,7 +122,7 @@ public class MysqlDataProviderTest {
 			//getPortfolios
 			userId = null;
 			System.out.println("--- getPortfolios("+userId+") ------");
-			System.out.println(dataProvider.getPortfolios(connection, xmlMimeType, userId,groupId, true, 0,null,null,false));
+			System.out.println(dataProvider.getPortfolios(connection, xmlMimeType, userId,groupId, true, 0,null,null,false, null));
 
 			//getNodes
 			String uuid_getnodes = "43020565-b650-4655-b466-af2c69b0c714";
@@ -139,7 +139,7 @@ public class MysqlDataProviderTest {
 			//getPortfolios
 			userId = null;
 			System.out.println("--- getPortfolios("+userId+") ------");
-			System.out.println(dataProvider.getPortfolios(connection, xmlMimeType, userId,groupId, true, 0,null,null,false));
+			System.out.println(dataProvider.getPortfolios(connection, xmlMimeType, userId,groupId, true, 0,null,null,false,null));
 
 
 		}

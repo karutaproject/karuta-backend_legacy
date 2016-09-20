@@ -1552,11 +1552,13 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly) throws SQLException
+	public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) throws SQLException
 	{
 		PreparedStatement st = null;
 		ResultSet res = null;
 		Integer count = null;
+		Boolean codeFilterProjectId = false;
+		Boolean codeFilterSearch = false;
 		String sql = "";
 		String sql_count = "";
 		String sql_suffix = "";
@@ -1582,16 +1584,28 @@ public class MysqlDataProvider implements DataProvider {
 					sql += "AND n.semantictag LIKE '%karuta-project%' ";
 					sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
 				}
-				//else
-					// On fait le filtre en Java car on doit recuperer les projets
-					//sql += "AND n.semantictag NOT LIKE '%karuta-project%' AND n.code NOT LIKE '%.%' ";
+				else
+				{
+					sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+				}
 			}
 			else if(projectId!=null)
 			{
-				if(projectId.length()>0)
+				if(projectId.length()>0 && !projectId.toLowerCase().equals("all"))
 				{
-					sql += "AND n.code LIKE '"+projectId+".%' ";
-					sql_count += "AND n.code LIKE '"+projectId+".%' ";
+					sql += "AND n.code LIKE ? ";
+					sql_count += "AND n.code LIKE ? ";
+					codeFilterProjectId = true;
+				}
+			}
+			else if(search!=null)
+			{
+				if(search.length()>0)
+				{
+					sql += "AND n.code LIKE ? ";
+					sql_count += "AND n.code LIKE ? ";
+					codeFilterSearch = true;
 				}
 			}
 			//active
@@ -1608,6 +1622,8 @@ public class MysqlDataProvider implements DataProvider {
 			sql += "ORDER BY r1.content;";
 			
 			st = c.prepareStatement(sql_count);
+			if(codeFilterProjectId) st.setString(1, projectId+"%");
+			else if(codeFilterSearch) st.setString(1, "%"+search+"%");
 			res = st.executeQuery();
 		    while(res.next()){
 		        count = res.getInt("c");
@@ -1629,7 +1645,10 @@ public class MysqlDataProvider implements DataProvider {
 		    }
 		    else
 		    {
-				st = c.prepareStatement(sql);
+		    	st = c.prepareStatement(sql);
+				if(codeFilterProjectId) st.setString(1, projectId+"%");
+				else if(codeFilterSearch) st.setString(1, "%"+search+"%");
+				
 				res = st.executeQuery();
 		    }
 
@@ -1656,16 +1675,28 @@ public class MysqlDataProvider implements DataProvider {
 					sql += "AND n.semantictag LIKE '%karuta-project%' ";
 					sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
 				}
-				//else
-					// On fait le filtre en Java car on doit recuperer les projets
-					//sql += "AND n.semantictag NOT LIKE '%karuta-project%' AND n.code NOT LIKE '%.%' ";
+				else
+				{
+					sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+				}
 			}
 			else if(projectId!=null)
 			{
-				if(projectId.length()>0)
+				if(projectId.length()>0 && !projectId.toLowerCase().equals("all"))
 				{
-					sql += "AND n.code LIKE '"+projectId+".%' ";
-					sql_count += "AND n.code LIKE '"+projectId+".%' ";
+					sql += "AND n.code LIKE ? ";
+					sql_count += "AND n.code LIKE ? ";
+					codeFilterProjectId = true;
+				}
+			}
+			else if(search!=null)
+			{
+				if(search.length()>0)
+				{
+					sql += "AND n.code LIKE ? ";
+					sql_count += "AND n.code LIKE ? ";
+					codeFilterSearch = true;
 				}
 			}
 			//active
@@ -1684,7 +1715,8 @@ public class MysqlDataProvider implements DataProvider {
 			st = c.prepareStatement(sql_count);
 			st.setInt(1, userId);
 			st.setInt(2, userId);
-			res = st.executeQuery();
+			if(codeFilterProjectId) st.setString(3, projectId+"%");
+			else if(codeFilterSearch) st.setString(3, "%"+search+"%");
 		    while(res.next()){
 		        count = res.getInt("c");
 		    }
@@ -1705,9 +1737,12 @@ public class MysqlDataProvider implements DataProvider {
 		    }
 		    else
 		    {
-				st = c.prepareStatement(sql);
+		    	st = c.prepareStatement(sql);
 				st.setInt(1, userId);
 				st.setInt(2, userId);
+				if(codeFilterProjectId) st.setString(3, projectId+"%");
+				else if(codeFilterSearch) st.setString(3, "%"+search+"%");
+				
 				res = st.executeQuery();
 		    }
 		}

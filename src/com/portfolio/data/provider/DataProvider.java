@@ -66,7 +66,7 @@ public interface DataProvider {
 
 	/// Relatif aux portfolios
 	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, String cutoff) throws Exception;
-	public Object getPortfolios(Connection c, MimeType outMimeType,int userId,int groupId,Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly) throws Exception;
+	public Object getPortfolios(Connection c, MimeType outMimeType,int userId,int groupId,Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) throws Exception;
 	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception;
 	public String getPortfolioUuidByNodeUuid(Connection c, String nodeUuid) throws Exception ;
 	public Object getPortfolioZip(MimeType mimeType, String portfolioUuid, int userId, int groupId, String label, Boolean resource, Boolean files) throws Exception;
