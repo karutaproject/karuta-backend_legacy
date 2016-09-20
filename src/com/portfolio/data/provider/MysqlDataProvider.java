@@ -1579,7 +1579,8 @@ public class MysqlDataProvider implements DataProvider {
 			//projects
 			if( portfolioProject!=null) 
 			{
-				if(portfolioProject)
+				if(projectId==null) projectId = "";
+				if(portfolioProject && !projectId.toLowerCase().equals("all"))
 				{
 					sql += "AND n.semantictag LIKE '%karuta-project%' ";
 					sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
@@ -1670,7 +1671,8 @@ public class MysqlDataProvider implements DataProvider {
 			//projects
 			if( portfolioProject!=null) 
 			{
-				if(portfolioProject)
+				if(projectId==null) projectId = "";
+				if(portfolioProject && !projectId.toLowerCase().equals("all"))
 				{
 					sql += "AND n.semantictag LIKE '%karuta-project%' ";
 					sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
