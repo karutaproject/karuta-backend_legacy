@@ -6108,7 +6108,7 @@ public class MysqlDataProvider implements DataProvider {
 						postGroupsUsers(c, 1, userId, ngid);
 						
 						/// Ensure entry is there in temp table, just need a skeleton info
-						sql = "REPLACE INTO t_group_right_info(grid, owner, label) VALUES((SELECT grid FROM group_info gi WHERE gid=?), 1, ?)";
+						sql = "REPLACE INTO t_group_right_info(grid, owner, label) VALUES(?, 1, ?)";
 						if (dbserveur.equals("oracle")){
 							// FIXME Unsure about this, might need testing
 							sql = "MERGE INTO group_info d using (SELECT ? grid,1 ,? label from dual) s ON (1=2) WHEN NOT MATCHED THEN INSERT (d.grid, d.owner, d.label) values (s.grid, s.owner, s.label)";
