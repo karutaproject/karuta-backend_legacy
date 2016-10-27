@@ -1587,8 +1587,9 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				else
 				{
-					sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
-					sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					// Not efficient in MySQL, disabled
+					//sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					//sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
 				}
 			}
 			else if(projectId!=null)
@@ -1679,8 +1680,9 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				else
 				{
-					sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
-					sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					// Not efficient in MySQL, disabled
+					//sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					//sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
 				}
 			}
 			else if(projectId!=null)
