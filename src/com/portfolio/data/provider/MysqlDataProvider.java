@@ -112,7 +112,7 @@ import com.portfolio.security.NodeRight;
 
 /**
  * @author vassoill
- * ImplÃ©mentation du dataProvider pour MySQL
+ * Implémentation du dataProvider pour MySQL
  *
  */
 public class MysqlDataProvider implements DataProvider {
@@ -167,7 +167,7 @@ public class MysqlDataProvider implements DataProvider {
 		st = c.prepareStatement(sql);
 		st.setString(1, nodeUuid);
 
-		// On doit vÃ©rifier le droit d'accÃ¨s en lecture avant de retourner le noeud
+		// On doit vérifier le droit d'accès en lecture avant de retourner le noeud
 		//if(!credential.getNodeRight(userId,groupId,nodeUuid,Credential.DELETE))
 		//return null;
 		//else
@@ -255,7 +255,7 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			// Ordering by code. A bit hackish but it work as intended
-			// Si on est admin, on rÃ©cupÃ¨re la liste complÃªte
+			// Si on est admin, on récupère la liste complête
 			if( cred.isAdmin(c, userId) )
 			{
 				sql = "SELECT bin2uuid(p.portfolio_id) AS portfolio_id, bin2uuid(p.root_node_uuid) AS root_node_uuid, p.modif_user_id, p.modif_date, p.active, p.user_id " +
@@ -571,7 +571,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(hasRights)
 		{
-			/// Si il y a quelque chose de particulier, on s'assure que tout soit bien nettoyÃ© de faÃ§on sÃ©parÃ©
+			/// Si il y a quelque chose de particulier, on s'assure que tout soit bien nettoyé de façon séparé
 			try
 			{
 				c.setAutoCommit(false);
@@ -790,9 +790,9 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			/// Re-numÃ©rote les noeud (on commence Ã  0)
-			sql = "UPDATE node SET node_order=@ii:=@ii+1 " +	// La 1Ã¨re valeur va Ãªtre 0
-					"WHERE node_parent_uuid=uuid2bin(?) AND (@ii:=-1) " +  // Pour tromper la requÃªte parce qu'on veut commencer Ã  0
+			/// Re-numérote les noeud (on commence à 0)
+			sql = "UPDATE node SET node_order=@ii:=@ii+1 " +	// La 1ère valeur va être 0
+					"WHERE node_parent_uuid=uuid2bin(?) AND (@ii:=-1) " +  // Pour tromper la requête parce qu'on veut commencer à 0
 					"ORDER by node_order";
 			if (dbserveur.equals("oracle"))
 			{
@@ -811,7 +811,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// Met Ã  jour les enfants
+			/// Met à jour les enfants
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE node n1, "
 					+ "(SELECT GROUP_CONCAT(bin2uuid(COALESCE(n2.shared_node_uuid,n2.node_uuid)) ORDER BY n2.node_order) AS value "
@@ -895,7 +895,7 @@ public class MysqlDataProvider implements DataProvider {
 				st.executeUpdate();
 				if( st != null ) try{ st.close(); }catch( SQLException e ){ e.printStackTrace(); }
 			}
-			// Ensuite on met Ã  jour les id ressource au niveau du noeud parent
+			// Ensuite on met à jour les id ressource au niveau du noeud parent
 			if(xsiType.equals("nodeRes"))
 			{
 				sql = " UPDATE node SET res_res_node_uuid =uuid2bin(?), shared_node_res_uuid=uuid2bin(?) ";
@@ -1019,7 +1019,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql += " WHERE node_uuid = (SELECT res_res_node_uuid FROM node ";
 				sql += " WHERE node_uuid=uuid2bin(?))  ";
 
-				/// InterpÃ©tation du code (vive le hack... Non)
+				/// Interpétation du code (vive le hack... Non)
 				Document doc = DomUtils.xmlString2Document("<?xml version='1.0' encoding='UTF-8' standalone='no'?><res>"+content+"</res>", new StringBuffer());
 				NodeList nodes = doc.getElementsByTagName("code");
 				Node code = nodes.item(0);
@@ -1393,7 +1393,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			userId = cred.getPublicUid(c);
 //			NodeRight nodeRight = new NodeRight(false,false,false,false,false,false);
-			/// VÃ©rifie les droits avec le compte publique (derniÃ¨re chance)
+			/// Vérifie les droits avec le compte publique (dernière chance)
 			nodeRight = cred.getPublicRight(c, userId, 123, rootNodeUuid, "dummy");
 			if( !nodeRight.read )
 				return "faux";
@@ -1559,6 +1559,7 @@ public class MysqlDataProvider implements DataProvider {
 		Integer count = null;
 		Boolean codeFilterProjectId = false;
 		Boolean codeFilterSearch = false;
+		Boolean portfolioNoProject = false;
 		String sql = "";
 		String sql_count = "";
 		String sql_suffix = "";
@@ -1587,8 +1588,11 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				else
 				{
-					sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
-					sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					portfolioNoProject = true;
+					return getPortfoliosNoProject(c,outMimeType,0, groupId, sql,countOnly,search,portfolioActive);
+					// Not efficient in MySQL, disabled
+					//sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					//sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
 				}
 			}
 			else if(projectId!=null)
@@ -1679,8 +1683,11 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				else
 				{
-					sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
-					sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					portfolioNoProject = true;
+					return getPortfoliosNoProject(c,outMimeType,userId, groupId, sql,countOnly, search,portfolioActive);
+					// Not efficient in MySQL, disabled
+					//sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
+					//sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
 				}
 			}
 			else if(projectId!=null)
@@ -1719,6 +1726,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.setInt(2, userId);
 			if(codeFilterProjectId) st.setString(3, projectId+"%");
 			else if(codeFilterSearch) st.setString(3, "%"+search+"%");
+			res = st.executeQuery();
 		    while(res.next()){
 		        count = res.getInt("c");
 		    }
@@ -1866,26 +1874,265 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			else if(outMimeType.getSubType().equals("json"))
 			{
-				String result = "";
-				result = "{ \"portfolios\": { \"portfolio\": [";
+				
+				out.append("{ \"portfolios\": { \"portfolio\": [");
 				boolean firstPass = false;
 				while(res.next())
 				{
-					if(firstPass) result += ",";
-					result += "{ ";
-					result += DomUtils.getJsonAttributeOutput("id", res.getString("portfolio_id"))+", ";
-					result += DomUtils.getJsonAttributeOutput("root_node_id", res.getString("root_node_uuid"))+", ";
-					result += getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId,null,false);
-					result += "} ";
+					if(firstPass) out.append(",");
+					out.append("{ ");
+					out.append(DomUtils.getJsonAttributeOutput("id", res.getString("portfolio_id"))+", ");
+					out.append(DomUtils.getJsonAttributeOutput("root_node_id", res.getString("root_node_uuid"))+", ");
+					out.append(getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId,null,false));
+					out.append("} ");
 					firstPass = true;
 				}
-				result += "] } }";
+				out.append("] } }");
 			}
 		}
 		res.close();
 		st.close();
 
 		return out.toString();
+	}
+	
+	public Object getPortfoliosNoProject(Connection c,MimeType outMimeType, int userId, int groupId, String sql,Boolean countOnly,String search,Boolean portfolioActive) throws SQLException
+	{
+		PreparedStatement st = null;
+		ResultSet res = null;
+		Integer count = 0;
+		StringBuilder out = new StringBuilder();
+		ArrayList codePortfolios = new ArrayList();
+		ArrayList codePortfoliosProjects = new ArrayList();
+		ArrayList codePortfoliosNonProjects = new ArrayList();
+		
+		System.out.println(sql);
+		System.out.println("------------");
+		
+		if(userId>0)
+		{
+			st = c.prepareStatement(sql);
+			st.setInt(1, userId);
+			st.setInt(2, userId);
+			
+			res = st.executeQuery();
+			
+		}
+		else
+		{
+			st = c.prepareStatement(sql);
+			
+			res = st.executeQuery();
+		}
+		
+		while(res.next())
+		{
+			String code = res.getString("code");
+			String semanticTag = res.getString("semantictag"); 
+			codePortfolios.add(code);
+			if(semanticTag!=null)
+				if(semanticTag.contains("karuta-project"))
+				{
+					codePortfoliosProjects.add(code);
+					//String[] tmp = code.split(".");
+					//codePortfoliosProjects.add(tmp[0]);
+				}
+		}
+		
+		for(int i=0;i<codePortfoliosProjects.size();i++)
+		{
+			System.out.println(codePortfoliosProjects.get(i));
+		}
+		System.out.println("------------");
+		for(int i=0;i<codePortfolios.size();i++)
+		{
+			System.out.println(codePortfolios.get(i));
+			String code = (String) codePortfolios.get(i);
+			if(code.contains("."))
+			{
+				String[] tmp = code.split("\\.");
+				String tmpCodeProjet = tmp[0];
+				if(!codePortfoliosProjects.contains(tmpCodeProjet))
+				{
+					count++;
+					codePortfoliosNonProjects.add(code);
+				}
+			}
+			else
+			{
+				if(codePortfoliosProjects.contains(code))
+				{
+					// Est un projet, on l'ignore
+				}
+				else
+				{
+					count++;
+					codePortfoliosNonProjects.add(code);
+				}
+			}
+		}
+		//TODO
+
+		 if(countOnly)
+		    {
+				if(outMimeType.getSubType().equals("xml"))
+				{
+					out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\""+count+"\" />");
+				}
+				else if(outMimeType.getSubType().equals("json"))
+				{
+					String result = "";
+					result = "{ \"portfolios\": \"count\": "+count;
+					result += "  }";
+				}
+
+		    }
+		 else  
+		 {
+			 	res = st.executeQuery();
+			 	if(outMimeType.getSubType().equals("xml"))
+				{
+					out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\""+count+"\" >");
+					while(res.next())
+					{
+						if(codePortfoliosNonProjects.contains(res.getString("code")))
+						{
+							String isOwner = "N";
+							String ownerId = res.getString("modif_user_id");
+							if( Integer.parseInt(ownerId) == userId )
+								isOwner = "Y";
+							
+							out.append("<portfolio id=\"").append(res.getString("portfolio_id"));
+							out.append("\" root_node_id=\"").append(res.getString("root_node_uuid"));
+							out.append("\" owner=\"").append(isOwner);
+							out.append("\" ownerid=\"").append(ownerId);
+							out.append("\" modified=\"").append(res.getString("p.modif_date")).append("\">");
+							
+							String nodeUuid = res.getString("root_node_uuid");
+							
+							if(res.getString("shared_node_uuid")!=null)	// FIXME, add to query
+							{
+								out.append(getNodeXmlOutput(c, res.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
+							}
+							else
+							{
+								String nodetype = res.getString("asm_type");
+								out.append("<").append(nodetype).append(" id=\"").append(res.getString("node_uuid")).append("\">");
+								
+								if(!"asmResource".equals(nodetype))
+								{
+									String metawad = res.getString("metadata_wad");
+									if(metawad!=null && !"".equals(metawad) )
+									{
+										out.append("<metadata-wad ").append(metawad).append("/>");
+									}
+									else
+										out.append("<metadata-wad/>");
+									
+									String metaepm = res.getString("metadata_epm");
+									if(metaepm!=null && !"".equals(metaepm) )
+										out.append("<metadata-epm "+metaepm+"/>");
+									else
+										out.append("<metadata-epm/>");
+									
+									String meta = res.getString("metadata");
+									if(meta!=null && !"".equals(meta))
+										out.append("<metadata "+meta+"/>");
+									else
+										out.append("<metadata/>");
+									
+									String code = res.getString("code");
+									if(meta!=null && !"".equals(meta))
+										out.append("<code>").append(code).append("</code>");
+									else
+										out.append("<code/>");
+									
+									String label = res.getString("label");
+									if(label!=null && !"".equals(label))
+										out.append("<label>").append(label).append("</label>");
+									else
+										out.append("<label/>");
+										
+									String descr = res.getString("descr");
+									if(descr!=null && !"".equals(descr))
+										out.append("<description>").append(descr).append("</description>");
+									else
+										out.append("<description/>");
+									
+									String semantic = res.getString("semantictag");
+									if(semantic!=null && !"".equals(semantic))
+										out.append("<semanticTag>").append(semantic).append("</semanticTag>");
+									else
+										out.append("<semanticTag/>");
+								}
+								
+								String resresuuid = res.getString("res_res_node_uuid");
+								if( resresuuid != null && !"".equals(resresuuid) )
+								{
+									String xsitype = res.getString("r1.xsi_type");
+									out.append("<asmResource id='").append(resresuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+									String resrescont = res.getString("r1.content");
+									if( resrescont != null && !"".equals(resrescont) )
+										out.append(resrescont);
+									out.append("</asmResource>");
+								}
+								
+								String rescontuuid = res.getString("res_context_node_uuid");
+								if( rescontuuid != null && !"".equals(rescontuuid) )
+								{
+									String xsitype = res.getString("r2.xsi_type");
+									out.append("<asmResource id='").append(rescontuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+									String resrescont = res.getString("r2.content");
+									if( resrescont != null && !"".equals(resrescont) )
+										out.append(resrescont);
+									out.append("</asmResource>");
+								}
+								
+								String resnodeuuid = res.getString("res_node_uuid");
+								if( resnodeuuid != null && !"".equals(resnodeuuid) )
+								{
+									String xsitype = res.getString("r3.xsi_type");
+									out.append("<asmResource id='").append(resnodeuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+									String resrescont = res.getString("r3.content");
+									if( resrescont != null && !"".equals(resrescont) )
+										out.append(resrescont);
+									out.append("</asmResource>");
+								}
+								out.append("</"+nodetype+">");
+								out.append("</portfolio>");
+							}
+						
+						}
+					}
+					out.append("</portfolios>");
+				}
+				else if(outMimeType.getSubType().equals("json"))
+				{
+					String result = "";
+					result = "{ \"portfolios\": { \"portfolio\": [";
+					boolean firstPass = false;
+					while(res.next())
+					{
+						if(codePortfoliosNonProjects.contains(res.getString("code")))
+						{
+							if(firstPass) result += ",";
+							result += "{ ";
+							result += DomUtils.getJsonAttributeOutput("id", res.getString("portfolio_id"))+", ";
+							result += DomUtils.getJsonAttributeOutput("root_node_id", res.getString("root_node_uuid"))+", ";
+							result += getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId,  groupId,null,false);
+							result += "} ";
+							firstPass = true;
+						}
+					}
+					result += "] } }";
+				}
+			}
+		
+		 	res.close();
+			st.close();
+
+			return out.toString();
+		
 	}
 
 	@Override
@@ -1894,7 +2141,7 @@ public class MysqlDataProvider implements DataProvider {
 		ResultSet res;
 		String nodeUuid;
 
-		// On recupere d'abord l'uuid du premier noeud trouvÃ© correspondant au semantictag
+		// On recupere d'abord l'uuid du premier noeud trouvé correspondant au semantictag
 		res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semantictag);
 		res.next();
 		nodeUuid = res.getString("node_uuid");
@@ -1960,13 +2207,13 @@ public class MysqlDataProvider implements DataProvider {
 		StringBuffer outTrace = new StringBuffer();
 		String portfolioUuid;
 
-		// Si le modele est renseignÃ©, on ignore le XML postÃ© et on rÃ©cupere le contenu du modele
-		// Ã  la place
+		// Si le modele est renseigné, on ignore le XML posté et on récupere le contenu du modele
+		// à la place
 		// FIXME Unused, we instanciate/copy a portfolio
 		if(portfolioModelId!=null)
 			in = getPortfolio(c, inMimeType,portfolioModelId,userId, groupId, null, null, null, substid, null).toString();
 
-		// On gÃ©nÃ¨re un nouvel uuid
+		// On génère un nouvel uuid
 		portfolioUuid = UUID.randomUUID().toString();
 
 
@@ -2022,7 +2269,7 @@ public class MysqlDataProvider implements DataProvider {
 		/// If we instanciate, don't need the designer role
 //		if( !parseRights )
 		{
-			/// CrÃ©er groupe 'designer', 'all' est mis avec ce qui est spÃ©cifiÃ© dans le xml reÃ§u
+			/// Créer groupe 'designer', 'all' est mis avec ce qui est spécifié dans le xml reçu
 			int groupid = postCreateRole(c, portfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
@@ -2049,7 +2296,7 @@ public class MysqlDataProvider implements DataProvider {
 		ResultSet rs = null;
 		try
 		{
-			// Retire la personne du rÃ´le
+			// Retire la personne du rôle
 			sql = "SELECT bin2uuid(portfolio_id) FROM node WHERE code=?";
 			st = c.prepareStatement(sql);
 			st.setString(1, code);
@@ -2249,7 +2496,7 @@ public class MysqlDataProvider implements DataProvider {
 	private  StringBuffer getNodeXmlOutput(Connection c, String nodeUuid,boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String label,boolean checkSecurity) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
-		// Verification securitÃ©
+		// Verification securité
 		if(checkSecurity)
 		{
 			NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, label);
@@ -2257,7 +2504,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				userId = cred.getPublicUid(c);
 //			NodeRight nodeRight = new NodeRight(false,false,false,false,false,false);
-			/// VÃ©rifie les droits avec le compte publique (derniÃ¨re chance)
+			/// Vérifie les droits avec le compte publique (dernière chance)
 				nodeRight = cred.getPublicRight(c, userId, 123, nodeUuid, "dummy");
 				if( !nodeRight.read )
 					return result;
@@ -2570,7 +2817,7 @@ public class MysqlDataProvider implements DataProvider {
 				
 				t_01 = System.currentTimeMillis();
 				String nodeUuid = result.getString("node_uuid");
-				if( nodeUuid == null ) continue;    // Cas oÃ¹ on a des droits sur plus de noeuds qui ne sont pas dans le portfolio
+				if( nodeUuid == null ) continue;    // Cas où on a des droits sur plus de noeuds qui ne sont pas dans le portfolio
 
 				String childsId = result.getString("node_children_uuid");
 
@@ -2860,9 +3107,9 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			else
 			{
-				/// FIXME: Il faudrait peut-Ãªtre prendre une autre stratÃ©gie pour sÃ©lectionner les bonnes donnÃ©es
-				// Cas propriÃ©taire
-				// Cas gÃ©nÃ©rale (partage via droits)
+				/// FIXME: Il faudrait peut-être prendre une autre stratégie pour sélectionner les bonnes données
+				// Cas propriétaire
+				// Cas générale (partage via droits)
 
 				if (dbserveur.equals("mysql")){
 					sql = "CREATE TEMPORARY TABLE t_rights(" +
@@ -2895,7 +3142,7 @@ public class MysqlDataProvider implements DataProvider {
 				time3 = System.currentTimeMillis();
 
 				/*
-				/// Droits donnÃ©es par le groupe sÃ©lectionnÃ©
+				/// Droits données par le groupe sélectionné
 				sql = "INSERT INTO t_rights(grid,id,RD,WR,DL,SB,AD) " +
 						"SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
 						"FROM group_info gi, group_right_info gri, group_rights gr " +
@@ -2906,10 +3153,10 @@ public class MysqlDataProvider implements DataProvider {
 				st.close();
 				//*/
 
-				/// Droits donnÃ©es par le portfolio Ã  'tout le monde'
-				/// Fusion des droits, pas trÃ¨s beau mais bon.
-				/// Droits donnÃ© spÃ©cifiquement Ã  un utilisateur
-				/// FIXME: Devrait peut-Ãªtre vÃ©rifier si la personne a les droits d'y accÃ©der?
+				/// Droits données par le portfolio à 'tout le monde'
+				/// Fusion des droits, pas très beau mais bon.
+				/// Droits donné spécifiquement à un utilisateur
+				/// FIXME: Devrait peut-être vérifier si la personne a les droits d'y accéder?
 				if (dbserveur.equals("mysql")){
 					sql = "INSERT INTO t_rights(grid,id,RD,WR,DL,SB,AD) ";
 					sql += "SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
@@ -2971,7 +3218,7 @@ public class MysqlDataProvider implements DataProvider {
 
 				time5 = System.currentTimeMillis();
 
-				/// Actuelle sÃ©lection des donnÃ©es
+				/// Actuelle sélection des données
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
 						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, n.modif_date, " +
@@ -2981,11 +3228,11 @@ public class MysqlDataProvider implements DataProvider {
 						"tr.RD, tr.WR, tr.SB, tr.DL, gr.types_id, gr.rules_id " +
 						"FROM group_rights gr, t_rights tr " +
 						"LEFT JOIN node n ON tr.id=n.node_uuid " +
-						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +   // RÃ©cupÃ©ration des donnÃ©es res_node
-						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +   // RÃ©cupÃ©ration des donnÃ©es res_res_node
-						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +   // RÃ©cupÃ©ration des donnÃ©es res_context
+						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +   // Récupération des données res_node
+						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +   // Récupération des données res_res_node
+						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +   // Récupération des données res_context
 						"WHERE tr.grid=gr.grid AND tr.id=gr.id AND tr.RD=1 " +
-						"UNION ALL " +	/// Union pour les donnÃ©es appartenant au crÃ©ateur
+						"UNION ALL " +	/// Union pour les données appartenant au créateur
 						"SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
 						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, n.modif_date, " +
@@ -3002,7 +3249,7 @@ public class MysqlDataProvider implements DataProvider {
 				st.setInt(1, userId);
 				st.setString(2, portfolioUuid);
 			}
-			rs = st.executeQuery();   // Pas sÃ»r si les 'statement' restent ouvert aprÃ¨s que la connexion soit fermÃ©e
+			rs = st.executeQuery();   // Pas sûr si les 'statement' restent ouvert après que la connexion soit fermée
 
 			time6 = System.currentTimeMillis();
 		}
@@ -3039,9 +3286,9 @@ public class MysqlDataProvider implements DataProvider {
 		return rs;
 	}
 
-	/// RÃ©cupÃ¨re les noeuds partagÃ©s d'un portfolio
-	/// C'est sÃ©parÃ© car les noeud ne provenant pas d'un mÃªme portfolio, on ne peut pas les sÃ©lectionner rapidement
-	/// Autre possibilitÃ© serait de garder ce mÃªme type de fonctionnement pour une sÃ©lection par niveau d'un portfolio.
+	/// Récupère les noeuds partagés d'un portfolio
+	/// C'est séparé car les noeud ne provenant pas d'un même portfolio, on ne peut pas les sélectionner rapidement
+	/// Autre possibilité serait de garder ce même type de fonctionnement pour une sélection par niveau d'un portfolio.
 	/// TODO: A faire un 'benchmark' dessus
 	private ResultSet getSharedMysqlStructure(Connection c, String portfolioUuid, int userId,  int groupId) throws SQLException
 	{
@@ -3088,7 +3335,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
-			// En double car on ne peut pas faire d'update/select d'une mÃªme table temporaire
+			// En double car on ne peut pas faire d'update/select d'une même table temporaire
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_struc_parentid_2(" +
 						"uuid binary(16) UNIQUE NOT NULL, " +
@@ -3109,7 +3356,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
-			/// Initialise la descente des noeuds partagÃ©s
+			/// Initialise la descente des noeuds partagés
 			sql = "INSERT INTO t_struc_parentid(uuid, node_parent_uuid, t_level) " +
 					"SELECT n.shared_node_uuid, n.node_parent_uuid, 0 " +
 					"FROM node n " +
@@ -3119,7 +3366,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// On boucle, sera toujours <= Ã  "nombre de noeud du portfolio"
+			/// On boucle, sera toujours <= à "nombre de noeud du portfolio"
 			int level = 0;
 			int added = 1;
 			if (dbserveur.equals("mysql")){
@@ -3145,13 +3392,13 @@ public class MysqlDataProvider implements DataProvider {
 				st.setInt(1, level+1);
 				st.setInt(2, level);
 				st.executeUpdate();
-				added = stTemp.executeUpdate();   // On s'arrÃªte quand rien Ã  Ã©tÃ© ajoutÃ©
-				level = level + 1;    // Prochaine Ã©tape
+				added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+				level = level + 1;    // Prochaine étape
 			}
 			st.close();
 			stTemp.close();
 
-			// SÃ©lectionne les donnÃ©es selon la filtration
+			// Sélectionne les données selon la filtration
 			sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid," +
 					" node_children_uuid, " +
 					" n.node_order," +
@@ -3159,24 +3406,24 @@ public class MysqlDataProvider implements DataProvider {
 					" n.shared_node AS shared_node," +
 					" bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid," +
 					" bin2uuid(n.res_node_uuid) AS res_node_uuid," +
-					" r1.xsi_type AS r1_type, r1.content AS r1_content," +     // donnÃ©e res_node
+					" r1.xsi_type AS r1_type, r1.content AS r1_content," +     // donnée res_node
 					" bin2uuid(n.res_res_node_uuid) as res_res_node_uuid," +
-					" r2.content AS r2_content," +     // donnÃ©e res_res_node
+					" r2.content AS r2_content," +     // donnée res_res_node
 					" bin2uuid(n.res_context_node_uuid) as res_context_node_uuid," +
-					" r3.content AS r3_content," +     // donnÃ©e res_context
+					" r3.content AS r3_content," +     // donnée res_context
 					" n.asm_type, n.xsi_type," +
 					" gr.RD, gr.WR, gr.SB, gr.DL, gr.types_id, gr.rules_id," +   // info sur les droits
 					" bin2uuid(n.portfolio_id) AS portfolio_id" +
 					" FROM node n" +
-					" LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid" +         // RÃ©cupÃ©ration des donnÃ©es res_node
-					" LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid" +     // RÃ©cupÃ©ration des donnÃ©es res_res_node
-					" LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid" + // RÃ©cupÃ©ration des donnÃ©es res_context
-//					" LEFT JOIN (group_rights gr, group_info gi, group_user gu)" +     // VÃ©rification des droits
-					" LEFT JOIN group_rights gr ON n.node_uuid=gr.id" +     // VÃƒÂ©rification des droits
+					" LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid" +         // Récupération des données res_node
+					" LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid" +     // Récupération des données res_res_node
+					" LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid" + // Récupération des données res_context
+//					" LEFT JOIN (group_rights gr, group_info gi, group_user gu)" +     // Vérification des droits
+					" LEFT JOIN group_rights gr ON n.node_uuid=gr.id" +     // VÃ©rification des droits
 					" LEFT JOIN group_info gi ON gr.grid=gi.grid" +
 					" LEFT JOIN group_user gu ON gi.gid=gu.gid" +
 					" WHERE gu.userid=? AND gr.RD=1" +  // On doit au moins avoir le droit de lecture
-					" AND n.node_uuid IN (SELECT uuid FROM t_struc_parentid)";   // Selon note filtrage, prendre les noeud nÃ©cÃ©ssaire
+					" AND n.node_uuid IN (SELECT uuid FROM t_struc_parentid)";   // Selon note filtrage, prendre les noeud nécéssaire
 
 			st = c.prepareStatement(sql);
 			st.setInt(1, userId);
@@ -3205,8 +3452,8 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	/// TODO: A faire un 'benchmark' dessus
-	/// RÃ©cupÃ¨re les noeuds en dessous par niveau. Pour faciliter le traitement des shared_node
-	/// Mais Ã§a serait beaucoup plus simple de faire un objet a traiter dans le client
+	/// Récupère les noeuds en dessous par niveau. Pour faciliter le traitement des shared_node
+	/// Mais ça serait beaucoup plus simple de faire un objet a traiter dans le client
 	private ResultSet getNodePerLevel(Connection c, String nodeUuid, int userId,  int rrgId) throws SQLException
 	{
 		PreparedStatement st = null;
@@ -3269,7 +3516,7 @@ public class MysqlDataProvider implements DataProvider {
 				st.execute();
 				st.close();
 				
-				// En double car on ne peut pas faire d'update/select d'une mÃªme table temporaire
+				// En double car on ne peut pas faire d'update/select d'une même table temporaire
 				sql = "CREATE TEMPORARY TABLE t_struc_parentid_2(" +
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
@@ -3333,7 +3580,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.execute();
 				ocs.close();
 
-				// En double car on ne peut pas faire d'update/select d'une mÃªme table temporaire
+				// En double car on ne peut pas faire d'update/select d'une même table temporaire
 				v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_parentid_2(" +
 						"uuid RAW(16) NOT NULL, " +
 						"node_parent_uuid RAW(16), " +
@@ -3369,7 +3616,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_dataTable = System.currentTimeMillis();
 
-			/// Initialise la descente des noeuds, si il y a un partagÃ© on partira de lÃ , sinon du noeud par dÃ©faut
+			/// Initialise la descente des noeuds, si il y a un partagé on partira de là, sinon du noeud par défaut
 			/// FIXME: There will be something with shared_node_uuid
 			sql = "INSERT INTO t_struc_parentid(uuid, node_parent_uuid, t_level) " +
 					"SELECT COALESCE(n.shared_node_uuid, n.node_uuid), n.node_parent_uuid, 0 " +
@@ -3383,7 +3630,7 @@ public class MysqlDataProvider implements DataProvider {
 			long t_initNode = System.currentTimeMillis();
 
 			/// On boucle, avec les shared_node si ils existent.
-			/// FIXME: PossiblitÃ© de boucle infini
+			/// FIXME: Possiblité de boucle infini
 			int level = 0;
 			int added = 1;
 			if (dbserveur.equals("mysql")){
@@ -3411,8 +3658,8 @@ public class MysqlDataProvider implements DataProvider {
 				st.setInt(1, level+1);
 				st.setInt(2, level);
 				st.executeUpdate();
-				added = stTemp.executeUpdate();   // On s'arrÃªte quand rien Ã  Ã©tÃ© ajoutÃ©
-				level = level + 1;    // Prochaine Ã©tape
+				added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+				level = level + 1;    // Prochaine étape
 			}
 			st.close();
 			stTemp.close();
@@ -3438,7 +3685,7 @@ public class MysqlDataProvider implements DataProvider {
 					st.close();
 				}
 				
-				// AggrÃ©gation des droits avec 'all', l'appartenance du groupe de l'utilisateur, et les droits propres Ã  l'utilisateur
+				// Aggrégation des droits avec 'all', l'appartenance du groupe de l'utilisateur, et les droits propres à l'utilisateur
 				if (dbserveur.equals("mysql")){
 					sql = "INSERT INTO t_rights_22(grid,id,RD,WR,DL,SB,AD) ";
 					sql += "SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
@@ -3483,7 +3730,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_allRights = System.currentTimeMillis();
 
-			// SÃ©lectionne les donnÃ©es selon la filtration
+			// Sélectionne les données selon la filtration
 			sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid," +
 					" n.node_children_uuid, " +
 					" n.node_order," +
@@ -3492,24 +3739,24 @@ public class MysqlDataProvider implements DataProvider {
 					" bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid," +
 					" bin2uuid(n.res_node_uuid) AS res_node_uuid," +
 					" n.modif_date," +
-					" r1.xsi_type AS r1_type, r1.content AS r1_content," +     // donnÃ©e res_node
+					" r1.xsi_type AS r1_type, r1.content AS r1_content," +     // donnée res_node
 					" bin2uuid(n.res_res_node_uuid) as res_res_node_uuid," +
 					" r1.modif_date AS r1_modif_date, " +
-					" r2.content AS r2_content," +     // donnÃ©e res_res_node
+					" r2.content AS r2_content," +     // donnée res_res_node
 					" bin2uuid(n.res_context_node_uuid) as res_context_node_uuid," +
 					" r2.modif_date AS r2_modif_date, " +
-					" r3.content AS r3_content," +     // donnÃ©e res_context
+					" r3.content AS r3_content," +     // donnée res_context
 					" r3.modif_date AS r3_modif_date, " +
 					" n.asm_type, n.xsi_type," +
 					" tr.RD, tr.WR, tr.SB, tr.DL, NULL AS types_id, NULL AS rules_id," +   // info sur les droits
 					" bin2uuid(n.portfolio_id) AS portfolio_id" +
 					" FROM node n" +	// Going back to original table, mainly for list of child nodes
-					" LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid" +         // RÃ©cupÃ©ration des donnÃ©es res_node
-					" LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid" +     // RÃ©cupÃ©ration des donnÃ©es res_res_node
-					" LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid" + // RÃ©cupÃ©ration des donnÃ©es res_context
-					" LEFT JOIN t_rights_22 tr" +     // VÃ©rification des droits
+					" LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid" +         // Récupération des données res_node
+					" LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid" +     // Récupération des données res_res_node
+					" LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid" + // Récupération des données res_context
+					" LEFT JOIN t_rights_22 tr" +     // Vérification des droits
 					" ON n.node_uuid=tr.id" +   // On doit au moins avoir le droit de lecture
-					" WHERE tr.RD=1 AND n.node_uuid IN (SELECT uuid FROM t_struc_parentid)";   // Selon note filtrage, prendre les noeud nÃ©cÃ©ssaire
+					" WHERE tr.RD=1 AND n.node_uuid IN (SELECT uuid FROM t_struc_parentid)";   // Selon note filtrage, prendre les noeud nécéssaire
 
 			st = c.prepareStatement(sql);
 			res = st.executeQuery();
@@ -3646,7 +3893,7 @@ public class MysqlDataProvider implements DataProvider {
 		if(!nodeRight.read)
 		{
 			userId = cred.getPublicUid(c);
-			/// VÃ©rifie les droits avec le compte publique (derniÃ¨re chance)
+			/// Vérifie les droits avec le compte publique (dernière chance)
 //			cred.getPublicRight(c, userId, 123, nodeUuid, "dummy");
 
 			if( !cred.isPublic(c, nodeUuid, null) )
@@ -3659,7 +3906,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_nodePerLevel = System.currentTimeMillis();
 
-			/// PrÃ©paration du XML que l'on va renvoyer
+			/// Préparation du XML que l'on va renvoyer
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 			DocumentBuilder documentBuilder = null;
 			Document document=null;
@@ -3904,15 +4151,15 @@ public class MysqlDataProvider implements DataProvider {
 				st.setInt(2, level);
 				st.executeUpdate();
 
-				added = stTemp.executeUpdate();   // On s'arrÃªte quand rien Ã  Ã©tÃ© ajoutÃ©
-				level = level + 1;    // Prochaine Ã©tape
+				added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+				level = level + 1;    // Prochaine étape
 			}
 			st.close();
 			stTemp.close();
 
 			t4 = System.currentTimeMillis();
 
-			/// On liste les ressources Ã  effacer
+			/// On liste les ressources à effacer
 			if (dbserveur.equals("mysql")){
 				sql = "INSERT INTO t_res_uuid(uuid) SELECT res_node_uuid FROM t_struc_node_resids WHERE res_node_uuid <> 0x0000000000000000000000000000000";
 			} else if (dbserveur.equals("oracle")){
@@ -4055,7 +4302,7 @@ public class MysqlDataProvider implements DataProvider {
 			if( portfolioUuid == null )
 				return "";
 
-			///// CrÃ©ation des tables temporaires
+			///// Création des tables temporaires
 			/// Pour la copie de la structure
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_data(" +
@@ -4126,7 +4373,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
-			/// Pour la copie des donnÃ©es
+			/// Pour la copie des données
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_res(" +
 						"new_uuid binary(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
@@ -4154,7 +4401,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
-			/// Pour la mise Ã  jour de la liste des enfants/parents
+			/// Pour la mise à jour de la liste des enfants/parents
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_struc(" +
 						"node_order int(12) NOT NULL, " +
@@ -4287,8 +4534,8 @@ public class MysqlDataProvider implements DataProvider {
 					st.setInt(1, level+1);
 					st.setInt(2, level);
 					st.executeUpdate();
-					added = stTemp.executeUpdate();   // On s'arrÃªte quand rien Ã  Ã©tÃ© ajoutÃ©
-					level = level + 1;    // Prochaine Ã©tape
+					added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+					level = level + 1;    // Prochaine étape
 				}
 				st.close();
 				stTemp.close();
@@ -4311,7 +4558,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			}
 
-			/// Copie les uuid pour la rÃ©solution des parents/enfants
+			/// Copie les uuid pour la résolution des parents/enfants
 			sql = "INSERT INTO t_struc(node_order, new_uuid, uuid, node_parent_uuid) " +
 					"SELECT node_order, new_uuid, node_uuid, node_parent_uuid FROM t_data";
 			st = c.prepareStatement(sql);
@@ -4320,7 +4567,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			if( !copyshared )
 			{
-				/// Cas spÃ©cial pour shared_node=1
+				/// Cas spécial pour shared_node=1
 				// Le temps qu'on refasse la liste des enfants, on va enlever le noeud plus tard
 				sql = "UPDATE t_data SET shared_node_uuid=node_uuid WHERE shared_node=1";
 				st = c.prepareStatement(sql);
@@ -4328,7 +4575,7 @@ public class MysqlDataProvider implements DataProvider {
 				st.close();
 
 				// Met a jour t_struc pour la redirection. C'est pour la list des enfants
-				// FIXME: A vÃ©rifier les appels qui modifie la liste des enfants.
+				// FIXME: A vérifier les appels qui modifie la liste des enfants.
 				if (dbserveur.equals("mysql")){
 					sql = "UPDATE t_struc s INNER JOIN t_data d ON s.uuid=d.node_uuid " +
 						"SET s.new_uuid=d.node_uuid WHERE d.shared_node=1";
@@ -4340,7 +4587,7 @@ public class MysqlDataProvider implements DataProvider {
 				st.close();
 			}
 
-			/// Copie des donnÃ©es non partagÃ©s (shared=0)
+			/// Copie des données non partagés (shared=0)
 			// Specific
 			sql = "INSERT INTO t_res(new_uuid, node_uuid, xsi_type, content, user_id, modif_user_id, modif_date) ";
 			if (dbserveur.equals("mysql")){
@@ -4413,7 +4660,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// RÃ©solution des nouveaux uuid avec les parents
+			/// Résolution des nouveaux uuid avec les parents
 			// Avec la structure (et droits sur la structure)
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_rights ri, t_data d SET ri.id=d.new_uuid WHERE ri.id=d.node_uuid AND d.shared_node=0";
@@ -4470,8 +4717,8 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// Mise Ã  jour de la liste des enfants (! requÃªte particuliÃ¨re)
-			/// L'ordre dÃ©termine le rendu visuel final du xml
+			/// Mise à jour de la liste des enfants (! requête particulière)
+			/// L'ordre détermine le rendu visuel final du xml
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d, (" +
 					"SELECT node_parent_uuid, GROUP_CONCAT(bin2uuid(s.new_uuid) ORDER BY s.node_order) AS value " +
@@ -4485,7 +4732,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			// Mise Ã  jour du code dans le contenu du noeud (blech)
+			// Mise à jour du code dans le contenu du noeud (blech)
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d " +
 					"LEFT JOIN t_res r ON d.res_res_node_uuid=r.new_uuid " +  // Il faut utiliser le nouveau uuid
@@ -4499,7 +4746,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			// Mise Ã  jour du code dans le code interne de la BD
+			// Mise à jour du code dans le code interne de la BD
 			sql = "UPDATE t_data d SET d.code=? WHERE d.asm_type='asmRoot'";
 			st = c.prepareStatement(sql);
 			st.setString(1, newCode);
@@ -4565,7 +4812,7 @@ public class MysqlDataProvider implements DataProvider {
 			resolver resolve = new resolver();
 
 			/// FIXME might want to regroup it with the import node I think
-			// Selection des metadonnÃ©es
+			// Selection des metadonnées
 			sql = "SELECT bin2uuid(t.new_uuid) AS uuid, bin2uuid(t.portfolio_id) AS puuid, t.metadata, t.metadata_wad, t.metadata_epm " +
 					"FROM t_data t";
 			st = c.prepareStatement(sql);
@@ -4741,13 +4988,13 @@ public class MysqlDataProvider implements DataProvider {
 					Node menuroles = attribMap.getNamedItem("menuroles");
 					if(menuroles!=null)
 					{
-						/// Pour les diffÃ©rents items du menu
+						/// Pour les différents items du menu
 						StringTokenizer menuline = new StringTokenizer(menuroles.getNodeValue(), ";");
 
 						while( menuline.hasMoreTokens() )
 						{
 							String line = menuline.nextToken();
-							/// Format pour l'instant: code_portfolio,tag_sï¿½mantique,label@en/libellï¿½@fr,rï¿½les[;autre menu]
+							/// Format pour l'instant: code_portfolio,tag_sémantique,label@en/libellé@fr,rôles[;autre menu]
 							String[] tokens = line.split(",");
 							String menurolename = null;
 							for( int t=0; t<4; ++t )
@@ -4801,10 +5048,10 @@ public class MysqlDataProvider implements DataProvider {
 
 			c.setAutoCommit(false);
 
-			/// On insÃ¨re les donnÃ©es prÃ©-compilÃ©
+			/// On insère les données pré-compilé
 			Iterator<String> entries = resolve.groups.keySet().iterator();
 
-			// CrÃ©Ã© les groupes, ils n'existent pas
+			// Créé les groupes, ils n'existent pas
 			String grquery = "INSERT INTO group_info(grid,owner,label) " +
 					"VALUES(?,?,?)";
 			PreparedStatement st2 = c.prepareStatement(grquery);
@@ -4903,7 +5150,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// Finalement on crÃ©e un rÃ´le designer
+			/// Finalement on crée un rôle designer
 			int groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
@@ -4972,7 +5219,7 @@ public class MysqlDataProvider implements DataProvider {
 			if( portfolioUuid == null )
 				return "Error: no portofolio selected";
 
-			///// CrÃ©ation des tables temporaires
+			///// Création des tables temporaires
 			/// Pour la copie de la structure
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_data(" +
@@ -5043,7 +5290,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
-			/// Pour la copie des donnÃ©es
+			/// Pour la copie des données
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_res(" +
 						"new_uuid binary(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
@@ -5071,7 +5318,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
-			/// Pour la mise Ã  jour de la liste des enfants/parents
+			/// Pour la mise à jour de la liste des enfants/parents
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_struc(" +
 						"node_order int(12) NOT NULL, " +
@@ -5116,7 +5363,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// Copie les uuid pour la rÃ©solution des parents/enfants
+			/// Copie les uuid pour la résolution des parents/enfants
 			sql = "INSERT INTO t_struc(node_order, new_uuid, uuid, node_parent_uuid) " +
 					"SELECT node_order, new_uuid, node_uuid, node_parent_uuid FROM t_data";
 			st = c.prepareStatement(sql);
@@ -5186,7 +5433,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// RÃ©solution des nouveaux uuid avec les parents
+			/// Résolution des nouveaux uuid avec les parents
 			// Avec la structure
 			sql = "UPDATE t_data t " +
 					"SET t.node_parent_uuid = (SELECT new_uuid FROM t_struc s WHERE s.uuid=t.node_parent_uuid)";
@@ -5225,8 +5472,8 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// Mise Ã  jour de la liste des enfants (! requÃªte particuliÃ¨re)
-			/// L'ordre dÃ©termine le rendu visuel final du xml
+			/// Mise à jour de la liste des enfants (! requête particulière)
+			/// L'ordre détermine le rendu visuel final du xml
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d, (" +
 					"SELECT node_parent_uuid, GROUP_CONCAT(bin2uuid(s.new_uuid) ORDER BY s.node_order) AS value " +
@@ -5240,7 +5487,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			// Mise Ã  jour du code dans le contenu du noeud
+			// Mise à jour du code dans le contenu du noeud
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d " +
 					"LEFT JOIN t_res r ON d.res_res_node_uuid=r.new_uuid " +  // Il faut utiliser le nouveau uuid
@@ -5254,7 +5501,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			// Mise Ã  jour du code dans le code interne de la BD
+			// Mise à jour du code dans le code interne de la BD
 			sql = "UPDATE t_data d SET d.code=? WHERE d.asm_type='asmRoot'";
 			st = c.prepareStatement(sql);
 			st.setString(1, newCode);
@@ -5289,7 +5536,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// Finalement on crÃ©e un rÃ´le designer
+			/// Finalement on crée un rôle designer
 			int groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
@@ -5588,7 +5835,7 @@ public class MysqlDataProvider implements DataProvider {
 					return "Inexistent selection";
 			}
 
-			///// CrÃ©ation des tables temporaires
+			///// Création des tables temporaires
 			/// Pour la copie de la structure
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE IF NOT EXISTS t_data_node(" +
@@ -5723,7 +5970,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t2 = System.currentTimeMillis();
 
-			/// Pour la copie des donnÃ©es
+			/// Pour la copie des données
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_res_node(" +
 						"new_uuid binary(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
@@ -5778,7 +6025,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t4 = System.currentTimeMillis();
 
-			// En double car on ne peut pas faire d'update/select d'une mÃªme table temporaire
+			// En double car on ne peut pas faire d'update/select d'une même table temporaire
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_struc_2(" +
 						"node_order int(12) NOT NULL, " +
@@ -5807,8 +6054,8 @@ public class MysqlDataProvider implements DataProvider {
 
 			t6 = System.currentTimeMillis();
 
-			/// Dans la table temporaire on retrouve les noeuds concernÃ©s
-			/// (assure une convergence de la rÃ©cursion et limite le nombre de lignes dans la recherche)
+			/// Dans la table temporaire on retrouve les noeuds concernés
+			/// (assure une convergence de la récursion et limite le nombre de lignes dans la recherche)
 			/// Init table
 			sql = "INSERT INTO t_struc(node_order, new_uuid, uuid, node_parent_uuid, t_level) " +
 					"SELECT d.node_order, d.new_uuid, d.node_uuid, uuid2bin(?), 0 " +
@@ -5822,7 +6069,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t7 = System.currentTimeMillis();
 
-			/// On boucle, sera toujours <= Ã  "nombre de noeud du portfolio"
+			/// On boucle, sera toujours <= à "nombre de noeud du portfolio"
 			int level = 0;
 			int added = 1;
 			if (dbserveur.equals("mysql")){
@@ -5848,15 +6095,15 @@ public class MysqlDataProvider implements DataProvider {
 				st.setInt(1, level+1);
 				st.setInt(2, level);
 				st.executeUpdate();
-				added = stTemp.executeUpdate();   // On s'arrÃªte quand rien Ã  Ã©tÃ© ajoutÃ©
-				level = level + 1;    // Prochaine Ã©tape
+				added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+				level = level + 1;    // Prochaine étape
 			}
 			st.close();
 			stTemp.close();
 
 			t8 = System.currentTimeMillis();
 
-			/// On retire les Ã©lÃ©ments null, Ã§a pose problÃªme par la suite
+			/// On retire les éléments null, ça pose problême par la suite
 			if (dbserveur.equals("mysql")){
 				sql = "DELETE FROM t_struc WHERE new_uuid=0x0000000000000000000000000000000";
 			} else if (dbserveur.equals("oracle")){
@@ -5868,7 +6115,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t9 = System.currentTimeMillis();
 
-			/// On filtre les donnÃ©es dont on a pas besoin
+			/// On filtre les données dont on a pas besoin
 			sql = "DELETE FROM t_data_node WHERE node_uuid NOT IN (SELECT uuid FROM t_struc)";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
@@ -5876,9 +6123,9 @@ public class MysqlDataProvider implements DataProvider {
 
 			t10 = System.currentTimeMillis();
 
-			///// FIXME TODO: VÃ©rifier les droits sur les donnÃ©es restantes
+			///// FIXME TODO: Vérifier les droits sur les données restantes
 
-			/// Copie des donnÃ©es non partagÃ©s (shared=0)
+			/// Copie des données non partagés (shared=0)
 			sql = "INSERT INTO t_res_node(new_uuid, node_uuid, xsi_type, user_id, modif_user_id, modif_date) ";
 			if (dbserveur.equals("mysql")){
 				sql += "SELECT uuid2bin(UUID()), ";
@@ -5897,7 +6144,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t11 = System.currentTimeMillis();
 
-			/// RÃ©solution des nouveaux uuid avec les parents
+			/// Résolution des nouveaux uuid avec les parents
 			// Avec la structure
 			sql = "UPDATE t_data_node t " +
 					"SET t.node_parent_uuid = (SELECT new_uuid FROM t_struc s WHERE s.uuid=t.node_parent_uuid)";
@@ -5932,7 +6179,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t15 = System.currentTimeMillis();
 
-			/// Mise Ã  jour du parent de la nouvelle copie ainsi que l'ordre
+			/// Mise à jour du parent de la nouvelle copie ainsi que l'ordre
 			sql = "UPDATE t_data_node " +
 					"SET node_parent_uuid=uuid2bin(?), " +
 					"node_order=(SELECT COUNT(node_parent_uuid) FROM node WHERE node_parent_uuid=uuid2bin(?)) " +
@@ -5946,7 +6193,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t16 = System.currentTimeMillis();
 
-			// Mise Ã  jour de l'appartenance au portfolio de destination
+			// Mise à jour de l'appartenance au portfolio de destination
 			sql = "UPDATE t_data_node " +
 					"SET portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
 			st = c.prepareStatement(sql);
@@ -6074,7 +6321,7 @@ public class MysqlDataProvider implements DataProvider {
 					sqlUpdateSB = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS SB, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.SB=1 WHEN NOT MATCHED THEN INSERT (grid, id, SB, RD) VALUES (t.grid, t.id, t.SB, t.RD)";
 				PreparedStatement stSB = c.prepareStatement(sqlUpdateSB);
 	
-				// Selection des metadonnÃ©es
+				// Selection des metadonnées
 				sql = "SELECT bin2uuid(t.new_uuid) AS uuid, bin2uuid(t.portfolio_id) AS puuid, n.metadata, n.metadata_wad, n.metadata_epm " +
 						"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
 				st = c.prepareStatement(sql);
@@ -6107,7 +6354,7 @@ public class MysqlDataProvider implements DataProvider {
 						postGroupsUsers(c, 1, userId, ngid);
 						
 						/// Ensure entry is there in temp table, just need a skeleton info
-						sql = "REPLACE INTO t_group_right_info(grid, owner, label) VALUES((SELECT grid FROM group_info gi WHERE gid=?), 1, ?)";
+						sql = "REPLACE INTO t_group_right_info(grid, owner, label) VALUES(?, 1, ?)";
 						if (dbserveur.equals("oracle")){
 							// FIXME Unsure about this, might need testing
 							sql = "MERGE INTO group_info d using (SELECT ? grid,1 ,? label from dual) s ON (1=2) WHEN NOT MATCHED THEN INSERT (d.grid, d.owner, d.label) values (s.grid, s.owner, s.label)";
@@ -6133,7 +6380,7 @@ public class MysqlDataProvider implements DataProvider {
 						Element attribNode = doc.getDocumentElement();
 						NamedNodeMap attribMap = attribNode.getAttributes();
 	
-						/// FIXME: Ã  amÃ©liorer pour faciliter le changement des droits
+						/// FIXME: à améliorer pour faciliter le changement des droits
 						String nodeRole;
 						Node att = attribMap.getNamedItem("access");
 						if(att != null)
@@ -6303,13 +6550,13 @@ public class MysqlDataProvider implements DataProvider {
 						Node menuroles = attribMap.getNamedItem("menuroles");
 						if(menuroles!=null)
 						{
-							/// Pour les diffÃ©rents items du menu
+							/// Pour les différents items du menu
 							StringTokenizer menuline = new StringTokenizer(menuroles.getNodeValue(), ";");
 
 							while( menuline.hasMoreTokens() )
 							{
 								String line = menuline.nextToken();
-								/// Format pour l'instant: code_portfolio,tag_sï¿½mantique,label@en/libellï¿½@fr,rï¿½les[;autre menu]
+								/// Format pour l'instant: code_portfolio,tag_sémantique,label@en/libellé@fr,rôles[;autre menu]
 								String[] tokens = line.split(",");
 								String menurolename = null;
 								for( int t=0; t<4; ++t )
@@ -6431,7 +6678,7 @@ public class MysqlDataProvider implements DataProvider {
 			t21 = System.currentTimeMillis();
 
 			/// FIXME: could be done before with temp table and temp stsructure
-			/// Mise Ã  jour de la liste des enfants
+			/// Mise à jour de la liste des enfants
 			if (dbserveur.equals("mysql")){
 			sql = "UPDATE node d, (" +
 					"SELECT p.node_parent_uuid, " +
@@ -6470,7 +6717,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			end = System.currentTimeMillis();
 
-			/// On rÃ©cupÃ¨re le uuid crÃ©Ã©
+			/// On récupère le uuid créé
 			sql = "SELECT bin2uuid(new_uuid) FROM t_data_node WHERE node_uuid=uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setString(1, baseUuid);
@@ -6544,7 +6791,7 @@ public class MysqlDataProvider implements DataProvider {
 		return createdUuid;
 	}
 
-	// MÃªme chose que postImportNode, mais on ne prend pas en compte le parsage des droits
+	// Même chose que postImportNode, mais on ne prend pas en compte le parsage des droits
 	@Override
 	public Object postCopyNode( Connection c, MimeType inMimeType, String destUuid, String tag, String code, String srcuuid, int userId, int groupId ) throws Exception
 	{
@@ -6590,7 +6837,7 @@ public class MysqlDataProvider implements DataProvider {
 			
 //			t1 = System.currentTimeMillis();
 
-			///// CrÃ©ation des tables temporaires
+			///// Création des tables temporaires
 			/// Pour la copie de la structure
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_data_node(" +
@@ -6723,7 +6970,7 @@ public class MysqlDataProvider implements DataProvider {
 			
 //			t2 = System.currentTimeMillis();
 
-			/// Pour la copie des donnÃ©es
+			/// Pour la copie des données
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_res_node(" +
 						"new_uuid binary(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
@@ -6778,7 +7025,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t4 = System.currentTimeMillis();
 
-			// En double car on ne peut pas faire d'update/select d'une mÃªme table temporaire
+			// En double car on ne peut pas faire d'update/select d'une même table temporaire
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_struc_2(" +
 						"node_order int(12) NOT NULL, " +
@@ -6808,8 +7055,8 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t6 = System.currentTimeMillis();
 
-			/// Dans la table temporaire on retrouve les noeuds concernÃ©s
-			/// (assure une convergence de la rÃ©cursion et limite le nombre de lignes dans la recherche)
+			/// Dans la table temporaire on retrouve les noeuds concernés
+			/// (assure une convergence de la récursion et limite le nombre de lignes dans la recherche)
 			/// Init table
 			sql = "INSERT INTO t_struc(node_order, new_uuid, uuid, node_parent_uuid, t_level) " +
 					"SELECT d.node_order, d.new_uuid, d.node_uuid, uuid2bin(?), 0 " +
@@ -6823,7 +7070,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t7 = System.currentTimeMillis();
 
-			/// On boucle, sera toujours <= Ã  "nombre de noeud du portfolio"
+			/// On boucle, sera toujours <= à "nombre de noeud du portfolio"
 			int level = 0;
 			int added = 1;
 			if (dbserveur.equals("mysql")){
@@ -6849,15 +7096,15 @@ public class MysqlDataProvider implements DataProvider {
 				st.setInt(1, level+1);
 				st.setInt(2, level);
 				st.executeUpdate();
-				added = stTemp.executeUpdate();   // On s'arrÃªte quand rien Ã  Ã©tÃ© ajoutÃ©
-				level = level + 1;    // Prochaine Ã©tape
+				added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+				level = level + 1;    // Prochaine étape
 			}
 			st.close();
 			stTemp.close();
 
 //			t8 = System.currentTimeMillis();
 
-			/// On retire les Ã©lÃ©ments null, Ã§a pose problÃªme par la suite
+			/// On retire les éléments null, ça pose problême par la suite
 			if (dbserveur.equals("mysql")){
 				sql = "DELETE FROM t_struc WHERE new_uuid=0x0000000000000000000000000000000";
 			} else if (dbserveur.equals("oracle")){
@@ -6869,7 +7116,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t9 = System.currentTimeMillis();
 
-			/// On filtre les donnÃ©es dont on a pas besoin
+			/// On filtre les données dont on a pas besoin
 			sql = "DELETE FROM t_data_node WHERE node_uuid NOT IN (SELECT uuid FROM t_struc)";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
@@ -6877,9 +7124,9 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t10 = System.currentTimeMillis();
 
-			///// FIXME TODO: VÃ©rifier les droits sur les donnÃ©es restantes
+			///// FIXME TODO: Vérifier les droits sur les données restantes
 
-			/// Copie des donnÃ©es non partagÃ©s (shared=0)
+			/// Copie des données non partagés (shared=0)
 			sql = "INSERT INTO t_res_node(new_uuid, node_uuid, xsi_type, user_id, modif_user_id, modif_date) ";
 			if (dbserveur.equals("mysql")){
 				sql += "SELECT uuid2bin(UUID()), ";
@@ -6898,7 +7145,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t11 = System.currentTimeMillis();
 
-			/// RÃ©solution des nouveaux uuid avec les parents
+			/// Résolution des nouveaux uuid avec les parents
 			// Avec la structure
 			sql = "UPDATE t_data_node t " +
 					"SET t.node_parent_uuid = (SELECT new_uuid FROM t_struc s WHERE s.uuid=t.node_parent_uuid)";
@@ -6933,7 +7180,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t15 = System.currentTimeMillis();
 
-			/// Mise Ã  jour du parent de la nouvelle copie ainsi que l'ordre
+			/// Mise à jour du parent de la nouvelle copie ainsi que l'ordre
 			sql = "UPDATE t_data_node " +
 					"SET node_parent_uuid=uuid2bin(?), " +
 					"node_order=(SELECT COUNT(node_parent_uuid) FROM node WHERE node_parent_uuid=uuid2bin(?)) " +
@@ -6947,7 +7194,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t16 = System.currentTimeMillis();
 
-			// Mise Ã  jour de l'appartenance au portfolio de destination
+			// Mise à jour de l'appartenance au portfolio de destination
 			sql = "UPDATE t_data_node " +
 					"SET portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
 			st = c.prepareStatement(sql);
@@ -6955,7 +7202,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			/// Mise Ã  jour de l'appartenance des donnÃ©es
+			/// Mise à jour de l'appartenance des données
 			sql = "UPDATE t_data_node " +
 					"SET modif_user_id=?";
 			st = c.prepareStatement(sql);
@@ -6995,7 +7242,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t19 = System.currentTimeMillis();
 
-			/// Mise Ã  jour de la liste des enfants
+			/// Mise à jour de la liste des enfants
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE node d, (" +
 					"SELECT p.node_parent_uuid, " +
@@ -7042,7 +7289,7 @@ public class MysqlDataProvider implements DataProvider {
 					"WHERE n.node_uuid=uuid2bin(?)) g," +  // Retrouve les groupes de destination via le noeud de destination
 					"(SELECT gri.label, s.new_uuid, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD, gr.types_id, gr.rules_id " +
 					"FROM t_struc s, group_rights gr, group_right_info gri " +
-					"WHERE s.uuid=gr.id AND gr.grid=gri.grid) r " + // Prend la liste des droits actuel des noeuds dupliquÃ©s
+					"WHERE s.uuid=gr.id AND gr.grid=gri.grid) r " + // Prend la liste des droits actuel des noeuds dupliqués
 					"WHERE g.label=r.label"; // On croise le nouveau 'grid' avec le 'grid' d'origine via le label
 			st = c.prepareStatement(sql);
 			st.setString(1, destUuid);
@@ -7066,7 +7313,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //			end = System.currentTimeMillis();
 
-			/// On rÃ©cupÃ¨re le uuid crÃ©Ã©
+			/// On récupère le uuid créé
 			sql = "SELECT bin2uuid(new_uuid) FROM t_data_node WHERE node_uuid=uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setString(1, baseUuid);
@@ -7228,7 +7475,7 @@ public class MysqlDataProvider implements DataProvider {
 		if(!cred.isAdmin(c, userid) && !cred.isDesigner(c, userid, uuid) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		if( uuid == uuidParent ) // Ajouter un noeud Ã  lui-mÃªme
+		if( uuid == uuidParent ) // Ajouter un noeud à lui-même
 			return false;
 
 		String sql = "";
@@ -7395,18 +7642,18 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch(Exception ex) {}
 
-		// Si id dÃ©fini, alors on Ã©crit en base
+		// Si id défini, alors on écrit en base
 		//TODO Transactionnel noeud+enfant
 		NodeList children = null;
 
 		children = node.getChildNodes();
-		// On parcourt une premiÃ¨re fois les enfants pour rÃ©cuperer la liste Ã  Ã©crire en base
+		// On parcourt une première fois les enfants pour récuperer la liste à écrire en base
 		int j=0;
 		for(int i=0;i<children.getLength();i++)
 		{
 			if(!children.item(i).getNodeName().equals("#text"))
 			{
-				// On vÃ©rifie si l'enfant n'est pas un Ã©lement de type code, label ou descr
+				// On vérifie si l'enfant n'est pas un élement de type code, label ou descr
 				if(children.item(i).getNodeName().equals("label"))
 				{
 					label = DomUtils.getInnerXml(children.item(i));
@@ -7534,7 +7781,7 @@ public class MysqlDataProvider implements DataProvider {
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		return deleteMySqlResource(c, resourceUuid, userId, groupId);
-		//TODO asmResource(s) dans table Node et parentNode children a mettre Ã  jour
+		//TODO asmResource(s) dans table Node et parentNode children a mettre à jour
 	}
 
 	@Override
@@ -7573,7 +7820,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			// VÃ©rifie si le rÃ´le existe pour ce portfolio
+			// Vérifie si le rôle existe pour ce portfolio
 			sql = "SELECT gi.gid FROM group_right_info gri " +
 					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"WHERE portfolio_id=uuid2bin(?) AND gri.label=?";
@@ -7590,7 +7837,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				c.setAutoCommit(false);
 
-				// CrÃ©e le rÃ´le
+				// Crée le rôle
 				sql = "INSERT INTO group_right_info(portfolio_id, label, owner) VALUES(uuid2bin(?),?,?)";
 				st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 				if (dbserveur.equals("oracle")){
@@ -7667,7 +7914,7 @@ public class MysqlDataProvider implements DataProvider {
 		ResultSet rs = null;
 		try
 		{
-			// Retire la personne du rÃ´le
+			// Retire la personne du rôle
 			sql = "DELETE FROM group_user " +
 					"WHERE userid=? " +
 					"AND gid=(SELECT gi.gid " +
@@ -7815,7 +8062,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	/*
-	 * forcedParentUuid permet de forcer l'uuid parent, indÃ©pendamment de l'attribut du noeud fourni
+	 * forcedParentUuid permet de forcer l'uuid parent, indépendamment de l'attribut du noeud fourni
 	 */
 	private String writeNode(Connection c, Node node, String portfolioUuid, String portfolioModelId, int userId, int ordrer, String forcedUuid, String forcedUuidParent,int sharedResParent,int sharedNodeResParent, boolean rewriteId, HashMap<String,String> resolve, boolean parseRights ) throws Exception
 	{
@@ -7868,8 +8115,8 @@ public class MysqlDataProvider implements DataProvider {
 				currentid = tempId;
 		}
 
-		// Si uuid forcÃ©, alors on ne tient pas compte de l'uuid indiquÃ© dans le xml
-		if( rewriteId )   // On garde les uuid par dÃ©faut
+		// Si uuid forcé, alors on ne tient pas compte de l'uuid indiqué dans le xml
+		if( rewriteId )   // On garde les uuid par défaut
 		{
 			uuid = currentid;
 		}
@@ -7889,11 +8136,11 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(forcedUuidParent!=null)
 		{
-			// Dans le cas d'un uuid parent forcÃ© => POST => on gÃ©nÃ¨re un UUID
+			// Dans le cas d'un uuid parent forcé => POST => on génère un UUID
 			parentUuid = forcedUuidParent;
 		}
 
-		/// RÃ©cupÃ©ration d'autre infos
+		/// Récupération d'autre infos
 		try
 		{
 			if(node.getNodeName()!=null) asmType = node.getNodeName();
@@ -7918,13 +8165,13 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch(Exception ex) {}
 
-		// Si id dÃ©fini, alors on Ã©crit en base
+		// Si id défini, alors on écrit en base
 		//TODO Transactionnel noeud+enfant
 		NodeList children = null;
 		try
 		{
 			children = node.getChildNodes();
-			// On parcourt une premiÃ¨re fois les enfants pour rÃ©cuperer la liste Ã  Ã©crire en base
+			// On parcourt une première fois les enfants pour récuperer la liste à écrire en base
 			for(int i=0;i<children.getLength();i++)
 			{
 				Node child = children.item(i);
@@ -7938,7 +8185,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					if( parseRights )
 					{
-					// Gestion de la securitÃ© intÃ©grÃ©e
+					// Gestion de la securité intégrée
 					//
 					Node metadataWadNode = children.item(i);
 					try
@@ -8110,7 +8357,7 @@ public class MysqlDataProvider implements DataProvider {
 					}
 					catch(Exception ex) {}
 
-					try   /// TODO: Ã  l'intÃ©gration avec sakai/LTI
+					try   /// TODO: à l'intégration avec sakai/LTI
 					{
 						Node notifyroles = metadataWadNode.getAttributes().getNamedItem("notifyroles");
 						if(notifyroles!=null)
@@ -8185,7 +8432,7 @@ public class MysqlDataProvider implements DataProvider {
 
 					metadata = DomUtils.getNodeAttributesString(children.item(i));
 				}
-				// On vÃ©rifie si l'enfant n'est pas un Ã©lement de type code, label ou descr
+				// On vérifie si l'enfant n'est pas un élement de type code, label ou descr
 				else if(children.item(i).getNodeName().equals("label"))
 				{
 					label = DomUtils.getInnerXml(children.item(i));
@@ -8209,11 +8456,11 @@ public class MysqlDataProvider implements DataProvider {
 			ex.printStackTrace();
 		}
 
-		// Si on est au debut de l'arbre, on stocke la dÃ©finition du portfolio
+		// Si on est au debut de l'arbre, on stocke la définition du portfolio
 		// dans la table portfolio
 		if(uuid!=null && node.getParentNode()!=null)
 		{
-			// On retrouve le code cachÃ© dans les ressources. blegh
+			// On retrouve le code caché dans les ressources. blegh
 			NodeList childs = node.getChildNodes();
 			for( int k=0; k<childs.getLength(); ++k )
 			{
@@ -8240,8 +8487,8 @@ public class MysqlDataProvider implements DataProvider {
 			else if(portfolioUuid==null) throw new Exception("Il manque la balise asmRoot !!");
 		}
 
-		// Si on instancie un portfolio Ã  partir d'un modÃ¨le
-		// Alors on gÃ¨re les share*
+		// Si on instancie un portfolio à partir d'un modèle
+		// Alors on gère les share*
 		if(portfolioModelId!=null)
 		{
 			if(sharedNode==1)
@@ -8257,9 +8504,9 @@ public class MysqlDataProvider implements DataProvider {
 					semtag, semanticTag,
 					label, code, descr, format, ordrer ,userId, portfolioUuid);
 
-		// Si le parent a Ã©tÃ© forcÃ©, cela veut dire qu'il faut mettre Ã  jour les enfants du parent
+		// Si le parent a été forcé, cela veut dire qu'il faut mettre à jour les enfants du parent
 		//TODO
-		// MODIF : On le met Ã  jour tout le temps car dans le cas d'un POST les uuid ne sont pas connus Ã  l'avance
+		// MODIF : On le met à jour tout le temps car dans le cas d'un POST les uuid ne sont pas connus à l'avance
 		//if(forcedUuidParent!=null)
 
 		// Si le noeud est de type asmResource, on stocke le innerXML du noeud
@@ -8287,7 +8534,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		}
 
-		// On reparcourt ensuite les enfants pour continuer la recursivitÃ©
+		// On reparcourt ensuite les enfants pour continuer la recursivité
 		//		if(children!=null && sharedNode!=1)
 		if( children!=null )
 		{
@@ -8313,7 +8560,7 @@ public class MysqlDataProvider implements DataProvider {
 						writeNode(c, child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
 						k++;
 					}
-					else if( "asmResource".equals(nodeName) ) // Les asmResource pose problÃªme dans l'ordre des noeuds
+					else if( "asmResource".equals(nodeName) ) // Les asmResource pose problême dans l'ordre des noeuds
 					{
 						writeNode(c, child,portfolioUuid,portfolioModelId,userId,k,childId,uuid,sharedRes,sharedNodeRes,rewriteId, resolve, parseRights);
 					}
@@ -8492,7 +8739,7 @@ public class MysqlDataProvider implements DataProvider {
 		stInsert.setString(3, label);
 		stInsert.executeUpdate();
 
-		//On renvoie le body pour qu'il soit stockÃ© dans le log
+		//On renvoie le body pour qu'il soit stocké dans le log
 		result = "<group ";
 		result += DomUtils.getXmlAttributeOutputInt("grid", grid)+" ";
 		result += DomUtils.getXmlAttributeOutputInt("owner", owner)+" ";
@@ -8774,7 +9021,7 @@ public class MysqlDataProvider implements DataProvider {
 				c.commit();
 			}
 
-			if( isPublic )	// InsÃ¨re ou retire 'sys_public' dans le groupe 'all' du portfolio
+			if( isPublic )	// Insère ou retire 'sys_public' dans le groupe 'all' du portfolio
 			{
 				sql = "INSERT IGNORE INTO group_user(gid, userid) " +
 						"VALUES( ?, (SELECT userid FROM credential WHERE login='sys_public'))";
@@ -9234,7 +9481,7 @@ public class MysqlDataProvider implements DataProvider {
 					Document doc = DomUtils.xmlString2Document(xml, outTrace);
 					
 					// Find code
-					/// Cherche si on a dï¿½jï¿½ envoyï¿½ quelque chose
+					/// Cherche si on a déjà envoyé quelque chose
 					XPath xPath = XPathFactory.newInstance().newXPath();
 					String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
 					NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
@@ -9284,7 +9531,7 @@ public class MysqlDataProvider implements DataProvider {
 					}
 					updateMysqlPortfolioActive(c, portfolioUuid,true);
 
-					/// Finalement on crÃ©e un rÃ´le designer
+					/// Finalement on crée un rôle designer
 					int groupid = postCreateRole(c, portfolioUuid, "designer", userId);
 
 					/// Ajoute la personne dans ce groupe
@@ -9345,7 +9592,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			// Attention on initialise la ligne file
 			// avec l'UUID d'origine de l'asmContext parent
-			// Il sera mis Ã  jour avec l'UUID asmContext final dans writeNode
+			// Il sera mis à jour avec l'UUID asmContext final dans writeNode
 			try
 			{
 				UUID tmpUuid = UUID.fromString(uuid);	/// base uuid
@@ -9628,7 +9875,7 @@ public class MysqlDataProvider implements DataProvider {
 		if( subst != null )
 			subst.close();
 
-		//On renvoie le body pour qu'il soit stockÃ© dans le log
+		//On renvoie le body pour qu'il soit stocké dans le log
 		result = "<user ";
 		result += DomUtils.getXmlAttributeOutput("uid", login)+" ";
 		result += DomUtils.getXmlAttributeOutput("firstname", firstname)+" ";
@@ -9775,7 +10022,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	/// Retrouve le uid du username
-	/// currentUser est lÃ  au cas oÃ¹ on voudrait limiter l'accÃ¨s
+	/// currentUser est là au cas où on voudrait limiter l'accès
 	@Override
 	public String getUserID(Connection c, int currentUser, String username)
 	{
@@ -9828,7 +10075,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		try {
 			if( res.next()){
-				//traitement de la rÃ©ponse, renvoie des donnÃ©es sous forme d'un xml
+				//traitement de la réponse, renvoie des données sous forme d'un xml
 				try {
 					String subs = res.getString("id");
 					if( subs != null )
@@ -10115,7 +10362,7 @@ public class MysqlDataProvider implements DataProvider {
 		NodeList children = null;
 
 		children = users.getChildNodes();
-		// On parcourt une premiÃ¨re fois les enfants pour rÃ©cuperer la liste Ã  Ã©crire en base
+		// On parcourt une première fois les enfants pour récuperer la liste à écrire en base
 
 		//On verifie le bon format
 		if(users.getNodeName().equals("users"))
@@ -10251,7 +10498,7 @@ public class MysqlDataProvider implements DataProvider {
 					subst.close();
 			}
 
-			//On renvoie le body pour qu'il soit stockÃ© dans le log
+			//On renvoie le body pour qu'il soit stocké dans le log
 			result = "<users>";
 
 			result += "<user ";
@@ -10465,7 +10712,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		ResultSet res = getMysqlOtherNodeUuidByPortfolioModelUuidBySemanticTag(c, portfolioModelId, semanticTag);
 		res.next();
-		// C'est le noeud obtenu dans le modele indiquÃ© par la table de correspondance
+		// C'est le noeud obtenu dans le modele indiqué par la table de correspondance
 		String otherParentNodeUuid = res.getString("node_uuid");
 
 		return postNode(c, inMimeType, otherParentNodeUuid, xml,userId, groupId, true);
@@ -10643,7 +10890,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		res = st.executeQuery();
 
-		/// VÃ©rifie si un groupe existe, dÃ©jÃ  associÃ© Ã  un rÃ´le
+		/// Vérifie si un groupe existe, déjà associé à un rôle
 		if(!res.next())
 		{
 			sql = "SELECT * FROM group_right_info WHERE grid = ?";
@@ -10661,7 +10908,7 @@ public class MysqlDataProvider implements DataProvider {
 				owner = res1.getInt("owner");
 			}
 
-			/// Synchronise les valeurs du rÃ´le avec le groupe d'utilisateur
+			/// Synchronise les valeurs du rôle avec le groupe d'utilisateur
 			sqlInsert = "REPLACE INTO group_info(grid, owner, label) VALUES (?, ?, ?)";
 			stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
@@ -10709,7 +10956,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		}
 
-		return "user "+userid2+" rajoutÃ© au groupd gid "+gid+" pour correspondre au groupRight grid "+grid;
+		return "user "+userid2+" rajouté au groupd gid "+gid+" pour correspondre au groupRight grid "+grid;
 	}
 
 	@Override
@@ -10903,7 +11150,7 @@ public class MysqlDataProvider implements DataProvider {
 	public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException
 	{
 		StringBuffer result = new StringBuffer();
-		// Verification securitÃ©
+		// Verification securité
 		NodeRight nodeRight = cred.getNodeRight(c, userId,groupId,nodeUuid, label);
 
 		if(!nodeRight.read)
@@ -11148,7 +11395,7 @@ public class MysqlDataProvider implements DataProvider {
 			
 			try
 			{
-				/// Mettre Ã  jour les flags et donnÃ©e du champ
+				/// Mettre à jour les flags et donnée du champ
 				String sql = "UPDATE node SET metadata=?, semantictag=?, shared_res=?, shared_node=?, shared_node_res=? WHERE node_uuid=uuid2bin(?)";
 				PreparedStatement st = c.prepareStatement(sql);
 				st.setString(1, metadata);
@@ -11379,7 +11626,7 @@ public class MysqlDataProvider implements DataProvider {
 		NodeList children = null;
 
 		children = role.getChildNodes();
-		// On parcourt une premiÃ¨re fois les enfants pour rÃ©cuperer la liste Ã  Ã©crire en base
+		// On parcourt une première fois les enfants pour récuperer la liste à écrire en base
 
 		//On verifie le bon format
 		if(role.getNodeName().equals("role"))
@@ -11510,7 +11757,7 @@ public class MysqlDataProvider implements DataProvider {
 		NodeList children = null;
 
 		children = users.getChildNodes();
-		// On parcourt une premiÃ¨re fois les enfants pour rÃ©cuperer la liste Ã  Ã©crire en base
+		// On parcourt une première fois les enfants pour récuperer la liste à écrire en base
 
 		//On verifie le bon format
 		if(users.getNodeName().equals("models"))
@@ -11547,14 +11794,14 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			/// FIXME: Patch court terme pour la migration
-			/// Trouve le login associÃ© au userId
+			/// Trouve le login associé au userId
 			String sql = "SELECT login FROM credential c " +
 					"WHERE c.userid=?";
 			PreparedStatement  st = c.prepareStatement(sql);
 			st.setInt(1, userId);
 			ResultSet res = st.executeQuery();
 
-			/// res.getFetchSize() retourne 0, mÃªme avec un bon rÃ©sultat
+			/// res.getFetchSize() retourne 0, même avec un bon résultat
 			String login="";
 			if( res.next() )
 				login = res.getString("login");
@@ -11764,8 +12011,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			st.setInt(1, level+1);
 			st.setInt(2, level);
 			st.executeUpdate();
-			added = stTemp.executeUpdate();   // On s'arrï¿½te quand rien a ete ajoute
-			level = level + 1;    // Prochaine ï¿½tape
+			added = stTemp.executeUpdate();   // On s'arrète quand rien a ete ajoute
+			level = level + 1;    // Prochaine étape
 		}
 		
 		sql2="SELECT bin2uuid(node_uuid) FROM t_node WHERE semantictag LIKE \"" + semtag +"\"";
@@ -11819,7 +12066,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				ocs.close();
 			}
 
-			// En double car on ne peut pas faire d'update/select d'une mÃªme table temporaire
+			// En double car on ne peut pas faire d'update/select d'une même table temporaire
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_struc_nodeid_2(" +
 						"uuid binary(16) UNIQUE NOT NULL, " +
@@ -11838,8 +12085,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				ocs.close();
 			}
 
-			/// Dans la table temporaire on retrouve les noeuds concernÃ©s
-			/// (assure une convergence de la rÃ©cursion et limite le nombre de lignes dans la recherche)
+			/// Dans la table temporaire on retrouve les noeuds concernés
+			/// (assure une convergence de la récursion et limite le nombre de lignes dans la recherche)
 			/// Init table
 			sql = "INSERT INTO t_struc_nodeid(uuid, t_level) " +
 					"SELECT n.node_uuid, 0 " +
@@ -11851,7 +12098,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			st.close();
 
 //			/*
-			/// On boucle, rÃ©cursion par niveau
+			/// On boucle, récursion par niveau
 			int level = 0;
 			int added = 1;
 			if (dbserveur.equals("mysql")){
@@ -11877,8 +12124,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				st.setInt(1, level+1);
 				st.setInt(2, level);
 				st.executeUpdate();
-				added = stTemp.executeUpdate();   // On s'arrÃªte quand rien Ã  Ã©tÃ© ajoutÃ©
-				level = level + 1;    // Prochaine Ã©tape
+				added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+				level = level + 1;    // Prochaine étape
 			}
 			st.close();
 			stTemp.close();
@@ -11911,7 +12158,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			st.setInt(1, userId);
 			st.setString(2, nodeUuid);
 			ResultSet res = st.executeQuery();
-			/// res.getFetchSize() retourne 0, mÃªme avec un bon rÃ©sultat
+			/// res.getFetchSize() retourne 0, même avec un bon résultat
 			int grid=0;
 			String grlabl = "";
 			if( res.next() )
@@ -12063,7 +12310,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					return "unchanged";
 
 				/// FIXME: This part might be deprecated in the near future
-				/// VÃ©rifie le showtoroles
+				/// Vérifie le showtoroles
 				Node showtonode = metaAttr.getNamedItem("showtoroles");
 				String showto = "";
 				if( showtonode != null )
@@ -12114,7 +12361,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				st.execute();
 				st.close();
 				
-				//Comparaison rï¿½ponses
+				//Comparaison réponses
 				//sql="SELECT bin2uuid(node_parent_uuid) " + "FROM node n " + "WHERE node_uuid=uuid2bin(\""+nodeUuid+"\")";
 				
 				//uuid1
@@ -12533,13 +12780,13 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					Node menuroles = attribMap.getNamedItem("menuroles");
 					if(menuroles!=null)
 					{
-						/// Pour les diffÃ©rents items du menu
+						/// Pour les différents items du menu
 						StringTokenizer menuline = new StringTokenizer(menuroles.getNodeValue(), ";");
 
 						while( menuline.hasMoreTokens() )
 						{
 							String line = menuline.nextToken();
-							/// Format pour l'instant: code_portfolio,tag_sï¿½mantique,label@en/libellï¿½@fr,rï¿½les[;autre menu]
+							/// Format pour l'instant: code_portfolio,tag_sémantique,label@en/libellé@fr,rôles[;autre menu]
 							String[] tokens = line.split(",");
 							String menurolename = null;
 							for( int t=0; t<4; ++t )
@@ -12588,7 +12835,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 
 			c.setAutoCommit(false);
 
-			/// On insÃ¨re les donnÃ©es prÃ©-compilÃ©
+			/// On insère les données pré-compilé
 //			Iterator<String> entries = resolve.groups.keySet().iterator();
 
 			/// Ajout des droits des noeuds FIXME
@@ -12699,7 +12946,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 
 				bypass = true;
 			}
-			else if( portfolio != null )  // Juste ceux reliÃ© Ã  un portfolio
+			else if( portfolio != null )  // Juste ceux relié à un portfolio
 			{
 				sql = "SELECT grid, label, bin2uuid(gri.portfolio_id) AS portfolio " +
 						"FROM group_right_info gri " +
@@ -12707,9 +12954,9 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				st = c.prepareStatement(sql);
 				st.setString(1, portfolio);
 			}
-			else if( user != null )   // Juste ceux reliÃ© Ã  une personne
+			else if( user != null )   // Juste ceux relié à une personne
 			{
-				/// RequÃ¨te longue, il faudrait le prendre d'un autre chemin avec ensemble plus petit, si possible
+				/// Requète longue, il faudrait le prendre d'un autre chemin avec ensemble plus petit, si possible
 				sql = "SELECT DISTINCT gri.grid, label, bin2uuid(gri.portfolio_id) AS portfolio " +
 						"FROM resource_table r " +
 						"LEFT JOIN group_rights gr ON r.node_uuid=gr.id " +
@@ -12735,7 +12982,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			Element root = document.createElement("rolerightsgroups");
 			document.appendChild(root);
 
-			if( bypass )  // WAD6 demande un format spÃ©cifique pour ce type de requÃªte (...)
+			if( bypass )  // WAD6 demande un format spécifique pour ce type de requête (...)
 			{
 				if( res.next() )
 				{
@@ -12890,7 +13137,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		return "";
 	}
 
-	/// Liste des RRG et utilisateurs d'un portfolio donnÃ©
+	/// Liste des RRG et utilisateurs d'un portfolio donné
 	@Override
 	public String getPortfolioInfo( Connection c, int userId, String portId )
 	{
@@ -12997,7 +13244,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			e.printStackTrace();
 		}
 
-		/// ProblÃªme de parsage
+		/// Problême de parsage
 		if( document == null ) return "erreur";
 
 		NodeList labelNodes = document.getElementsByTagName("label");
@@ -13023,7 +13270,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			sqlPid = "SET portfolio_id=? ";
 		}
 
-		// Il faut au moins 1 paramÃ¨tre Ã  changer
+		// Il faut au moins 1 paramètre à changer
 		if( text.isEmpty() ) return "";
 
 		try
@@ -13069,7 +13316,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			e.printStackTrace();
 		}
 
-		/// ProblÃªme de parsage
+		/// Problême de parsage
 		if( document == null ) return value;
 
 		try
@@ -13094,7 +13341,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			}
 
 			if( label == null ) return value;
-			/// CrÃ©ation du groupe de droit
+			/// Création du groupe de droit
 			rrgst.setString(2, label);
 			rrgst.setString(3, portfolio);
 			rrgst.executeUpdate();
@@ -13106,7 +13353,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			rrgst.close();
 			labelNode.setAttribute("id", Integer.toString(grid));
 
-			/// RÃ©cupÃ¨re les donnÃ©es avec identifiant mis-Ã -jour
+			/// Récupère les données avec identifiant mis-à-jour
 			StringWriter stw = new StringWriter();
 			Transformer serializer = TransformerFactory.newInstance().newTransformer();
 			DOMSource source = new DOMSource(document);
@@ -13144,7 +13391,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		{
 			c.setAutoCommit(false);
 
-			/// VÃ©rifie si un group_info/grid existe
+			/// Vérifie si un group_info/grid existe
 			String sqlCheck = "SELECT gid FROM group_info WHERE grid=?";
 			PreparedStatement st = c.prepareStatement(sqlCheck);
 			st.setInt(1, rrgid);
@@ -13299,7 +13546,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			e.printStackTrace();
 		}
 
-		/// ProblÃªme de parsage
+		/// Problême de parsage
 		if( document == null ) return value;
 
 		try
@@ -13429,7 +13676,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 
 
-	/// Retire les utilisateurs des RRG d'un portfolio donnÃ©
+	/// Retire les utilisateurs des RRG d'un portfolio donné
 	@Override
 	public String deletePortfolioUser( Connection c, int userId, String portId )
 	{
@@ -14237,7 +14484,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	@Override
 	public String getRessource(Connection c, String nodeUuid, int userId, int groupId, String type) throws SQLException
 	{
-		// RÃ©cupÃ©re le noeud, et assemble les ressources, si il y en a
+		// Récupére le noeud, et assemble les ressources, si il y en a
 		String result = "";
 
 		ResultSet resNode = null;
@@ -14447,8 +14694,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						st.setInt(1, level+1);
 						st.setInt(2, level);
 						st.executeUpdate();
-						added = stTemp.executeUpdate();   // On s'arrÃªte quand rien Ã  Ã©tÃ© ajoutÃ©
-						level = level + 1;    // Prochaine Ã©tape
+						added = stTemp.executeUpdate();   // On s'arrête quand rien à été ajouté
+						level = level + 1;    // Prochaine étape
 					}
 					st.close();
 					stTemp.close();
