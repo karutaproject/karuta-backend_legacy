@@ -140,6 +140,7 @@ public class RestServicePortfolio
 	KEventbus eventbus = new KEventbus();
 	
 	static BufferedWriter editLog = null;
+	static BufferedWriter errorLog = null;
 
 	/**
 	 * Initialize service objects
@@ -155,7 +156,11 @@ public class RestServicePortfolio
 			String editlog = ConfigUtils.get("edit_log");
 			if( !"".equals(editlog) && editlog != null )
 				editLog = LogUtils.getLog(editlog);
-			
+			// General error log
+			String errorlog = ConfigUtils.get("error_log");
+			if( !"".equals(errorlog) && errorlog != null )
+				errorLog = LogUtils.getLog(errorlog);
+
 			// Initialize data provider and cas
 			try
 			{
@@ -2637,22 +2642,26 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
+		Date time = new Date();
+		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+		String timeFormat = dt.format(time);
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putNodeMetadata(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
+			
 			if(returnValue.equals("faux")){
-
+				errorLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.flush();
+				editLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				Date time = new Date();
-				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-				String timeFormat = dt.format(time);
-				editLog.write(String.format("%s metadata: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.write(String.format("[OK] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 			
@@ -2698,22 +2707,25 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
+		Date time = new Date();
+		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+		String timeFormat = dt.format(time);
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putNodeMetadataWad(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
-
+				errorLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.flush();
+				editLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				Date time = new Date();
-				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-				String timeFormat = dt.format(time);
-				editLog.write(String.format("%s metadatawad: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.write(String.format("[OK] %s metadatawad: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 
@@ -2759,24 +2771,33 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
+		Date time = new Date();
+		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+		String timeFormat = dt.format(time);
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putNodeMetadataEpm(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
-
+				errorLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.flush();
+				editLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			if( "erreur".equals(returnValue) )
+			{
+				errorLog.write(String.format("[NMOD] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.flush();
+				editLog.write(String.format("[NMOD] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.flush();
 				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Erreur");
+			}
 
 			if( editLog!= null )
 			{
-				Date time = new Date();
-				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-				String timeFormat = dt.format(time);
-				editLog.write(String.format("%s metadataepm: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.write(String.format("[OK] %s metadataepm: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
@@ -2823,22 +2844,25 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
+		Date time = new Date();
+		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+		String timeFormat = dt.format(time);
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putNodeNodeContext(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
-
+				errorLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.flush();
+				editLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				Date time = new Date();
-				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-				String timeFormat = dt.format(time);
-				editLog.write(String.format("%s nodecontext: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.write(String.format("[OK] %s nodecontext: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 
@@ -2878,6 +2902,9 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
+		Date time = new Date();
+		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+		String timeFormat = dt.format(time);
 
 		try
 		{
@@ -2888,16 +2915,16 @@ public class RestServicePortfolio
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putNodeNodeResource(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
-
+				errorLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.flush();
+				editLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				Date time = new Date();
-				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-				String timeFormat = dt.format(time);
-				editLog.write(String.format("%s noderesource: %s -- %s (%s)\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.write(String.format("[OK] %s noderesource: %s -- %s (%s) === %s\n", nodeUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 
@@ -3522,6 +3549,9 @@ public class RestServicePortfolio
 		event.inputData = xmlResource;
 		//*/
 		Connection c = null;
+		Date time = new Date();
+		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+		String timeFormat = dt.format(time);
 
 		try
 		{
@@ -3530,10 +3560,7 @@ public class RestServicePortfolio
 			logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				Date time = new Date();
-				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-				String timeFormat = dt.format(time);
-				editLog.write(String.format("%s resource: %s -- %s (%s)\n", nodeParentUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr() ));
+				editLog.write(String.format("[OK] %s resource: %s -- %s (%s) === %s\n", nodeParentUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
 				editLog.flush();
 			}
 
@@ -3543,6 +3570,17 @@ public class RestServicePortfolio
 		}
 		catch( RestWebApplicationException ex )
 		{
+			try
+			{
+				errorLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeParentUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
+				errorLog.flush();
+				editLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeParentUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
+				editLog.flush();
+			}
+			catch(Exception exex)
+			{
+				logger.error(exex.getMessage());
+			}
 			logger.error(ex.getMessage());
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlResource, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
@@ -3551,6 +3589,15 @@ public class RestServicePortfolio
 		}
 		catch(Exception ex)
 		{
+			try
+			{
+				errorLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeParentUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
+				errorLog.flush();
+			}
+			catch(Exception exex)
+			{
+				logger.error(exex.getMessage());
+			}
 			logger.error(ex.getMessage());
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlResource, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
