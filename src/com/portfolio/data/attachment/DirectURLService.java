@@ -100,12 +100,12 @@ public class DirectURLService  extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException
 	{
 		String val = request.getParameter("i");
-		byte[] data = hexStringToByteArray(val);
 		/// Decrypt data
 		Cipher rc4;
 		String output="";
 		try
 		{
+			byte[] data = stringToHex(val.toCharArray());
 			rc4 = Cipher.getInstance("RC4");
 			String secretkey = ConfigUtils.get("directkey");
 			SecretKeySpec key = new SecretKeySpec(secretkey.getBytes(), "RC4");
@@ -123,6 +123,10 @@ public class DirectURLService  extends HttpServlet {
 			e.printStackTrace();
 		}
 		catch( InvalidKeyException e )
+		{
+			e.printStackTrace();
+		}
+		catch( ArrayIndexOutOfBoundsException e )
 		{
 			e.printStackTrace();
 		}
@@ -363,7 +367,7 @@ public class DirectURLService  extends HttpServlet {
 			SecretKeySpec key = new SecretKeySpec(secretkey.getBytes(), "RC4");
 			rc4.init(Cipher.ENCRYPT_MODE, key);
 			byte[] clear = rc4.update(data.getBytes());
-			output = bytesToHex(clear);
+			output = hexToString(clear);
 		}
 		catch( NoSuchAlgorithmException e )
 		{
@@ -386,25 +390,32 @@ public class DirectURLService  extends HttpServlet {
 
 	}
 
-	final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-	public static String bytesToHex(byte[] bytes) {
-	    char[] hexChars = new char[bytes.length * 2];
-	    for ( int j = 0; j < bytes.length; j++ ) {
-	        int v = bytes[j] & 0xFF;
-	        hexChars[j * 2] = hexArray[v >>> 4];
-	        hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-	    }
-	    return new String(hexChars);
+	final protected static char[] resolveHex = "0123456789ABCDEF".toCharArray();
+	public static String hexToString(byte[] bytes) {
+			StringBuilder hexchars = new StringBuilder(bytes.length * 2);
+			for ( int j = 0; j < bytes.length; j++ ) {
+				hexchars.append(resolveHex[(bytes[j] & 0xFF) >>> 4]);
+				hexchars.append(resolveHex[(bytes[j] & 0xFF) & 0x0F]);
+			}
+			return hexchars.toString();
 	}
 
-	public static byte[] hexStringToByteArray(String s) {
-    int len = s.length();
-    byte[] data = new byte[len / 2];
-    for (int i = 0; i < len; i += 2) {
-        data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                             + Character.digit(s.charAt(i+1), 16));
-    }
-    return data;
+	// speed vs space
+	final protected static char[] resolveChar = {
+			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+			0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8,9,0,0,
+			0,0,0,0,0,10,11,12,13,14,15,0,0,0,0,0,0,0,0,0,
+			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,11,12,
+			13,14,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+			0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	public static byte[] stringToHex(char[] s) {
+		int len = s.length>>1;
+		byte[] data = new byte[len];
+		for (int i = 0; i < len; ++i) {
+			data[i] = (byte) (resolveChar[s[i<<1]] << 4 | resolveChar[s[(i<<1)+1]]);
+		}
+		return data;
 	}
 }
 
