@@ -141,8 +141,10 @@ public class RestServicePortfolio
 	
 	static BufferedWriter editLog = null;
 	static BufferedWriter errorLog = null;
-	static String logFormat = null;
 
+	static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
+	static final String logFormatShort = "%7$s\n";
+	
 	/**
 	 * Initialize service objects
 	 **/
@@ -153,12 +155,6 @@ public class RestServicePortfolio
 			// Loading configKaruta.properties
 			ConfigUtils.loadConfigFile(sc.getServletContext());
 
-			String logdetails = ConfigUtils.get("log_details");
-			if(logdetails != null && "Y".equals(logdetails) )
-				logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
-			else
-				logFormat = "%7$s\n";
-			
 			// User action logging
 			String editlog = ConfigUtils.get("edit_log");
 			if( !"".equals(editlog) && editlog != null )
@@ -2645,13 +2641,18 @@ public class RestServicePortfolio
 	@Path("/nodes/node/{nodeid}/metadata")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public String putNodeMetadata(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public String putNodeMetadata(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 		String timeFormat = dt.format(time);
+		String logformat = "";
+		if( "false".equals(info) )
+			logformat = logFormatShort;
+		else
+			logformat = logFormat;
 
 		try
 		{
@@ -2659,16 +2660,16 @@ public class RestServicePortfolio
 			String returnValue = dataProvider.putNodeMetadata(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			
 			if(returnValue.equals("faux")){
-				errorLog.write(String.format(logFormat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.write(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				errorLog.flush();
-				editLog.write(String.format(logFormat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format(logFormat, "OK", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "OK", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 			
@@ -2710,29 +2711,34 @@ public class RestServicePortfolio
 	@Path("/nodes/node/{nodeid}/metadatawad")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public String putNodeMetadataWad(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public String putNodeMetadataWad(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 		String timeFormat = dt.format(time);
+		String logformat = "";
+		if( "false".equals(info) )
+			logformat = logFormatShort;
+		else
+			logformat = logFormat;
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putNodeMetadataWad(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
-				errorLog.write(String.format(logFormat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.write(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				errorLog.flush();
-				editLog.write(String.format(logFormat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format(logFormat, "OK", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "OK", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 
@@ -2774,37 +2780,42 @@ public class RestServicePortfolio
 	@Path("/nodes/node/{nodeid}/metadataepm")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public String putNodeMetadataEpm(String xmlNode, @PathParam("nodeid") String nodeUuid, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public String putNodeMetadataEpm(String xmlNode, @PathParam("nodeid") String nodeUuid, @QueryParam("group") int groupId, @QueryParam("info") String info, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 		String timeFormat = dt.format(time);
+		String logformat = "";
+		if( "false".equals(info) )
+			logformat = logFormatShort;
+		else
+			logformat = logFormat;
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putNodeMetadataEpm(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
-				errorLog.write(String.format(logFormat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.write(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				errorLog.flush();
-				editLog.write(String.format(logFormat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			if( "erreur".equals(returnValue) )
 			{
-				errorLog.write(String.format(logFormat, "NMOD", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.write(String.format(logformat, "NMOD", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				errorLog.flush();
-				editLog.write(String.format(logFormat, "NMOD", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "NMOD", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 				throw new RestWebApplicationException(Status.NOT_MODIFIED, "Erreur");
 			}
 
 			if( editLog!= null )
 			{
-				editLog.write(String.format(logFormat, "OK", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "OK", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
@@ -2847,29 +2858,34 @@ public class RestServicePortfolio
 	@Path("/nodes/node/{nodeid}/nodecontext")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 		String timeFormat = dt.format(time);
+		String logformat = "";
+		if( "false".equals(info) )
+			logformat = logFormatShort;
+		else
+			logformat = logFormat;
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putNodeNodeContext(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
-				errorLog.write(String.format(logFormat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.write(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				errorLog.flush();
-				editLog.write(String.format(logFormat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format(logFormat, "OK", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "OK", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 
@@ -2905,13 +2921,18 @@ public class RestServicePortfolio
 	@Path("/nodes/node/{nodeid}/noderesource")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 		String timeFormat = dt.format(time);
+		String logformat = "";
+		if( "false".equals(info) )
+			logformat = logFormatShort;
+		else
+			logformat = logFormat;
 
 		try
 		{
@@ -2922,16 +2943,16 @@ public class RestServicePortfolio
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.putNodeNodeResource(c, new MimeType("text/xml"),nodeUuid,xmlNode, ui.userId, groupId).toString();
 			if(returnValue.equals("faux")){
-				errorLog.write(String.format(logFormat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				errorLog.write(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				errorLog.flush();
-				editLog.write(String.format(logFormat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format(logFormat, "OK", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
+				editLog.write(String.format(logformat, "OK", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode ));
 				editLog.flush();
 			}
 
@@ -3544,7 +3565,7 @@ public class RestServicePortfolio
 	@Path("/resources/resource/{node-parent-uuid}")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public String putResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-parent-uuid") String nodeParentUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
+	public String putResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("node-parent-uuid") String nodeParentUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
@@ -3559,6 +3580,11 @@ public class RestServicePortfolio
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 		String timeFormat = dt.format(time);
+		String logformat = "";
+		if( "false".equals(info) )
+			logformat = logFormatShort;
+		else
+			logformat = logFormat;
 
 		try
 		{
@@ -3567,7 +3593,7 @@ public class RestServicePortfolio
 			logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
 			if( editLog!= null )
 			{
-				editLog.write(String.format(logFormat, "OK", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
+				editLog.write(String.format(logformat, "OK", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
 				editLog.flush();
 			}
 
@@ -3579,9 +3605,9 @@ public class RestServicePortfolio
 		{
 			try
 			{
-				errorLog.write(String.format(logFormat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
+				errorLog.write(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
 				errorLog.flush();
-				editLog.write(String.format(logFormat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
+				editLog.write(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
 				editLog.flush();
 			}
 			catch(Exception exex)
@@ -3598,7 +3624,7 @@ public class RestServicePortfolio
 		{
 			try
 			{
-				errorLog.write(String.format("[ERR] %s metadata: %s -- %s (%s) === %s\n", nodeParentUuid, ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
+				errorLog.write(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource ));
 				errorLog.flush();
 			}
 			catch(Exception exex)
