@@ -33,6 +33,8 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.portfolio.data.utils.ConfigUtils;
+
 import au.com.bytecode.opencsv.CSVReader;
 
 public class ConvertCSV  extends HttpServlet {
@@ -77,6 +79,11 @@ public class ConvertCSV  extends HttpServlet {
 		response.setContentType("application/json");
 		response.setCharacterEncoding("UTF-8");
 
+		String csvsep = ConfigUtils.get("csv_separator");
+		char csvseparator = ',';	// Default is ','
+		if( csvsep != null || !"".equals(csvsep) )
+			csvseparator = csvsep.charAt(0);	// Otherwise just fetch the first character defined
+		
 		JSONObject data = new JSONObject();
 		try
 		{
@@ -102,7 +109,7 @@ public class ConvertCSV  extends HttpServlet {
 					if( "uploadfile".equals(fieldname) )	// name="uploadfile"
 					{
 						InputStreamReader isr = new InputStreamReader(item.getInputStream());
-						CSVReader reader = new CSVReader(isr,';');
+						CSVReader reader = new CSVReader(isr, csvseparator);
 						String[] headerLine;
 						String[] dataLine;
 
