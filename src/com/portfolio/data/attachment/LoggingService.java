@@ -145,7 +145,8 @@ public class LoggingService  extends HttpServlet
 			BufferedReader bread = new BufferedReader(bis);
 			
 			BufferedWriter bwrite = LogUtils.getLog(filename);
-			bwrite.write(datestring+" : "+context+" - '"+username+"' -- ");
+			String outputformat = "%s : %s - '%s' -- ";
+			bwrite.write(String.format(outputformat, datestring, context, username));
 			String s;
 			while( (s=bread.readLine())!=null )
 			{
