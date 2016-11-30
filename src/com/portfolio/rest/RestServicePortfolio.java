@@ -431,16 +431,18 @@ public class RestServicePortfolio
 	@Path("/users")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
-	public String getUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public String getUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("username") String username, @QueryParam("firstname") String firstname, @QueryParam("lastname") String lastname, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
+		if( ui.userId == 0 )
+			throw new RestWebApplicationException(Status.FORBIDDEN, "Not logged in");
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
 
-			String xmlGroups = dataProvider.getListUsers(c, ui.userId);
+			String xmlGroups = dataProvider.getListUsers(c, ui.userId, username, firstname, lastname);
 			logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
 			return xmlGroups;

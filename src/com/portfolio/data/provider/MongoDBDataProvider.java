@@ -326,7 +326,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String[] getUsers(Connection c, int userId) {
+	public String[] getUsers(Connection c, int userId, String username, String firstname, String lastname) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -433,7 +433,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 
 	@Override
-	public String getListUsers(Connection c, int userId) {
+	public String getListUsers(Connection c, int userId, String username, String firstname, String lastname) {
 		// TODO Auto-generated method stub
 		return null;
 	}

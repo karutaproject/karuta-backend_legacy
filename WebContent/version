@@ -2,7 +2,7 @@
 <versions>
 	<version id='backend'>
 		<number>2.0.1.6</number>
-		<date>2016-11-29</date>
+		<date>2016-11-30</date>
 	</version>
 	<version id='fileserver'>
 		<number>1.2.0.2</number>

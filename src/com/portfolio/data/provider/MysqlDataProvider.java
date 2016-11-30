@@ -387,7 +387,7 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
-	public ResultSet getMysqlUsers(Connection c, Integer userId)
+	public ResultSet getMysqlUsers(Connection c, Integer userId, String username, String firstname, String lastname)
 	{
 		PreparedStatement st;
 		String sql;
@@ -397,9 +397,50 @@ public class MysqlDataProvider implements DataProvider {
 			// On recupere d'abord les informations dans la table structures
 			sql = "SELECT * FROM credential c " +
 					"LEFT JOIN credential_substitution cs " +
-					"ON c.userid=cs.userid " +
-					"ORDER BY c.userid";
+					"ON c.userid=cs.userid ";
+			int count = 0;
+			if( username != null ) count++;
+			if( firstname != null ) count++;
+			if( lastname != null ) count++;
+			if( count >0 )
+			{
+				sql += "WHERE ";
+				if( username != null )
+				{
+					sql += "login LIKE ? ";
+					if( count > 1 )
+						sql += "AND ";
+				}
+				if( firstname != null )
+				{
+					sql += "display_firstname LIKE ? ";
+					if( count > 1 )
+						sql += "AND ";
+				}
+				if( lastname != null )
+				{
+					sql += "display_lastname LIKE ? ";
+				}
+			}
+			sql += "ORDER BY c.userid";
 			st = c.prepareStatement(sql);
+			
+			int start = 1;
+			if( username != null )
+			{
+				st.setString(start, "%"+username+"%");
+				start++;
+			}
+			if( firstname != null )
+			{
+				st.setString(start, "%"+firstname+"%");
+				start++;
+			}
+			if( lastname != null )
+			{
+				st.setString(start, "%"+lastname+"%");
+				start++;
+			}
 
 			return st.executeQuery();
 		}
@@ -8751,9 +8792,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getUsers(Connection c, int userId) throws Exception
+	public Object getUsers(Connection c, int userId, String username, String firstname, String lastname) throws Exception
 	{
-		ResultSet res = getMysqlUsers(c, userId);
+		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname);
 
 		String result = "<users>";
 		int curUser = 0;
@@ -9966,9 +10007,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getListUsers(Connection c, int userId)
+	public String getListUsers(Connection c, int userId, String username, String firstname, String lastname)
 	{
-		ResultSet res = getMysqlUsers(c, userId);
+		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname);
 
 		StringBuilder result = new StringBuilder();
 		result.append("<users>");
