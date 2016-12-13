@@ -264,6 +264,7 @@ public class RestServicePortfolio
 	{
 		HttpSession session = request.getSession(true);
 
+		/*
 		String referer = (String) request.getHeader("referer");	// Can be spoofed
 		String source = (String) session.getAttribute("source");
 		if( source != null )
@@ -289,6 +290,7 @@ public class RestServicePortfolio
 				}
 			}
 		}
+		//*/
 		
 		UserInfo ui = new UserInfo();
 		initService(request);
