@@ -4627,7 +4627,7 @@ public class RestServicePortfolio
 			if(casUrlValidation!=null)
 				sv.setCasValidateUrl(casUrlValidation);
 			else
-				sv.setCasValidateUrl("https://cas-upmf.grenet.fr/serviceValidate");
+				sv.setCasValidateUrl("https://cas-uga.grenet.fr/serviceValidate");
 			requestURL = httpServletRequest.getRequestURL();
 			if (httpServletRequest.getQueryString() != null) {
 				requestURL.append("?").append(httpServletRequest.getQueryString());
