@@ -13891,22 +13891,25 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	@Override
 	public String getUsersByUserGroup(Connection c, int userGroupId, int userId)
 	{
-		String sql = "";
+		StringBuffer sql =  new StringBuffer();
 		PreparedStatement st = null;
 		ResultSet res = null;
 
 		String result = "<group id=\""+userGroupId+"\"><users>";
 		try
 		{
-			sql = "SELECT * FROM credential_group_members WHERE cg=?";
-			st = c.prepareStatement(sql);
+			sql.append("select distinct cgm.userid from group_right_info gri, credential_group cg, credential_group_members cgm ")
+				.append("	where ")
+				.append("    gri.label = cg.label and cg.cg=cgm.cg and (gri.grid=? or cg.cg=?)");
+			st = c.prepareStatement(sql.toString());
 			st.setInt(1, userGroupId);
+			st.setInt(2, userGroupId);
 			res = st.executeQuery();
 
 			while(res.next())
 			{
 				result +="<user ";
-				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("userid"))+" ";
+				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("userid"))+"";
 				result += ">";
 				result += "</user>";
 			}
