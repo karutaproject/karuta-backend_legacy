@@ -13900,9 +13900,10 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		{
 			sql.append("select distinct cgm.userid from group_right_info gri, credential_group cg, credential_group_members cgm ")
 				.append("	where ")
-				.append("    gri.label = cg.label and cg.cg=cgm.cg and gri.grid=?");
+				.append("    gri.label = cg.label and cg.cg=cgm.cg and (gri.grid=? or cg.cg=?)");
 			st = c.prepareStatement(sql.toString());
 			st.setInt(1, userGroupId);
+			st.setInt(2, userGroupId);
 			res = st.executeQuery();
 
 			while(res.next())
