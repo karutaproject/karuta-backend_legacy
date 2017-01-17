@@ -81,7 +81,7 @@ public class ConvertCSV  extends HttpServlet {
 
 		String csvsep = ConfigUtils.get("csv_separator");
 		char csvseparator = ',';	// Default is ','
-		if( csvsep != null || !"".equals(csvsep) )
+		if( csvsep != null && !"".equals(csvsep) )
 			csvseparator = csvsep.charAt(0);	// Otherwise just fetch the first character defined
 		
 		JSONObject data = new JSONObject();

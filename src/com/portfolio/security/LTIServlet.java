@@ -513,6 +513,7 @@ public class LTIServlet extends HttpServlet {
 	 * @param inputRole
 	 * @return
 	 */
+	/*
 	static public String roleMapper(ServletContext application, String inputRole, StringBuffer outTrace) throws Exception {
 		//Replace any spaces in the role name
 		String adjustedInput = inputRole.replaceAll(" ", "_");
@@ -525,13 +526,14 @@ public class LTIServlet extends HttpServlet {
 		  outTrace.append("\nRole map: " + adjustedInput + "=>" + wadRole);
 		return wadRole;
 	}
-
+//*/
 	/**
 	 * Load in the roleMap.properties file that contains the lti_role=WAD_role definitions
 	 * @param application
 	 * @param session
 	 * @throws Exception
 	 */
+	/*
 	private static void loadRoleMapAttributes(ServletContext application) throws Exception {
 		String servName = application.getContextPath();
 		String path = application.getRealPath("/");
@@ -556,6 +558,7 @@ public class LTIServlet extends HttpServlet {
 		fichierSrce.close();
 
 	}
+	//*/
 
 	/**
 	 * Ensure that this is a proper lti request and it is authorized
@@ -655,6 +658,7 @@ public class LTIServlet extends HttpServlet {
 		}
 	}
 
+	/*
 	private void LoadProperties( ServletContext application ) throws Exception
 	{
 	     String ppath = application.getRealPath("");
@@ -682,6 +686,7 @@ public class LTIServlet extends HttpServlet {
 	            }
 	        }
 	        fichierSrce.close();
+	        //*/
 	        /*
 	        //--------------------------------------------------------
 	        String appVersionFilename = ppath+"/version";
@@ -705,6 +710,6 @@ public class LTIServlet extends HttpServlet {
 	        coreVersionfichierSrce.close();
 	        //*/
 
-	}
+//	}
 
 }
