@@ -195,7 +195,7 @@ public class DirectURLService  extends HttpServlet {
 				isLogged = true;
 			}
 			
-			String[] login = {"0","0","0"};
+			String[] login = null;
 			switch( level )
 			{
 				case 4:	// Just log as public (world)
@@ -215,8 +215,22 @@ public class DirectURLService  extends HttpServlet {
 					break;
 					
 				case 3:	// Create account for this person
-					if( !isLogged )
+					/// Check if user exist by logging in
+					login = dataProvider.logViaEmail(c, email);
+					if( login != null )
 					{
+						uid = Integer.parseInt(login[2]);
+						session.setAttribute("user", login[1]);
+						session.setAttribute("uid", uid);
+						session.setAttribute("source", "public.htm");
+						
+						String referer = (String) request.getHeader("referer");	// Can be spoofed
+						System.out.println("Login from source: "+referer);
+						isLogged = true;
+					}
+					else if( !isLogged )
+					{
+						login = new String[] {"0","0","0"};
 						try
 						{
 						login[2] = dataProvider.createUser(c, email, email);
