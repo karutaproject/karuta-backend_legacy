@@ -1948,8 +1948,8 @@ public class MysqlDataProvider implements DataProvider {
 		ArrayList codePortfoliosProjects = new ArrayList();
 		ArrayList codePortfoliosNonProjects = new ArrayList();
 		
-		System.out.println(sql);
-		System.out.println("------------");
+//		System.out.println(sql);
+//		System.out.println("------------");
 		
 		if(userId>0)
 		{
@@ -1981,14 +1981,16 @@ public class MysqlDataProvider implements DataProvider {
 				}
 		}
 		
+		/*
 		for(int i=0;i<codePortfoliosProjects.size();i++)
 		{
 			System.out.println(codePortfoliosProjects.get(i));
 		}
 		System.out.println("------------");
+		//*/
 		for(int i=0;i<codePortfolios.size();i++)
 		{
-			System.out.println(codePortfolios.get(i));
+//			System.out.println(codePortfolios.get(i));
 			String code = (String) codePortfolios.get(i);
 			if(code.contains("."))
 			{
