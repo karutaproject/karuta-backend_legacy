@@ -1263,8 +1263,9 @@ public class MysqlDataProvider implements DataProvider {
 		st = c.prepareStatement(sql);
 		st.setString(1, portfolioUuid);
 		res = st.executeQuery();
-		res.next();
-		String root_node = res.getString("root_node_uuid");
+		String root_node = "";
+		if( res.next() )
+			root_node = res.getString("root_node_uuid");
 
 		if( st != null ) st.close();
 		if( res != null ) res.close();
