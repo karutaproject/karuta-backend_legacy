@@ -250,19 +250,8 @@ public class Credential
 			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
 			res = st.executeQuery();
-			res.next();
-
-			/*
-			if(res.getInt("user_id") == userId || isAdmin(userId))
-			{
-				reponse = true;
-			}
-			else
-			{
-			}
-			//*/
-
-			reponse = getNodeRight(c, userId, groupId, res.getString("root_node_uuid"), droit);
+			if( res.next() )
+				reponse = getNodeRight(c, userId, groupId, res.getString("root_node_uuid"), droit);
 
 		}
 		catch(Exception ex)

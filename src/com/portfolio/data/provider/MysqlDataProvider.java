@@ -1263,8 +1263,9 @@ public class MysqlDataProvider implements DataProvider {
 		st = c.prepareStatement(sql);
 		st.setString(1, portfolioUuid);
 		res = st.executeQuery();
-		res.next();
-		String root_node = res.getString("root_node_uuid");
+		String root_node = "";
+		if( res.next() )
+			root_node = res.getString("root_node_uuid");
 
 		if( st != null ) st.close();
 		if( res != null ) res.close();
@@ -1947,8 +1948,8 @@ public class MysqlDataProvider implements DataProvider {
 		ArrayList codePortfoliosProjects = new ArrayList();
 		ArrayList codePortfoliosNonProjects = new ArrayList();
 		
-		System.out.println(sql);
-		System.out.println("------------");
+//		System.out.println(sql);
+//		System.out.println("------------");
 		
 		if(userId>0)
 		{
@@ -1980,14 +1981,16 @@ public class MysqlDataProvider implements DataProvider {
 				}
 		}
 		
+		/*
 		for(int i=0;i<codePortfoliosProjects.size();i++)
 		{
 			System.out.println(codePortfoliosProjects.get(i));
 		}
 		System.out.println("------------");
+		//*/
 		for(int i=0;i<codePortfolios.size();i++)
 		{
-			System.out.println(codePortfolios.get(i));
+//			System.out.println(codePortfolios.get(i));
 			String code = (String) codePortfolios.get(i);
 			if(code.contains("."))
 			{
