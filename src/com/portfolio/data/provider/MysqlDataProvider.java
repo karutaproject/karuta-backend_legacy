@@ -7519,7 +7519,7 @@ public class MysqlDataProvider implements DataProvider {
 		if(!cred.isAdmin(c, userid) && !cred.isDesigner(c, userid, uuid) )
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-		if( uuid == uuidParent ) // Ajouter un noeud e lui-meme
+		if( uuid.equals(uuidParent) ) // Ajouter un noeud e lui-meme
 			return false;
 
 		String sql = "";
