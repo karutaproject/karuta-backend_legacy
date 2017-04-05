@@ -3003,7 +3003,7 @@ public class RestServicePortfolio
 
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
-			if(returnValue == "faux")
+			if("faux".equals(returnValue) )
 			{
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
 			}
