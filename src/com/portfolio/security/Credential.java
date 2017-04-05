@@ -848,23 +848,23 @@ public class Credential
 		try
 		{
 
-			if (droit == READ)
+			if (READ.equals(droit) )
 			{
 				RD = 1;
 			}
-			else if (droit == WRITE)
+			else if (WRITE.equals(droit))
 			{
 				WR = 1;
 			}
-			else if (droit == DELETE)
+			else if (DELETE.equals(droit) )
 			{
 				DL = 1;
 			}
-			else if (droit == SUBMIT)
+			else if (SUBMIT.equals(droit))
 			{
 				SB = 1;
 			}
-			else if ( droit == ADD )
+			else if ( ADD.equals(droit) )
 			{
 				AD = 1;
 			}
@@ -963,7 +963,7 @@ public class Credential
 						try
 						{
 
-							if(droit == READ)
+							if(READ.equals(droit))
 							{
 								sqlUpdate = "UPDATE group_rights SET RD = ?  WHERE grid = ? AND id = uuid2bin(?)";
 								st = c.prepareStatement(sqlUpdate);
@@ -972,7 +972,7 @@ public class Credential
 								st.setString(3, uuid);
 								st.executeUpdate();
 							}
-							else if (droit == WRITE)
+							else if (WRITE.equals(droit))
 							{
 								sqlUpdate = "UPDATE group_rights SET WR = ? WHERE grid = ? AND id = uuid2bin(?)";
 								st = c.prepareStatement(sqlUpdate);
@@ -981,7 +981,7 @@ public class Credential
 								st.setString(3, uuid);
 								st.executeUpdate();
 							}
-							else if (droit == DELETE)
+							else if (DELETE.equals(droit))
 							{
 								sqlUpdate = "UPDATE group_rights SET DL = ? WHERE grid = ? AND id = uuid2bin(?)";
 								st = c.prepareStatement(sqlUpdate);
@@ -990,7 +990,7 @@ public class Credential
 								st.setString(3, uuid);
 								st.executeUpdate();
 							}
-							else if (droit == SUBMIT)
+							else if (SUBMIT.equals(droit))
 							{
 								//// FIXME: ajoute le rules_id pré-canné pour certaine valeurs
 								sqlUpdate = "UPDATE group_rights SET SB = ? WHERE grid = ? AND id = uuid2bin(?)";
@@ -1000,7 +1000,7 @@ public class Credential
 								st.setString(3, uuid);
 								st.executeUpdate();
 							}
-							else if ( droit == ADD )
+							else if ( ADD.equals(droit) )
 							{
 								sqlUpdate = "UPDATE group_rights SET AD = ? WHERE grid = ? AND id = uuid2bin(?)";
 								st = c.prepareStatement(sqlUpdate);
@@ -1036,7 +1036,7 @@ public class Credential
 					{
 						try
 						{
-							if(droit == READ)
+							if(READ.equals(droit))
 							{
 								sqlInsert = "INSERT INTO group_rights(grid, id, RD) VALUES (?, uuid2bin(?),?)";
 								st = c.prepareStatement(sqlInsert);
@@ -1045,7 +1045,7 @@ public class Credential
 								st.setInt(3, RD);
 								st.executeUpdate();
 							}
-							else if (droit == WRITE)
+							else if (WRITE.equals(droit))
 							{
 								sqlInsert = "INSERT INTO group_rights(grid, id, WR) VALUES (?, uuid2bin(?),?)";
 								st = c.prepareStatement(sqlInsert);
@@ -1054,7 +1054,7 @@ public class Credential
 								st.setInt(3, WR);
 								st.executeUpdate();
 							}
-							else if (droit == DELETE)
+							else if (DELETE.equals(droit))
 							{
 								sqlInsert = "INSERT INTO group_rights(grid, id, DL) VALUES (?, uuid2bin(?),?)";
 								st = c.prepareStatement(sqlInsert);
@@ -1063,7 +1063,7 @@ public class Credential
 								st.setInt(3, DL);
 								st.executeUpdate();
 							}
-							else if (droit == SUBMIT)
+							else if (SUBMIT.equals(droit))
 							{
 								sqlInsert = "INSERT INTO group_rights(grid, id, SB) VALUES (?, uuid2bin(?),?)";
 								st = c.prepareStatement(sqlInsert);
