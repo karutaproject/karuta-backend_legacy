@@ -270,13 +270,16 @@
       <artifactId>javax.mail</artifactId>
       <version>1.5.2</version>
     </dependency>
+<!-- filename must match systemPath -->
+<!--
     <dependency>
       <groupId>com.oracle</groupId>
       <artifactId>ojdbc</artifactId>
       <version>14</version>
       <scope>system</scope>
-      <systemPath>${basedir}/WebContent/WEB-INF/lib/ojdbc6.jar</systemPath> <!-- must match file name -->
+      <systemPath>${basedir}/WebContent/WEB-INF/lib/ojdbc6.jar</systemPath>
     </dependency>
+-->
     <dependency>
       <groupId>net.sf.opencsv</groupId>
       <artifactId>opencsv</artifactId>
