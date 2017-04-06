@@ -2123,6 +2123,8 @@ public class RestServicePortfolio
 		{
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.getNode(c, new MimeType("text/xml"),nodeUuid,false, ui.userId, groupId, this.label).toString();
+			if(returnValue == null)
+				throw new RestWebApplicationException(Status.NOT_FOUND, "Node "+nodeUuid+" not found");
 			if(returnValue.length() != 0)
 			{
 				if(accept.equals(MediaType.APPLICATION_JSON))
@@ -2190,6 +2192,8 @@ public class RestServicePortfolio
 		{
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.getNode(c, new MimeType("text/xml"),nodeUuid,true, ui.userId, groupId, this.label).toString();
+			if( returnValue == null )
+				throw new RestWebApplicationException(Status.NOT_FOUND, "Node "+nodeUuid+" not found");
 			if(returnValue.length() != 0)
 			{
 				if(accept.equals(MediaType.APPLICATION_JSON))
@@ -5400,7 +5404,6 @@ public class RestServicePortfolio
 				{
 					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
 				}
-
 			}
 			// Erreur de requ�te
 			else

@@ -3643,7 +3643,8 @@ public class MysqlDataProvider implements DataProvider {
 			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			res = st.executeQuery();
-			res.next();
+			if( !res.next() ) // A non-existing uuid has been given
+				return null;
 			String portfolioid = res.getString("portfolio_id");
 			res.close();
 			st.close();
@@ -3947,6 +3948,8 @@ public class MysqlDataProvider implements DataProvider {
 		if(outMimeType.getSubType().equals("xml"))
 		{
 			ResultSet result = getNodePerLevel(c, nodeUuid, userId, nodeRight.rrgId);
+			if(result == null)	// Node doesn't exist
+				return null;
 
 			long t_nodePerLevel = System.currentTimeMillis();
 
@@ -10728,6 +10731,8 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// TODO: Test this more, should use getNode rather than having another output
 			xml = getNode(c, new MimeType("text/xml"),nodeUuid,true, userId, groupId, null).toString();
+			if( xml == null )
+				return null;
 
 //			xml = getNodeXmlOutput(nodeUuid,true,null,userId, groupId, null,true).toString();
 			return DomUtils.processXSLTfile2String( DomUtils.xmlString2Document(xml, new StringBuffer()), xslFile, param, paramVal, new StringBuffer());
@@ -12446,6 +12451,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				//parse le noeud
 				String lbl = null;
 				Object ndSol = getNode(c, new MimeType("text/xml"), nodePrct, true, 1, 0, lbl);
+				if(ndSol == null)
+					return null;
 				
 				DocumentBuilderFactory documentBuilderFactory2 = DocumentBuilderFactory.newInstance();
 				DocumentBuilder documentBuilder2 = documentBuilderFactory2.newDocumentBuilder();
@@ -12479,6 +12486,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				//Recuperation uuidNoeud sur lequel effectuer l'action, role et action
 				String lbl2 = null;
 				Object nd = getNode(c, new MimeType("text/xml"), contextActionNodeUuid, true, 1, 0, lbl2);
+				if( nd == null )
+					return null;
 				
 				DocumentBuilderFactory documentBuilderFactory3 = DocumentBuilderFactory.newInstance();
 				DocumentBuilder documentBuilder3 = documentBuilderFactory3.newDocumentBuilder();
