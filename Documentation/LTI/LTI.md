@@ -7,12 +7,22 @@ Tested with Sakai 10.6
 
 1\. Configure the following lines in *configKaruta.properties*
 
-> basiclti.provider.{KEY}.secret={SECRET}
-> lti\_redirect\_location=/karuta/karuta/htm/list.htm
+    # ==== LTI configuration =====
+    ### Uncomment and configure when you want to use LTI
+    #basiclti.provider.{KEY}.secret={SECRET}
+    ### Redirection for Karuta 1.2.x
+    #lti_redirect_location=/karuta/karuta/htm/list.htm
+    ### Redirection for Karuta 2.x
+    lti_redirect_location=/karuta/application/htm/karuta.htm
 
 You can change *lti\_redirect\_location* to something else if the UI is on another server, or under a different name
 
 ## Sakai side
+
+### As a site-wide tool
+TODO
+
+### Per-course basis
 
 1\. Editing the worksite
 
