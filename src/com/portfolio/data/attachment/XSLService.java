@@ -372,6 +372,7 @@ public class XSLService  extends HttpServlet {
 
 				/// Fetch node we want to replace
 				String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), uuid.getTextContent(), true, userId, groupId, "").toString();
+				if(returnValue == null) continue;
 
 				is = new ByteArrayInputStream(returnValue.getBytes("UTF-8"));
 				Document rep = documentBuilder.parse(is);

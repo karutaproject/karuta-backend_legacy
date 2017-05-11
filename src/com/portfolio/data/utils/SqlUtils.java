@@ -16,8 +16,6 @@
 package com.portfolio.data.utils;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.util.Properties;
 
@@ -25,17 +23,11 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.servlet.ServletContext;
 import javax.sql.DataSource;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.dbcp.cpdsadapter.DriverAdapterCPDS;
 import org.apache.commons.dbcp.datasources.SharedPoolDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import com.portfolio.data.provider.DataProvider;
 
@@ -91,8 +83,6 @@ public class SqlUtils
 				DriverAdapterCPDS cpds = new DriverAdapterCPDS();
 				cpds.setDriver(dbdriver);
 				cpds.setUrl(dburl);
-//				cpds.setUser(dbuser);
-//				cpds.setPassword(dbpass);
 				
 				Properties info = new Properties();
 				info.put("user", dbuser);
@@ -104,9 +94,10 @@ public class SqlUtils
 				
 				/// TODO: Complete it with other parameters, also, benchmark
 				/// Configuring other stuff
-				tds.setValidationQuery("SELECT 1");
+				tds.setValidationQuery("SELECT 1 FROM DUAL");
 				tds.setTestOnBorrow(true);
 				tds.setTestWhileIdle(true);
+				tds.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 				
 				String maxwait = ConfigUtils.get("DB.MaxWait");
 				String maxtotal = ConfigUtils.get("DB.MaxTotal");
@@ -124,7 +115,6 @@ public class SqlUtils
 				
 				tds.setMaxWait(Integer.decode(maxwait));
 				tds.setMaxActive(Integer.decode(maxtotal));
-//				tds.setDefaultMinIdle(Integer.decode(minidle));
 				tds.setMaxIdle(Integer.decode(maxidle));
 				tds.setTimeBetweenEvictionRunsMillis(Integer.decode(waiteviction));
 				tds.setNumTestsPerEvictionRun(Integer.decode(numtesteviction));
@@ -135,70 +125,9 @@ public class SqlUtils
 			{
 				e.printStackTrace();
 			}
-
-			// Try to initialize Datasource
-			/*
-			cxt = new InitialContext();
-			if ( cxt == null ) {
-				throw new Exception("no context found!");
-			}
-			//*/
-	
-			/// Init this here, might fail depending on server hosting
-			/*
-			try
-			{
-//				ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
-			}
-			catch( Exception e )
-			{
-				logger.info("Might not be possible to load context.xml: "+e.getMessage());
-			}
-			//*/
 			loaded = true;
 		}
-
-//		if( ds != null )	// Return the connection directly
 		return ds.getConnection();
-
-		/// Deprecated with hosting
-		/*
-		//// Case where we can't deploy context.xml, load it raw via the DriverManager
-		// Open META-INF/context.xml
-		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
-		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		Document doc = documentBuilder.parse(servContext.getRealPath("/")+"/META-INF/context.xml");
-		NodeList res = doc.getElementsByTagName("Resource");
-		Node dbres = res.item(0);
-
-		Properties info = new Properties();
-		NamedNodeMap attr = dbres.getAttributes();
-		String url = "";
-		for( int i=0; i<attr.getLength(); ++i )
-		{
-			Node att = attr.item(i);
-			String name = att.getNodeName();
-			String val = att.getNodeValue();
-			if( "url".equals(name) )
-				url = val;
-			else if( "username".equals(name) )	// username (context.xml) -> user (properties)
-				info.put("user", val);
-			else if( "driverClassName".equals(name) )
-				Class.forName(val);
-			else
-				info.put(name, val);
-		}
-
-		Connection connection = DriverManager.getConnection(url, info);
-		if( "mysql".equals(serverType) )
-		{	// Because we don't always have access to base configuration
-			PreparedStatement st = connection.prepareStatement("SET SESSION group_concat_max_len = 1048576");	// 1MB
-			st.execute();
-			st.close();
-		}
-		
-		return connection;
-		//*/
 	}
 
 	public static void close()

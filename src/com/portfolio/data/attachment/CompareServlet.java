@@ -194,7 +194,7 @@ public class CompareServlet extends HttpServlet {
 
     								provider.putNodeMetadataWad(c, new MimeType("text/xml"), idd, result, 1, 0);
     							}
-    							else if ((v1!=null && v2!=null && v1!=v2))
+    							else if ((v1!=null && v2!=null && !v1.equals(v2)))
     							{
     								similaire=false;
     								nbComparaison = nbComparaison+1;

@@ -2596,55 +2596,6 @@ public class DBConnect
     return false;
   }
 
-  long[] getRights( String login, String uuid )
-  {
-    long[] ret = {0, 0};
-    if( uuid == null ) return ret;
-    ///
-    ResultSet rs=null;
-    PreparedStatement stmt=null;
-    try
-    {
-      String query = "SELECT general, creation FROM rights AS r, credential AS c " +
-      		"WHERE c.login=? AND c.userid=r.userid AND id=uuid2bin(?))";
-      stmt=con.prepareStatement(query);
-      stmt.setString(1, login);
-      stmt.setString(2, uuid);
-      rs = stmt.executeQuery();
-
-      if( rs.next() )
-      {
-        ret[0] = rs.getLong(0);
-        ret[1] = rs.getLong(1);
-      }
-    }
-    catch( SQLException e )
-    {
-      e.printStackTrace();
-    }
-    finally
-    {
-      try
-      {
-        if( rs!=null )
-        {
-          rs.close();
-          rs=null;
-        }
-        if( stmt!=null )
-        {
-          stmt.close();
-          stmt=null;
-        }
-      }
-      catch( SQLException e )
-      {
-      }
-    }
-
-    return ret;
-  }
-
   /// Get needed data from cookies
   /// 0: login, 1: token
   /// TODO: Update cookie date
