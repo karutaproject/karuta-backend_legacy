@@ -571,6 +571,11 @@ public class RestServicePortfolio
 
 			return queryuser;
 		}
+		catch(RestWebApplicationException ex)
+		{
+			logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+		}
 		catch(Exception ex)
 		{
 			ex.printStackTrace();
