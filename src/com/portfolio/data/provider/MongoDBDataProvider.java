@@ -479,6 +479,12 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
+	public String UserChangeInfo(Connection c, int userId, int userid2, String in) throws SQLException
+	{
+		return null;
+	}
+
+	@Override
 	public String postUsers(Connection c, String xmlUsers, int userId) throws Exception {
 		// TODO Auto-generated method stub
 		return null;

@@ -563,10 +563,14 @@ public class RestServicePortfolio
 		{
 			c = SqlUtils.getConnection(servContext);
 
-			if(!credential.isAdmin(c, ui.userId) && !credential.isCreator(c, ui.userId))
-				throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
+			String queryuser = "";
+			if(credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId))
+				queryuser = dataProvider.putInfUser(c, ui.userId, userid, xmlInfUser);
+			else if(ui.userId == userid)	/// Changing self
+				queryuser = dataProvider.UserChangeInfo(c, ui.userId, userid, xmlInfUser);
+			else
+				throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
 
-			String queryuser = dataProvider.putInfUser(c, ui.userId, userid, xmlInfUser);
 			logRestRequest(httpServletRequest, "", queryuser, Status.OK.getStatusCode());
 
 			return queryuser;

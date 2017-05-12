@@ -10450,6 +10450,90 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
+	public String UserChangeInfo(Connection c, int userId, int userid2, String in) throws SQLException
+	{
+		if(userId != userid2)
+			throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
+		
+		String result1 = null;
+		Integer  id = 0;
+		String  password = null;
+		String  email = null;
+		String  username = null;
+		String  firstname = null;
+		String  lastname = null;
+		String  active = null;
+		String is_admin = null;
+		String is_designer = null;
+
+		//On prepare les requetes SQL
+		PreparedStatement st;
+		String sql;
+
+		// Parse input
+		Document doc;
+		Element infUser = null;
+		try
+		{
+			doc = DomUtils.xmlString2Document(in, new StringBuffer());
+			infUser = doc.getDocumentElement();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		NodeList children = null;
+
+		children = infUser.getChildNodes();
+
+		if(infUser.getNodeName().equals("user"))
+		{
+			//On recupere les attributs
+
+			if(infUser.getAttributes().getNamedItem("id")!=null)
+			{
+				id = Integer.parseInt(infUser.getAttributes().getNamedItem("id").getNodeValue());
+			}else{
+				id = null;
+			}
+			NodeList children2 = null;
+			children2 = infUser.getChildNodes();
+			for(int y=0;y<children2.getLength();y++)
+			{
+				if(children2.item(y).getNodeName().equals("password"))
+				{
+					password = DomUtils.getInnerXml(children2.item(y));
+
+					sql = "UPDATE credential SET password = UNHEX(SHA1(?)) WHERE  userid = ?";
+					if (dbserveur.equals("oracle")){
+						sql = "UPDATE credential SET password = crypt(?) WHERE  userid = ?";
+					}
+
+					st = c.prepareStatement(sql);
+					st.setString(1, password);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if(children2.item(y).getNodeName().equals("email"))
+				{
+					email = DomUtils.getInnerXml(children2.item(y));
+
+					sql = "UPDATE credential SET email = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setString(1, email);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+			}
+		}
+
+		result1 = ""+userid2;
+
+		return result1;
+	}
+
+	
+	@Override
 	public String postUsers(Connection c, String in, int userId) throws Exception
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId))
