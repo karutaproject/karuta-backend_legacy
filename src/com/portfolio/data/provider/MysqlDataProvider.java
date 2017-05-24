@@ -10369,7 +10369,9 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					is_admin = DomUtils.getInnerXml(children2.item(y));
 
-					int is_adminInt = Integer.parseInt(is_admin);
+					int is_adminInt = 0;
+					if( "1".equals(is_admin) )
+						is_adminInt = 1;
 
 					sql = "UPDATE credential SET is_admin = ? WHERE  userid = ?";
 
@@ -10383,7 +10385,9 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					is_designer = DomUtils.getInnerXml(children2.item(y));
 
-					int is_designerInt = Integer.parseInt(is_designer);
+					int is_designerInt = 0;
+					if( "1".equals(is_designer) )
+						is_designerInt = 1;
 
 					sql = "UPDATE credential SET is_designer = ? WHERE  userid = ?";
 
@@ -10397,7 +10401,9 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					active = DomUtils.getInnerXml(children2.item(y));
 
-					int activeInt = Integer.parseInt(active);
+					int activeInt = 0;
+					if( "1".equals(active))
+						activeInt = 1;
 
 					sql = "UPDATE credential SET active = ? WHERE  userid = ?";
 
@@ -10662,14 +10668,11 @@ public class MysqlDataProvider implements DataProvider {
 				stInsert.setString(6, active);
 			}
 
-			if(designerstr == null)
-			{
+			if("1".equals(designerstr))
+				designer = 1;
+			else
 				designer = 0;
-				stInsert.setInt(7, designer);
-			}else{
-				designer = Integer.parseInt(designerstr);
-				stInsert.setInt(7, designer);
-			}
+			stInsert.setInt(7, designer);
 
 			stInsert.executeUpdate();
 
