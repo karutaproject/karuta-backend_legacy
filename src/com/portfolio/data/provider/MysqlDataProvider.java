@@ -6049,17 +6049,15 @@ public class MysqlDataProvider implements DataProvider {
 				st.setString(1, portfolioCode);
 				st.executeUpdate();
 				st.close();
-	
-				t1e = System.currentTimeMillis();
-	
-				/// Find the right starting node we want
+				
+				/// Try if the tag sent exist in code
 				sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
 						"FROM t_data_node n2 " +
-						"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
+						"WHERE n2.code=? AND n2.portfolio_id=uuid2bin(?)";
 				st = c.prepareStatement(sql);
 				st.setString(1, tag);
 				st.setString(2, portfolioCode);
-	
+
 				res = st.executeQuery();
 				String pUuid="";
 				if( res.next() )	// Take the first one declared
@@ -6069,13 +6067,34 @@ public class MysqlDataProvider implements DataProvider {
 					res.close();
 					st.close();
 				}
-				else
+				else	// Otherwise it's with semantictag, maybe
 				{
-					res.close();
-					st.close();
-					return "Selection non existante.";
+					/// Find the right starting node we want
+					sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
+							"FROM t_data_node n2 " +
+							"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
+					st = c.prepareStatement(sql);
+					st.setString(1, tag);
+					st.setString(2, portfolioCode);
+		
+					res = st.executeQuery();
+					if( res.next() )	// Take the first one declared
+					{
+						baseUuid = res.getString("nUuid");
+						pUuid = res.getString("pUuid");
+						res.close();
+						st.close();
+					}
+					else
+					{
+						res.close();
+						st.close();
+						return "Selection non existante.";
+					}
 				}
 			}
+			
+			t1e = System.currentTimeMillis();
 
 			t2 = System.currentTimeMillis();
 
@@ -7049,17 +7068,14 @@ public class MysqlDataProvider implements DataProvider {
 				st.setString(1, portfolioCode);
 				st.executeUpdate();
 				st.close();
-	
-	//			t1a = System.currentTimeMillis();
-	
-				/// Find the right starting node we want
+
+				/// Check if we can find a code with the tag sent
 				sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
 						"FROM t_data_node n2 " +
-						"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
+						"WHERE n2.code=? AND n2.portfolio_id=uuid2bin(?)";
 				st = c.prepareStatement(sql);
 				st.setString(1, tag);
 				st.setString(2, portfolioCode);
-
 				res = st.executeQuery();
 				String pUuid="";
 				if( res.next() )	// Take the first one declared
@@ -7069,13 +7085,35 @@ public class MysqlDataProvider implements DataProvider {
 					res.close();
 					st.close();
 				}
-				else
+				else // If nothing, then continue with semantictag
 				{
-					res.close();
-					st.close();
-					return "Selection non existante.";
+					/// Find the right starting node we want
+					sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
+							"FROM t_data_node n2 " +
+							"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
+					st = c.prepareStatement(sql);
+					st.setString(1, tag);
+					st.setString(2, portfolioCode);
+
+					res = st.executeQuery();
+					if( res.next() )	// Take the first one declared
+					{
+						baseUuid = res.getString("nUuid");
+						pUuid = res.getString("pUuid");
+						res.close();
+						st.close();
+					}
+					else
+					{
+						res.close();
+						st.close();
+						return "Selection non existante.";
+					}
 				}
 			}
+	
+//			t1a = System.currentTimeMillis();
+
 			
 //			t2 = System.currentTimeMillis();
 
