@@ -1091,16 +1091,25 @@ public class MysqlDataProvider implements DataProvider {
 				if( code != null )
 				{
 					Node codeContent = code.getFirstChild();
+					
 					String codeVal;
 					if( codeContent != null )
 					{
 						codeVal = codeContent.getNodeValue();
-						String sq = "UPDATE node SET code=? WHERE node_uuid=uuid2bin(?)";
-						st = c.prepareStatement(sq);
-						st.setString(1, codeVal);
-						st.setString(2, nodeUuid);
-						st.executeUpdate();
-						st.close();
+						// Check if code already exists
+						if( isCodeExist(c, codeVal) )
+						{
+							throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
+						}
+						else
+						{
+							String sq = "UPDATE node SET code=? WHERE node_uuid=uuid2bin(?)";
+							st = c.prepareStatement(sq);
+							st.setString(1, codeVal);
+							st.setString(2, nodeUuid);
+							st.executeUpdate();
+							st.close();
+						}
 					}
 				}
 			}
