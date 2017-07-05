@@ -2045,6 +2045,10 @@ public class RestServicePortfolio
 
 			return returnValue;
 		}
+		catch( RestWebApplicationException e )
+		{
+			throw e;
+		}
 		catch(Exception ex)
 		{
 			ex.printStackTrace();
@@ -4860,6 +4864,10 @@ public class RestServicePortfolio
 
 			c = SqlUtils.getConnection(servContext);
 			returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"), httpServletRequest, uploadedInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
+		}
+		catch( RestWebApplicationException e )
+		{
+			throw e;
 		}
 		catch( Exception e )
 		{

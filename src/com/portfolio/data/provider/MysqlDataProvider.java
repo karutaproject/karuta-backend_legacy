@@ -9514,7 +9514,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws IOException
+	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws Exception
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -9699,7 +9699,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch( Exception e )
 		{
-			e.printStackTrace();
+			throw e;
 		}
 
 		if( hasLoaded )
