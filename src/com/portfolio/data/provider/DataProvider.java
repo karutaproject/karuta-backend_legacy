@@ -82,7 +82,8 @@ public interface DataProvider {
 
 	public Object deletePortfolio(Connection c, String portfolioUuid, int userId, int groupId) throws Exception;
 
-	public boolean isCodeExist( Connection c, String code );
+	// Same code allowed with nodes in different portfolio, and not root node
+	public boolean isCodeExist( Connection c, String code, String nodeuuid );
 
 	/// Relatif aux modèles
 	// Deprecated I think

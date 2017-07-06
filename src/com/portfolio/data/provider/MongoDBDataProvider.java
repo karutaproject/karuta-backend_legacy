@@ -211,7 +211,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isCodeExist( Connection c, String code )
+	public boolean isCodeExist( Connection c, String code, String nodeuuid )
 	{
 		return false;
 	}

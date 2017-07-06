@@ -1097,7 +1097,7 @@ public class MysqlDataProvider implements DataProvider {
 					{
 						codeVal = codeContent.getNodeValue();
 						// Check if code already exists
-						if( isCodeExist(c, codeVal) )
+						if( isCodeExist(c, codeVal, nodeUuid) )
 						{
 							throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
 						}
@@ -1138,6 +1138,10 @@ public class MysqlDataProvider implements DataProvider {
 			st.setString(5,nodeUuid);
 
 			return st.executeUpdate();
+		}
+		catch(RestWebApplicationException e)
+		{
+			throw e;
 		}
 		catch(Exception ex)
 		{
@@ -2349,7 +2353,7 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				
 				// Simple query
-				if( isCodeExist(c, code) )
+				if( isCodeExist(c, code, null) )
 					throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
 				
 				nodelist.item(0).setTextContent(code);
@@ -2394,8 +2398,9 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
+	// Same code allowed with nodes in different portfolio, and not root node
 	@Override
-	public boolean isCodeExist( Connection c, String code )
+	public boolean isCodeExist( Connection c, String code, String nodeuuid )
 	{
 		boolean response = false;
 		String sql;
@@ -2403,10 +2408,15 @@ public class MysqlDataProvider implements DataProvider {
 		ResultSet rs = null;
 		try
 		{
-			// Retire la personne du rôle
-			sql = "SELECT bin2uuid(portfolio_id) FROM node WHERE code=?";
+			sql = "SELECT bin2uuid(portfolio_id) FROM node " +
+					"WHERE asm_type!=? AND code=? ";
+			if( nodeuuid != null )
+				sql += "AND portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
 			st = c.prepareStatement(sql);
-			st.setString(1, code);
+			st.setString(1, "asmRoot");
+			st.setString(2, code);
+			if(nodeuuid != null)
+				st.setString(3, nodeuuid);
 			rs = st.executeQuery();
 
 			if( rs.next() )
@@ -9656,7 +9666,7 @@ public class MysqlDataProvider implements DataProvider {
 								continue;
 							
 							// Check if new code exists
-							if( isCodeExist(c, code) )
+							if( isCodeExist(c, code, null) )
 								throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
 							
 							// Replace content
@@ -9665,7 +9675,7 @@ public class MysqlDataProvider implements DataProvider {
 						else	// Otherwise, check if it exists
 						{
 							// Simple query
-							if( isCodeExist(c, code) )
+							if( isCodeExist(c, code, null) )
 								throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
 						}
 					}

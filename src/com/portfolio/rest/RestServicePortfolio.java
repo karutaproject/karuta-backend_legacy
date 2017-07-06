@@ -1648,7 +1648,7 @@ public class RestServicePortfolio
 			String newcode = tgtcode;
 			int num = 0;
 			c = SqlUtils.getConnection(servContext);
-			while( dataProvider.isCodeExist(c, newcode) )
+			while( dataProvider.isCodeExist(c, newcode, null) )
 				newcode = tgtcode+" ("+ num++ +")";
 			tgtcode = newcode;
 
@@ -1711,7 +1711,7 @@ public class RestServicePortfolio
 			/// Check if code exist, find a suitable one otherwise. Eh.
 			String newcode = tgtcode;
 			c = SqlUtils.getConnection(servContext);
-			if( dataProvider.isCodeExist(c, newcode) )
+			if( dataProvider.isCodeExist(c, newcode, null) )
 			{
 				return Response.status(Status.CONFLICT).entity("code exist").build();
 			}
@@ -2984,7 +2984,7 @@ public class RestServicePortfolio
 		}
 		catch(RestWebApplicationException ex)
 		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw ex;
 		}
 		catch(Exception ex)
 		{
