@@ -14934,11 +14934,11 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				{
 					sql = "INSERT INTO t_struc_parentid " +
 							"SELECT node_uuid, node_parent_uuid, 0 " +
-							"FROM t_s_node_2 WHERE semantictag LIKE ? AND code LIKE ?";
+							"FROM t_s_node_2 WHERE semantictag LIKE ? AND code = ?";
 					//sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, node_children_uuid, code, asm_type, label FROM node WHERE portfolio_id = uuid2bin('c884bdcd-2165-469b-9939-14376f7f3500') AND metadata LIKE '%semantictag=%competence%'";
 					st = c.prepareStatement(sql);
 					st.setString(1, "%"+semtag_parent+"%");
-					st.setString(2, "%"+code_parent+"%");
+					st.setString(2, code_parent);
 					st.executeUpdate();
 
 					int level = 0;
