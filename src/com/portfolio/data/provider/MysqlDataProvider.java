@@ -2409,14 +2409,17 @@ public class MysqlDataProvider implements DataProvider {
 		try
 		{
 			sql = "SELECT bin2uuid(portfolio_id) FROM node " +
-					"WHERE asm_type!=? AND code=? ";
+					"WHERE asm_type=? AND code=? ";
 			if( nodeuuid != null )
-				sql += "AND portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
+				sql += "AND node_uuid!=uuid2bin(?) AND portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
 			st = c.prepareStatement(sql);
 			st.setString(1, "asmRoot");
 			st.setString(2, code);
 			if(nodeuuid != null)
+			{
 				st.setString(3, nodeuuid);
+				st.setString(4, nodeuuid);
+			}
 			rs = st.executeQuery();
 
 			if( rs.next() )
