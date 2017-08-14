@@ -2380,8 +2380,9 @@ public class MysqlDataProvider implements DataProvider {
 		/// If we instanciate, don't need the designer role
 //		if( !parseRights )
 		{
+			int groupid = postCreateRole(c, portfolioUuid, "all", userId);
 			/// Creer groupe 'designer', 'all' est mis avec ce qui est specifique dans le xml reçu
-			int groupid = postCreateRole(c, portfolioUuid, "designer", userId);
+			groupid = postCreateRole(c, portfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
@@ -5280,8 +5281,10 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
+			/// Create base group
+			int groupid = postCreateRole(c, newPortfolioUuid, "all", userId);
 			/// Finalement on cree un rele designer
-			int groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);
+			groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
@@ -9700,8 +9703,10 @@ public class MysqlDataProvider implements DataProvider {
 					}
 					updateMysqlPortfolioActive(c, portfolioUuid,true);
 
+					/// Create base group
+					int groupid = postCreateRole(c, portfolioUuid, "all", userId);
 					/// Finalement on cree un rele designer
-					int groupid = postCreateRole(c, portfolioUuid, "designer", userId);
+					groupid = postCreateRole(c, portfolioUuid, "designer", userId);
 
 					/// Ajoute la personne dans ce groupe
 					putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
