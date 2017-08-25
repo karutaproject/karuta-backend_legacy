@@ -15162,13 +15162,13 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 
 		try
 		{
-			if( username != null )
+			if( !"".equals(username) && username != null )
 			{
 				sql = "SELECT userid FROM credential WHERE login = ? ";
 				st = c.prepareStatement(sql);
 				st.setString(1, username);
 			}
-			else if( email != null )
+			else if( !"".equals(email) && email != null )
 			{
 				sql = "SELECT userid FROM credential WHERE email = ? ";
 				st = c.prepareStatement(sql);
