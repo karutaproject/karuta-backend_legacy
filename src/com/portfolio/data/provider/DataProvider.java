@@ -55,9 +55,7 @@ public interface DataProvider {
 	public void writeLog(Connection c, String url, String method, String headers, String inBody, String outBody, int code);
 
 	/// Relatif ˆ l'authentification
-	public String[] postCredential(String login, String password, Integer userId) throws ServletException, IOException;
 	public String[] postCredentialFromXml(Connection c, Integer userId, String username, String password, String substitute) throws ServletException, IOException;
-	public void getCredential(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException;
 	public String getMysqlUserUid (Connection c, String login) throws Exception;
 	@Deprecated
 	public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception;

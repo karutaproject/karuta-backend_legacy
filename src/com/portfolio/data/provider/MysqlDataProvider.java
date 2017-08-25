@@ -8807,27 +8807,6 @@ public class MysqlDataProvider implements DataProvider {
 		return ret;
 	}
 
-	@Override
-	public String[] postCredential(String login, String password, Integer UserId) throws ServletException, IOException
-	{
-		try{
-			return cred.doPost(login, password);
-		}catch (ServletException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-
-	@Override
-	public void getCredential(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		try{
-			cred.doGet(request, response);
-		}catch (ServletException e) {
-			e.printStackTrace();
-		}
-	}
-
 	@Deprecated
 	@Override
 	public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception
