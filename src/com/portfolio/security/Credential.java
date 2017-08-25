@@ -97,6 +97,29 @@ public class Credential
 		}
 	}
 
+	/// Change portfolio owner
+	public boolean putPortfolioOwner(Connection c, String portfolioId, int ownerId) throws Exception
+	{
+		PreparedStatement st;
+		boolean retval = false;
+
+		try
+		{
+			String sql = "UPDATE portfolio SET modif_user_id=? WHERE portfolio_id = uuid2bin(?)";
+			st = c.prepareStatement(sql);
+			st.setInt(1, ownerId);
+			st.setString(2, portfolioId);
+			int numMatch = st.executeUpdate();
+			if( numMatch > 0 )
+				retval = true;
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+		}
+		return retval;
+	}
+	
 	public int getMysqlUserUid(Connection c, String login) throws Exception
 	{
 		PreparedStatement st;
