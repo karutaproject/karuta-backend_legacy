@@ -6097,9 +6097,9 @@ public class MysqlDataProvider implements DataProvider {
 					/// Find the right starting node we want
 					sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
 							"FROM t_data_node n2 " +
-							"WHERE n2.semantictag LIKE ? AND n2.portfolio_id=uuid2bin(?)";
+							"WHERE n2.semantictag = ? AND n2.portfolio_id=uuid2bin(?)";
 					st = c.prepareStatement(sql);
-					st.setString(1, "%"+tag+"%");
+					st.setString(1, tag);
 					st.setString(2, portfolioCode);
 		
 					res = st.executeQuery();
@@ -7115,9 +7115,9 @@ public class MysqlDataProvider implements DataProvider {
 					/// Find the right starting node we want
 					sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
 							"FROM t_data_node n2 " +
-							"WHERE n2.semantictag LIKE ? AND n2.portfolio_id=uuid2bin(?)";
+							"WHERE n2.semantictag = ? AND n2.portfolio_id=uuid2bin(?)";
 					st = c.prepareStatement(sql);
-					st.setString(1, "%"+tag+"%");
+					st.setString(1, tag);
 					st.setString(2, portfolioCode);
 
 					res = st.executeQuery();
