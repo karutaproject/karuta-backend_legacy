@@ -33,6 +33,17 @@
 		<servlet-name>Jersey REST Service</servlet-name>
 		<url-pattern>/rest/*</url-pattern>
 	</servlet-mapping>
+
+	<servlet>
+		<description>Exporting portfolio in zipped HTML format</description>
+		<display-name>ExportHTML</display-name>
+		<servlet-name>ExportHTML</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.ExportHTMLService</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ExportHTML</servlet-name>
+		<url-pattern>/export/*</url-pattern>
+	</servlet-mapping>
 	
 	<servlet>
 		<description></description>
