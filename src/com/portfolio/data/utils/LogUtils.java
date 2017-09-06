@@ -19,6 +19,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
@@ -66,9 +67,13 @@ public class LogUtils
 		return hasLoaded;
 	}
 
-	public static BufferedWriter getLog( String filename ) throws FileNotFoundException, UnsupportedEncodingException
+	public static BufferedWriter getLog( String filename ) throws IOException
 	{
-		FileOutputStream fos = new FileOutputStream(filePath+filename, true);
+		// Ensure file exists
+		File file = new File(filePath+filename);
+		file.createNewFile();
+		
+		FileOutputStream fos = new FileOutputStream(file, true);
 		OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8");
 		BufferedWriter bwrite = new BufferedWriter(osw);
 		

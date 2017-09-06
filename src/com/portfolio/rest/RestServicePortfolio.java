@@ -1287,6 +1287,53 @@ public class RestServicePortfolio
 	}
 
 	/**
+	 *	Change portfolio owner
+	 *	PUT /rest/api/portfolios/portfolios/{portfolio-id}/setOwner/{newOwnerId}
+	 *	parameters:
+	 *		- portfolio-id
+	 *		- newOwnerId
+	 *	return:
+	 **/
+	@Path("/portfolios/portfolio/{portfolio-id}/setOwner/{newOwnerId}")
+	@PUT
+	@Consumes(MediaType.APPLICATION_XML)
+	@Produces(MediaType.APPLICATION_XML)
+	public String putPortfolioOwner( String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @PathParam("portfolio-id") String portfolioUuid, @PathParam("newOwnerId") int newOwner, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest )
+	{
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
+		boolean retval = false;
+		
+		try
+		{
+			c = SqlUtils.getConnection(servContext);
+			// Check if logged user is either admin, or owner of the current portfolio
+			if( credential.isAdmin(c, ui.userId) || credential.isOwner(c, ui.userId, portfolioUuid) )
+			{
+				retval = credential.putPortfolioOwner(c, portfolioUuid, ui.userId);
+				logRestRequest(httpServletRequest, xmlPortfolio, null, Status.OK.getStatusCode());
+			}
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, xmlPortfolio, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+		
+		return Boolean.toString(retval);
+	}
+
+	/**
 	 *	Modify some portfolio option
 	 *	PUT /rest/api/portfolios/portfolios/{portfolio-id}
 	 *	parameters:
@@ -1654,7 +1701,7 @@ public class RestServicePortfolio
 			String newcode = tgtcode;
 			int num = 0;
 			c = SqlUtils.getConnection(servContext);
-			while( dataProvider.isCodeExist(c, newcode) )
+			while( dataProvider.isCodeExist(c, newcode, null) )
 				newcode = tgtcode+" ("+ num++ +")";
 			tgtcode = newcode;
 
@@ -1717,7 +1764,7 @@ public class RestServicePortfolio
 			/// Check if code exist, find a suitable one otherwise. Eh.
 			String newcode = tgtcode;
 			c = SqlUtils.getConnection(servContext);
-			if( dataProvider.isCodeExist(c, newcode) )
+			if( dataProvider.isCodeExist(c, newcode, null) )
 			{
 				return Response.status(Status.CONFLICT).entity("code exist").build();
 			}
@@ -2050,6 +2097,10 @@ public class RestServicePortfolio
 			logRestRequest(httpServletRequest, returnValue, returnValue, Status.OK.getStatusCode());
 
 			return returnValue;
+		}
+		catch( RestWebApplicationException e )
+		{
+			throw e;
 		}
 		catch(Exception ex)
 		{
@@ -2986,7 +3037,7 @@ public class RestServicePortfolio
 		}
 		catch(RestWebApplicationException ex)
 		{
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw ex;
 		}
 		catch(Exception ex)
 		{
@@ -4866,6 +4917,10 @@ public class RestServicePortfolio
 
 			c = SqlUtils.getConnection(servContext);
 			returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"),new MimeType("text/xml"), httpServletRequest, uploadedInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
+		}
+		catch( RestWebApplicationException e )
+		{
+			throw e;
 		}
 		catch( Exception e )
 		{
