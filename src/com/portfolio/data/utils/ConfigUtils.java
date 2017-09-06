@@ -55,8 +55,8 @@ public class ConfigUtils
 			while ((line = readerSrce.readLine())!=null){
 				if (!line.startsWith("#") && line.length()>2) { // ce n'est pas un commentaire et longueur>=3 ex: x=b est le minumum
 					int cut = line.indexOf("=");
-					variable = line.substring(0, cut);
-					value = line.substring(cut+1);
+					variable = line.substring(0, cut).trim();
+					value = line.substring(cut+1).trim();
 					attributes.put(variable, value);
 				}
 			}
