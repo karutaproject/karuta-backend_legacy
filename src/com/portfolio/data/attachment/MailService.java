@@ -158,12 +158,13 @@ public class MailService  extends HttpServlet {
 		String notification = ConfigUtils.get("notification");
 		logger.trace("Message via: "+notification);
 
+		int retval = 0;
 		try
 		{
 			if( "email".equals(notification) )
 			{
 //				System.out.println("SENDING: "+message);
-				MailUtils.postMail(config, recipient, sender, subject, message, logger);
+				retval = MailUtils.postMail(config, recipient, sender, subject, message, logger);
 				logger.trace("Mail to: "+recipient+"; from: "+sender+" by uid: "+uid);
 			}
 			else if( "sakai".equals(notification) )
@@ -179,6 +180,9 @@ public class MailService  extends HttpServlet {
 					logger.trace("Message sent to: "+user+" -> "+status);
 				}
 			}
+			else if( null == notification )	// Notification type not set or commented
+			{
+			}
 			else
 			{
 				logger.error("Unknown notification method: "+notification);
@@ -190,8 +194,11 @@ public class MailService  extends HttpServlet {
 			logger.error(e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
+		
 		try
 		{
+			if( retval < 0 )
+				response.setStatus(HttpServletResponse.SC_GONE);
 			response.getOutputStream().close();
 			request.getInputStream().close();
 		}

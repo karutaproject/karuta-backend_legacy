@@ -55,9 +55,7 @@ public interface DataProvider {
 	public void writeLog(Connection c, String url, String method, String headers, String inBody, String outBody, int code);
 
 	/// Relatif à l'authentification
-	public String[] postCredential(String login, String password, Integer userId) throws ServletException, IOException;
 	public String[] postCredentialFromXml(Connection c, Integer userId, String username, String password, String substitute) throws ServletException, IOException;
-	public void getCredential(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException;
 	public String getMysqlUserUid (Connection c, String login) throws Exception;
 	@Deprecated
 	public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception;
@@ -76,13 +74,14 @@ public interface DataProvider {
 
 	public Object postPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in,  int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws Exception;
 	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2,
-			HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws FileNotFoundException, IOException;
+			HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws Exception;
 	public Object postInstanciatePortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner ) throws Exception;
 	public Object postCopyPortfolio(Connection c, MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId, boolean setOwner ) throws Exception;
 
 	public Object deletePortfolio(Connection c, String portfolioUuid, int userId, int groupId) throws Exception;
 
-	public boolean isCodeExist( Connection c, String code );
+	// Same code allowed with nodes in different portfolio, and not root node
+	public boolean isCodeExist( Connection c, String code, String nodeuuid );
 
 	/// Relatif aux modèles
 	// Deprecated I think

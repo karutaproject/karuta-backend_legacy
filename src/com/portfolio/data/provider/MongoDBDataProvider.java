@@ -211,7 +211,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public boolean isCodeExist( Connection c, String code )
+	public boolean isCodeExist( Connection c, String code, String nodeuuid )
 	{
 		return false;
 	}
@@ -270,20 +270,6 @@ public class MongoDBDataProvider implements DataProvider {
 			int userId, int groupId,String resources, int substid) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	@Override
-	public String[] postCredential(String login, String password, Integer UserId) throws ServletException, IOException {
-		return null;
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void getCredential(HttpServletRequest request,
-			HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -392,7 +378,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2,
-			HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws FileNotFoundException, IOException
+			HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws Exception
 			{
 		// TODO Auto-generated method stub
 		return null;

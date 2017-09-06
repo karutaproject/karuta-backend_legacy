@@ -55,7 +55,19 @@ public class MessageService  extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 	{
 		/// Check if user has an account
+		HttpSession session = request.getSession(false);
+		if( session == null )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
+		int uid = (Integer) session.getAttribute("uid");
+		if( uid == 0 )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
 		/// From
 		/// Recipient

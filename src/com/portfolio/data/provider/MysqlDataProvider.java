@@ -1091,16 +1091,25 @@ public class MysqlDataProvider implements DataProvider {
 				if( code != null )
 				{
 					Node codeContent = code.getFirstChild();
+					
 					String codeVal;
 					if( codeContent != null )
 					{
 						codeVal = codeContent.getNodeValue();
-						String sq = "UPDATE node SET code=? WHERE node_uuid=uuid2bin(?)";
-						st = c.prepareStatement(sq);
-						st.setString(1, codeVal);
-						st.setString(2, nodeUuid);
-						st.executeUpdate();
-						st.close();
+						// Check if code already exists
+						if( isCodeExist(c, codeVal, nodeUuid) )
+						{
+							throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
+						}
+						else
+						{
+							String sq = "UPDATE node SET code=? WHERE node_uuid=uuid2bin(?)";
+							st = c.prepareStatement(sq);
+							st.setString(1, codeVal);
+							st.setString(2, nodeUuid);
+							st.executeUpdate();
+							st.close();
+						}
 					}
 				}
 			}
@@ -1129,6 +1138,10 @@ public class MysqlDataProvider implements DataProvider {
 			st.setString(5,nodeUuid);
 
 			return st.executeUpdate();
+		}
+		catch(RestWebApplicationException e)
+		{
+			throw e;
 		}
 		catch(Exception ex)
 		{
@@ -2340,7 +2353,7 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				
 				// Simple query
-				if( isCodeExist(c, code) )
+				if( isCodeExist(c, code, null) )
 					throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
 				
 				nodelist.item(0).setTextContent(code);
@@ -2367,8 +2380,9 @@ public class MysqlDataProvider implements DataProvider {
 		/// If we instanciate, don't need the designer role
 //		if( !parseRights )
 		{
+			int groupid = postCreateRole(c, portfolioUuid, "all", userId);
 			/// Creer groupe 'designer', 'all' est mis avec ce qui est specifique dans le xml reçu
-			int groupid = postCreateRole(c, portfolioUuid, "designer", userId);
+			groupid = postCreateRole(c, portfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
@@ -2385,8 +2399,9 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
+	// Same code allowed with nodes in different portfolio, and not root node
 	@Override
-	public boolean isCodeExist( Connection c, String code )
+	public boolean isCodeExist( Connection c, String code, String nodeuuid )
 	{
 		boolean response = false;
 		String sql;
@@ -2394,10 +2409,18 @@ public class MysqlDataProvider implements DataProvider {
 		ResultSet rs = null;
 		try
 		{
-			// Retire la personne du rôle
-			sql = "SELECT bin2uuid(portfolio_id) FROM node WHERE code=?";
+			sql = "SELECT bin2uuid(portfolio_id) FROM node " +
+					"WHERE asm_type=? AND code=? ";
+			if( nodeuuid != null )
+				sql += "AND node_uuid!=uuid2bin(?) AND portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
 			st = c.prepareStatement(sql);
-			st.setString(1, code);
+			st.setString(1, "asmRoot");
+			st.setString(2, code);
+			if(nodeuuid != null)
+			{
+				st.setString(3, nodeuuid);
+				st.setString(4, nodeuuid);
+			}
 			rs = st.executeQuery();
 
 			if( rs.next() )
@@ -5258,8 +5281,10 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
+			/// Create base group
+			int groupid = postCreateRole(c, newPortfolioUuid, "all", userId);
 			/// Finalement on cree un rele designer
-			int groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);
+			groupid = postCreateRole(c, newPortfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
 			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
@@ -6049,17 +6074,15 @@ public class MysqlDataProvider implements DataProvider {
 				st.setString(1, portfolioCode);
 				st.executeUpdate();
 				st.close();
-	
-				t1e = System.currentTimeMillis();
-	
-				/// Find the right starting node we want
+				
+				/// Try if the tag sent exist in code
 				sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
 						"FROM t_data_node n2 " +
-						"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
+						"WHERE n2.code=? AND n2.portfolio_id=uuid2bin(?)";
 				st = c.prepareStatement(sql);
 				st.setString(1, tag);
 				st.setString(2, portfolioCode);
-	
+
 				res = st.executeQuery();
 				String pUuid="";
 				if( res.next() )	// Take the first one declared
@@ -6069,13 +6092,34 @@ public class MysqlDataProvider implements DataProvider {
 					res.close();
 					st.close();
 				}
-				else
+				else	// Otherwise it's with semantictag, maybe
 				{
-					res.close();
-					st.close();
-					return "Selection non existante.";
+					/// Find the right starting node we want
+					sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
+							"FROM t_data_node n2 " +
+							"WHERE n2.semantictag = ? AND n2.portfolio_id=uuid2bin(?)";
+					st = c.prepareStatement(sql);
+					st.setString(1, tag);
+					st.setString(2, portfolioCode);
+		
+					res = st.executeQuery();
+					if( res.next() )	// Take the first one declared
+					{
+						baseUuid = res.getString("nUuid");
+						pUuid = res.getString("pUuid");
+						res.close();
+						st.close();
+					}
+					else
+					{
+						res.close();
+						st.close();
+						return "Selection non existante.";
+					}
 				}
 			}
+			
+			t1e = System.currentTimeMillis();
 
 			t2 = System.currentTimeMillis();
 
@@ -7049,17 +7093,14 @@ public class MysqlDataProvider implements DataProvider {
 				st.setString(1, portfolioCode);
 				st.executeUpdate();
 				st.close();
-	
-	//			t1a = System.currentTimeMillis();
-	
-				/// Find the right starting node we want
+
+				/// Check if we can find a code with the tag sent
 				sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
 						"FROM t_data_node n2 " +
-						"WHERE n2.semantictag=? AND n2.portfolio_id=uuid2bin(?)";
+						"WHERE n2.code=? AND n2.portfolio_id=uuid2bin(?)";
 				st = c.prepareStatement(sql);
 				st.setString(1, tag);
 				st.setString(2, portfolioCode);
-
 				res = st.executeQuery();
 				String pUuid="";
 				if( res.next() )	// Take the first one declared
@@ -7069,13 +7110,35 @@ public class MysqlDataProvider implements DataProvider {
 					res.close();
 					st.close();
 				}
-				else
+				else // If nothing, then continue with semantictag
 				{
-					res.close();
-					st.close();
-					return "Selection non existante.";
+					/// Find the right starting node we want
+					sql = "SELECT bin2uuid(n2.node_uuid) AS nUuid, bin2uuid(n2.portfolio_id) AS pUuid " +
+							"FROM t_data_node n2 " +
+							"WHERE n2.semantictag = ? AND n2.portfolio_id=uuid2bin(?)";
+					st = c.prepareStatement(sql);
+					st.setString(1, tag);
+					st.setString(2, portfolioCode);
+
+					res = st.executeQuery();
+					if( res.next() )	// Take the first one declared
+					{
+						baseUuid = res.getString("nUuid");
+						pUuid = res.getString("pUuid");
+						res.close();
+						st.close();
+					}
+					else
+					{
+						res.close();
+						st.close();
+						return "Selection non existante.";
+					}
 				}
 			}
+	
+//			t1a = System.currentTimeMillis();
+
 			
 //			t2 = System.currentTimeMillis();
 
@@ -8744,27 +8807,6 @@ public class MysqlDataProvider implements DataProvider {
 		return ret;
 	}
 
-	@Override
-	public String[] postCredential(String login, String password, Integer UserId) throws ServletException, IOException
-	{
-		try{
-			return cred.doPost(login, password);
-		}catch (ServletException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-
-	@Override
-	public void getCredential(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		try{
-			cred.doGet(request, response);
-		}catch (ServletException e) {
-			e.printStackTrace();
-		}
-	}
-
 	@Deprecated
 	@Override
 	public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception
@@ -9467,7 +9509,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws IOException
+	public Object postPortfolioZip(Connection c, MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest, InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights, String projectName) throws Exception
 	{
 		if(!cred.isAdmin(c, userId) && !cred.isCreator(c, userId))
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -9609,7 +9651,7 @@ public class MysqlDataProvider implements DataProvider {
 								continue;
 							
 							// Check if new code exists
-							if( isCodeExist(c, code) )
+							if( isCodeExist(c, code, null) )
 								throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
 							
 							// Replace content
@@ -9618,7 +9660,7 @@ public class MysqlDataProvider implements DataProvider {
 						else	// Otherwise, check if it exists
 						{
 							// Simple query
-							if( isCodeExist(c, code) )
+							if( isCodeExist(c, code, null) )
 								throw new RestWebApplicationException(Status.CONFLICT, "Existing code.");
 						}
 					}
@@ -9640,8 +9682,10 @@ public class MysqlDataProvider implements DataProvider {
 					}
 					updateMysqlPortfolioActive(c, portfolioUuid,true);
 
+					/// Create base group
+					int groupid = postCreateRole(c, portfolioUuid, "all", userId);
 					/// Finalement on cree un rele designer
-					int groupid = postCreateRole(c, portfolioUuid, "designer", userId);
+					groupid = postCreateRole(c, portfolioUuid, "designer", userId);
 
 					/// Ajoute la personne dans ce groupe
 					putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
@@ -9652,7 +9696,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		catch( Exception e )
 		{
-			e.printStackTrace();
+			throw e;
 		}
 
 		if( hasLoaded )
@@ -10369,7 +10413,9 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					is_admin = DomUtils.getInnerXml(children2.item(y));
 
-					int is_adminInt = Integer.parseInt(is_admin);
+					int is_adminInt = 0;
+					if( "1".equals(is_admin) )
+						is_adminInt = 1;
 
 					sql = "UPDATE credential SET is_admin = ? WHERE  userid = ?";
 
@@ -10383,7 +10429,9 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					is_designer = DomUtils.getInnerXml(children2.item(y));
 
-					int is_designerInt = Integer.parseInt(is_designer);
+					int is_designerInt = 0;
+					if( "1".equals(is_designer) )
+						is_designerInt = 1;
 
 					sql = "UPDATE credential SET is_designer = ? WHERE  userid = ?";
 
@@ -10397,7 +10445,9 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					active = DomUtils.getInnerXml(children2.item(y));
 
-					int activeInt = Integer.parseInt(active);
+					int activeInt = 0;
+					if( "1".equals(active))
+						activeInt = 1;
 
 					sql = "UPDATE credential SET active = ? WHERE  userid = ?";
 
@@ -10662,14 +10712,11 @@ public class MysqlDataProvider implements DataProvider {
 				stInsert.setString(6, active);
 			}
 
-			if(designerstr == null)
-			{
+			if("1".equals(designerstr))
+				designer = 1;
+			else
 				designer = 0;
-				stInsert.setInt(7, designer);
-			}else{
-				designer = Integer.parseInt(designerstr);
-				stInsert.setInt(7, designer);
-			}
+			stInsert.setInt(7, designer);
 
 			stInsert.executeUpdate();
 
@@ -14871,11 +14918,11 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				{
 					sql = "INSERT INTO t_struc_parentid " +
 							"SELECT node_uuid, node_parent_uuid, 0 " +
-							"FROM t_s_node_2 WHERE semantictag LIKE ? AND code LIKE ?";
+							"FROM t_s_node_2 WHERE semantictag LIKE ? AND code = ?";
 					//sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, node_children_uuid, code, asm_type, label FROM node WHERE portfolio_id = uuid2bin('c884bdcd-2165-469b-9939-14376f7f3500') AND metadata LIKE '%semantictag=%competence%'";
 					st = c.prepareStatement(sql);
 					st.setString(1, "%"+semtag_parent+"%");
-					st.setString(2, "%"+code_parent+"%");
+					st.setString(2, code_parent);
 					st.executeUpdate();
 
 					int level = 0;
@@ -15115,13 +15162,13 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 
 		try
 		{
-			if( username != null )
+			if( !"".equals(username) && username != null )
 			{
 				sql = "SELECT userid FROM credential WHERE login = ? ";
 				st = c.prepareStatement(sql);
 				st.setString(1, username);
 			}
-			else if( email != null )
+			else if( !"".equals(email) && email != null )
 			{
 				sql = "SELECT userid FROM credential WHERE email = ? ";
 				st = c.prepareStatement(sql);
