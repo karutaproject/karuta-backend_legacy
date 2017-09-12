@@ -31,6 +31,7 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -763,6 +764,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String getGroupRightsInfos(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("portfolioId") String portfolioId)
 	{
+		if( !isUUID(portfolioId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+		
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -822,6 +828,11 @@ public class RestServicePortfolio
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, "application/zip", MediaType.APPLICATION_OCTET_STREAM})
 	public Object getPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resource, @QueryParam("files") String files, @QueryParam("export") String export, @QueryParam("lang") String lang, @QueryParam("level") String cutoff)
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+		
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		Connection c = null;
@@ -929,6 +940,11 @@ public class RestServicePortfolio
 
 	private File getZipFile( String portfolioUuid, String portfolioContent, String lang, Document doc, HttpSession session ) throws IOException, XPathExpressionException
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		/// Temp file in temp directory
 		File tempDir = new File(System.getProperty("java.io.tmpdir", null));
 		File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
@@ -1245,6 +1261,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String putPortfolio( String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("active") String active, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		
@@ -1341,6 +1362,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String putPortfolioConfiguration(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portfolioUuid, @QueryParam("active") Boolean portfolioActive)
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		
@@ -1675,6 +1701,11 @@ public class RestServicePortfolio
 	@POST
 	public Object postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname, @QueryParam("owner") String setowner)
 	{
+		if( !isUUID(portfolioId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		String value = "Instanciate: "+portfolioId;
 
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
@@ -1743,6 +1774,11 @@ public class RestServicePortfolio
 	@POST
 	public Response postCopyPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("owner") String setowner )
 	{
+		if( !isUUID(portfolioId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		String value = "Instanciate: "+portfolioId;
 
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
@@ -2124,6 +2160,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String deletePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -2179,6 +2220,11 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public String getNode( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -2248,6 +2294,11 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public String getNodeWithChildren( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+		
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -2310,6 +2361,11 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public String getNodeMetadataWad( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -2368,6 +2424,11 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public String getNodeRights( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -2440,6 +2501,11 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public String postNodeRights( String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -2546,6 +2612,11 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public String getNodeBySemanticTag( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-uuid") String portfolioUuid,@PathParam("semantictag") String semantictag,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -2598,6 +2669,11 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public String getNodesBySemanticTag( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-uuid") String portfolioUuid,@PathParam("semantictag") String semantictag,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -2649,7 +2725,12 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
-//		long t_startRest = System.nanoTime();
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
+		//		long t_startRest = System.nanoTime();
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -2714,6 +2795,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeMetadata(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		Date time = new Date();
@@ -2784,6 +2870,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeMetadataWad(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		Date time = new Date();
@@ -2853,6 +2944,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeMetadataEpm(String xmlNode, @PathParam("nodeid") String nodeUuid, @QueryParam("group") int groupId, @QueryParam("info") String info, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
 		Date time = new Date();
@@ -2931,6 +3027,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		Date time = new Date();
@@ -2994,6 +3095,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		Date time = new Date();
@@ -3060,6 +3166,11 @@ public class RestServicePortfolio
 	@POST
 	public String postImportNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid)
 	{
+		if( !isUUID(srcuuid) || !isUUID(parentId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -3108,6 +3219,11 @@ public class RestServicePortfolio
 	@POST
 	public String postCopyNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid)
 	{
+		if( !isUUID(srcuuid) || !isUUID(parentId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -3218,6 +3334,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public Response postNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") Integer group, @PathParam("parent-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("group") int groupId)
 	{
+		if( !isUUID(parentId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		KEvent event = new KEvent();
@@ -3287,6 +3408,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public Response postMoveNodeUp(String xmlNode, @PathParam("node-id") String nodeId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest )
 	{
+		if( !isUUID(nodeId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+		
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
 		/*
@@ -3359,6 +3485,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public Response postChangeNodeParent(String xmlNode, @PathParam("node-id") String nodeId, @PathParam("parent-id") String parentId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest )
 	{
+		if( !isUUID(nodeId) || !isUUID(parentId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+		
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
 		/*
@@ -3420,6 +3551,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String postActionNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeId, @PathParam("action-name") String macro, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -3467,6 +3603,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String deleteNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-uuid") String nodeUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+		
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -3540,6 +3681,11 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public String getResource( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-parent-id") String nodeParentUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeParentUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -3597,6 +3743,11 @@ public class RestServicePortfolio
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public String getResources( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -3638,6 +3789,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String putResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("node-parent-uuid") String nodeParentUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeParentUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		/*
@@ -3729,6 +3885,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String postResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-parent-uuid") String nodeParentUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeParentUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -3921,6 +4082,11 @@ public class RestServicePortfolio
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public String getRolePortfolio( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("role") String role, @PathParam("portfolio-id") String portfolioId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept)
 	{
+		if( !isUUID(portfolioId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -4011,6 +4177,7 @@ public class RestServicePortfolio
 	 *	parameters:
 	 *	return:
 	 **/
+	@Deprecated
 	@Path("/models")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -4064,6 +4231,7 @@ public class RestServicePortfolio
 	 *	parameters:
 	 *	return:
 	 **/
+	@Deprecated
 	@Path("/models/{model-id}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -4174,6 +4342,10 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String deleteResource(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("resource-id") String resourceUuid,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(resourceUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -4368,6 +4540,10 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String getGroupsPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -4407,6 +4583,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String getUserGroupByPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+		
 		HttpSession session = httpServletRequest.getSession(true);
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -4780,6 +4961,11 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public String getNodeWithXSL( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @QueryParam("xsl-file") String xslFile, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("lang") String lang, @QueryParam("p1") String p1, @QueryParam("p2") String p2, @QueryParam("p3") String  p3)
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -4850,6 +5036,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String postNodeFromModelBySemanticTag(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @PathParam("semantic-tag") String semantictag, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId )
 	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
@@ -4943,6 +5134,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String getUsersByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 		Connection c = null;
 
@@ -4982,6 +5178,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String getGroupsByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(portfolioUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 		Connection c = null;
 
@@ -5454,6 +5655,11 @@ public class RestServicePortfolio
 	public String postMacro(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("uuid") String uuid, @PathParam("macro-name") String macroName,
 			@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest)
 	{
+		if( !isUUID(uuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
@@ -5729,6 +5935,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String getRightsGroup( @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portfolio, @QueryParam("user") Integer queryuser, @QueryParam("role") String role)
 	{
+		if( !isUUID(portfolio) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
@@ -5778,6 +5989,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String getPortfolioRightInfo( @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portId )
 	{
+		if( !isUUID(portId) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue="";
@@ -5937,6 +6153,11 @@ public class RestServicePortfolio
 	@Produces(MediaType.APPLICATION_XML)
 	public String postRightGroups(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolio, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest )
 	{
+		if( !isUUID(portfolio) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
 		UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
 		/**
@@ -6304,6 +6525,18 @@ public class RestServicePortfolio
 		}
 	}
 
-
+	public boolean isUUID(String uuidstr)
+	{
+		try
+		{
+			UUID uuid = UUID.fromString(uuidstr);
+		}
+		catch( Exception e )
+		{
+			return false;
+		}
+		
+		return true;
+	}
 
 }
