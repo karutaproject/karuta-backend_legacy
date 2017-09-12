@@ -6489,10 +6489,11 @@ public class MysqlDataProvider implements DataProvider {
 					String portfolioUuid = res.getString("puuid");
 					// Process et remplacement de 'user' par la personne en cours
 					String meta = res.getString("metadata_wad");
-	
-					if( meta.contains("user") )
+
+					String onlyuser = "(?<![-=+])\b(user)\b(?![-=+])";
+					if( meta.matches(onlyuser) )
 					{
-						meta = meta.replaceAll("user", login);
+						meta = meta.replaceAll(onlyuser, login);
 	
 						/// Replace metadata with actual username
 						sql = "UPDATE t_data_node t SET t.metadata_wad=? WHERE t.new_uuid=uuid2bin(?)";
@@ -12059,7 +12060,8 @@ public class MysqlDataProvider implements DataProvider {
 				login = res.getString("login");
 
 			/// Remplace 'user' par le login de l'utilisateur
-			meta = meta.replaceAll("user", login);
+			String onlyuser = "(?<![-=+])\b(user)\b(?![-=+])";
+			meta = meta.replaceAll(onlyuser, login);
 
 			/// Ajoute un droit dans la table
 
