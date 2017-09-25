@@ -620,7 +620,8 @@ public class XSLService  extends HttpServlet {
 		String format = request.getParameter("format");
 //		String format = formatNode.item(0).getTextContent();
 		String parameters = request.getParameter("parameters");
-
+		parameters = parameters + ";urlimage:"+internalServer;
+		
 		System.out.println("POST PARAMETERS: ");
 		System.out.println("xsl: "+xslfile);
 		System.out.println("format: "+format);

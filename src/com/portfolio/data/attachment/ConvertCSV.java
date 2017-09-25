@@ -15,6 +15,7 @@
 
 package com.portfolio.data.attachment;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -30,6 +31,7 @@ import javax.servlet.http.HttpSession;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.io.IOUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -84,7 +86,7 @@ public class ConvertCSV  extends HttpServlet {
 		if( csvsep != null && !"".equals(csvsep) )
 			csvseparator = csvsep.charAt(0);	// Otherwise just fetch the first character defined
 		
-		JSONObject data = new JSONObject();
+		JSONObject data = null;
 		try
 		{
 			DiskFileItemFactory factory = new DiskFileItemFactory();
@@ -92,8 +94,8 @@ public class ConvertCSV  extends HttpServlet {
 			List<FileItem> items = upload.parseRequest(request);
 			Iterator<FileItem> iter = items.iterator();
 
-			List<String[]> meta = new ArrayList<String[]>();
-			List<List<String[]>> linesData = new ArrayList<List<String[]>>();
+//			List<String[]> meta = new ArrayList<String[]>();
+//			List<List<String[]>> linesData = new ArrayList<List<String[]>>();
 
 			while( iter.hasNext() )
 			{
@@ -109,48 +111,31 @@ public class ConvertCSV  extends HttpServlet {
 					if( "uploadfile".equals(fieldname) )	// name="uploadfile"
 					{
 						InputStreamReader isr = new InputStreamReader(item.getInputStream());
-						CSVReader reader = new CSVReader(isr, csvseparator);
-						String[] headerLine;
-						String[] dataLine;
-
-						headerLine = reader.readNext();
-						if( headerLine == null )
-							break;
-
-						dataLine = reader.readNext();
-						if( dataLine == null )
-							break;
-
-						for( int i=0; i<headerLine.length; ++i )
+						byte[] rawdata = IOUtils.toByteArray(isr);
+						InputStreamReader byteReader = new InputStreamReader(new ByteArrayInputStream(rawdata));
+						
+						// Different tries depending on locale
+						data = ReadCSV(byteReader, ',');
+						if( data.length() == 0 )
 						{
-							data.put(headerLine[i], dataLine[i]);
+							// Closing the CSVReader also close the byteReader, no choice
+							byteReader = new InputStreamReader(new ByteArrayInputStream(rawdata));
+							data = ReadCSV(byteReader, ';');
 						}
-
-						headerLine = reader.readNext();
-						if( headerLine == null )
-							break;
-
-						JSONArray lines = new JSONArray();
-						while( (dataLine = reader.readNext()) != null )
+						if( data.length() == 0 )
 						{
-							JSONObject lineInfo = new JSONObject();
-							for( int i=0; i<headerLine.length; ++i )
-							{
-								lineInfo.put(headerLine[i], dataLine[i]);
-							}
-							lines.put(lineInfo);
+							byteReader = new InputStreamReader(new ByteArrayInputStream(rawdata));
+							data = ReadCSV(byteReader, csvseparator);
 						}
-
-						data.put("lines", lines);
-
-						isr.close();
+						
+						byteReader.close();
 					}
 				}
 			}
 		}
 		catch( Exception e )
 		{
-
+			e.printStackTrace();
 		}
 
 		PrintWriter out = null;
@@ -173,6 +158,56 @@ public class ConvertCSV  extends HttpServlet {
 			}
 		}
 
+	}
+	
+	protected JSONObject ReadCSV(InputStreamReader isr, char separator) throws IOException
+	{
+		JSONObject data = new JSONObject();
+		CSVReader reader = new CSVReader(isr, separator);
+		String[] headerLine;
+		String[] dataLine;
+
+		headerLine = reader.readNext();
+		if( headerLine == null || headerLine.length == 1 )	// Need at least 2 columns
+		{
+			reader.close();
+			return data;
+		}
+
+		dataLine = reader.readNext();
+		if( dataLine == null )
+		{
+			reader.close();
+			return data;
+		}
+
+		for( int i=0; i<headerLine.length; ++i )
+		{
+			data.put(headerLine[i], dataLine[i]);
+		}
+
+		headerLine = reader.readNext();
+		if( headerLine == null )
+		{
+			reader.close();
+			return data;
+		}
+
+		JSONArray lines = new JSONArray();
+		while( (dataLine = reader.readNext()) != null )
+		{
+			JSONObject lineInfo = new JSONObject();
+			for( int i=0; i<headerLine.length; ++i )
+			{
+				lineInfo.put(headerLine[i], dataLine[i]);
+			}
+			lines.put(lineInfo);
+		}
+
+		data.put("lines", lines);
+
+		reader.close();	// Also close the byteReader
+		return data;
 	}
 }
 

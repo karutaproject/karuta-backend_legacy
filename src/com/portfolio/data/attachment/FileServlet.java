@@ -833,6 +833,12 @@ public class FileServlet  extends HttpServlet
 			// ====== PathInfo: /resources/file[/{uuid}?lang={fr|en}&size={S|L}] pathInfo
 			//			String uri = request.getRequestURI();
 			String[] token = url.split("/");
+			if( token.length < 2 )
+			{
+				response.setStatus(404);
+				response.getOutputStream().close();
+				return;
+			}
 			String uuid = token[1];
 			//wadbackend.WadUtilities.appendlogfile(logFName, "GETfile:"+request.getRemoteAddr()+":"+uri);
 
