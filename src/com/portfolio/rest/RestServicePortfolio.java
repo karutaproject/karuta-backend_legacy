@@ -445,7 +445,13 @@ public class RestServicePortfolio
 		{
 			c = SqlUtils.getConnection(servContext);
 
-			String xmlGroups = dataProvider.getListUsers(c, ui.userId, username, firstname, lastname);
+			String xmlGroups = "";
+			if(credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId))
+				xmlGroups = dataProvider.getListUsers(c, ui.userId, username, firstname, lastname);
+			else if(ui.userId != 0)
+				xmlGroups = dataProvider.getInfUser(c, ui.userId, ui.userId);
+			else
+				throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
 			logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
 			return xmlGroups;
