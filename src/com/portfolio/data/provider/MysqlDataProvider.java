@@ -10319,6 +10319,7 @@ public class MysqlDataProvider implements DataProvider {
 	{
 		String result1 = null;
 		Integer  id = 0;
+		String originalp = null;
 		String  password = null;
 		String  email = null;
 		String  username = null;
@@ -10327,6 +10328,7 @@ public class MysqlDataProvider implements DataProvider {
 		String  active = null;
 		String is_admin = null;
 		String is_designer = null;
+		String hasSubstitute = null;
 
 		//On prepare les requetes SQL
 		PreparedStatement st;
@@ -10358,148 +10360,169 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			NodeList children2 = null;
 			children2 = infUser.getChildNodes();
+			/// Fetch parameters
+			/// TODO Make some function out of this I think
 			for(int y=0;y<children2.getLength();y++)
 			{
 				if(children2.item(y).getNodeName().equals("username"))
-				{
-					username = DomUtils.getInnerXml(children2.item(y));
-
-					sql = "UPDATE credential SET login = ? WHERE  userid = ?";
-
-					st = c.prepareStatement(sql);
-					st.setString(1, username);
-					st.setInt(2, userid2);
-					st.executeUpdate();
-				}
+				{ username = DomUtils.getInnerXml(children2.item(y)); }
+				if(children2.item(y).getNodeName().equals("prevpass"))
+				{ originalp = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("password"))
-				{
-					password = DomUtils.getInnerXml(children2.item(y));
-
-					sql = "UPDATE credential SET password = UNHEX(SHA1(?)) WHERE  userid = ?";
-					if (dbserveur.equals("oracle")){
-						sql = "UPDATE credential SET password = crypt(?) WHERE  userid = ?";
-					}
-
-					st = c.prepareStatement(sql);
-					st.setString(1, password);
-					st.setInt(2, userid2);
-					st.executeUpdate();
-				}
+				{ password = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("firstname"))
-				{
-					firstname = DomUtils.getInnerXml(children2.item(y));
-
-					sql = "UPDATE credential SET display_firstname = ? WHERE  userid = ?";
-
-					st = c.prepareStatement(sql);
-					st.setString(1, firstname);
-					st.setInt(2, userid2);
-					st.executeUpdate();
-				}
+				{ firstname = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("lastname"))
-				{
-					lastname = DomUtils.getInnerXml(children2.item(y));
-
-					sql = "UPDATE credential SET display_lastname = ? WHERE  userid = ?";
-
-					st = c.prepareStatement(sql);
-					st.setString(1, lastname);
-					st.setInt(2, userid2);
-					st.executeUpdate();
-				}
+				{ lastname = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("email"))
-				{
-					email = DomUtils.getInnerXml(children2.item(y));
-
-					sql = "UPDATE credential SET email = ? WHERE  userid = ?";
-
-					st = c.prepareStatement(sql);
-					st.setString(1, email);
-					st.setInt(2, userid2);
-					st.executeUpdate();
-				}
+				{ email = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("admin"))
-				{
-					is_admin = DomUtils.getInnerXml(children2.item(y));
-
-					int is_adminInt = 0;
-					if( "1".equals(is_admin) )
-						is_adminInt = 1;
-
-					sql = "UPDATE credential SET is_admin = ? WHERE  userid = ?";
-
-					st = c.prepareStatement(sql);
-					st.setInt(1, is_adminInt);
-					st.setInt(2, userid2);
-					st.executeUpdate();
-				}
-//				/*
+				{ is_admin = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("designer"))
-				{
-					is_designer = DomUtils.getInnerXml(children2.item(y));
-
-					int is_designerInt = 0;
-					if( "1".equals(is_designer) )
-						is_designerInt = 1;
-
-					sql = "UPDATE credential SET is_designer = ? WHERE  userid = ?";
-
-					st = c.prepareStatement(sql);
-					st.setInt(1, is_designerInt);
-					st.setInt(2, userid2);
-					st.executeUpdate();
-				}
-				//*/
+				{ is_designer = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("active"))
-				{
-					active = DomUtils.getInnerXml(children2.item(y));
-
-					int activeInt = 0;
-					if( "1".equals(active))
-						activeInt = 1;
-
-					sql = "UPDATE credential SET active = ? WHERE  userid = ?";
-
-					st = c.prepareStatement(sql);
-					st.setInt(1, activeInt);
-					st.setInt(2, userid2);
-					st.executeUpdate();
-				}
-
+				{ active = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("substitute"))
+				{ hasSubstitute = DomUtils.getInnerXml(children2.item(y)); }
+				
+				/// Check if user has the correct password to execute changes
+				boolean isOK = false;
+				if( originalp != null )
 				{
-					String hasSubstitute = DomUtils.getInnerXml(children2.item(y));
-
-					/// Add the possibility of user substitution
-					PreparedStatement subst = null;
-					/// FIXME: More complete rule to use
-					if( "1".equals(hasSubstitute) )
-					{	// id=0, don't check who this person can substitute (except root)
-						if (dbserveur.equals("mysql")){
-							sql = "INSERT IGNORE INTO credential_substitution(userid, id, type) VALUES(?,0,'USER')";
-						}else{
-							sql = "MERGE INTO credential_substitution cs "
-								+ "USING "
-								+ "(select * from credential_substitution where type='USER' and id=0 and userid=?) t "
-								+ " ON (cs.userid=t.userid and cs.id=t.id and cs.type=t.type) "
-								+ " WHEN NOT MATCHED THEN "
-								+ " INSERT (userid, id, type) VALUES (t.userid,t.id,t.type)";
-						}
-						subst = c.prepareStatement(sql);
-						subst.setInt(1, userid2);
-						subst.execute();
-					}
-					else if( "0".equals(hasSubstitute) )
+					sql = "SELECT userid FROM credential WHERE userid=? AND password=UNHEX(SHA1(?))";
+					st = c.prepareStatement(sql);
+					st.setInt(1, userid2);
+					st.setString(2, password);
+					ResultSet res = st.executeQuery();
+					if( res.next() )
 					{
-						sql = "DELETE FROM credential_substitution WHERE userid=? AND id=0";
-						subst = c.prepareStatement(sql);
-						subst.setInt(1, userid2);
-						subst.execute();
+						isOK = true;
 					}
-					if( subst != null )
-						subst.close();
 				}
-
+				
+				/// Send queries
+				if( isOK )
+				{
+					if( username != null )
+					{
+						sql = "UPDATE credential SET login = ? WHERE  userid = ?";
+	
+						st = c.prepareStatement(sql);
+						st.setString(1, username);
+						st.setInt(2, userid2);
+						st.executeUpdate();
+					}
+					if( password != null )
+					{
+						sql = "UPDATE credential SET password = UNHEX(SHA1(?)) WHERE  userid = ?";
+						if (dbserveur.equals("oracle")){
+							sql = "UPDATE credential SET password = crypt(?) WHERE  userid = ?";
+						}
+	
+						st = c.prepareStatement(sql);
+						st.setString(1, password);
+						st.setInt(2, userid2);
+						st.executeUpdate();
+					}
+					if( firstname != null )
+					{
+						sql = "UPDATE credential SET display_firstname = ? WHERE  userid = ?";
+	
+						st = c.prepareStatement(sql);
+						st.setString(1, firstname);
+						st.setInt(2, userid2);
+						st.executeUpdate();
+					}
+					if( lastname != null )
+					{
+						sql = "UPDATE credential SET display_lastname = ? WHERE  userid = ?";
+	
+						st = c.prepareStatement(sql);
+						st.setString(1, lastname);
+						st.setInt(2, userid2);
+						st.executeUpdate();
+					}
+					if( email != null )
+					{
+						sql = "UPDATE credential SET email = ? WHERE  userid = ?";
+	
+						st = c.prepareStatement(sql);
+						st.setString(1, email);
+						st.setInt(2, userid2);
+						st.executeUpdate();
+					}
+					if( is_admin != null )
+					{
+						int is_adminInt = 0;
+						if( "1".equals(is_admin) )
+							is_adminInt = 1;
+	
+						sql = "UPDATE credential SET is_admin = ? WHERE  userid = ?";
+	
+						st = c.prepareStatement(sql);
+						st.setInt(1, is_adminInt);
+						st.setInt(2, userid2);
+						st.executeUpdate();
+					}
+					if( is_designer != null )
+					{
+						int is_designerInt = 0;
+						if( "1".equals(is_designer) )
+							is_designerInt = 1;
+	
+						sql = "UPDATE credential SET is_designer = ? WHERE  userid = ?";
+	
+						st = c.prepareStatement(sql);
+						st.setInt(1, is_designerInt);
+						st.setInt(2, userid2);
+						st.executeUpdate();
+					}
+					if( active != null )
+					{
+						int activeInt = 0;
+						if( "1".equals(active))
+							activeInt = 1;
+	
+						sql = "UPDATE credential SET active = ? WHERE  userid = ?";
+	
+						st = c.prepareStatement(sql);
+						st.setInt(1, activeInt);
+						st.setInt(2, userid2);
+						st.executeUpdate();
+					}
+					if( hasSubstitute != null )
+					{
+						/// Add the possibility of user substitution
+						PreparedStatement subst = null;
+						/// FIXME: More complete rule to use
+						if( "1".equals(hasSubstitute) )
+						{	// id=0, don't check who this person can substitute (except root)
+							if (dbserveur.equals("mysql")){
+								sql = "INSERT IGNORE INTO credential_substitution(userid, id, type) VALUES(?,0,'USER')";
+							}else{
+								sql = "MERGE INTO credential_substitution cs "
+									+ "USING "
+									+ "(select * from credential_substitution where type='USER' and id=0 and userid=?) t "
+									+ " ON (cs.userid=t.userid and cs.id=t.id and cs.type=t.type) "
+									+ " WHEN NOT MATCHED THEN "
+									+ " INSERT (userid, id, type) VALUES (t.userid,t.id,t.type)";
+							}
+							subst = c.prepareStatement(sql);
+							subst.setInt(1, userid2);
+							subst.execute();
+						}
+						else if( "0".equals(hasSubstitute) )
+						{
+							sql = "DELETE FROM credential_substitution WHERE userid=? AND id=0";
+							subst = c.prepareStatement(sql);
+							subst.setInt(1, userid2);
+							subst.execute();
+						}
+						if( subst != null )
+							subst.close();
+					}
+				}
+				
 			}
 		}
 
@@ -10516,6 +10539,7 @@ public class MysqlDataProvider implements DataProvider {
 		
 		String result1 = null;
 		Integer  id = 0;
+		String  originalp = null;
 		String  password = null;
 		String  email = null;
 		String  username = null;
@@ -10556,34 +10580,63 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			NodeList children2 = null;
 			children2 = infUser.getChildNodes();
+			/// Get parameters
 			for(int y=0;y<children2.getLength();y++)
 			{
-				if(children2.item(y).getNodeName().equals("password"))
+				if(children2.item(y).getNodeName().equals("prevpass"))
+				{
+					originalp = DomUtils.getInnerXml(children2.item(y));
+				}
+				else if(children2.item(y).getNodeName().equals("password"))
 				{
 					password = DomUtils.getInnerXml(children2.item(y));
-
+				}
+				else if(children2.item(y).getNodeName().equals("email"))
+				{
+					email = DomUtils.getInnerXml(children2.item(y));
+				}
+			}
+			
+			/// Checking if previous password match
+			boolean isOK = false;
+			if( originalp != null )
+			{
+				sql = "SELECT userid FROM credential WHERE userid=? AND password=UNHEX(SHA1(?))";
+				st = c.prepareStatement(sql);
+				st.setInt(1, userid2);
+				st.setString(2, password);
+				ResultSet res = st.executeQuery();
+				if( res.next() )
+				{
+					isOK = true;
+				}
+			}
+			/// Executing changes if valid
+			if( isOK )
+			{
+				if( password != null )
+				{
 					sql = "UPDATE credential SET password = UNHEX(SHA1(?)) WHERE  userid = ?";
 					if (dbserveur.equals("oracle")){
 						sql = "UPDATE credential SET password = crypt(?) WHERE  userid = ?";
 					}
-
+	
 					st = c.prepareStatement(sql);
 					st.setString(1, password);
 					st.setInt(2, userid2);
 					st.executeUpdate();
 				}
-				if(children2.item(y).getNodeName().equals("email"))
+				if( email != null )
 				{
-					email = DomUtils.getInnerXml(children2.item(y));
-
 					sql = "UPDATE credential SET email = ? WHERE  userid = ?";
-
+	
 					st = c.prepareStatement(sql);
 					st.setString(1, email);
 					st.setInt(2, userid2);
 					st.executeUpdate();
 				}
 			}
+			
 		}
 
 		result1 = ""+userid2;
