@@ -3209,24 +3209,7 @@ public class MysqlDataProvider implements DataProvider {
 				st = c.prepareStatement(sql);
 				st.setString(1, portfolioUuid);
 			}
-			else if(cred.isPublic(c, null, portfolioUuid))	// Public case, looks like previous query, but with different rights
-			{
-				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
-						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
-						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, n.modif_date, " +
-						"r1.xsi_type AS r1_type, r1.content AS r1_content, r1.modif_date AS r1_modif_date, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
-						"r2.content AS r2_content, r2.modif_date AS r2_modif_date, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
-						"r3.content AS r3_content, r3.modif_date AS r3_modif_date, n.asm_type, n.xsi_type, " +
-						"1 AS RD, 0 AS WR, 0 AS SB, 0 AS DL, NULL AS types_id, NULL AS rules_id " +
-						"FROM node n " +
-						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +
-						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
-						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +
-						"WHERE portfolio_id=uuid2bin(?)";
-				st = c.prepareStatement(sql);
-				st.setString(1, portfolioUuid);
-			}
-			else
+			else if( cred.hasSomeRight(c, userId, portfolioUuid) )
 			{
 				/// FIXME: Il faudrait peut-etre prendre une autre strategie pour selectionner les bonnes donnees
 				// Cas proprietaire
@@ -3370,7 +3353,32 @@ public class MysqlDataProvider implements DataProvider {
 				st.setInt(1, userId);
 				st.setString(2, portfolioUuid);
 			}
-			rs = st.executeQuery();   // Pas sur si les 'statement' restent ouvert apres que la connexion soit fermee
+			else if(cred.isPublic(c, null, portfolioUuid))	// Public case, looks like previous query, but with different rights
+			{
+				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
+						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
+						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.res_node_uuid) AS res_node_uuid, n.modif_date, " +
+						"r1.xsi_type AS r1_type, r1.content AS r1_content, r1.modif_date AS r1_modif_date, bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, " +
+						"r2.content AS r2_content, r2.modif_date AS r2_modif_date, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, " +
+						"r3.content AS r3_content, r3.modif_date AS r3_modif_date, n.asm_type, n.xsi_type, " +
+						"1 AS RD, 0 AS WR, 0 AS SB, 0 AS DL, NULL AS types_id, NULL AS rules_id " +
+						"FROM node n " +
+						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +
+						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
+						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +
+						"WHERE portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, portfolioUuid);
+			}
+			else
+			{
+				// Neither admin or creator,
+				// Neither owner or have some right
+				// Neither public
+				sql = "SELECT NULL LIMIT 0;";
+				st = c.prepareStatement(sql);
+			}
+			rs = st.executeQuery();
 
 			time6 = System.currentTimeMillis();
 		}

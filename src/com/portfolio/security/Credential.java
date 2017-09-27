@@ -173,6 +173,58 @@ public class Credential
 		return reponse;
 	}
 
+	// Has some right: whether ownership, or given by someone
+	public boolean hasSomeRight(Connection c, int userId, String portfolio_uuid)
+	{
+		PreparedStatement st=null;
+		String sql;
+		ResultSet res=null;
+		boolean hasSomeRight = false;
+
+		try
+		{
+				/// Sinon on évalue le droit donnée directement
+				sql = "SELECT modif_user_id FROM portfolio WHERE modif_user_id = ? AND portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setInt(1, userId);
+				st.setString(2, portfolio_uuid);
+				res = st.executeQuery();
+				if(res.next())
+				{
+					hasSomeRight = true;
+				}
+				
+				st.close();
+				res.close();
+				
+				sql = "SELECT gu.userid FROM group_user gu, group_info gi, group_right_info gri " +
+						"WHERE gu.gid=gi.gid AND gi.grid=gri.grid AND " +
+						"gu.userid=? AND gri.portfolio_id=uuid2bin(?)";
+				st.setInt(1, userId);
+				st.setString(2, portfolio_uuid);
+				res = st.executeQuery();
+				if(res.next())
+				{
+					hasSomeRight = true;
+				}
+				
+				st.close();
+				res.close();
+		}
+		catch(Exception ex)
+		{
+			logger.error(ex.getMessage());
+			ex.printStackTrace();
+		}
+		finally
+		{
+			if( st != null ) try{ st.close(); }catch( SQLException e ){ e.printStackTrace(); }
+			if( res != null ) try{ res.close(); }catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		return hasSomeRight;
+	}
+
 	public boolean hasNodeRight(Connection c, int userId, int groupId, String node_uuid, String droit)
 	{
 		NodeRight nodeRight = getNodeRight(c, userId, groupId, node_uuid, null);
