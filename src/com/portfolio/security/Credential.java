@@ -183,7 +183,7 @@ public class Credential
 
 		try
 		{
-				/// Sinon on évalue le droit donnée directement
+				/// Evaluate ownership
 				sql = "SELECT modif_user_id FROM portfolio WHERE modif_user_id = ? AND portfolio_id=uuid2bin(?)";
 				st = c.prepareStatement(sql);
 				st.setInt(1, userId);
@@ -193,23 +193,26 @@ public class Credential
 				{
 					hasSomeRight = true;
 				}
-				
-				st.close();
-				res.close();
-				
-				sql = "SELECT gu.userid FROM group_user gu, group_info gi, group_right_info gri " +
-						"WHERE gu.gid=gi.gid AND gi.grid=gri.grid AND " +
-						"gu.userid=? AND gri.portfolio_id=uuid2bin(?)";
-				st.setInt(1, userId);
-				st.setString(2, portfolio_uuid);
-				res = st.executeQuery();
-				if(res.next())
+				else	// Check further for other shared rights
 				{
-					hasSomeRight = true;
+					st.close();
+					res.close();
+					
+					sql = "SELECT gu.userid FROM group_user gu, group_info gi, group_right_info gri " +
+							"WHERE gu.gid=gi.gid AND gi.grid=gri.grid AND " +
+							"gu.userid=? AND gri.portfolio_id=uuid2bin(?)";
+					st = c.prepareStatement(sql);
+					st.setInt(1, userId);
+					st.setString(2, portfolio_uuid);
+					res = st.executeQuery();
+					if(res.next())
+					{
+						hasSomeRight = true;
+					}
+					else
+					{
+					}
 				}
-				
-				st.close();
-				res.close();
 		}
 		catch(Exception ex)
 		{
