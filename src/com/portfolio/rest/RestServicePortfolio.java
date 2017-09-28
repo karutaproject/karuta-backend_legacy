@@ -1707,10 +1707,12 @@ public class RestServicePortfolio
 	@POST
 	public Object postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname, @QueryParam("owner") String setowner)
 	{
+		/*
 		if( !isUUID(portfolioId) )
 		{
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
+		//*/
 
 		String value = "Instanciate: "+portfolioId;
 
@@ -1780,10 +1782,12 @@ public class RestServicePortfolio
 	@POST
 	public Response postCopyPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId , @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("owner") String setowner )
 	{
+		/*
 		if( !isUUID(portfolioId) )
 		{
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
+		//*/
 
 		String value = "Instanciate: "+portfolioId;
 
@@ -3172,7 +3176,8 @@ public class RestServicePortfolio
 	@POST
 	public String postImportNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid)
 	{
-		if( !isUUID(srcuuid) || !isUUID(parentId) )
+//		if( !isUUID(srcuuid) || !isUUID(parentId) )
+		if( !isUUID(parentId) )
 		{
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
@@ -3182,6 +3187,9 @@ public class RestServicePortfolio
 
 		try
 		{
+			if( ui.userId == 0 )
+				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'etes pas connecte");
+			
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.postImportNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 
@@ -3225,7 +3233,8 @@ public class RestServicePortfolio
 	@POST
 	public String postCopyNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid)
 	{
-		if( !isUUID(srcuuid) || !isUUID(parentId) )
+//		if( !isUUID(srcuuid) || !isUUID(parentId) )
+		if( !isUUID(parentId) )
 		{
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
@@ -3237,6 +3246,9 @@ public class RestServicePortfolio
 
 		try
 		{
+			if( ui.userId == 0 )
+				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'etes pas connecte");
+			
 			c = SqlUtils.getConnection(servContext);
 			String returnValue = dataProvider.postCopyNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 			logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
