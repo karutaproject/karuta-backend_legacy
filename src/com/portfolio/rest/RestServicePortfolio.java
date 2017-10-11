@@ -3176,11 +3176,12 @@ public class RestServicePortfolio
 	@POST
 	public String postImportNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid)
 	{
-//		if( !isUUID(srcuuid) || !isUUID(parentId) )
-		if( !isUUID(parentId) )
+		/*
+		if( !isUUID(srcuuid) || !isUUID(parentId) )
 		{
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
+		//*/
 
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -3233,11 +3234,12 @@ public class RestServicePortfolio
 	@POST
 	public String postCopyNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid)
 	{
-//		if( !isUUID(srcuuid) || !isUUID(parentId) )
-		if( !isUUID(parentId) )
+		/*
+		if( !isUUID(srcuuid) || !isUUID(parentId) )
 		{
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
+		//*/
 
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
