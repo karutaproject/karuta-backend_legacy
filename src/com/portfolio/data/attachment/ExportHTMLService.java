@@ -112,6 +112,8 @@ public class ExportHTMLService  extends HttpServlet {
 		if( uid == 0 )
 			return;
 
+		request.setCharacterEncoding("UTF-8");
+		
 		String portfolioUuid = request.getParameter("pid");
 		String lang = request.getParameter("lang");
 		
