@@ -10384,22 +10384,22 @@ public class MysqlDataProvider implements DataProvider {
 				{ active = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("substitute"))
 				{ hasSubstitute = DomUtils.getInnerXml(children2.item(y)); }
+			}
 				
-				/// Check if user has the correct password to execute changes
-				boolean isOK = false;
-				if( originalp != null )
+			/// Check if user has the correct password to execute changes
+			boolean isOK = false;
+			if( originalp != null )
+			{
+				sql = "SELECT userid FROM credential WHERE userid=? AND password=UNHEX(SHA1(?))";
+				st = c.prepareStatement(sql);
+				st.setInt(1, userId);
+				st.setString(2, originalp);
+				ResultSet res = st.executeQuery();
+				if( res.next() )
 				{
-					sql = "SELECT userid FROM credential WHERE userid=? AND password=UNHEX(SHA1(?))";
-					st = c.prepareStatement(sql);
-					st.setInt(1, userid2);
-					st.setString(2, password);
-					ResultSet res = st.executeQuery();
-					if( res.next() )
-					{
-						isOK = true;
-					}
+					isOK = true;
 				}
-				
+
 				/// Send queries
 				if( isOK )
 				{
@@ -10522,6 +10522,10 @@ public class MysqlDataProvider implements DataProvider {
 							subst.close();
 					}
 				}
+				else
+				{
+					throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
+				}
 				
 			}
 		}
@@ -10603,8 +10607,8 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				sql = "SELECT userid FROM credential WHERE userid=? AND password=UNHEX(SHA1(?))";
 				st = c.prepareStatement(sql);
-				st.setInt(1, userid2);
-				st.setString(2, password);
+				st.setInt(1, userId);
+				st.setString(2, originalp);
 				ResultSet res = st.executeQuery();
 				if( res.next() )
 				{
@@ -10623,7 +10627,7 @@ public class MysqlDataProvider implements DataProvider {
 	
 					st = c.prepareStatement(sql);
 					st.setString(1, password);
-					st.setInt(2, userid2);
+					st.setInt(2, userId);
 					st.executeUpdate();
 				}
 				if( email != null )
@@ -10632,7 +10636,7 @@ public class MysqlDataProvider implements DataProvider {
 	
 					st = c.prepareStatement(sql);
 					st.setString(1, email);
-					st.setInt(2, userid2);
+					st.setInt(2, userId);
 					st.executeUpdate();
 				}
 			}
