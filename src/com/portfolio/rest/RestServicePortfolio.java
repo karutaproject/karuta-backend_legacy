@@ -1331,7 +1331,7 @@ public class RestServicePortfolio
 			// Check if logged user is either admin, or owner of the current portfolio
 			if( credential.isAdmin(c, ui.userId) || credential.isOwner(c, ui.userId, portfolioUuid) )
 			{
-				retval = credential.putPortfolioOwner(c, portfolioUuid, ui.userId);
+				retval = credential.putPortfolioOwner(c, portfolioUuid, newOwner);
 				logRestRequest(httpServletRequest, xmlPortfolio, null, Status.OK.getStatusCode());
 			}
 		}
