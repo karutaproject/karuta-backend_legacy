@@ -96,10 +96,10 @@ public class MysqlDataProviderTest {
 			  // getNode
 			String uuid = "43020565-b650-4655-b466-af2c69b0c714";
 			System.out.println("--- getNode("+uuid+") ------");
-			System.out.println(dataProvider.getNode(connection, xmlMimeType, uuid, false,userId, groupId, null));
+			System.out.println(dataProvider.getNode(connection, xmlMimeType, uuid, false,userId, groupId, null, null));
 			// getNode with children
 			System.out.println("--- getNode("+uuid+") with children ------");
-			System.out.println(dataProvider.getNode(connection, xmlMimeType, uuid, true,userId, groupId, null));
+			System.out.println(dataProvider.getNode(connection, xmlMimeType, uuid, true,userId, groupId, null, null));
 
 			// putNode
 			String parent_uuid_putnode = "82af4eae-0119-4055-b422-e37cece57e0f";
@@ -129,7 +129,7 @@ public class MysqlDataProviderTest {
 			System.out.println("--- getNodes("+uuid_getnodes+") ------");
 			System.out.println(dataProvider.getNodes(connection, xmlMimeType, null,
 					userId, groupId, null,uuid_getnodes, null,
-					null,null)
+					null,null, null)
 			);
 
 

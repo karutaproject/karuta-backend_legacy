@@ -318,7 +318,7 @@ public class XSLService  extends HttpServlet {
 				for( int i=0; i<nodeid.length; ++i )
 				{
 					String n = nodeid[i];
-					String nodexml = dataProvider.getNode(c, new MimeType("text/xml"), n, true, userId, groupId, "").toString();
+					String nodexml = dataProvider.getNode(c, new MimeType("text/xml"), n, true, userId, groupId, "", null).toString();
 					aggregate.append(nodexml);
 				}
 			}
@@ -371,7 +371,7 @@ public class XSLService  extends HttpServlet {
 //				Node uuid = XPathAPI.selectSingleNode(res, filterCode);
 
 				/// Fetch node we want to replace
-				String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), uuid.getTextContent(), true, userId, groupId, "").toString();
+				String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), uuid.getTextContent(), true, userId, groupId, "", null).toString();
 				if(returnValue == null) continue;
 
 				is = new ByteArrayInputStream(returnValue.getBytes("UTF-8"));

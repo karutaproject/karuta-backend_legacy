@@ -63,7 +63,7 @@ public interface DataProvider {
 	public boolean isAdmin( Connection c, String uid );
 
 	/// Relatif aux portfolios
-	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, String cutoff) throws Exception;
+	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, Integer cutoff) throws Exception;
 	public Object getPortfolios(Connection c, MimeType outMimeType,int userId,int groupId,Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) throws Exception;
 	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception;
 	public String getPortfolioUuidByNodeUuid(Connection c, String nodeUuid) throws Exception ;
@@ -94,9 +94,9 @@ public interface DataProvider {
 	public Object postModels(Connection c, MimeType mimeType, String xmlModel, int userId)throws Exception;
 
 	/// Relatif aux noeuds
-	public Object getNode(Connection c, MimeType outMimeType,String nodeUuid,boolean withChildren, int userId, int groupId, String label) throws Exception;
-	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,int userId, int groupId, String semtag,String parentUuid, String filterId,String filterParameters,String sortId) throws Exception;
-	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws SQLException;
+	public Object getNode(Connection c, MimeType outMimeType,String nodeUuid,boolean withChildren, int userId, int groupId, String label, Integer cutoff) throws Exception;
+	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,int userId, int groupId, String semtag,String parentUuid, String filterId,String filterParameters,String sortId, Integer cutoff) throws Exception;
+	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent, Integer cutoff) throws SQLException;
 	public Object getNodeBySemanticTag(Connection c, MimeType mimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception;
 	Object getNodesBySemanticTag(Connection c, MimeType outMimeType, int userId, int groupId, String portfolioUuid, String semanticTag) throws SQLException;
 	public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId);

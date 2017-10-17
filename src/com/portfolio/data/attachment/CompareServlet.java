@@ -255,9 +255,9 @@ public class CompareServlet extends HttpServlet {
 		try {
 			provider = SqlUtils.initProvider(null, logger);
 			c = SqlUtils.getConnection(getServletContext());
-			ingt = provider.getNode(c, new MimeType("text/xml"), uuidNd, true, 1, groupId, lbl); //pour test remplacer uuidNd par strNoeud
-			ingtREP = provider.getNode(c, new MimeType("text/xml"), uuidREP, true, 1, groupId, lbl);
-			ingtSOL = provider.getNode(c, new MimeType("text/xml"), uuidSOL, true, 1, groupId, lbl);
+			ingt = provider.getNode(c, new MimeType("text/xml"), uuidNd, true, 1, groupId, lbl, null); //pour test remplacer uuidNd par strNoeud
+			ingtREP = provider.getNode(c, new MimeType("text/xml"), uuidREP, true, 1, groupId, lbl, null);
+			ingtSOL = provider.getNode(c, new MimeType("text/xml"), uuidSOL, true, 1, groupId, lbl, null);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

@@ -1459,7 +1459,7 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, String cutoff) throws Exception
+	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, Integer cutoff) throws Exception
 	{
 		long t1=0, t2=0, t3=0, t4=0, t5=0;
 		long t0 = System.currentTimeMillis();
@@ -1562,7 +1562,7 @@ public class MysqlDataProvider implements DataProvider {
 			footer = "}}";
 		}
 
-		return header+getNode(c, outMimeType, rootNodeUuid,true, userId, groupId, label).toString()+footer;
+		return header+getNode(c, outMimeType, rootNodeUuid,true, userId, groupId, label, cutoff).toString()+footer;
 	}
 
 	@Override
@@ -2523,7 +2523,7 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,
 			int userId,int groupId, String semtag, String parentUuid, String filterId,
-			String filterParameters, String sortId) throws SQLException
+			String filterParameters, String sortId, Integer cutoff) throws SQLException
 	{
 		return getNodeXmlListOutput(c, parentUuid, true, userId, groupId);
 	}
@@ -2816,7 +2816,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 
-	private String getLinearXml(Connection c, String portfolioUuid, String rootuuid, Node portfolio, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role, String cutoff) throws SQLException, SAXException, IOException, ParserConfigurationException
+	private String getLinearXml(Connection c, String portfolioUuid, String rootuuid, Node portfolio, boolean withChildren, String withChildrenOfXsiType, int userId,int groupId, String role, Integer cutoff) throws SQLException, SAXException, IOException, ParserConfigurationException
 	{
 		DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
 		DocumentBuilder parse=newInstance.newDocumentBuilder();
@@ -2833,7 +2833,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		time0 = System.currentTimeMillis();
 
-		ResultSet resNode = getMysqlStructure(c, portfolioUuid,userId, groupId);
+		ResultSet resNode = getMysqlStructure(c, portfolioUuid,userId, groupId, cutoff);
 
 		time1= System.currentTimeMillis();
 
@@ -2841,18 +2841,18 @@ public class MysqlDataProvider implements DataProvider {
 		/// Node -> parent
 		HashMap<String, t_tree> entries = new HashMap<String, t_tree>();
 
-		processQuery(resNode, resolve, entries, null, parse, role, cutoff);
+		processQuery(resNode, resolve, entries, null, parse, role);
 		resNode.close();
 
 		time2 = System.currentTimeMillis();
 
-		resNode = getSharedMysqlStructure(c, portfolioUuid,userId, groupId);
+		resNode = getSharedMysqlStructure(c, portfolioUuid,userId, groupId, cutoff);
 
 		time3 = System.currentTimeMillis();
 
 		if( resNode != null )
 		{
-			processQuery(resNode, resolve, entries, null, parse, role, cutoff);
+			processQuery(resNode, resolve, entries, null, parse, role);
 			resNode.close();
 		}
 
@@ -2916,7 +2916,7 @@ public class MysqlDataProvider implements DataProvider {
 		data.append("</").append(node.type).append(">");
 	}
 
-	private void processQuery( ResultSet result, HashMap<String, Object[]> resolve, HashMap<String, t_tree> entries, Document document, DocumentBuilder parse, String role, String cutoff ) throws UnsupportedEncodingException, DOMException, SQLException, SAXException, IOException
+	private void processQuery( ResultSet result, HashMap<String, Object[]> resolve, HashMap<String, t_tree> entries, Document document, DocumentBuilder parse, String role ) throws UnsupportedEncodingException, DOMException, SQLException, SAXException, IOException
 	{
 		long t_01 = 0;
 		long t_02 = 0;
@@ -2944,8 +2944,6 @@ public class MysqlDataProvider implements DataProvider {
 
 				String type = result.getString("asm_type");
 
-				if( cutoff!= null && cutoff.equals(type) ) continue;
-				
 				data.append("<");
 				data.append(type);
 				data.append(" ");
@@ -3169,7 +3167,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private ResultSet getMysqlStructure(Connection c, String portfolioUuid, int userId,  int groupId) throws SQLException
+	private ResultSet getMysqlStructure(Connection c, String portfolioUuid, int userId,  int groupId, Integer cutoff) throws SQLException
 	{
 		PreparedStatement st=null;
 		String sql = "";
@@ -3419,7 +3417,7 @@ public class MysqlDataProvider implements DataProvider {
 	/// C'est separe car les noeud ne provenant pas d'un meme portfolio, on ne peut pas les selectionner rapidement
 	/// Autre possibilite serait de garder ce meme type de fonctionnement pour une selection par niveau d'un portfolio.
 	/// TODO: A faire un 'benchmark' dessus
-	private ResultSet getSharedMysqlStructure(Connection c, String portfolioUuid, int userId,  int groupId) throws SQLException
+	private ResultSet getSharedMysqlStructure(Connection c, String portfolioUuid, int userId,  int groupId, Integer cutoff) throws SQLException
 	{
 		PreparedStatement st = null;
 		String sql;
@@ -3516,7 +3514,7 @@ public class MysqlDataProvider implements DataProvider {
 	        PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
 			st = c.prepareStatement(sql);
-			while( added != 0 )
+			while( added != 0 && (cutoff==null? true: level < cutoff) )
 			{
 				st.setInt(1, level+1);
 				st.setInt(2, level);
@@ -3583,7 +3581,7 @@ public class MysqlDataProvider implements DataProvider {
 	/// TODO: A faire un 'benchmark' dessus
 	/// Recupere les noeuds en dessous par niveau. Pour faciliter le traitement des shared_node
 	/// Mais ea serait beaucoup plus simple de faire un objet a traiter dans le client
-	private ResultSet getNodePerLevel(Connection c, String nodeUuid, int userId,  int rrgId) throws SQLException
+	private ResultSet getNodePerLevel(Connection c, String nodeUuid, int userId,  int rrgId, Integer cutoff) throws SQLException
 	{
 		PreparedStatement st = null;
 		String sql="";
@@ -3790,7 +3788,7 @@ public class MysqlDataProvider implements DataProvider {
 			long t_initLoop = System.currentTimeMillis();
 
 			st = c.prepareStatement(sql);
-			while( added != 0 )
+			while( added != 0 && (cutoff==null? true: level < cutoff) )
 			{
 				st.setInt(1, level+1);
 				st.setInt(2, level);
@@ -4017,7 +4015,7 @@ public class MysqlDataProvider implements DataProvider {
 
 
 	@Override
-	public Object getNode(Connection c, MimeType outMimeType, String nodeUuid,boolean withChildren, int userId,int groupId, String label) throws SQLException, TransformerFactoryConfigurationError, ParserConfigurationException, UnsupportedEncodingException, DOMException, SAXException, IOException, TransformerException
+	public Object getNode(Connection c, MimeType outMimeType, String nodeUuid,boolean withChildren, int userId,int groupId, String label, Integer cutoff) throws SQLException, TransformerFactoryConfigurationError, ParserConfigurationException, UnsupportedEncodingException, DOMException, SAXException, IOException, TransformerException
 	{
 		StringBuffer nodexml = new StringBuffer();
 
@@ -4039,7 +4037,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		if(outMimeType.getSubType().equals("xml"))
 		{
-			ResultSet result = getNodePerLevel(c, nodeUuid, userId, nodeRight.rrgId);
+			ResultSet result = getNodePerLevel(c, nodeUuid, userId, nodeRight.rrgId, cutoff);
 			if(result == null)	// Node doesn't exist
 				return null;
 
@@ -4059,7 +4057,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			long t_initContruction = System.currentTimeMillis();
 
-			processQuery(result, resolve, entries, document, documentBuilder, nodeRight.groupLabel, null);
+			processQuery(result, resolve, entries, document, documentBuilder, nodeRight.groupLabel);
 			result.close();
 
 			long t_processQuery = System.currentTimeMillis();
@@ -10998,7 +10996,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// TODO: Test this more, should use getNode rather than having another output
-			xml = getNode(c, new MimeType("text/xml"),nodeUuid,true, userId, groupId, null).toString();
+			xml = getNode(c, new MimeType("text/xml"),nodeUuid,true, userId, groupId, null, null).toString();
 			if( xml == null )
 				return null;
 
@@ -12719,7 +12717,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				
 				//parse le noeud
 				String lbl = null;
-				Object ndSol = getNode(c, new MimeType("text/xml"), nodePrct, true, 1, 0, lbl);
+				Object ndSol = getNode(c, new MimeType("text/xml"), nodePrct, true, 1, 0, lbl, null);
 				if(ndSol == null)
 					return null;
 				
@@ -12754,7 +12752,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				
 				//Recuperation uuidNoeud sur lequel effectuer l'action, role et action
 				String lbl2 = null;
-				Object nd = getNode(c, new MimeType("text/xml"), contextActionNodeUuid, true, 1, 0, lbl2);
+				Object nd = getNode(c, new MimeType("text/xml"), contextActionNodeUuid, true, 1, 0, lbl2, null);
 				if( nd == null )
 					return null;
 				
@@ -14876,7 +14874,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 
 	@Override
-	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws SQLException
+	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent, Integer cutoff) throws SQLException
 	{
 		PreparedStatement st = null;
 		String sql;
@@ -15012,7 +15010,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
 					st = c.prepareStatement(sql);
-					while( added != 0 )
+					while( added != 0 && (cutoff==null? true: level < cutoff) )
 					{
 						st.setInt(1, level+1);
 						st.setInt(2, level);

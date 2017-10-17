@@ -81,7 +81,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object getNode(Connection c, MimeType outMimeType, String nodeUuid,
-			boolean withChildren, int userId, int groupId, String label) throws Exception {
+			boolean withChildren, int userId, int groupId, String label, Integer cutoff) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -90,14 +90,14 @@ public class MongoDBDataProvider implements DataProvider {
 	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,
 			int userId,int groupId,
 			String semtag, String parentUuid, String filterId,
-			String filterParameters, String sortId) throws Exception {
+			String filterParameters, String sortId, Integer cutoff) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid,
-			int userId, int groupId, String label, String resource, String files, int substid, String cutoff) throws Exception {
+			int userId, int groupId, String label, String resource, String files, int substid, Integer cutoff) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -843,7 +843,7 @@ public class MongoDBDataProvider implements DataProvider {
 
 	@Override
 	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag,
-			int userId, int groupId, String semtag_parent, String code_parent) throws SQLException {
+			int userId, int groupId, String semtag_parent, String code_parent, Integer cutoff) throws SQLException {
 		// TODO Auto-generated method stub
 		return null;
 	}
