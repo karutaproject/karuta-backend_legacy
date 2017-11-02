@@ -105,7 +105,15 @@ public class Credential
 
 		try
 		{
-			String sql = "UPDATE portfolio SET modif_user_id=? WHERE portfolio_id = uuid2bin(?)";
+			c.setAutoCommit(false);
+			String sql = "UPDATE node SET modif_user_id=? WHERE node_uuid = " +
+					"(SELECT root_node_uuid FROM portfolio WHERE portfolio_id=uuid2bin(?))";
+			st = c.prepareStatement(sql);
+			st.setInt(1, ownerId);
+			st.setString(2, portfolioId);
+			st.executeUpdate();
+			
+			sql = "UPDATE portfolio SET modif_user_id=? WHERE portfolio_id = uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setInt(1, ownerId);
 			st.setString(2, portfolioId);
@@ -115,7 +123,14 @@ public class Credential
 		}
 		catch(Exception ex)
 		{
+			try{ c.rollback(); }
+			catch( SQLException e1 ){ e1.printStackTrace(); }
 			ex.printStackTrace();
+		}
+		finally
+		{
+			c.commit();
+			c.setAutoCommit(true);
 		}
 		return retval;
 	}
