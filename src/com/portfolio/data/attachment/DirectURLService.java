@@ -16,6 +16,7 @@
 package com.portfolio.data.attachment;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -33,6 +34,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 
+import javax.activation.MimeType;
+import javax.activation.MimeTypeParseException;
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
@@ -42,9 +45,14 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
@@ -341,6 +349,84 @@ public class DirectURLService  extends HttpServlet {
 		String role = request.getParameter("role");
 		String level = request.getParameter("l");
 		String duration = request.getParameter("d");
+		String type = request.getParameter("type");
+		String shareroles = request.getParameter("showtoroles");
+		String showtorole = request.getParameter("showtorole");
+		Connection c = null;
+		Document doc = null;
+		
+		/// Fetching data to be checked upon
+		String nodedata = "";
+		try
+		{
+			c = SqlUtils.getConnection(this.getServletContext());
+			nodedata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, "", 1).toString();
+
+			System.out.println("DIRECT FETCH NODE: "+nodedata);
+			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
+			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			doc = documentBuilder.parse(new ByteArrayInputStream(nodedata.getBytes("UTF-8")));
+		}
+		catch( Exception e1 )
+		{
+			e1.printStackTrace();
+		}
+		finally
+		{
+			if(c != null) try
+			{
+				c.close();
+			}
+			catch( SQLException e )
+			{
+				e.printStackTrace();
+			}
+		}
+		NodeList metadata = doc.getElementsByTagName("metadata-wad");
+		String[] values = null;
+		if( metadata.getLength() > 0 )
+		{
+			Node meta = metadata.item(0);
+			Node nodeshareroles = meta.getAttributes().getNamedItem("shareroles");
+			String shareroleval = nodeshareroles.getTextContent();
+			values = shareroleval.split(",");
+		}
+		
+		// Parameters checking
+		boolean isok = false;
+		// shareroles format:
+		/*
+		  0: rôle,
+		  1: rôle destinataire,
+		  2: rôles et/ou courriels,
+		  3: niveau (0-4),
+		  4: durée de vie du lien (en heures),
+		  5: libellé du bouton@fr,
+		  6: condition (optionel)
+		 **/
+		if( "email".equals(type) )
+		{
+			if( role.equals(values[1]) && values[2].contains(email) )
+			{
+				isok = true;
+			}
+		}
+		else if( "showtorole".equals(type) )
+		{
+			if( role.equals(values[1]) && showtorole.equals(values[2]) )
+			{
+				isok = true;
+			}
+		}
+		
+		if( !isok )
+		{
+			response.setStatus(403);
+			PrintWriter writer = response.getWriter();
+			writer.close();
+			request.getInputStream().close();
+			return;
+		}
 		
 		if(duration == null)
 			duration = "72";	// Default 72h
