@@ -13469,11 +13469,11 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		try
 		{
 			// group_right_info pid:grid -> group_info grid:gid -> group_user gid:userid
-			String sql = "SELECT gri.grid AS grid, gri.label AS label, gu.userid AS userid " +
-					"FROM group_right_info gri " +
+			String sql = "SELECT gri.grid AS grid, gri.label AS label, gu.userid AS userid, c.display_firstname AS firstname, c.display_lastname AS lastname, c.email AS email " +
+					"FROM credential c, group_right_info gri " +
 					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 					"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
-					"WHERE gri.portfolio_id=uuid2bin(?)";
+					"WHERE gu.userid=c.userid AND gri.portfolio_id=uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setString(1, portId);
 			res = st.executeQuery();
@@ -13513,7 +13513,22 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				{
 					Element user = document.createElement("user");
 					user.setAttribute("id", Long.toString(uid));
+					
+					String firstname = res.getString("firstname");
+					Element firstnameNode = document.createElement("display_firstname");
+					firstnameNode.setTextContent(firstname);
+					
+					String lastname = res.getString("lastname");
+					Element lastnameNode = document.createElement("display_lastname");
+					lastnameNode.setTextContent(lastname);
 
+					String email = res.getString("email");
+					Element emailNode = document.createElement("email");
+					emailNode.setTextContent(email);
+
+					user.appendChild(firstnameNode);
+					user.appendChild(lastnameNode);
+					user.appendChild(emailNode);
 					rrgUsers.appendChild(user);
 				}
 			}
