@@ -46,6 +46,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.UUID;
@@ -6489,6 +6491,8 @@ public class MysqlDataProvider implements DataProvider {
 				t18 = System.currentTimeMillis();
 	
 				/// Loop through metadata and assemble rights
+				String onlyuser = "(?<![-=+])(user)(?![-=+])";
+				Pattern pattern = Pattern.compile(onlyuser);
 				while( res.next() )
 				{
 					String uuid = res.getString("uuid");
@@ -6496,8 +6500,8 @@ public class MysqlDataProvider implements DataProvider {
 					// Process et remplacement de 'user' par la personne en cours
 					String meta = res.getString("metadata_wad");
 
-					String onlyuser = "(?<![-=+])\b(user)\b(?![-=+])";
-					if( meta.matches(onlyuser) )
+					Matcher matcher = pattern.matcher(meta);
+					if( matcher.find() )
 					{
 						meta = meta.replaceAll(onlyuser, login);
 	
