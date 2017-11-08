@@ -10397,135 +10397,135 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					isOK = true;
 				}
-
-				/// Send queries
-				if( isOK )
-				{
-					if( username != null )
-					{
-						sql = "UPDATE credential SET login = ? WHERE  userid = ?";
-	
-						st = c.prepareStatement(sql);
-						st.setString(1, username);
-						st.setInt(2, userid2);
-						st.executeUpdate();
-					}
-					if( password != null )
-					{
-						sql = "UPDATE credential SET password = UNHEX(SHA1(?)) WHERE  userid = ?";
-						if (dbserveur.equals("oracle")){
-							sql = "UPDATE credential SET password = crypt(?) WHERE  userid = ?";
-						}
-	
-						st = c.prepareStatement(sql);
-						st.setString(1, password);
-						st.setInt(2, userid2);
-						st.executeUpdate();
-					}
-					if( firstname != null )
-					{
-						sql = "UPDATE credential SET display_firstname = ? WHERE  userid = ?";
-	
-						st = c.prepareStatement(sql);
-						st.setString(1, firstname);
-						st.setInt(2, userid2);
-						st.executeUpdate();
-					}
-					if( lastname != null )
-					{
-						sql = "UPDATE credential SET display_lastname = ? WHERE  userid = ?";
-	
-						st = c.prepareStatement(sql);
-						st.setString(1, lastname);
-						st.setInt(2, userid2);
-						st.executeUpdate();
-					}
-					if( email != null )
-					{
-						sql = "UPDATE credential SET email = ? WHERE  userid = ?";
-	
-						st = c.prepareStatement(sql);
-						st.setString(1, email);
-						st.setInt(2, userid2);
-						st.executeUpdate();
-					}
-					if( is_admin != null )
-					{
-						int is_adminInt = 0;
-						if( "1".equals(is_admin) )
-							is_adminInt = 1;
-	
-						sql = "UPDATE credential SET is_admin = ? WHERE  userid = ?";
-	
-						st = c.prepareStatement(sql);
-						st.setInt(1, is_adminInt);
-						st.setInt(2, userid2);
-						st.executeUpdate();
-					}
-					if( is_designer != null )
-					{
-						int is_designerInt = 0;
-						if( "1".equals(is_designer) )
-							is_designerInt = 1;
-	
-						sql = "UPDATE credential SET is_designer = ? WHERE  userid = ?";
-	
-						st = c.prepareStatement(sql);
-						st.setInt(1, is_designerInt);
-						st.setInt(2, userid2);
-						st.executeUpdate();
-					}
-					if( active != null )
-					{
-						int activeInt = 0;
-						if( "1".equals(active))
-							activeInt = 1;
-	
-						sql = "UPDATE credential SET active = ? WHERE  userid = ?";
-	
-						st = c.prepareStatement(sql);
-						st.setInt(1, activeInt);
-						st.setInt(2, userid2);
-						st.executeUpdate();
-					}
-					if( hasSubstitute != null )
-					{
-						/// Add the possibility of user substitution
-						PreparedStatement subst = null;
-						/// FIXME: More complete rule to use
-						if( "1".equals(hasSubstitute) )
-						{	// id=0, don't check who this person can substitute (except root)
-							if (dbserveur.equals("mysql")){
-								sql = "INSERT IGNORE INTO credential_substitution(userid, id, type) VALUES(?,0,'USER')";
-							}else{
-								sql = "MERGE INTO credential_substitution cs "
-									+ "USING "
-									+ "(select * from credential_substitution where type='USER' and id=0 and userid=?) t "
-									+ " ON (cs.userid=t.userid and cs.id=t.id and cs.type=t.type) "
-									+ " WHEN NOT MATCHED THEN "
-									+ " INSERT (userid, id, type) VALUES (t.userid,t.id,t.type)";
-							}
-							subst = c.prepareStatement(sql);
-							subst.setInt(1, userid2);
-							subst.execute();
-						}
-						else if( "0".equals(hasSubstitute) )
-						{
-							sql = "DELETE FROM credential_substitution WHERE userid=? AND id=0";
-							subst = c.prepareStatement(sql);
-							subst.setInt(1, userid2);
-							subst.execute();
-						}
-						if( subst != null )
-							subst.close();
-					}
-				}
-				else
-				{
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
-				}
-				
 			}
+
+			/// Send queries
+			if( isOK || cred.isAdmin(c, userId) )
+			{
+				if( username != null )
+				{
+					sql = "UPDATE credential SET login = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setString(1, username);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( password != null )
+				{
+					sql = "UPDATE credential SET password = UNHEX(SHA1(?)) WHERE  userid = ?";
+					if (dbserveur.equals("oracle")){
+						sql = "UPDATE credential SET password = crypt(?) WHERE  userid = ?";
+					}
+
+					st = c.prepareStatement(sql);
+					st.setString(1, password);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( firstname != null )
+				{
+					sql = "UPDATE credential SET display_firstname = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setString(1, firstname);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( lastname != null )
+				{
+					sql = "UPDATE credential SET display_lastname = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setString(1, lastname);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( email != null )
+				{
+					sql = "UPDATE credential SET email = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setString(1, email);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( is_admin != null )
+				{
+					int is_adminInt = 0;
+					if( "1".equals(is_admin) )
+						is_adminInt = 1;
+
+					sql = "UPDATE credential SET is_admin = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setInt(1, is_adminInt);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( is_designer != null )
+				{
+					int is_designerInt = 0;
+					if( "1".equals(is_designer) )
+						is_designerInt = 1;
+
+					sql = "UPDATE credential SET is_designer = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setInt(1, is_designerInt);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( active != null )
+				{
+					int activeInt = 0;
+					if( "1".equals(active))
+						activeInt = 1;
+
+					sql = "UPDATE credential SET active = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setInt(1, activeInt);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( hasSubstitute != null )
+				{
+					/// Add the possibility of user substitution
+					PreparedStatement subst = null;
+					/// FIXME: More complete rule to use
+					if( "1".equals(hasSubstitute) )
+					{	// id=0, don't check who this person can substitute (except root)
+						if (dbserveur.equals("mysql")){
+							sql = "INSERT IGNORE INTO credential_substitution(userid, id, type) VALUES(?,0,'USER')";
+						}else{
+							sql = "MERGE INTO credential_substitution cs "
+								+ "USING "
+								+ "(select * from credential_substitution where type='USER' and id=0 and userid=?) t "
+								+ " ON (cs.userid=t.userid and cs.id=t.id and cs.type=t.type) "
+								+ " WHEN NOT MATCHED THEN "
+								+ " INSERT (userid, id, type) VALUES (t.userid,t.id,t.type)";
+						}
+						subst = c.prepareStatement(sql);
+						subst.setInt(1, userid2);
+						subst.execute();
+					}
+					else if( "0".equals(hasSubstitute) )
+					{
+						sql = "DELETE FROM credential_substitution WHERE userid=? AND id=0";
+						subst = c.prepareStatement(sql);
+						subst.setInt(1, userid2);
+						subst.execute();
+					}
+					if( subst != null )
+						subst.close();
+				}
+			}
+			else
+			{
+				throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
+			}
+				
 		}
 
 		result1 = ""+userid2;
