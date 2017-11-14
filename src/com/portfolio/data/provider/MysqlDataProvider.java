@@ -3610,11 +3610,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid BINARY(16) NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
 						"xsi_type varchar(50)  DEFAULT NULL, " +
-						"semtag varchar(250) DEFAULT NULL, " +
-						"semantictag varchar(250) DEFAULT NULL, " +
-						"label varchar(250)  DEFAULT NULL, " +
-						"code varchar(250)  DEFAULT NULL, " +
-						"descr varchar(250)  DEFAULT NULL, " +
+						"semtag varchar(100) DEFAULT NULL, " +
+						"semantictag varchar(100) DEFAULT NULL, " +
+						"label varchar(100)  DEFAULT NULL, " +
+						"code varchar(100)  DEFAULT NULL, " +
+						"descr varchar(100)  DEFAULT NULL, " +
 						"format varchar(30) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
@@ -3670,11 +3670,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
-						"semtag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"label VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"code VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"descr VARCHAR2(250 CHAR)  DEFAULT NULL, " +
+						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 						"modif_user_id NUMBER(12) DEFAULT NULL, " +
 						"modif_date timestamp DEFAULT NULL, " +
@@ -4464,11 +4464,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid BINARY(16) NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
 						"xsi_type varchar(50)  DEFAULT NULL, " +
-						"semtag varchar(250) DEFAULT NULL, " +
-						"semantictag varchar(250) DEFAULT NULL, " +
-						"label varchar(250)  DEFAULT NULL, " +
-						"code varchar(250)  DEFAULT NULL, " +
-						"descr varchar(250)  DEFAULT NULL, " +
+						"semtag varchar(100) DEFAULT NULL, " +
+						"semantictag varchar(100) DEFAULT NULL, " +
+						"label varchar(100)  DEFAULT NULL, " +
+						"code varchar(100)  DEFAULT NULL, " +
+						"descr varchar(100)  DEFAULT NULL, " +
 						"format varchar(30) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
@@ -4497,11 +4497,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
-						"semtag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"label VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"code VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"descr VARCHAR2(250 CHAR)  DEFAULT NULL, " +
+						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL, " +
@@ -5383,11 +5383,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid BINARY(16) NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
 						"xsi_type varchar(50)  DEFAULT NULL, " +
-						"semtag varchar(250) DEFAULT NULL, " +
-						"semantictag varchar(250) DEFAULT NULL, " +
-						"label varchar(250)  DEFAULT NULL, " +
-						"code varchar(250)  DEFAULT NULL, " +
-						"descr varchar(250)  DEFAULT NULL, " +
+						"semtag varchar(100) DEFAULT NULL, " +
+						"semantictag varchar(100) DEFAULT NULL, " +
+						"label varchar(100)  DEFAULT NULL, " +
+						"code varchar(100)  DEFAULT NULL, " +
+						"descr varchar(100)  DEFAULT NULL, " +
 						"format varchar(30) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
@@ -5416,11 +5416,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
-						"semtag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"label VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"code VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"descr VARCHAR2(250 CHAR)  DEFAULT NULL, " +
+						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL, " +
@@ -5760,7 +5760,7 @@ public class MysqlDataProvider implements DataProvider {
 					"node_uuid binary(16)  NOT NULL, " +
 					"node_parent_uuid binary(16) DEFAULT NULL, " +
 					"node_order int(12) NOT NULL, " +
-					"metadata_wad varchar(2048) NOT NULL, " +
+					"metadata_wad varchar(2798) NOT NULL, " +
 					"res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -5772,11 +5772,11 @@ public class MysqlDataProvider implements DataProvider {
 					"shared_node_res_uuid BINARY(16) NULL, " +
 					"asm_type varchar(50) DEFAULT NULL, " +
 					"xsi_type varchar(50)  DEFAULT NULL, " +
-					"semtag varchar(250) DEFAULT NULL, " +
-					"semantictag varchar(250) DEFAULT NULL, " +
-					"label varchar(250)  DEFAULT NULL, " +
-					"code varchar(250)  DEFAULT NULL, " +
-					"descr varchar(250)  DEFAULT NULL, " +
+					"semtag varchar(100) DEFAULT NULL, " +
+					"semantictag varchar(100) DEFAULT NULL, " +
+					"label varchar(100)  DEFAULT NULL, " +
+					"code varchar(100)  DEFAULT NULL, " +
+					"descr varchar(100)  DEFAULT NULL, " +
 					"format varchar(30) DEFAULT NULL, " +
 					"modif_user_id int(12) NOT NULL, " +
 					"modif_date timestamp NULL DEFAULT NULL, " +
@@ -5790,7 +5790,7 @@ public class MysqlDataProvider implements DataProvider {
 					"node_uuid VARCHAR2(32)  NOT NULL, " +
 					"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"node_order NUMBER(12) NOT NULL, " +
-					"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
+					"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
 					"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
@@ -5802,11 +5802,11 @@ public class MysqlDataProvider implements DataProvider {
 					"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 					"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
-					"semtag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-					"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-					"label VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-					"code VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-					"descr VARCHAR2(250 CHAR)  DEFAULT NULL, " +
+					"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+					"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+					"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+					"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+					"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 					"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 					"modif_user_id NUMBER(12) NOT NULL, " +
 					"modif_date timestamp DEFAULT NULL, " +
@@ -5985,7 +5985,7 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid binary(16)  NOT NULL, " +
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
 						"node_order int(12) NOT NULL, " +
-						"metadata_wad varchar(2048) NOT NULL, " +
+						"metadata_wad varchar(2798) NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -5997,11 +5997,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid BINARY(16) NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
 						"xsi_type varchar(50)  DEFAULT NULL, " +
-						"semtag varchar(250) DEFAULT NULL, " +
-						"semantictag varchar(250) DEFAULT NULL, " +
-						"label varchar(250)  DEFAULT NULL, " +
-						"code varchar(250)  DEFAULT NULL, " +
-						"descr varchar(250)  DEFAULT NULL, " +
+						"semtag varchar(100) DEFAULT NULL, " +
+						"semantictag varchar(100) DEFAULT NULL, " +
+						"label varchar(100)  DEFAULT NULL, " +
+						"code varchar(100)  DEFAULT NULL, " +
+						"descr varchar(100)  DEFAULT NULL, " +
 						"format varchar(30) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
@@ -6015,7 +6015,7 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid VARCHAR2(32)  NOT NULL, " +
 						"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
-						"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
+						"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
 						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
@@ -6027,11 +6027,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
-						"semtag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"label VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"code VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"descr VARCHAR2(250 CHAR)  DEFAULT NULL, " +
+						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL, " +
@@ -7009,7 +7009,7 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid binary(16)  NOT NULL, " +
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
 						"node_order int(12) NOT NULL, " +
-						"metadata_wad varchar(2048) NOT NULL, " +
+						"metadata_wad varchar(2798) NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -7021,11 +7021,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid BINARY(16) NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
 						"xsi_type varchar(50)  DEFAULT NULL, " +
-						"semtag varchar(250) DEFAULT NULL, " +
-						"semantictag varchar(250) DEFAULT NULL, " +
-						"label varchar(250)  DEFAULT NULL, " +
-						"code varchar(250)  DEFAULT NULL, " +
-						"descr varchar(250)  DEFAULT NULL, " +
+						"semtag varchar(100) DEFAULT NULL, " +
+						"semantictag varchar(100) DEFAULT NULL, " +
+						"label varchar(100)  DEFAULT NULL, " +
+						"code varchar(100)  DEFAULT NULL, " +
+						"descr varchar(100)  DEFAULT NULL, " +
 						"format varchar(30) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
 						"modif_date timestamp NULL DEFAULT NULL, " +
@@ -7039,7 +7039,7 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid VARCHAR2(32)  NOT NULL, " +
 						"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
-						"metadata_wad VARCHAR2(2048 CHAR) DEFAULT NULL, " +
+						"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
 						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
@@ -7051,11 +7051,11 @@ public class MysqlDataProvider implements DataProvider {
 						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
-						"semtag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-						"label VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"code VARCHAR2(250 CHAR)  DEFAULT NULL, " +
-						"descr VARCHAR2(250 CHAR)  DEFAULT NULL, " +
+						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+						"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 						"modif_user_id NUMBER(12) NOT NULL, " +
 						"modif_date timestamp DEFAULT NULL, " +
@@ -12240,7 +12240,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		if (dbserveur.equals("mysql")){
 			sql = "CREATE TEMPORARY TABLE t_node(" +
 					"node_uuid binary(16) UNIQUE NOT NULL, " +
-					"semantictag varchar(250) DEFAULT NULL, "+
+					"semantictag varchar(100) DEFAULT NULL, "+
 					"res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_context_node_uuid binary(16) DEFAULT NULL, "+
@@ -12251,7 +12251,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		} else if (dbserveur.equals("oracle")){
 			String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_node(" +
 					"node_uuid VARCHAR2(32) UNIQUE NOT NULL, " +
-					"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
+					"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 					"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"res_context_node_uuid VARCHAR2(32) DEFAULT NULL, " +
@@ -12267,7 +12267,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		if (dbserveur.equals("mysql")){
 			sql = "CREATE TEMPORARY TABLE t_node_2(" +
 					"node_uuid binary(16) UNIQUE NOT NULL, " +
-					"semantictag varchar(250) DEFAULT NULL, "+
+					"semantictag varchar(100) DEFAULT NULL, "+
 					"res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_context_node_uuid binary(16) DEFAULT NULL, "+
@@ -12278,7 +12278,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		} else if (dbserveur.equals("oracle")){
 			String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_node_2(" +
 					"node_uuid VARCHAR2(32) UNIQUE NOT NULL, " +
-					"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
+					"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 					"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"res_context_node_uuid VARCHAR2(32) DEFAULT NULL, " +
@@ -14927,9 +14927,9 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 							"node_uuid binary(16)  NOT NULL, " +
 							"node_parent_uuid binary(16) DEFAULT NULL, " +
 							"asm_type varchar(50) DEFAULT NULL, " +
-							"semtag varchar(250) DEFAULT NULL, " +
-							"semantictag varchar(250) DEFAULT NULL, " +
-							"code varchar(250)  DEFAULT NULL," +
+							"semtag varchar(100) DEFAULT NULL, " +
+							"semantictag varchar(100) DEFAULT NULL, " +
+							"code varchar(100)  DEFAULT NULL," +
 							"node_order int(12) NOT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 					st = c.prepareStatement(sql);
 					st.execute();
@@ -14957,9 +14957,9 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 							"node_uuid VARCHAR2(32)  NOT NULL, " +
 							"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 							"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
-							"semtag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-							"semantictag VARCHAR2(250 CHAR) DEFAULT NULL, " +
-							"code VARCHAR2(250 CHAR)  DEFAULT NULL," +
+							"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+							"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
+							"code VARCHAR2(100 CHAR)  DEFAULT NULL," +
 							"node_order NUMBER(10,0) NOT NULL) ON COMMIT PRESERVE ROWS";
 					sql = "{call create_or_empty_table('t_s_node_2','"+v_sql+"')}";
 					CallableStatement ocs = c.prepareCall(sql) ;
