@@ -15019,7 +15019,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_parentid_2,t_struc_parentid_2_UK_uuid)*/ INTO t_struc_parentid_2(uuid, node_parent_uuid, t_level) ";
 					}
 					sql += "SELECT n.node_uuid, n.node_parent_uuid, ? " +
-							"FROM node n WHERE n.portfolio_id=uuid2bin(?) AND n.node_parent_uuid IN (SELECT uuid FROM t_struc_parentid t " +
+							"FROM t_s_node_2 n WHERE n.node_parent_uuid IN (SELECT uuid FROM t_struc_parentid t " +
 							"WHERE t.t_level=?)";
 
 					String sqlTemp=null;
@@ -15031,11 +15031,11 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					PreparedStatement stTemp = c.prepareStatement(sqlTemp);
 
 					st = c.prepareStatement(sql);
-					st.setString(2, pid);
+					
 					while( added != 0 && (cutoff==null? true: level < cutoff) )
 					{
 						st.setInt(1, level+1);
-						st.setInt(3, level);
+						st.setInt(2, level);
 						st.executeUpdate();
 						added = stTemp.executeUpdate();   // On s'arrete quand rien e ete ajoute
 						level = level + 1;    // Prochaine etape
