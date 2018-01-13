@@ -68,6 +68,7 @@ public interface DataProvider {
 	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception;
 	public String getPortfolioUuidByNodeUuid(Connection c, String nodeUuid) throws Exception ;
 	public Object getPortfolioZip(MimeType mimeType, String portfolioUuid, int userId, int groupId, String label, Boolean resource, Boolean files) throws Exception;
+	public String getPortfolioShared(Connection c, int user, int userId) throws SQLException;
 
 	public Object putPortfolio(Connection c, MimeType inMimeType,MimeType outMimeType,String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String modelId) throws Exception;
 	public Object putPortfolioConfiguration(Connection c, String portfolioUuid,Boolean portfolioActive, Integer userId);

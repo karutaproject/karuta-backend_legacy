@@ -1982,6 +1982,55 @@ public class RestServicePortfolio
 		}
 	}
 
+	/**
+	 *	Return a list of portfolio shared to a user
+	 *	GET /portfolios/shared/{userid}
+	 *	parameters:
+	 *	return:
+	 **/
+	@Path("/portfolios/shared/{userid}")
+	@POST
+	@Produces(MediaType.APPLICATION_XML)
+	public Response  getPortfolioShared( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("userid") int userid)
+	{
+		UserInfo uinfo = checkCredential(httpServletRequest, user, token, null);
+
+		Connection c = null;
+		try
+		{
+			c = SqlUtils.getConnection(servContext);
+			if( credential.isAdmin(c, uinfo.userId) )
+			{
+				String res = dataProvider.getPortfolioShared(c, uinfo.userId, userid);
+				return  Response.ok(res).build();
+			}
+			else
+			{
+				return Response.status(403).build();
+			}
+		}
+		catch(RestWebApplicationException ex)
+		{
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+	}
+
+
 	// GET /portfolios/zip ? portfolio={}, toujours avec files
 	// zip s�par�s
 	// zip des zip

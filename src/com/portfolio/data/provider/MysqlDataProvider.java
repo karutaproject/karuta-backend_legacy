@@ -15157,6 +15157,41 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		return null;
 	}
 
+	public String getPortfolioShared(Connection c, int user, int userId) throws SQLException
+	{
+		String sql;
+		PreparedStatement st = null;
+		ResultSet res = null;
+		String result = "";
+		StringBuilder out = new StringBuilder();
+
+		try
+		{
+			sql = "SELECT gu.gid, bin2uuid(gri.portfolio_id) "
+					+ "FROM group_user gu, group_info gi, group_right_info gri "
+					+ "WHERE gu.gid=gi.gid AND gi.grid=gri.grid "
+					+ "AND gu.userid=?";
+			st = c.prepareStatement(sql);
+			st.setInt(1, userId);
+			res = st.executeQuery();
+
+			out.append("<portfolios>");
+			while( res.next() )
+			{
+				int gid = res.getInt(1);
+				String portfolio = res.getString(2);
+				out.append("<portfolio gid='"+gid+"' portfolio='"+portfolio+"'/>");
+			}
+			out.append("</portfolios>");
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+
+		return out.toString();
+	}
+	
 
 	@Override
 	public Object getNodesParent(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws Exception

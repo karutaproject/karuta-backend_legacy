@@ -861,6 +861,12 @@ public class MongoDBDataProvider implements DataProvider {
 		return null;
 	}
 
+	public String getPortfolioShared(Connection c, int user, int userId) throws SQLException
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
 	@Override
 	public Object getNodesParent(Connection c, MimeType mimeType, String portfoliocode,
 			String semtag, int userId, int groupId, String semtag_parent,
