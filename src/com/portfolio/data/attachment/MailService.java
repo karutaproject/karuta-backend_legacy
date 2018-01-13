@@ -104,6 +104,10 @@ public class MailService  extends HttpServlet {
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
 		}
+		
+		boolean keepcc = false;
+		if( "true".equals(request.getParameter("ccsender")) )
+			keepcc = true;
 
 		logger.trace("Sending mail for user: "+uid);
 
@@ -164,7 +168,10 @@ public class MailService  extends HttpServlet {
 			if( "email".equals(notification) )
 			{
 //				System.out.println("SENDING: "+message);
-				retval = MailUtils.postMail(config, recipient, sender, subject, message, logger);
+				if( keepcc )
+					retval = MailUtils.postMail(config, recipient, sender, subject, message, logger);
+				else
+					retval = MailUtils.postMail(config, recipient, "", subject, message, logger);
 				logger.trace("Mail to: "+recipient+"; from: "+sender+" by uid: "+uid);
 			}
 			else if( "sakai".equals(notification) )
