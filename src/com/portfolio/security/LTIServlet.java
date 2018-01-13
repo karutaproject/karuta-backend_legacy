@@ -260,7 +260,9 @@ public class LTIServlet extends HttpServlet {
 			}
 			else
 			{
+				String server = "https://"+request.getServerName()+request.getContextPath();
 				session.invalidate();
+				response.sendRedirect(server+"/lti-403.html");
 				return;
 			}
 
@@ -419,8 +421,11 @@ public class LTIServlet extends HttpServlet {
 		userId = dataProvider.getUserId( connexion, username, email );
 		if ( "0".equals(userId) ) {
 			//create it
+			/*
 			userId = dataProvider.createUser(connexion, username, email);
 			outTrace.append("\nCreate User (self) results: " + userId);
+			//*/
+			outTrace.append("\nUser not created: " + username);
 		}
 		else {
 			outTrace.append("\nUser found: " + userId);
