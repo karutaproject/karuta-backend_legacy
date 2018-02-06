@@ -7011,7 +7011,7 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid binary(16)  NOT NULL, " +
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
 						"node_order int(12) NOT NULL, " +
-						"metadata_wad varchar(2798) NOT NULL, " +
+//						"metadata_wad varchar(2798) NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -7041,7 +7041,7 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid VARCHAR2(32)  NOT NULL, " +
 						"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
-						"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
+//						"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
 						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
@@ -7078,7 +7078,8 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")){
 					sql += "SELECT sys_guid(), ";
 				}
-				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+//				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+					sql += "node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 						"FROM node n " +
 						"WHERE n.portfolio_id=(SELECT portfolio_id FROM node n1 WHERE n1.node_uuid=uuid2bin(?))";
 				st = c.prepareStatement(sql);
@@ -7099,7 +7100,8 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")){
 					sql += "SELECT sys_guid(), ";
 				}
-				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+//				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+				sql += "node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 						"FROM t_node_cache n " +
 						"WHERE portfolio_id=uuid2bin(?)";
 				st = c.prepareStatement(sql);
