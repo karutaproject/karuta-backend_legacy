@@ -66,10 +66,14 @@ public class MailUtils
 			recip_cc = recipients_cc.split(",");
 
 		String mail_login = ConfigUtils.get("mail_login");
+		String mail_sender = ConfigUtils.get("mail_sender");
 		String mail_password = ConfigUtils.get("mail_password");
 		
 		if( mail_login == null || mail_password == null )
 			return -1;
+		
+		if( mail_sender == null )
+			mail_sender = mail_login;
 
 		String smtpserver = ConfigUtils.get("smtp.server");
 		String useAuth = ConfigUtils.get("smtp.useauth");
@@ -95,7 +99,7 @@ public class MailUtils
 		Message msg = new MimeMessage(session);
 
 		// set the from and to address
-		InternetAddress addressFrom = new InternetAddress(mail_login);
+		InternetAddress addressFrom = new InternetAddress(mail_sender);
 		msg.setFrom(addressFrom);
 		logger.debug("<br>addressFrom: "+addressFrom);
 
