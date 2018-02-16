@@ -10662,17 +10662,6 @@ public class MysqlDataProvider implements DataProvider {
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String result = null;
-		String  username = null;
-		String  password = null;
-		String  firstname = null;
-		String  lastname = null;
-		String  email = null;
-		String designerstr = null;
-		String  active = "1";
-		String substitute = null;
-		int id = 0;
-		int designer;
-
 		//On prepare les requetes SQL
 		PreparedStatement stInsert;
 		String sqlInsert;
@@ -10689,159 +10678,132 @@ public class MysqlDataProvider implements DataProvider {
 		// On parcourt une premiere fois les enfants pour recuperer la liste e ecrire en base
 
 		//On verifie le bon format
-		if(users.getNodeName().equals("users"))
-		{
-			for(int i=0;i<children.getLength();i++)
-			{
-				if(children.item(i).getNodeName().equals("user"))
-				{
-					NodeList children2 = null;
-					children2 = children.item(i).getChildNodes();
-					for(int y=0;y<children2.getLength();y++)
-					{
-						if(children2.item(y).getNodeName().equals("username"))
-						{
-							username = DomUtils.getInnerXml(children2.item(y));
-						}
-						if(children2.item(y).getNodeName().equals("password"))
-						{
-							password = DomUtils.getInnerXml(children2.item(y));
-						}
-						if(children2.item(y).getNodeName().equals("firstname"))
-						{
-							firstname = DomUtils.getInnerXml(children2.item(y));
-						}
-						if(children2.item(y).getNodeName().equals("lastname"))
-						{
-							lastname = DomUtils.getInnerXml(children2.item(y));
-						}
-						if(children2.item(y).getNodeName().equals("email"))
-						{
-							email = DomUtils.getInnerXml(children2.item(y));
-						}
-						if(children2.item(y).getNodeName().equals("active"))
-						{
-							active = DomUtils.getInnerXml(children2.item(y));
-						}
-						if(children2.item(y).getNodeName().equals("designer"))
-						{
-							designerstr = DomUtils.getInnerXml(children2.item(y));
-						}
-						if(children2.item(y).getNodeName().equals("substitute"))
-						{
-							substitute = DomUtils.getInnerXml(children2.item(y));
-						}
-					}
-				}
-			}
-		}else{
-			result = "Erreur lors de la recuperation des attributs de l'utilisateur dans le XML";
-		}
-
-		//On ajoute l'utilisateur dans la base de donnees
+		StringBuilder userdone = new StringBuilder();
+		userdone.append("<users>");
+		String  username = null;
 		try
 		{
-			sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)),?,?)";
-			stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
-			if (dbserveur.equals("oracle")){
-				  sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer) VALUES (?, ?, ?, ?, crypt(?),?,?)";
-				  stInsert = c.prepareStatement(sqlInsert, new String[]{"userid"});
-			}
-
-			stInsert.setString(1, username);
-
-			if(firstname == null)
+			if(users.getNodeName().equals("users"))
 			{
-				firstname = " ";
-				stInsert.setString(2, firstname);
-			}else{
-				stInsert.setString(2, firstname);
-			}
+				c.setAutoCommit(false);
 
-			if(lastname == null)
-			{
-				lastname = " ";
-				stInsert.setString(3, lastname);
-			}else{
-				stInsert.setString(3, lastname);
-			}
-
-			if(email == null)
-			{
-				email = " ";
-				stInsert.setString(4, email);
-			}else{
-				stInsert.setString(4, email);
-			}
-
-			stInsert.setString(5, password);
-
-			if(active == null)
-			{
-				active = " ";
-				stInsert.setString(6, active);
-			}else{
-				stInsert.setString(6, active);
-			}
-
-			if("1".equals(designerstr))
-				designer = 1;
-			else
-				designer = 0;
-			stInsert.setInt(7, designer);
-
-			stInsert.executeUpdate();
-
-			ResultSet rs = stInsert.getGeneratedKeys();
-			if (rs.next()) {
-				id = rs.getInt(1);
-			}
-
-			if( substitute != null )
-			{
-				PreparedStatement subst = null;
-				/// FIXME: More complete rule to use
-				if( "1".equals(substitute) )
-				{	// id=0, don't check who this person can substitute (except root)
-					String sql = "INSERT IGNORE INTO credential_substitution(userid, id, type) VALUES(?,0,'USER')";
-					subst = c.prepareStatement(sql);
-					subst.setInt(1, id);
-					subst.execute();
-				}
-				else if( "0".equals(substitute) )
+				for(int i=0;i<children.getLength();i++)
 				{
-					String sql = "DELETE FROM credential_substitution WHERE userid=? AND id=0";
-					subst = c.prepareStatement(sql);
-					subst.setInt(1, id);
-					subst.execute();
+					String  password = null;
+					String  firstname = null;
+					String  lastname = null;
+					String  email = null;
+					String designerstr = null;
+					String  active = "1";
+					String substitute = null;
+					int id = 0;
+					int designer;
+
+					if(children.item(i).getNodeName().equals("user"))
+					{
+						NodeList children2 = null;
+						children2 = children.item(i).getChildNodes();
+						for(int y=0;y<children2.getLength();y++)
+						{
+							if(children2.item(y).getNodeName().equals("username")){ username = DomUtils.getInnerXml(children2.item(y));	}
+							if(children2.item(y).getNodeName().equals("password")){	password = DomUtils.getInnerXml(children2.item(y));	}
+							if(children2.item(y).getNodeName().equals("firstname")){	firstname = DomUtils.getInnerXml(children2.item(y));	}
+							if(children2.item(y).getNodeName().equals("lastname")){	lastname = DomUtils.getInnerXml(children2.item(y));	}
+							if(children2.item(y).getNodeName().equals("email")){	email = DomUtils.getInnerXml(children2.item(y));	}
+							if(children2.item(y).getNodeName().equals("active")){	active = DomUtils.getInnerXml(children2.item(y));	}
+							if(children2.item(y).getNodeName().equals("designer")){	designerstr = DomUtils.getInnerXml(children2.item(y));	}
+							if(children2.item(y).getNodeName().equals("substitute")){	substitute = DomUtils.getInnerXml(children2.item(y));	}
+						}
+
+						//On ajoute l'utilisateur dans la base de donnees
+						sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)),?,?)";
+						stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+						if (dbserveur.equals("oracle")){
+							sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer) VALUES (?, ?, ?, ?, crypt(?),?,?)";
+							stInsert = c.prepareStatement(sqlInsert, new String[]{"userid"});
+						}
+
+						stInsert.setString(1, username);
+
+						if(firstname == null){	firstname = " ";	}
+						stInsert.setString(2, firstname);
+
+						if(lastname == null){	lastname = " "; }
+						stInsert.setString(3, lastname);
+
+						if(email == null){	email = " ";	}
+						stInsert.setString(4, email);
+
+						stInsert.setString(5, password);
+
+						if(active == null){	active = " ";	}
+						stInsert.setString(6, active);
+
+						if("1".equals(designerstr))
+							designer = 1;
+						else
+							designer = 0;
+						stInsert.setInt(7, designer);
+
+						stInsert.executeUpdate();
+
+						ResultSet rs = stInsert.getGeneratedKeys();
+						if (rs.next()) {
+							id = rs.getInt(1);
+						}
+
+						if( substitute != null )
+						{
+							PreparedStatement subst = null;
+							/// FIXME: More complete rule to use
+							if( "1".equals(substitute) )
+							{	// id=0, don't check who this person can substitute (except root)
+								String sql = "INSERT IGNORE INTO credential_substitution(userid, id, type) VALUES(?,0,'USER')";
+								subst = c.prepareStatement(sql);
+								subst.setInt(1, id);
+								subst.execute();
+							}
+							else if( "0".equals(substitute) )
+							{
+								String sql = "DELETE FROM credential_substitution WHERE userid=? AND id=0";
+								subst = c.prepareStatement(sql);
+								subst.setInt(1, id);
+								subst.execute();
+							}
+							if( subst != null )
+								subst.close();
+						}
+						else
+							substitute = "0";
+
+						userdone.append("<user ").append("id=\"").append(id).append("\">");
+						userdone.append("<username>").append(username).append("</username>");
+						userdone.append("<firstname>").append(firstname).append("</firstname>");
+						userdone.append("<lastname>").append(lastname).append("</lastname>");
+						userdone.append("<email>").append(email).append("</email>");
+						userdone.append("<active>").append(active).append("</active>");
+						userdone.append("<designer>").append(designerstr).append("</designer>");
+						userdone.append("<substitute>").append(substitute).append("</substitute>");
+						userdone.append("</user>");
+					}
 				}
-				if( subst != null )
-					subst.close();
+			}else{
+				result = "Missing \"users\" tag";
 			}
-
-			//On renvoie le body pour qu'il soit stocke dans le log
-			result = "<users>";
-
-			result += "<user ";
-			result += DomUtils.getXmlAttributeOutputInt("id",id);
-			result += ">";
-			result += DomUtils.getXmlElementOutput("username", username);
-			result += DomUtils.getXmlElementOutput("password", password);
-			result += DomUtils.getXmlElementOutput("firstname", firstname);
-			result += DomUtils.getXmlElementOutput("lastname", lastname);
-			result += DomUtils.getXmlElementOutput("email", email);
-			result += DomUtils.getXmlElementOutput("active", active);
-			result += DomUtils.getXmlElementOutput("designer", designerstr);
-			result += DomUtils.getXmlElementOutput("substitute", substitute);
-			result += "</user>";
-
-			result += "</users>";
-
 		} catch (SQLException e) {
 			logger.error(e.getMessage());
-//			e.printStackTrace();
-			result = null;
+			//			e.printStackTrace();
+			c.rollback();
+			result = "Error when processing user: "+username;
 		}
+		finally
+		{
+			c.setAutoCommit(true);
+		}
+		userdone.append("</users>");
+		
+		if( result == null )
+			result = userdone.toString();
 
 		return result;
 	}
