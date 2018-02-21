@@ -108,6 +108,15 @@ public class DirectURLService  extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException
 	{
 		String val = request.getParameter("i");
+		if( val == null )
+		{
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			PrintWriter writer = response.getWriter();
+			writer.write("No data sent");
+			writer.close();
+			request.getInputStream().close();
+			return;
+		}
 		/// Decrypt data
 		Cipher rc4;
 		String output="";
