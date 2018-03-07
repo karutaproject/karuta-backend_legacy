@@ -371,7 +371,7 @@ public class DirectURLService  extends HttpServlet {
 			c = SqlUtils.getConnection(this.getServletContext());
 			nodedata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, "", 1).toString();
 
-			System.out.println("DIRECT FETCH NODE: "+nodedata);
+//			System.out.println("DIRECT FETCH NODE: "+nodedata);
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
 			doc = documentBuilder.parse(new ByteArrayInputStream(nodedata.getBytes("UTF-8")));
@@ -396,9 +396,22 @@ public class DirectURLService  extends HttpServlet {
 		if( metadata.getLength() > 0 )
 		{
 			Node meta = metadata.item(0);
+			/// Authorized role to create share requests
 			Node nodeshareroles = meta.getAttributes().getNamedItem("shareroles");
+			
+			if( nodeshareroles == null )
+			{
+				response.setStatus(HttpServletResponse.SC_PRECONDITION_FAILED);
+				PrintWriter writer = response.getWriter();
+				writer.write("Missing shareroles attribute");
+				writer.close();
+				request.getInputStream().close();
+				return;
+			}
+
 			String shareroleval = nodeshareroles.getTextContent();
 			values = shareroleval.split(",");
+			System.out.println("VALUES: "+shareroleval);
 		}
 		
 		// Parameters checking
