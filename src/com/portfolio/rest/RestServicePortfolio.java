@@ -166,52 +166,13 @@ public class RestServicePortfolio
 				errorLog = LogUtils.getLog(errorlog);
 
 			// Initialize data provider and cas
-			try
-			{
-				casUrlValidation =  context.getInitParameter("casUrlValidation") ;
-			}
-			catch(Exception ex)
-			{
-				casUrlValidation = null;
-			};
-
-			try
-			{
-				elggDefaultApiUrl =  context.getInitParameter("elggDefaultApiUrl") ;
-			}
-			catch(Exception ex)
-			{
-				elggDefaultApiUrl = null;
-			};
-
-			try
-			{
-				elggDefaultSiteUrl =  context.getInitParameter("elggDefaultSiteUrl") ;
-			}
-			catch(Exception ex)
-			{
-				elggDefaultSiteUrl = null;
-			};
-
-
-
-			try
-			{
-				elggApiKey =  context.getInitParameter("elggApiKey") ;
-			}
-			catch(Exception ex)
-			{
-				elggApiKey = null;
-			};
-
-			try
-			{
-				elggDefaultUserPassword =  context.getInitParameter("elggDefaultUserPassword") ;
-			}
-			catch(Exception ex)
-			{
-				elggDefaultUserPassword = null;
-			};
+			casUrlValidation =  ConfigUtils.get("casUrlValidation") ;
+			// Elgg variables
+			elggDefaultApiUrl =  ConfigUtils.get("elggDefaultApiUrl") ;
+			elggDefaultSiteUrl =  ConfigUtils.get("elggDefaultSiteUrl") ;
+			elggApiKey =  ConfigUtils.get("elggApiKey") ;
+			elggDefaultUserPassword =  ConfigUtils.get("elggDefaultUserPassword") ;
+			elggDefaultUserPassword = null;
 
 			servConfig = sc;
 			servContext = context;
@@ -4941,10 +4902,22 @@ public class RestServicePortfolio
 		{
 			ServiceTicketValidator sv = new ServiceTicketValidator();
 
-			if(casUrlValidation!=null)
-				sv.setCasValidateUrl(casUrlValidation);
-			else
-				sv.setCasValidateUrl("https://cas-uga.grenet.fr/serviceValidate");
+			if(casUrlValidation==null)
+			{
+				Response response = null;
+				try
+				{
+					// formulate the response
+					response = Response.status(Status.PRECONDITION_FAILED)
+							.entity("CAS URL not defined").build();
+				} catch (Exception e) {
+					response = Response.status(500).build();
+				}
+				return response;
+			}
+			
+			sv.setCasValidateUrl(casUrlValidation);
+
 			requestURL = httpServletRequest.getRequestURL();
 			if (httpServletRequest.getQueryString() != null) {
 				requestURL.append("?").append(httpServletRequest.getQueryString());

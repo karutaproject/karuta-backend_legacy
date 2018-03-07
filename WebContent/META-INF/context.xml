@@ -16,11 +16,4 @@
 		url="jdbc:oracle:thin:@//localhost:5112/KARUTA" />
 	-->
 	<ResourceLink global="jdbc/portfolio-backend" name="jdbc/portfolio-backend" type="javax.sql.DataSource" />
-	
-	<Parameter name="casUrlValidation" value="https://cas-uga.grenet.fr/serviceValidate" override="false"/>
-	
-	<Parameter name="elggDefaultApiUrl" value="http://tanami.upmf-grenoble.fr/elgg/services/api/rest/json/" override="false"/>
-	<Parameter name="elggDefaultSiteUrl" value="http://tanami.upmf-grenoble.fr/elgg/" override="false"/>
-	<Parameter name="elggApiKey" value="apikey" override="false"/>
-	<Parameter name="elggDefaultUserPassword" value="defaultpassword" override="false"/>
 </Context>
