@@ -172,7 +172,6 @@ public class RestServicePortfolio
 			elggDefaultSiteUrl =  ConfigUtils.get("elggDefaultSiteUrl") ;
 			elggApiKey =  ConfigUtils.get("elggApiKey") ;
 			elggDefaultUserPassword =  ConfigUtils.get("elggDefaultUserPassword") ;
-			elggDefaultUserPassword = null;
 
 			servConfig = sc;
 			servContext = context;
