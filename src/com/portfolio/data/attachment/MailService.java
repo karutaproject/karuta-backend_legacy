@@ -138,10 +138,10 @@ public class MailService  extends HttpServlet {
 			if( recipientNode.getLength() > 0 )
 				recipient = recipientNode.item(0).getFirstChild().getNodeValue();
 			/// CC
-			if( recipient_ccNode.getLength() > 0 )
+			if( recipient_ccNode.getLength() > 0 && recipient_ccNode.item(0).getFirstChild() != null )
 				recipient_cc = recipient_ccNode.item(0).getFirstChild().getNodeValue();
 			/// BCC
-			if( recipient_bccNode.getLength() > 0 )
+			if( recipient_bccNode.getLength() > 0 && recipient_bccNode.item(0).getFirstChild() != null )
 				recipient_bcc = recipient_bccNode.item(0).getFirstChild().getNodeValue();
 			/// Subject
 			if( subjectNode.getLength() > 0 )
