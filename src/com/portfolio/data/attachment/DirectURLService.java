@@ -369,7 +369,17 @@ public class DirectURLService  extends HttpServlet {
 		try
 		{
 			c = SqlUtils.getConnection(this.getServletContext());
-			nodedata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, "", 1).toString();
+			Object retdata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, "", 1);
+			if( retdata == null )
+			{
+				response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+				PrintWriter writer = response.getWriter();
+				writer.write("Node not found");
+				writer.close();
+				request.getInputStream().close();
+				return;
+			}
+			nodedata = retdata.toString();
 
 //			System.out.println("DIRECT FETCH NODE: "+nodedata);
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
