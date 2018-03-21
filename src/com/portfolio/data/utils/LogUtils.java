@@ -69,9 +69,14 @@ public class LogUtils
 
 	public static BufferedWriter getLog( String filename ) throws IOException
 	{
+		// Ensure directory exists
+		File dir = new File(filePath);
+		if( !dir.exists() )
+			dir.mkdirs();
 		// Ensure file exists
 		File file = new File(filePath+filename);
-		file.createNewFile();
+		if( !file.exists() )
+			file.createNewFile();
 		
 		FileOutputStream fos = new FileOutputStream(file, true);
 		OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8");
