@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -45,6 +46,7 @@ import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.SqlUtils;
+import com.portfolio.security.Credential;
 
 public class LoggingService  extends HttpServlet
 {
@@ -74,33 +76,105 @@ public class LoggingService  extends HttpServlet
 		
 	}
 
-	/*
-	public void initialize(HttpServletRequest httpServletRequest)
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 	{
+		/// Check if user is logged in
+		HttpSession session = request.getSession(false);
+		if( session == null )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
+
+		int uid = (Integer) session.getAttribute("uid");
+		if( uid == 0 )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
+		
+		final Credential credential = new Credential();
+		/// Check if user is admin
 		Connection c;
 		try
 		{
-//			dataProvider.disconnect();	// Ensure we are disconnected
-//			c = SqlUtils.getConnection(getServletContext());
-//			dataProvider.setConnection(c);
+			c = SqlUtils.getConnection(getServletContext());
+			if( credential.isAdmin(c, uid) )
+			{
+				/// Logfile name
+				String loggingLine = request.getParameter("n");
+				String filename  =  ConfigUtils.get("logfile_"+loggingLine);
+
+				if( filename == null )	// Wanting an undefined logfile
+				{
+					response.setStatus(400);
+					PrintWriter writer = response.getWriter();
+					writer.append("Undefined log file");
+					writer.close();
+					return;
+				}
+
+				FileReader fr = new FileReader(filename);
+				BufferedReader bread = new BufferedReader(fr);
+				OutputStreamWriter osw = new OutputStreamWriter(response.getOutputStream());
+				BufferedWriter bwrite = new BufferedWriter(osw);
+				
+				char[] buffer = new char[1024];
+				int offset = 0;
+				int read=1;
+				
+				while( read > 0 )
+				{
+					read = bread.read(buffer, offset, 1024);
+					offset += read;
+					bwrite.write(buffer);
+				}
+				
+				/// Cleanup
+				bread.close();
+			}
 		}
 		catch( Exception e )
 		{
 			e.printStackTrace();
-			logger.error(e.getMessage());
 		}
-	}
-	//*/
+		
+		/// Close connections
+		try
+		{
+			request.getReader().close();
+			response.getWriter().close();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
 
+	}
+		
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 	{
-//		initialize(request);
+		/// Check if user is logged in
+		HttpSession session = request.getSession(false);
+		if( session == null )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
+
+		int uid = (Integer) session.getAttribute("uid");
+		if( uid == 0 )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 		
 		Connection c = null;
+		boolean raw = false;
 		try
 		{
-			HttpSession session = request.getSession(true);
 			Integer val = (Integer) session.getAttribute("uid");
 			/// Basic check if user is logged on
 			if( val == null )
@@ -125,6 +199,12 @@ public class LoggingService  extends HttpServlet
 			String context = request.getContextPath();
 			String username = "";
 			String showuser = request.getParameter("user");
+			String rawparam = request.getParameter("raw");
+			if( "1".equals(rawparam) || "true".equals(rawparam) )
+			{
+				raw = true;
+			}
+			
 			if( "true".equals(showuser) )
 			{
 				c = SqlUtils.getConnection(session.getServletContext());
@@ -145,8 +225,11 @@ public class LoggingService  extends HttpServlet
 			BufferedReader bread = new BufferedReader(bis);
 			
 			BufferedWriter bwrite = LogUtils.getLog(filename);
-			String outputformat = "%s : %s - '%s' -- ";
-			bwrite.write(String.format(outputformat, datestring, context, username));
+			if( !raw )
+			{
+				String outputformat = "%s : %s - '%s' -- ";
+				bwrite.write(String.format(outputformat, datestring, context, username));
+			}
 			String s;
 			while( (s=bread.readLine())!=null )
 			{
