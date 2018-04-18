@@ -161,6 +161,21 @@ public class DirectURLService  extends HttpServlet {
 		String email = splitData[1];
 		String role = splitData[2];
 		int level = Integer.parseInt(splitData[3]);
+		
+		/// Check if email if correctly formatted
+		String email_pattern = ".*@.*\\..*";
+		boolean email_ok = email.matches(email_pattern);
+		if( !email_ok )
+		{
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			PrintWriter writer = response.getWriter();
+			writer.write("Invalid email");
+			writer.close();
+			request.getInputStream().close();
+			return;
+		}
+
+		
 		if( "unlimited".equals(splitData[4]) )
 		{
 			// Log access
@@ -242,7 +257,7 @@ public class DirectURLService  extends HttpServlet {
 						session.setAttribute("source", "public.htm");
 						
 						String referer = (String) request.getHeader("referer");	// Can be spoofed
-						System.out.println("Login from source: "+referer);
+//						System.out.println("Login from source: "+referer);
 						isLogged = true;
 					}
 					else if( !isLogged )
@@ -280,7 +295,7 @@ public class DirectURLService  extends HttpServlet {
 						session.setAttribute("source", "public.htm");
 						
 						String referer = (String) request.getHeader("referer");	// Can be spoofed
-						System.out.println("Login from source: "+referer);
+//						System.out.println("Login from source: "+referer);
 					}
 					break;
 					
@@ -421,7 +436,7 @@ public class DirectURLService  extends HttpServlet {
 
 			String shareroleval = nodeshareroles.getTextContent();
 			values = shareroleval.split(",");
-			System.out.println("VALUES: "+shareroleval);
+//			System.out.println("VALUES: "+shareroleval);
 		}
 		
 		// Parameters checking
@@ -436,11 +451,19 @@ public class DirectURLService  extends HttpServlet {
 		  5: libellé du bouton@fr,
 		  6: condition (optionel)
 		 **/
+		String checkStatus = "Invalid: ";
 		if( "email".equals(type) )
 		{
 			if( role.equals(values[1]) && values[2].contains(email) )
 			{
 				isok = true;
+			}
+			else
+			{
+				if( !role.equals(values[1]) )
+					checkStatus += "Role doesn't match. ";
+				if( !values[2].contains(email) )
+					checkStatus += "Email doesn't match.";
 			}
 		}
 		else if( "showtorole".equals(type) )
@@ -449,12 +472,24 @@ public class DirectURLService  extends HttpServlet {
 			{
 				isok = true;
 			}
+			else
+			{
+				if( !role.equals(values[1]) )
+					checkStatus += "Role doesn't match. ";
+				if( !showtorole.equals(values[2]) )
+					checkStatus += "showtorole doesn't match.";
+			}
+		}
+		else
+		{
+			checkStatus += "type missing or invalid.";
 		}
 		
 		if( !isok )
 		{
-			response.setStatus(403);
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			PrintWriter writer = response.getWriter();
+			writer.write(checkStatus);
 			writer.close();
 			request.getInputStream().close();
 			return;
@@ -519,6 +554,7 @@ public class DirectURLService  extends HttpServlet {
 		writer.write(output);
 		writer.close();
 		request.getInputStream().close();
+//	System.out.println("DIRECT FETCH NODE: "+output);
 
 	}
 

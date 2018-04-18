@@ -15282,6 +15282,11 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		ResultSet res = null;
 		String retval = "0";
 
+		String email_pattern = ".*@.*\\..*";
+		boolean email_ok = email.matches(email_pattern);
+		if( !email_ok )
+			return retval;
+
 		try
 		{
 			Date date = new Date();
@@ -15555,6 +15560,10 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	@Override
 	public String[] logViaEmail( Connection c, String email )
 	{
+		String email_pattern = ".*@.*\\..*";
+		boolean email_ok = email.matches(email_pattern);
+		if( !email_ok )
+			return null;
 		String[] data = null;
 		String sql;
 		PreparedStatement st = null;
