@@ -121,6 +121,7 @@ public class DirectURLService  extends HttpServlet {
 		/// Decrypt data
 		Cipher rc4;
 		String output="";
+
 		try
 		{
 			byte[] data = stringToHex(val.toCharArray());
@@ -173,7 +174,7 @@ public class DirectURLService  extends HttpServlet {
 		{
 			int duration = Integer.parseInt(splitData[4]);	// In hours (minimum 1h)
 			long endtime = 0;
-			if( splitData.length == 6 )
+			if( splitData.length >= 5 )
 				endtime = Long.parseLong(splitData[5]);
 			
 			/// Check if link is still valid
@@ -187,6 +188,7 @@ public class DirectURLService  extends HttpServlet {
 				response.setStatus(403);
 				response.getWriter().close();
 				request.getInputStream().close();
+				return;
 			}
 			else
 			{
