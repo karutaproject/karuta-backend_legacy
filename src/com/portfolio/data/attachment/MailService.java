@@ -18,6 +18,7 @@ package com.portfolio.data.attachment;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
@@ -123,6 +124,14 @@ public class MailService  extends HttpServlet {
 		{
 			IOUtils.copy(request.getInputStream(), writer);
 			String data = writer.toString();
+			if( "".equals(data) )
+			{
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				PrintWriter responsewriter = response.getWriter();
+				responsewriter.println("Empty content");
+				responsewriter.close();
+				return;
+			}
 			Document doc = DomUtils.xmlString2Document(data, new StringBuffer());
 			NodeList senderNode = doc.getElementsByTagName("sender");
 			NodeList recipientNode = doc.getElementsByTagName("recipient");
