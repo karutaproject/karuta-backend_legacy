@@ -272,7 +272,8 @@ public class Credential
 		{
 			long t1=0, t2=0, t3=0, t4=0, t5=0, t6=0;
 			long t0 = System.currentTimeMillis();
-			if( getPortfolioAdmin(c, userId, node_uuid) || isAdmin(c, userId) )
+//			if( getPortfolioAdmin(c, userId, node_uuid) || isAdmin(c, userId) )
+			if( isAdmin(c, userId) )
 			{
 				nodeRight.read = true;
 				nodeRight.write = true;

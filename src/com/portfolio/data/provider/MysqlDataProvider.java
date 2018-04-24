@@ -3335,7 +3335,8 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN resource_table r1 ON n.res_node_uuid=r1.node_uuid " +   // Recuperation des donnees res_node
 						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +   // Recuperation des donnees res_res_node
 						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +   // Recuperation des donnees res_context
-						"WHERE tr.grid=gr.grid AND tr.id=gr.id AND tr.RD=1 " +
+						"WHERE tr.grid=gr.grid AND tr.id=gr.id AND tr.RD=1 "; // +
+						/*
 						"UNION ALL " +	/// Union pour les donnees appartenant au createur
 						"SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
@@ -3349,9 +3350,10 @@ public class MysqlDataProvider implements DataProvider {
 						"LEFT JOIN resource_table r2 ON n.res_res_node_uuid=r2.node_uuid " +
 						"LEFT JOIN resource_table r3 ON n.res_context_node_uuid=r3.node_uuid " +
 						"WHERE n.modif_user_id=? AND portfolio_id=uuid2bin(?)";
+				//*/
 				st = c.prepareStatement(sql);
-				st.setInt(1, userId);
-				st.setString(2, portfolioUuid);
+//				st.setInt(1, userId);
+//				st.setString(2, portfolioUuid);
 			}
 			else if(cred.isPublic(c, null, portfolioUuid))	// Public case, looks like previous query, but with different rights
 			{
