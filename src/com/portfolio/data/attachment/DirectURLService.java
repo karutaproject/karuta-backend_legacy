@@ -33,6 +33,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.UUID;
 
 import javax.activation.MimeType;
 import javax.activation.MimeTypeParseException;
@@ -160,21 +161,8 @@ public class DirectURLService  extends HttpServlet {
 		String uuid = splitData[0];
 		String email = splitData[1];
 		String role = splitData[2];
+		String showtorole = splitData[6];
 		int level = Integer.parseInt(splitData[3]);
-		
-		/// Check if email if correctly formatted
-		String email_pattern = ".*@.*\\..*";
-		boolean email_ok = email.matches(email_pattern);
-		if( !email_ok )
-		{
-			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-			PrintWriter writer = response.getWriter();
-			writer.write("Invalid email");
-			writer.close();
-			request.getInputStream().close();
-			return;
-		}
-
 		
 		if( "unlimited".equals(splitData[4]) )
 		{
@@ -247,6 +235,16 @@ public class DirectURLService  extends HttpServlet {
 					break;
 					
 				case 3:	// Create account for this person
+					if( "2world".equals(showtorole) )
+					{
+						/// Create bogus email
+						String username = UUID.randomUUID().toString();
+						String domainname = UUID.randomUUID().toString();
+						String tld = UUID.randomUUID().toString();
+						
+						email = username+"@"+domainname+"."+tld;
+					}
+					
 					/// Check if user exist by logging in
 					login = dataProvider.logViaEmail(c, email);
 					if( login != null )
@@ -260,6 +258,7 @@ public class DirectURLService  extends HttpServlet {
 //						System.out.println("Login from source: "+referer);
 						isLogged = true;
 					}
+					
 					else if( !isLogged )
 					{
 						login = new String[] {"0","0","0"};
@@ -374,7 +373,7 @@ public class DirectURLService  extends HttpServlet {
 		String level = request.getParameter("l");
 		String duration = request.getParameter("d");
 		String type = request.getParameter("type");
-		String shareroles = request.getParameter("showtoroles");
+		String sharerole = request.getParameter("sharerole");
 		String showtorole = request.getParameter("showtorole");
 		Connection c = null;
 		Document doc = null;
@@ -435,7 +434,31 @@ public class DirectURLService  extends HttpServlet {
 			}
 
 			String shareroleval = nodeshareroles.getTextContent();
-			values = shareroleval.split(",");
+			String multiplex[] = shareroleval.split(";");
+			/// Find matching line
+			String find_pattern = "";
+			if("email".equals(type) )
+				find_pattern = "^"+sharerole+","+role+","+email+",.*";
+			else if( "showtorole".equals(type) )
+				find_pattern = "^"+sharerole+","+role+","+showtorole+",.*";
+			
+			int f=0;
+			for( f=0; f< multiplex.length; f++ )
+			{
+				if( multiplex[f].matches(find_pattern) )
+					break;
+			}
+			if( f >= multiplex.length )
+			{
+				response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+				PrintWriter writer = response.getWriter();
+				writer.write("No matching rule");
+				writer.close();
+				request.getInputStream().close();
+				return;
+			}
+
+			values = multiplex[f].split(",");
 //			System.out.println("VALUES: "+shareroleval);
 		}
 		
@@ -454,7 +477,7 @@ public class DirectURLService  extends HttpServlet {
 		String checkStatus = "Invalid: ";
 		if( "email".equals(type) )
 		{
-			if( role.equals(values[1]) && values[2].contains(email) )
+			if( values[1].contains(role) && values[2].contains(email) )
 			{
 				isok = true;
 			}
@@ -468,7 +491,7 @@ public class DirectURLService  extends HttpServlet {
 		}
 		else if( "showtorole".equals(type) )
 		{
-			if( role.equals(values[1]) && showtorole.equals(values[2]) )
+			if( values[1].contains(role) && values[2].contains(showtorole) )
 			{
 				isok = true;
 			}
@@ -528,7 +551,7 @@ public class DirectURLService  extends HttpServlet {
 		String output = "";
 		try
 		{
-			String data = uuid+" "+email+" "+role+" "+level+" "+duration+" "+endtimeString;
+			String data = uuid+" "+email+" "+role+" "+level+" "+duration+" "+endtimeString+" "+showtorole;
 			Cipher rc4 = Cipher.getInstance("RC4");
 			String secretkey = ConfigUtils.get("directkey");
 			SecretKeySpec key = new SecretKeySpec(secretkey.getBytes(), "RC4");
