@@ -4103,6 +4103,20 @@ public class MysqlDataProvider implements DataProvider {
 			return null;
 	}
 
+	public String getNodePortfolioId(Connection c, String nodeUuid ) throws Exception
+	{
+		String sql = "SELECT bin2uuid(portfolio_id) FROM node WHERE node_uuid=uuid2bin(?)";
+		String portfolioid = "";
+		PreparedStatement st = c.prepareStatement(sql);
+		st.setString(1, nodeUuid);
+		ResultSet res = st.executeQuery();
+		if( res.next() )
+			portfolioid = res.getString(1);
+		st.close();
+		
+		return portfolioid;
+	}
+	
 	@Override
 	public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId)
 	{

@@ -96,6 +96,7 @@ public interface DataProvider {
 
 	/// Relatif aux noeuds
 	public Object getNode(Connection c, MimeType outMimeType,String nodeUuid,boolean withChildren, int userId, int groupId, String label, Integer cutoff) throws Exception;
+	public String getNodePortfolioId(Connection c, String nodeUuid ) throws Exception;
 	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,int userId, int groupId, String semtag,String parentUuid, String filterId,String filterParameters,String sortId, Integer cutoff) throws Exception;
 	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent, Integer cutoff) throws SQLException;
 	public Object getNodeBySemanticTag(Connection c, MimeType mimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception;

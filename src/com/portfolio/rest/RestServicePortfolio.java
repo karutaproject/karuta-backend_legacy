@@ -2502,6 +2502,68 @@ public class RestServicePortfolio
 	}
 
 	/**
+	 *	Fetch portfolio id from a given node id
+	 *	GET /rest/api/nodes/node/{node-id}/portfolioid
+	 *	parameters:
+	 *	return:
+	 *		portfolioid
+	 **/
+	@Path("/nodes/node/{node-id}/portfolioid")
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public String getNodePortfolioId( @CookieParam("user") String user, @CookieParam("credential") String token, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept )
+	{
+		if( !isUUID(nodeUuid) )
+		{
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		Connection c = null;
+
+		try
+		{
+			c = SqlUtils.getConnection(servContext);
+			// Admin, or if user has a right to read can fetch this information
+			if( !credential.isAdmin(c, ui.userId) && !credential.hasNodeRight(c, ui.userId, 0, nodeUuid, Credential.READ) )
+			{
+				throw new RestWebApplicationException(Status.FORBIDDEN, "No rights");
+			}
+			
+			String returnValue = dataProvider.getNodePortfolioId( c, nodeUuid );
+			if(returnValue.length() != 0)
+			{
+				return returnValue;
+			}
+			else
+			{
+				throw new RestWebApplicationException(Status.NOT_FOUND, "Error, shouldn't happen.");
+			}
+		}
+		catch(RestWebApplicationException ex)
+		{
+			throw new RestWebApplicationException(ex.getStatus(), ex.getResponse().getEntity().toString());
+		}
+		catch(SQLException ex)
+		{
+			throw new RestWebApplicationException(Status.NOT_FOUND, "Node "+nodeUuid+" not found");
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+	}
+
+	/**
 	 *	Change nodes right
 	 *	POST /rest/api/nodes/node/{node-id}/rights
 	 *	parameters:

@@ -87,6 +87,12 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
+	public String getNodePortfolioId(Connection c, String nodeUuid ) throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	@Override
 	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,
 			int userId,int groupId,
 			String semtag, String parentUuid, String filterId,
