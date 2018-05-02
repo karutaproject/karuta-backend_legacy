@@ -10188,7 +10188,9 @@ public class MysqlDataProvider implements DataProvider {
 					result.append(res.getString("active"));
 					result.append("</active><substitute>");
 					result.append(subs);
-					result.append("</substitute></user>");
+					result.append("</substitute>");
+					result.append("<other>").append(res.getString("other")).append("</other>");
+					result.append("</user>");
 				}
 				else {}
 			}
@@ -10278,6 +10280,7 @@ public class MysqlDataProvider implements DataProvider {
 					result += DomUtils.getXmlElementOutput("designer", res.getString("is_designer"));
 					result += DomUtils.getXmlElementOutput("active", res.getString("active"));
 					result += DomUtils.getXmlElementOutput("substitute", subs);
+					result += DomUtils.getXmlElementOutput("other",  res.getString("other"));
 					result += "</user>";
 
 				}
@@ -10351,6 +10354,7 @@ public class MysqlDataProvider implements DataProvider {
 		String is_admin = null;
 		String is_designer = null;
 		String hasSubstitute = null;
+		String other = "";
 
 		//On prepare les requetes SQL
 		PreparedStatement st;
@@ -10406,6 +10410,8 @@ public class MysqlDataProvider implements DataProvider {
 				{ active = DomUtils.getInnerXml(children2.item(y)); }
 				if(children2.item(y).getNodeName().equals("substitute"))
 				{ hasSubstitute = DomUtils.getInnerXml(children2.item(y)); }
+				if(children2.item(y).getNodeName().equals("other"))
+				{ other = DomUtils.getInnerXml(children2.item(y)); }
 			}
 				
 			/// Check if user has the correct password to execute changes
@@ -10510,6 +10516,15 @@ public class MysqlDataProvider implements DataProvider {
 
 					st = c.prepareStatement(sql);
 					st.setInt(1, activeInt);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( other != null )
+				{
+					sql = "UPDATE credential SET other = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setString(1, other);
 					st.setInt(2, userid2);
 					st.executeUpdate();
 				}
@@ -10712,6 +10727,7 @@ public class MysqlDataProvider implements DataProvider {
 					String designerstr = null;
 					String  active = "1";
 					String substitute = null;
+					String other = "";
 					int id = 0;
 					int designer;
 
@@ -10729,13 +10745,14 @@ public class MysqlDataProvider implements DataProvider {
 							if(children2.item(y).getNodeName().equals("active")){	active = DomUtils.getInnerXml(children2.item(y));	}
 							if(children2.item(y).getNodeName().equals("designer")){	designerstr = DomUtils.getInnerXml(children2.item(y));	}
 							if(children2.item(y).getNodeName().equals("substitute")){	substitute = DomUtils.getInnerXml(children2.item(y));	}
+							if(children2.item(y).getNodeName().equals("other")){	other = DomUtils.getInnerXml(children2.item(y));	}
 						}
 
 						//On ajoute l'utilisateur dans la base de donnees
-						sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)),?,?)";
+						sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer, other) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)),?,?,?)";
 						stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 						if (dbserveur.equals("oracle")){
-							sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer) VALUES (?, ?, ?, ?, crypt(?),?,?)";
+							sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer, other) VALUES (?, ?, ?, ?, crypt(?),?,?,?)";
 							stInsert = c.prepareStatement(sqlInsert, new String[]{"userid"});
 						}
 
@@ -10760,6 +10777,7 @@ public class MysqlDataProvider implements DataProvider {
 						else
 							designer = 0;
 						stInsert.setInt(7, designer);
+						stInsert.setString(8, other);
 
 						stInsert.executeUpdate();
 
@@ -10800,6 +10818,7 @@ public class MysqlDataProvider implements DataProvider {
 						userdone.append("<active>").append(active).append("</active>");
 						userdone.append("<designer>").append(designerstr).append("</designer>");
 						userdone.append("<substitute>").append(substitute).append("</substitute>");
+						userdone.append("<other>").append(substitute).append("</other>");
 						userdone.append("</user>");
 					}
 				}
@@ -10921,6 +10940,7 @@ public class MysqlDataProvider implements DataProvider {
 			returnValue[0] += DomUtils.getXmlElementOutput("admin", res.getString("is_admin"));
 			returnValue[0] += DomUtils.getXmlElementOutput("designer", res.getString("is_designer"));
 			returnValue[0] += DomUtils.getXmlElementOutput("email",res.getString("email"));
+			returnValue[0] += DomUtils.getXmlElementOutput("other",res.getString("other"));
 			returnValue[0] +="</credential>";
 		}
 		catch (Exception e){ e.printStackTrace(); }
