@@ -440,7 +440,7 @@ public class DirectURLService  extends HttpServlet {
 			/// Find matching line
 			String find_pattern = "";
 			if("email".equals(type) )
-				find_pattern = "^"+sharerole+","+role+","+email+",.*";
+				find_pattern = "^"+sharerole+","+role+",("+email+"|\\?),.*";
 			else if( "showtorole".equals(type) )
 				find_pattern = "^"+sharerole+","+role+","+showtorole+",.*";
 			
@@ -479,7 +479,7 @@ public class DirectURLService  extends HttpServlet {
 		String checkStatus = "Invalid: ";
 		if( "email".equals(type) )
 		{
-			if( values[1].contains(role) && values[2].contains(email) )
+			if( (values[1].contains(role) && values[2].contains(email)) || "?".equals(values[2]) )
 			{
 				isok = true;
 			}
