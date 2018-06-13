@@ -69,7 +69,7 @@ public class MailUtils
 		String mail_sender = ConfigUtils.get("mail_sender");
 		String mail_password = ConfigUtils.get("mail_password");
 		
-		if( mail_login == null || mail_password == null )
+		if( mail_login == null )
 			return -1;
 		
 		if( mail_sender == null )
