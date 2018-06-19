@@ -4763,6 +4763,18 @@ public class RestServicePortfolio
 		String retVal = "";
 		int status = 0;
 		Connection c = null;
+		
+		String authlog = ConfigUtils.get("auth_log");
+		BufferedWriter authLog = null;
+		try
+		{
+			if( !"".equals(authlog) && authlog != null )
+			authLog = LogUtils.getLog(authlog);
+		}
+		catch( IOException e1 )
+		{
+			logger.error("Could not create authentification log file");
+		}
 
 		try
 		{
@@ -4791,6 +4803,9 @@ public class RestServicePortfolio
 			{
 				event.status = 403;
 				retVal = "invalid credential";
+				
+				if(authLog != null)
+					authLog.write(String.format("Authentication error for user '%s' date '%s'\n", login, LogUtils.getCurrentDate()));
 			}
 			else if ( !"0".equals(resultCredential[2]) )
 			{
@@ -4805,6 +4820,8 @@ public class RestServicePortfolio
 					session.setAttribute("uid", subid);
 					session.setAttribute("subuser", resultCredential[1]);
 					session.setAttribute("subuid", uid);
+					if(authLog != null)
+						authLog.write(String.format("Authentication success for user '%s' date '%s' (Substitution)\n", login, LogUtils.getCurrentDate()));
 				}
 				else
 				{
@@ -4815,6 +4832,8 @@ public class RestServicePortfolio
 					session.setAttribute("uid", userId);
 					session.setAttribute("subuser", "");
 					session.setAttribute("subuid", 0);
+					if(authLog != null)
+						authLog.write(String.format("Authentication success for user '%s' date '%s'\n", login, LogUtils.getCurrentDate()));
 				}
 
 				event.status = 200;
@@ -4843,8 +4862,17 @@ public class RestServicePortfolio
 			try
 			{
 				if( c != null ) c.close();
+				if( authLog != null )
+				{
+					authLog.flush();
+					authLog.close();
+				}
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
+			catch( IOException e )
+			{
+				e.printStackTrace();
+			}
 		}
 		
 		return Response.status(status).entity(retVal).type(MediaType.APPLICATION_XML).build();
