@@ -122,7 +122,8 @@ public class MailUtils
 
 		// first part  (the html)
 		MimeBodyPart messageBodyPart = new MimeBodyPart();
-		messageBodyPart.setContent(content, "text/html");
+		messageBodyPart.setHeader("Content-Type","text/html; charset=\"utf-8\""); 
+		messageBodyPart.setContent(content, "text/html; charset=utf-8");
 
 		// add it
 		multipart.addBodyPart(messageBodyPart);
