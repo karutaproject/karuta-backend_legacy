@@ -124,6 +124,17 @@
 
 	<servlet>
 		<description></description>
+		<display-name>Shibboleth service</display-name>
+		<servlet-name>ShibeServe</servlet-name>
+		<servlet-class>com.portfolio.security.ShibeServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ShibeServe</servlet-name>
+		<url-pattern>/shibe</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<description></description>
 		<display-name>CSVServlet</display-name>
 		<servlet-name>CSVServlet</servlet-name>
 		<servlet-class>com.portfolio.data.attachment.ConvertCSV</servlet-class>

@@ -306,6 +306,28 @@ public class RestServicePortfolio
 			String xmluser = dataProvider.getInfUser(c, ui.userId, ui.userId);
 			logRestRequest(httpServletRequest, "", xmluser, Status.OK.getStatusCode());
 
+			/// Add shibboleth info if needed
+			HttpSession session = httpServletRequest.getSession(false);
+			int fromshibe = (Integer) session.getAttribute("fromshibe");
+			String alist = ConfigUtils.get("shib_attrib");
+			if( fromshibe == 1 && alist != null )
+			{
+				/// Fetch and construct needed data
+				String[] attriblist = alist.split(",");
+				int lastst = xmluser.lastIndexOf("<");
+				StringBuilder shibuilder = new StringBuilder( xmluser.substring(0, lastst) );
+				for( String attrib : attriblist )
+				{
+					String value = (String) httpServletRequest.getAttribute(attrib);
+					shibuilder.append("<").append(attrib).append(">")
+					.append(value)
+					.append("</").append(attrib).append(">");
+				}
+				/// Add it as last tag after "moving" the closing tag
+				shibuilder.append(xmluser.substring(lastst));
+				xmluser = shibuilder.toString();
+			}
+			
 			return Response.ok(xmluser).build();
 		}
 		catch(Exception ex)
@@ -324,7 +346,6 @@ public class RestServicePortfolio
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
 	}
-
 
 	/**
 	 *	Get groups from a user id
