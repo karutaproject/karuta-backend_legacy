@@ -308,9 +308,9 @@ public class RestServicePortfolio
 
 			/// Add shibboleth info if needed
 			HttpSession session = httpServletRequest.getSession(false);
-			int fromshibe = (Integer) session.getAttribute("fromshibe");
+			Integer fromshibe = (Integer) session.getAttribute("fromshibe");
 			String alist = ConfigUtils.get("shib_attrib");
-			if( fromshibe == 1 && alist != null )
+			if( fromshibe != null && fromshibe == 1 && alist != null )
 			{
 				/// Fetch and construct needed data
 				String[] attriblist = alist.split(",");
