@@ -4993,9 +4993,16 @@ public class RestServicePortfolio
 	 *	parameters:
 	 *	return:
 	 **/
+	@POST
+	@Path("/credential/login/cas")
+	public Response postCredentialFromCas( String content, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	{
+		return getCredentialFromCas(user, token, groupId, ticket, redir, sc, httpServletRequest);
+	}
+	
 	@Path("/credential/login/cas")
 	@GET
-	public Response postCredentialFromCas( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public Response getCredentialFromCas( @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		initService( httpServletRequest );
 		HttpSession session = httpServletRequest.getSession(true);
@@ -5028,17 +5035,42 @@ public class RestServicePortfolio
 			
 			sv.setCasValidateUrl(casUrlValidation);
 
+			/// X-Forwarded-Proto is for certain setup, check config file
+			/// for some more details
+			String proto = httpServletRequest.getHeader("X-Forwarded-Proto");
 			requestURL = httpServletRequest.getRequestURL();
-			if (httpServletRequest.getQueryString() != null) {
-				requestURL.append("?").append(httpServletRequest.getQueryString());
+			if( proto == null )
+			{
+				System.out.println("cas usuel");
+				if (redir != null) {
+					requestURL.append("?redir=").append(redir);
+				}
+				completeURL = requestURL.toString();
 			}
-			completeURL = requestURL.toString();
+			else
+			{
+				/// Keep only redir parameter
+				if (redir != null) {
+					requestURL.append("?redir=").append(redir);
+				}
+				completeURL = requestURL.replace(0, requestURL.indexOf(":"), proto).toString();
+			}
+			/// completeURL should be the same provided in the "service" parameter
+			// System.out.println(String.format("Service: %s\n", completeURL));
+
 			sv.setService(completeURL);
 			sv.setServiceTicket(ticket);
 			//sv.setProxyCallbackUrl(urlOfProxyCallbackServlet);
 			sv.validate();
 
 			xmlResponse = sv.getResponse();
+			if( xmlResponse.contains("cas:authenticationFailure") )
+			{
+				System.out.println(String.format("CAS response: %s\n", xmlResponse));
+				return Response.status(Status.FORBIDDEN).entity("CAS error").build();
+			}
+			
+
 			//<cas:user>vassoilm</cas:user>
 			//session.setAttribute("user", sv.getUser());
 			//session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
