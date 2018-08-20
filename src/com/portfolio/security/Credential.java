@@ -170,14 +170,20 @@ public class Credential
 
 		try
 		{
+			/// modif_user_id => current owner
 			//sql = "SELECT distinct portfolio_id FROM GroupRights gr, group_user gu, group_info gi, node n WHERE gu.gid = gi.gid AND gi.grid = gr.grid and gr.id = n.node_uuid AND gu.userid = ? and gr.grid =  '26'";
-			sql = "SELECT user_id, bin2uuid(root_node_uuid) as root_node_uuid FROM portfolio WHERE portfolio_id = uuid2bin(?)";
+			sql = "SELECT user_id, modif_user_id, bin2uuid(root_node_uuid) as root_node_uuid FROM portfolio " +
+					"WHERE portfolio_id = uuid2bin(?) AND modif_user_id = ?";
 			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
+			st.setInt(2, userId);
 			res = st.executeQuery();
-			if( res.next() )
+			if( res.next() )	// Is the owner
+			{
+				reponse.add = reponse.delete = reponse.read = reponse.write = true;
+			}
+			else	// General case
 				reponse = getNodeRight(c, userId, groupId, res.getString("root_node_uuid"), droit);
-
 		}
 		catch(Exception ex)
 		{

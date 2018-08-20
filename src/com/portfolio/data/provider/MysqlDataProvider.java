@@ -3191,8 +3191,8 @@ public class MysqlDataProvider implements DataProvider {
 
 			time1 = System.currentTimeMillis();
 
-			// Cas admin, designer
-			if(cred.isAdmin(c, userId) || cred.isDesigner(c, userId, rootNodeUuid))
+			// Cas admin, designer, owner
+			if(cred.isAdmin(c, userId) || cred.isDesigner(c, userId, rootNodeUuid) || userId == cred.getOwner(c, userId, portfolioUuid) )
 			{
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
