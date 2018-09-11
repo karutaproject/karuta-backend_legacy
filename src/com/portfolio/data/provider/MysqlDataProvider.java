@@ -4485,7 +4485,7 @@ public class MysqlDataProvider implements DataProvider {
 						"semtag varchar(100) DEFAULT NULL, " +
 						"semantictag varchar(100) DEFAULT NULL, " +
 						"label varchar(100)  DEFAULT NULL, " +
-						"code varchar(100)  DEFAULT NULL, " +
+						"code varchar(255)  DEFAULT NULL, " +
 						"descr varchar(100)  DEFAULT NULL, " +
 						"format varchar(30) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
@@ -4518,7 +4518,7 @@ public class MysqlDataProvider implements DataProvider {
 						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 						"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 						"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
-						"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"code VARCHAR2(255 CHAR)  DEFAULT NULL, " +
 						"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 						"modif_user_id NUMBER(12) NOT NULL, " +
@@ -6018,7 +6018,7 @@ public class MysqlDataProvider implements DataProvider {
 						"semtag varchar(100) DEFAULT NULL, " +
 						"semantictag varchar(100) DEFAULT NULL, " +
 						"label varchar(100)  DEFAULT NULL, " +
-						"code varchar(100)  DEFAULT NULL, " +
+						"code varchar(255)  DEFAULT NULL, " +
 						"descr varchar(100)  DEFAULT NULL, " +
 						"format varchar(30) DEFAULT NULL, " +
 						"modif_user_id int(12) NOT NULL, " +
@@ -6048,7 +6048,7 @@ public class MysqlDataProvider implements DataProvider {
 						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 						"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 						"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
-						"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+						"code VARCHAR2(255 CHAR)  DEFAULT NULL, " +
 						"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
 						"modif_user_id NUMBER(12) NOT NULL, " +
