@@ -702,6 +702,9 @@ public class FileServlet  extends HttpServlet
 				int code = connection.getResponseCode();
 				String msg = connection.getResponseMessage();
 
+				if( code != HttpURLConnection.HTTP_OK )
+					logger.error("Couldn't send file: "+msg);
+				
 				/// Retrieving info
 				InputStream objReturn = connection.getInputStream();
 				StringWriter idResponse = new StringWriter();
