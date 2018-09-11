@@ -1112,6 +1112,7 @@ public class RestServicePortfolio
 	 *	- code
 	 *	- n: number of results (10<n<50)
 	 *	- i: index start + n
+	 *	- userid: for this user (only with root)
 	 *	return:
 	 *	<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 	 *	<portfolios>
@@ -1135,7 +1136,7 @@ public class RestServicePortfolio
 	@GET
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("user") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") Integer cutoff, @QueryParam("public") String public_var, @QueryParam("project") String project, @QueryParam("count") String count,  @QueryParam("search") String search)
+	public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("userid") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") Integer cutoff, @QueryParam("public") String public_var, @QueryParam("project") String project, @QueryParam("count") String count,  @QueryParam("search") String search)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -1187,7 +1188,7 @@ public class RestServicePortfolio
 						int publicid = credential.getMysqlUserUid(c, "public");
 						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, portfolioActive, 0, portfolioProject, portfolioProjectId, countOnly, search).toString();
 					}
-					else if( userId != null && credential.isAdmin(c, ui.userId) )	//	XXX If user is admin, can ask any specific list of portfolios as a specific user	(normally redudant with substitution) 
+					else if( userId != null && credential.isAdmin(c, ui.userId) ) 
 					{
 						returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search).toString();
 					}
