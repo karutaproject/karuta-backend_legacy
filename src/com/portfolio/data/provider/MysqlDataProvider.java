@@ -12677,6 +12677,55 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				st.executeUpdate();
 				st.close();
 			}
+			else if("submitall".equals(macroName))
+			{
+				// Fill temp table 't_struc_nodeid' with node ids
+				queryChildren(c, nodeUuid);
+				
+				/// Apply changes
+				System.out.println("ACTION: "+macroName+" grid: "+grid+" -> uuid: "+nodeUuid);
+				/// Insert/replace existing editing related rights
+				/// Same as submit, except we don't limit to user's own group right
+				sql = "INSERT INTO group_rights(grid, id, WR, DL, AD, SB, types_id, rules_id) " +
+						"SELECT gr.grid, gr.id, 0, 0, 0, 0, NULL, NULL " +
+						"FROM group_rights gr " +
+						"WHERE gr.id IN (SELECT uuid FROM t_struc_nodeid) " +
+						"ON DUPLICATE KEY UPDATE WR=0, DL=0, AD=0, SB=0, types_id=null, rules_id=null";
+
+				if (dbserveur.equals("oracle")){
+					sql = "MERGE INTO group_rights d USING (" +
+							"SELECT gr.grid, gr.id, 0 WR, 0 DL, 0 AD, 0 SB, NULL types_id, NULL rules_id " +
+							"FROM group_rights gr " +
+							"WHERE gr.id IN (SELECT uuid FROM t_struc_nodeid)) s " +
+							"ON (d.grid=s.grid AND d.id=s.id) " +
+							"WHEN MATCHED THEN UPDATE " +
+							"SET d.WR=0, d.DL=0, d.AD=0, d.SB=0, d.types_id=s.types_id, d.rules_id=s.rules_id " +
+							"WHEN NOT MATCHED THEN " +
+							"INSERT (d.grid, d.id, d.WR, d.DL, d.AD, d.SB, d.types_id, d.rules_id) " +
+							"VALUES (s.grid, s.id, s.WR, s.DL, s.AD, s.SB, s.types_id, s.rules_id)";
+				}
+				st = c.prepareStatement(sql);
+				int rows = st.executeUpdate();
+				st.close();
+				
+				if( rows == 0 )
+					return "unchanged";
+				
+				/// We then update the metadata notifying it was submitted
+				rootMeta.setAttribute("submitted", "Y");
+				/// Submitted date
+				Date time = new Date();
+				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				String timeFormat = dt.format(time);
+				rootMeta.setAttribute("submitteddate", timeFormat);
+				String updatedMeta = DomUtils.getNodeAttributesString(rootMeta);
+				sql = "UPDATE node SET metadata_wad=? WHERE node_uuid=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, updatedMeta);
+				st.setString(2, nodeUuid);
+				st.executeUpdate();
+				st.close();
+			}
 			else if( "submitQuizz".equals(macroName) )
 			{
 				sql = "DROP TEMPORARY TABLE IF EXISTS t_struc_nodeid, t_struc_nodeid_2";
