@@ -179,6 +179,17 @@
 	</servlet-mapping>
 
 	<servlet>
+		<description></description>
+		<display-name>Report service</display-name>
+		<servlet-name>ReportService</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.ReportService</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ReportService</servlet-name>
+		<url-pattern>/report</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<servlet-name>LTI</servlet-name>
 		<servlet-class>com.portfolio.security.LTIServlet</servlet-class>
 	</servlet>
