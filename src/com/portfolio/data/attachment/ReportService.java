@@ -103,41 +103,53 @@ public class ReportService  extends HttpServlet
 		Connection c;
 		try
 		{
-			c = SqlUtils.getConnection(getServletContext());
-			if( credential.isAdmin(c, uid) )
+			String pathinfo = request.getPathInfo();
+			String urlTarget = "http://127.0.0.1:8081";
+			if( pathinfo != null )
+				urlTarget += pathinfo;
+			System.out.println("Path: "+pathinfo+" -> "+urlTarget);
+			
+			/// Create connection
+			URL urlConn = new URL(urlTarget);
+			HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
+			connection.setDoOutput(true);
+			connection.setUseCaches(false);
+			connection.setInstanceFollowRedirects(false);
+			String method = request.getMethod();
+			connection.setRequestMethod(method);
+
+			String context = request.getContextPath();
+			connection.setRequestProperty("app", context);
+
+			/// Transfer headers
+			String key = "";
+			String value = "";
+			Enumeration<String> header = request.getHeaderNames();
+			while( header.hasMoreElements() )
 			{
-				/// Logfile name
-				String loggingLine = request.getParameter("n");
-				String filename  =  ConfigUtils.get("logfile_"+loggingLine);
-
-				if( filename == null )	// Wanting an undefined logfile
-				{
-					response.setStatus(400);
-					PrintWriter writer = response.getWriter();
-					writer.append("Undefined log file");
-					writer.close();
-					return;
-				}
-
-				FileReader fr = new FileReader(filename);
-				BufferedReader bread = new BufferedReader(fr);
-				OutputStreamWriter osw = new OutputStreamWriter(response.getOutputStream());
-				BufferedWriter bwrite = new BufferedWriter(osw);
-				
-				char[] buffer = new char[1024];
-				int offset = 0;
-				int read=1;
-				
-				while( read > 0 )
-				{
-					read = bread.read(buffer, offset, 1024);
-					offset += read;
-					bwrite.write(buffer);
-				}
-				
-				/// Cleanup
-				bread.close();
+				key = header.nextElement();
+				value = request.getHeader(key);
+				connection.setRequestProperty(key, value);
 			}
+
+			connection.connect();
+
+			OutputStream output = response.getOutputStream();
+			/// Send data to report daemon
+			InputStream inputData = connection.getInputStream();
+			IOUtils.copy(inputData, output);
+
+			/// Those 2 lines are needed, otherwise, no request sent
+			int code = connection.getResponseCode();
+			String msg = connection.getResponseMessage();
+
+			if( code != HttpURLConnection.HTTP_OK )
+				logger.error("Couldn't send file: "+msg);
+			
+			// Close connection to report daemon
+			connection.disconnect();
+			inputData.close();
+			output.close();
 		}
 		catch( Exception e )
 		{
@@ -147,8 +159,8 @@ public class ReportService  extends HttpServlet
 		/// Close connections
 		try
 		{
-			request.getReader().close();
-			response.getWriter().close();
+//			request.getReader().close();
+//			response.getWriter().close();
 		}
 		catch(Exception e)
 		{
@@ -201,7 +213,13 @@ public class ReportService  extends HttpServlet
 
 			data += "&user="+username;
 			
-			String urlTarget = "127.0.0.1:8081/";
+			String pathinfo = request.getPathInfo();
+			String urlTarget = "http://127.0.0.1:8081";
+			if( pathinfo != null )
+				urlTarget += pathinfo;
+			System.out.println("Path: "+pathinfo+" -> "+urlTarget);
+			
+			System.out.println("Sending: "+data);
 			
 			/// Create connection
 			URL urlConn = new URL(urlTarget);
@@ -249,6 +267,10 @@ public class ReportService  extends HttpServlet
 			
 			// Close connection to report daemon
 			connection.disconnect();
+			System.out.println("Send: OK");
+			
+			objReturn.close();
+			os.close();
 		}
 		catch( Exception e )
 		{
@@ -261,7 +283,7 @@ public class ReportService  extends HttpServlet
 			{
 				if( c != null ) c.close();
 				request.getInputStream().close();
-				response.getWriter().close();
+//				response.getWriter().close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 			catch( IOException e )

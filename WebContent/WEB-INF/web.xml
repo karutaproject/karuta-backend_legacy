@@ -186,7 +186,7 @@
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ReportService</servlet-name>
-		<url-pattern>/report</url-pattern>
+		<url-pattern>/report/*</url-pattern>
 	</servlet-mapping>
 
 	<servlet>
