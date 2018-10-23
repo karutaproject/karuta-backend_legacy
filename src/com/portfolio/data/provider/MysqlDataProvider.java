@@ -14236,6 +14236,44 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 	
 	@Override
+	public int getGroupByGroupLabel(Connection c, String groupLabel, int userId)
+	{
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+
+		int groupId = -1;
+		try
+		{
+			sql = "SELECT cg FROM credential_group cg " +
+					"WHERE cg.label=?";
+			st = c.prepareStatement(sql);
+			st.setString(1, groupLabel);
+			res = st.executeQuery();
+
+			if(res.next())
+			{
+				groupId = res.getInt("cg");
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+      }
+      catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		return groupId;
+	}
+	
+	@Override
 	public String getGroupByUser(Connection c, int user, int userId)
 	{
 		String sql = "";
@@ -14530,6 +14568,44 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
       catch( SQLException e ){ e.printStackTrace(); }
 		}
 		
+		return groupid;
+	}
+	
+	@Override
+	public int getPortfolioGroupIdFromLabel(Connection c, String groupLabel, int userId )
+	{
+		String sql = "";
+		PreparedStatement st = null;
+		ResultSet res = null;
+		int groupid = -1;
+
+		try
+		{
+			sql = "SELECT pg FROM portfolio_group pg " +
+					"WHERE pg.label=?";
+			st = c.prepareStatement(sql);
+			st.setString(1, groupLabel);
+			res = st.executeQuery();
+
+			if(res.next())
+			{
+				groupid = res.getInt("pg");
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				if( res != null )
+					res.close();
+				if( st != null )
+					st.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+
 		return groupid;
 	}
 	

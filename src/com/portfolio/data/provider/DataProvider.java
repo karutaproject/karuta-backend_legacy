@@ -174,6 +174,7 @@ public interface DataProvider {
 	public boolean isUserMemberOfGroup(Connection c, int userId, int groupId);
 	public String getRoleUser(Connection c, int userId, int userid2);
 	public String getUserGroupList(Connection c, int userId);
+	public int getGroupByGroupLabel(Connection c, String groupLabel, int userId);
 	public String getGroupByUser(Connection c, int user, int userId);
 	public String getUsersByUserGroup(Connection c, int userGroupId, int userId);
 	public String getGroupsByRole(Connection c, int userId, String portfolioUuid, String role);
@@ -193,6 +194,7 @@ public interface DataProvider {
 
 	/// Related to portfolio groups
 	public int postPortfolioGroup( Connection c, String groupname, String type, Integer parent, int userId );
+	public int getPortfolioGroupIdFromLabel( Connection c, String groupLabel, int userId );
 	public String getPortfolioGroupListFromPortfolio(Connection c, String portfolioid,  int userId );
 	public String getPortfolioGroupList( Connection c, int userId );
 	public String getPortfolioByPortfolioGroup( Connection c, Integer portfolioGroupId, int userId );

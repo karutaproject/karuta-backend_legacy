@@ -5526,7 +5526,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/usersgroups")
 	@GET
-	public String getUsersByUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user)
+	public String getUsersByUserGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user, @QueryParam("label") String groupLabel )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
@@ -5535,7 +5535,16 @@ public class RestServicePortfolio
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			if( user != null )
+			if( groupLabel != null )
+			{
+				int groupId = dataProvider.getGroupByGroupLabel(c, groupLabel, ui.userId);
+				if( groupId < 0 )
+				{
+					throw new RestWebApplicationException(Status.NOT_FOUND, "");
+				}
+				xmlUsers = Integer.toString(groupId);
+			}
+			else if( user != null )
 				xmlUsers = dataProvider.getGroupByUser(c, user, ui.userId);
 			else if( group == null )
 				xmlUsers = dataProvider.getUserGroupList(c, ui.userId);
@@ -5715,6 +5724,7 @@ public class RestServicePortfolio
 	 *	GET /rest/api/portfoliogroups
 	 *	parameters:
 	 *	 - group: group id
+	 *	 - label: group label -> Return group id
 	 *	return:
 	 *	 - Without group id
 	 *		<groups>
@@ -5732,7 +5742,7 @@ public class RestServicePortfolio
 	 **/
 	@Path("/portfoliogroups")
 	@GET
-	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String portfolioid)
+	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String portfolioid, @QueryParam("label") String groupLabel )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
@@ -5741,7 +5751,16 @@ public class RestServicePortfolio
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			if( portfolioid != null )
+			if( groupLabel != null )
+			{
+				int groupid = dataProvider.getPortfolioGroupIdFromLabel(c, groupLabel, ui.userId);
+				if( groupid == -1 )
+				{
+					throw new RestWebApplicationException(Status.NOT_FOUND, "");
+				}
+				xmlUsers = Integer.toString(groupid);
+			}
+			else if( portfolioid != null )
 			{
 				xmlUsers = dataProvider.getPortfolioGroupListFromPortfolio(c, portfolioid, ui.userId);
 			}

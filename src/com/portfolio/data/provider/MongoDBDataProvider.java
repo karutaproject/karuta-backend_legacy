@@ -956,4 +956,19 @@ public class MongoDBDataProvider implements DataProvider {
 		return false;
 	}
 
+	@Override
+	public int getGroupByGroupLabel( Connection c, String groupLabel, int userId )
+	{
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public int getPortfolioGroupIdFromLabel( Connection c, String groupLabel,
+			int userId )
+	{
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }
