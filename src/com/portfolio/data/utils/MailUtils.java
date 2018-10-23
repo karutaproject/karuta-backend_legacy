@@ -90,8 +90,16 @@ public class MailUtils
 		props.put("mail.smtp.port", serverport);
 		props.put("mail.smtp.starttls.enable",enabletls);
 
-		javax.mail.Authenticator auth = new SMTPAuthenticator(mail_login, mail_password);
-		Session session = Session.getInstance(props, auth);
+		Session session;
+		if( "true".equals(useAuth) )
+		{
+			javax.mail.Authenticator auth = new SMTPAuthenticator(mail_login, mail_password);
+			session = Session.getInstance(props, auth);
+		}
+		else
+		{
+			session = Session.getInstance(props);
+		}
 
 		session.setDebug(debug);
 
