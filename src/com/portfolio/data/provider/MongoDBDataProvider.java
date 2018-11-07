@@ -66,6 +66,13 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
+	public Object postPortfolioParserights(Connection c, String portfolioUuid, int userId)
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
 	public Object deletePortfolio(Connection c, String portfolioUuid, int userId, int groupId)
 			throws Exception {
 		// TODO Auto-generated method stub

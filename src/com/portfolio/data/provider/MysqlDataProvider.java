@@ -2523,6 +2523,430 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
+	public Object postPortfolioParserights(Connection c, String portfolioUuid, int userId){
+		// TODO Auto-generated method stub
+		if( !cred.isAdmin(c, userId) && !cred.isCreator(c, userId) ) return "no rights";
+		
+		String sql = "";
+		PreparedStatement st;
+		boolean setPublic = false;
+
+		try
+		{
+			/// temp class
+			class right
+			{
+				int rd=0;
+				int wr=0;
+				int dl=0;
+				int sb=0;
+				int ad=0;
+				String types="";
+				String rules="";
+				String notify="";
+			};
+
+			class groupright
+			{
+				right getGroup( String label )
+				{
+					right r = rights.get(label.trim());
+					if( r == null )
+					{
+						r = new right();
+						rights.put(label, r);
+					}
+					return r;
+				}
+
+				void setNotify( String roles )
+				{
+					Iterator<right> iter = rights.values().iterator();
+					while( iter.hasNext() )
+					{
+						right r = iter.next();
+						r.notify = roles.trim();
+					}
+				}
+
+				HashMap<String, right> rights = new HashMap<String, right>();
+			};
+
+			class resolver
+			{
+				groupright getUuid( String uuid )
+				{
+					groupright gr = resolve.get(uuid);
+					if( gr == null )
+					{
+						gr = new groupright();
+						resolve.put(uuid, gr);
+					}
+					return gr;
+				};
+
+				HashMap<String, groupright> resolve = new HashMap<String, groupright>();
+				HashMap<String, Integer> groups = new HashMap<String, Integer>();
+			};
+
+			resolver resolve = new resolver();
+
+			// Selection des metadonnees
+			sql = "SELECT bin2uuid(n.node_uuid) AS uuid, bin2uuid(n.portfolio_id) AS puuid, n.metadata, n.metadata_wad, n.metadata_epm " +
+					"FROM node n " +
+					"WHERE portfolio_id=uuid2bin(?)";
+			st = c.prepareStatement(sql);
+			st.setString(1, portfolioUuid);
+			ResultSet res = st.executeQuery();
+
+			DocumentBuilder documentBuilder;
+			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
+			documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			while( res.next() )
+			{
+				String uuid = res.getString("uuid");
+				//        	String puuid = res.getString("puuid");
+				String meta = res.getString("metadata_wad");
+				//          meta = meta.replaceAll("user", login);
+				String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"/>";
+
+				groupright role = resolve.getUuid(uuid);
+
+				try
+				{
+					/// parse meta
+					InputSource is = new InputSource(new StringReader(nodeString));
+					Document doc = documentBuilder.parse(is);
+
+					/// Process attributes
+					Element attribNode = doc.getDocumentElement();
+					NamedNodeMap attribMap = attribNode.getAttributes();
+
+					String nodeRole;
+					Node att = attribMap.getNamedItem("access");
+					if(att != null)
+					{
+						//if(access.equalsIgnoreCase("public") || access.contains("public"))
+						//	credential.postGroupRight("all",uuid,Credential.READ,portfolioUuid,userId);
+					}
+					att = attribMap.getNamedItem("seenoderoles");
+					if(att != null)
+					{
+						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+						while (tokens.hasMoreElements())
+						{
+							nodeRole = tokens.nextElement().toString();
+
+							right r = role.getGroup(nodeRole);
+							r.rd = 1;
+
+							resolve.groups.put(nodeRole, 0);
+						}
+					}
+					att = attribMap.getNamedItem("showtoroles");
+					if(att != null)
+					{
+						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+						while (tokens.hasMoreElements())
+						{
+							nodeRole = tokens.nextElement().toString();
+
+							right r = role.getGroup(nodeRole);
+							r.rd = 0;
+
+							resolve.groups.put(nodeRole, 0);
+						}
+					}
+					att = attribMap.getNamedItem("delnoderoles");
+					if(att != null)
+					{
+						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+						while (tokens.hasMoreElements())
+						{
+
+							nodeRole = tokens.nextElement().toString();
+							right r = role.getGroup(nodeRole);
+							r.dl = 1;
+
+							resolve.groups.put(nodeRole, 0);
+						}
+					}
+					att = attribMap.getNamedItem("editnoderoles");
+					if(att != null)
+					{
+						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+						while (tokens.hasMoreElements())
+						{
+							nodeRole = tokens.nextElement().toString();
+							right r = role.getGroup(nodeRole);
+							r.wr = 1;
+
+							resolve.groups.put(nodeRole, 0);
+						}
+					}
+					att = attribMap.getNamedItem("submitnoderoles");
+					if(att != null)
+					{
+						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+						while (tokens.hasMoreElements())
+						{
+							nodeRole = tokens.nextElement().toString();
+							right r = role.getGroup(nodeRole);
+							r.sb = 1;
+
+							resolve.groups.put(nodeRole, 0);
+						}
+					}
+					att = attribMap.getNamedItem("seeresroles");
+					if(att != null)
+					{
+						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+						while (tokens.hasMoreElements())
+						{
+							nodeRole = tokens.nextElement().toString();
+							right r = role.getGroup(nodeRole);
+							r.rd = 1;
+
+							resolve.groups.put(nodeRole, 0);
+						}
+					}
+					att = attribMap.getNamedItem("delresroles");
+					if(att != null)
+					{
+						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+						while (tokens.hasMoreElements())
+						{
+							nodeRole = tokens.nextElement().toString();
+							right r = role.getGroup(nodeRole);
+							r.dl = 1;
+
+							resolve.groups.put(nodeRole, 0);
+						}
+					}
+					att = attribMap.getNamedItem("editresroles");
+					if(att != null)
+					{
+						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+						while (tokens.hasMoreElements())
+						{
+							nodeRole = tokens.nextElement().toString();
+							right r = role.getGroup(nodeRole);
+							r.wr = 1;
+
+							resolve.groups.put(nodeRole, 0);
+						}
+					}
+					att = attribMap.getNamedItem("submitroles");
+					if(att != null)
+					{
+						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
+						while (tokens.hasMoreElements())
+						{
+							nodeRole = tokens.nextElement().toString();
+							right r = role.getGroup(nodeRole);
+							r.sb = 1;
+
+							resolve.groups.put(nodeRole, 0);
+						}
+					}
+					Node actionroles = attribMap.getNamedItem("actionroles");
+					if(actionroles!=null)
+					{
+						/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
+						StringTokenizer tokens = new StringTokenizer(actionroles.getNodeValue(), ";");
+						while (tokens.hasMoreElements())
+						{
+							nodeRole = tokens.nextElement().toString();
+							StringTokenizer data = new StringTokenizer(nodeRole, ":");
+							String nrole = data.nextElement().toString();
+							String actions = data.nextElement().toString().trim();
+							right r = role.getGroup(nrole);
+							r.rules = actions;
+
+							resolve.groups.put(nrole, 0);
+						}
+					}
+					Node menuroles = attribMap.getNamedItem("menuroles");
+					if(menuroles!=null)
+					{
+						/// Pour les differents items du menu
+						StringTokenizer menuline = new StringTokenizer(menuroles.getNodeValue(), ";");
+
+						while( menuline.hasMoreTokens() )
+						{
+							String line = menuline.nextToken();
+							/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+							String[] tokens = line.split(",");
+							String menurolename = null;
+							for( int t=0; t<4; ++t )
+								menurolename = tokens[3];
+
+							if( menurolename != null )
+							{
+								// Break down list of roles
+								String[] roles = menurolename.split(" ");
+								for( int i=0; i<roles.length; ++i )
+								resolve.groups.put(roles[i].trim(), 0);
+							}
+						}
+					}
+					Node notifyroles = attribMap.getNamedItem("notifyroles");
+					if(notifyroles!=null)
+					{
+						/// Format pour l'instant: notifyroles="sender responsable"
+						StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
+						String merge = "";
+						if( tokens.hasMoreElements() )
+							merge = tokens.nextElement().toString().trim();
+						while (tokens.hasMoreElements())
+							merge += ","+tokens.nextElement().toString().trim();
+						role.setNotify(merge);
+					}
+
+					// Check if base portfolio is public
+					if( cred.isPublic(c, null, portfolioUuid) )
+						setPublic = true;
+//					/*
+					meta = res.getString("metadata");
+					nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer "+meta+"/>";
+					is = new InputSource(new StringReader(nodeString));
+					doc = documentBuilder.parse(is);
+					attribNode = doc.getDocumentElement();
+					attribMap = attribNode.getAttributes();
+					Node publicatt = attribMap.getNamedItem("public");
+					if( publicatt != null && "Y".equals(publicatt.getNodeValue()) )
+						setPublic = true;
+					//*/
+				}
+				catch( Exception e )
+				{
+					e.printStackTrace();
+				}
+			}
+
+			res.close();
+			st.close();
+
+			c.setAutoCommit(false);
+
+			/// On insere les donnees pre-compile
+			Iterator<String> entries = resolve.groups.keySet().iterator();
+
+			// Cree les groupes, ils n'existent pas
+			String grquery = "INSERT INTO group_info(grid,owner,label) " +
+					"VALUES(?,?,?)";
+			PreparedStatement st2 = c.prepareStatement(grquery);
+			String gri = "INSERT INTO group_right_info(owner, label, change_rights, portfolio_id) " +
+					"VALUES(?,?,?,uuid2bin(?))";
+			if( "mysql".equals(dbserveur) )
+				st = c.prepareStatement(gri, Statement.RETURN_GENERATED_KEYS);
+			if (dbserveur.equals("oracle"))
+				st = c.prepareStatement(gri, new String[]{"grid"});
+
+			while( entries.hasNext() )
+			{
+				String label = entries.next();
+				st.setInt(1, 1);
+				st.setString(2, label);
+				st.setInt(3, 0);
+				st.setString(4, portfolioUuid);
+
+				st.execute();
+				ResultSet keys = st.getGeneratedKeys();
+				keys.next();
+				int grid = keys.getInt(1);
+				resolve.groups.put( label, grid );
+
+				st2.setInt(1, grid);
+				st2.setInt(2, 1);
+				st2.setString(3, label);
+				st2.execute();
+			}
+			st2.close();
+			st.close();
+
+			/// Ajout des droits des noeuds
+			String insertRight = "INSERT INTO group_rights(grid, id, RD, WR, DL, SB, AD, types_id, rules_id, notify_roles) " +
+					"VALUES(?,uuid2bin(?),?,?,?,?,?,?,?,?)";
+			st = c.prepareStatement(insertRight);
+
+			Iterator<Entry<String, groupright>> rights = resolve.resolve.entrySet().iterator();
+			while( rights.hasNext() )
+			{
+				Entry<String, groupright> entry = rights.next();
+				String uuid = entry.getKey();
+				groupright gr = entry.getValue();
+
+				Iterator<Entry<String, right>> rightiter = gr.rights.entrySet().iterator();
+				while( rightiter.hasNext() )
+				{
+					Entry<String, right> rightelem = rightiter.next();
+					String group = rightelem.getKey();
+					int grid = resolve.groups.get(group);
+					right rightval = rightelem.getValue();
+					st.setInt(1, grid);
+					st.setString(2, uuid);
+					st.setInt(3, rightval.rd);
+					st.setInt(4, rightval.wr);
+					st.setInt(5, rightval.dl);
+					st.setInt(6, rightval.sb);
+					st.setInt(7, rightval.ad);
+					st.setString(8, rightval.types);
+					st.setString(9, rightval.rules);
+					st.setString(10, rightval.notify);
+
+					st.execute();
+				}
+			}
+
+			/// Create base group
+			int groupid = postCreateRole(c, portfolioUuid, "all", userId);
+			/// Finalement on cree un rele designer
+			groupid = postCreateRole(c, portfolioUuid, "designer", userId);
+
+			/// Ajoute la personne dans ce groupe
+			putUserGroup(c, Integer.toString(groupid), Integer.toString(userId));
+
+			// Update time
+			touchPortfolio(c, null, portfolioUuid);
+			
+			/// Set portfolio public if needed
+			if( setPublic )
+				setPublicState(c, userId, portfolioUuid, setPublic);
+		}
+		catch( Exception e )
+		{
+			logger.error("MESSAGE: "+e.getMessage() +" "+e.getLocalizedMessage());
+
+			try
+			{
+				portfolioUuid = "erreur: "+e.getMessage();
+				if( c.getAutoCommit() == false )
+					c.rollback();
+			}
+			catch( SQLException e1 ){ e1.printStackTrace(); }
+			e.printStackTrace();
+		}
+		finally
+		{
+			try
+			{
+				c.setAutoCommit(true);
+				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
+				if (dbserveur.equals("mysql")){
+					sql = "DROP TEMPORARY TABLE IF EXISTS t_data, t_res, t_struc, t_struc_2, t_rights";
+					st = c.prepareStatement(sql);
+					st.execute();
+					st.close();
+				}
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+
+		return portfolioUuid;
+	}
+	
+	@Override
 	public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,
 			int userId,int groupId, String semtag, String parentUuid, String filterId,
 			String filterParameters, String sortId, Integer cutoff) throws SQLException
@@ -14127,7 +14551,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			int gid = Integer.parseInt(usergroup);
 			int uid = Integer.parseInt(userPut);
 
-			sql = "INSERT INTO group_user(gid, userid) VALUES(?,?)";
+			sql = "INSERT IGNORE INTO group_user(gid, userid) VALUES(?,?)";
 			st = c.prepareStatement(sql);
 			st.setInt(1, gid);
 			st.setInt(2, uid);

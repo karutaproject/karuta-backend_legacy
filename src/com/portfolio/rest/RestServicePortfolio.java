@@ -1290,6 +1290,44 @@ public class RestServicePortfolio
 	}
 
 	/**
+	 *	Reparse portfolio rights
+	 *	POST /rest/api/portfolios/portfolios/{portfolio-id}/parserights
+	 *	parameters:
+	 *	return:
+	 **/
+	@Path("/portfolios/portfolio/{portfolio-id}/parserights")
+	@POST
+	public Response postPortfolio( @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest )
+	{
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		Connection c = null;
+		
+		try
+		{
+			c = SqlUtils.getConnection(servContext);
+			if( !credential.isAdmin(c, ui.userId) )
+				return Response.status(Status.FORBIDDEN).build();
+			
+			dataProvider.postPortfolioParserights(c, portfolioUuid, ui.userId);
+
+			return Response.status(Status.OK).build();
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		finally
+		{
+			try
+			{
+				if( c != null ) c.close();
+			}
+			catch( SQLException e ){ e.printStackTrace(); }
+		}
+	}
+
+	/**
 	 *	Change portfolio owner
 	 *	PUT /rest/api/portfolios/portfolios/{portfolio-id}/setOwner/{newOwnerId}
 	 *	parameters:
