@@ -12940,8 +12940,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			boolean doUpdate = true;
 
 			NamedNodeMap metaAttr = rootMeta.getAttributes();
-			int admingroup = getRoleByNode(c, 1, nodeUuid, "administrator");	// Check for the possibility of administrator group
-			if( "reset".equals(macroName) && (cred.isAdmin(c, userId) || (cred.isCreator(c, userId) && cred.isUserMemberOfRole(c, userId, admingroup) ) ) )	// Admin, or isCreator && part of adminstrator group
+			int resetgroup = getRoleByNode(c, 1, nodeUuid, "resetter");	// Check for the possibility of resetter group
+			if( "reset".equals(macroName) && (cred.isAdmin(c, userId) || cred.isUserMemberOfRole(c, userId, resetgroup) ) )	// Admin, or part of resetter group
 			{
 				/// if reset and admin
 				// Call specific function to process current temporary table
