@@ -9890,39 +9890,30 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object deleteUsers(Connection c, Integer userId,Integer userId2)
-	{
-		if(!cred.isAdmin(c, userId))
-			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
-
-		/// Looks like it should be merged since not used anywhere else
-		int res = deleteMysqlUsers(c, userId2);
-
-		return res;
-	}
-
-	private int deleteMysqlUsers(Connection c, Integer userId)
+	public int deleteUsers(Connection c, Integer userId,Integer userId2)
 	{
 		String sql = "";
 		PreparedStatement st;
+		int result = 0;
 
 		try {
 
 			sql  = " DELETE FROM credential WHERE userid=? ";
 			st = c.prepareStatement(sql);
-			st.setInt(1, userId);
+			st.setInt(1, userId2);
 			st.executeUpdate();
 
 			sql  = " DELETE FROM group_user WHERE userid=?";
 			st = c.prepareStatement(sql);
-			st.setInt(1, userId);
+			st.setInt(1, userId2);
 
-			return 0;
+			result = 1;
 
 		} catch (SQLException e) {
 			e.printStackTrace();
-			return 1;
+			result = -1;
 		}
+		return result;
 	}
 
 	@Override

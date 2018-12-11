@@ -4587,6 +4587,7 @@ public class RestServicePortfolio
 	}
 
 	/**
+	 *	!! This or the other gets deleted (redundant)
 	 *	Delete users
 	 *	DELETE /rest/api/users
 	 *	parameters:
@@ -4599,15 +4600,23 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
+		String message = "";
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteUsers(c, userId, null).toString());
-			if(nbResourceDeleted==0)
-			{
-				System.out.print("supprim�");
-			}
+			
+			// Not (admin or self)
+			if(!credential.isAdmin(c, ui.userId) && ui.userId != userId )
+				throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
+
+			int nbResourceDeleted = dataProvider.deleteUsers(c, ui.userId, userId);
+			logRestRequest(httpServletRequest, null,null, Status.OK.getStatusCode());
+			if( nbResourceDeleted > 0 )
+				message = "user "+userId+" deleted";
+			else
+				message = "user "+userId+" not found";
+			
 			logRestRequest(httpServletRequest, null,null, Status.OK.getStatusCode());
 
 			return "";
@@ -4648,14 +4657,21 @@ public class RestServicePortfolio
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
+		String message= "";
 
 		try
 		{
 			c = SqlUtils.getConnection(servContext);
-			int nbResourceDeleted = Integer.parseInt(dataProvider.deleteUsers(c, ui.userId, userid).toString());
-			logRestRequest(httpServletRequest, null,null, Status.OK.getStatusCode());
+			// Not (admin or self)
+			if(!credential.isAdmin(c, ui.userId) && ui.userId != userid )
+				throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-			return "user "+userid+" deleted";
+			int nbResourceDeleted = dataProvider.deleteUsers(c, ui.userId, userid);
+			logRestRequest(httpServletRequest, null,null, Status.OK.getStatusCode());
+			if( nbResourceDeleted > 0 )
+				message = "user "+userid+" deleted";
+			else
+				message = "user "+userid+" not found";
 		}
 		catch(RestWebApplicationException ex)
 		{
@@ -4678,6 +4694,7 @@ public class RestServicePortfolio
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
 		}
+		return message;
 	}
 
 	/**

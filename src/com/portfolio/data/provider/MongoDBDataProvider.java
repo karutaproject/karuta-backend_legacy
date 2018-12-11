@@ -378,9 +378,9 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object deleteUsers(Connection c, Integer userId, Integer userId2) {
+	public int deleteUsers(Connection c, Integer userId, Integer userId2) {
 		// TODO Auto-generated method stub
-		return null;
+		return 0;
 	}
 
 	@Override

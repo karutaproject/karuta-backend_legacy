@@ -162,7 +162,7 @@ public interface DataProvider {
 	public String postUsersGroups(int userId);
 
 	public Object deleteUser(int userid, int userId1);
-	public Object deleteUsers(Connection c, Integer userId, Integer userid2);
+	public int deleteUsers(Connection c, Integer userId, Integer userid2);
 
 	/// Relatif aux ressources
 	public String getResourceNodeUuidByParentNodeUuid(Connection c, String nodeParentUuid);
