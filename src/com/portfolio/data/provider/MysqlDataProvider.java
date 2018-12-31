@@ -2009,6 +2009,7 @@ public class MysqlDataProvider implements DataProvider {
 	
 	public Object getPortfoliosNoProject(Connection c,MimeType outMimeType, int userId, int groupId, String sql,Boolean countOnly,String search,Boolean portfolioActive) throws SQLException
 	{
+		/// orz
 		PreparedStatement st = null;
 		ResultSet res = null;
 		Integer count = 0;
@@ -2031,11 +2032,14 @@ public class MysqlDataProvider implements DataProvider {
 		}
 		else
 		{
+			sql += " AND p.active=?";
+
 			st = c.prepareStatement(sql);
+			st.setBoolean(1, portfolioActive);
 			
 			res = st.executeQuery();
 		}
-		
+
 		while(res.next())
 		{
 			String code = res.getString("code");
