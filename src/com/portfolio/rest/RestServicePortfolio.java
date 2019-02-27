@@ -1743,6 +1743,12 @@ public class RestServicePortfolio
 
 		try
 		{
+			c = SqlUtils.getConnection(servContext);
+			if( !credential.isAdmin(c, ui.userId) && !credential.isCreator(c, ui.userId) )
+			{
+				return Response.status(Status.FORBIDDEN).entity("403").build();
+			}
+				
 			boolean setOwner = false;
 			if( "true".equals(setowner) )
 				setOwner = true;
@@ -1753,7 +1759,6 @@ public class RestServicePortfolio
 			/// Check if code exist, find a suitable one otherwise. Eh.
 			String newcode = tgtcode;
 			int num = 0;
-			c = SqlUtils.getConnection(servContext);
 			while( dataProvider.isCodeExist(c, newcode, null) )
 				newcode = tgtcode+" ("+ num++ +")";
 			tgtcode = newcode;
@@ -1817,18 +1822,22 @@ public class RestServicePortfolio
 		Connection c = null;
 		try
 		{
-			boolean setOwner = false;
-			if( "true".equals(setowner) )
-				setOwner = true;
-
+			c = SqlUtils.getConnection(servContext);
+			if( !credential.isAdmin(c, ui.userId) && !credential.isCreator(c, ui.userId) )
+			{
+				return Response.status(Status.FORBIDDEN).entity("403").build();
+			}
+				
 			/// Check if code exist, find a suitable one otherwise. Eh.
 			String newcode = tgtcode;
-			c = SqlUtils.getConnection(servContext);
 			if( dataProvider.isCodeExist(c, newcode, null) )
 			{
 				return Response.status(Status.CONFLICT).entity("code exist").build();
 			}
 
+			boolean setOwner = false;
+			if( "true".equals(setowner) )
+				setOwner = true;
 			tgtcode = newcode;
 
 			String returnValue = dataProvider.postCopyPortfolio(c, new MimeType("text/xml"),portfolioId, srccode, tgtcode, ui.userId, setOwner ).toString();
