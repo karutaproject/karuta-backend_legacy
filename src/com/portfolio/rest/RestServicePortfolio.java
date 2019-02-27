@@ -5018,9 +5018,9 @@ public class RestServicePortfolio
 
 				// Write change
 				boolean result = dataProvider.changePassword(c, username, password);
-				String content = "Your new password: "+password;
+				String content = "Your new password: "+password+"<br>\n";
 				String referal = httpServletRequest.getHeader("referer");
-				content += String.format("\nadministrator - %s\n", referal); 
+//				content += String.format("administrator - %s", referal); 
 				
 				if( result )
 				{
