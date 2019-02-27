@@ -27,6 +27,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Enumeration;
@@ -85,96 +86,7 @@ public class ReportService  extends HttpServlet
 	{
 		/// Check if user is logged in
 		HttpSession session = request.getSession(false);
-		if( session == null )
-		{
-			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-			return;
-		}
-
-		int uid = (Integer) session.getAttribute("uid");
-		if( uid == 0 )
-		{
-			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-			return;
-		}
-		
-		final Credential credential = new Credential();
-		/// Check if user is admin
-		Connection c;
-		try
-		{
-			String pathinfo = request.getPathInfo();
-			String urlTarget = "http://127.0.0.1:8081";
-			if( pathinfo != null )
-				urlTarget += pathinfo;
-			System.out.println("Path: "+pathinfo+" -> "+urlTarget);
-			
-			/// Create connection
-			URL urlConn = new URL(urlTarget);
-			HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
-			connection.setDoOutput(true);
-			connection.setUseCaches(false);
-			connection.setInstanceFollowRedirects(false);
-			String method = request.getMethod();
-			connection.setRequestMethod(method);
-
-			String context = request.getContextPath();
-			connection.setRequestProperty("app", context);
-
-			/// Transfer headers
-			String key = "";
-			String value = "";
-			Enumeration<String> header = request.getHeaderNames();
-			while( header.hasMoreElements() )
-			{
-				key = header.nextElement();
-				value = request.getHeader(key);
-				connection.setRequestProperty(key, value);
-			}
-
-			connection.connect();
-
-			OutputStream output = response.getOutputStream();
-			/// Send data to report daemon
-			InputStream inputData = connection.getInputStream();
-			IOUtils.copy(inputData, output);
-
-			/// Those 2 lines are needed, otherwise, no request sent
-			int code = connection.getResponseCode();
-			String msg = connection.getResponseMessage();
-
-			if( code != HttpURLConnection.HTTP_OK )
-				logger.error("Couldn't send file: "+msg);
-			
-			// Close connection to report daemon
-			connection.disconnect();
-			inputData.close();
-			output.close();
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
-		
-		/// Close connections
-		try
-		{
-//			request.getReader().close();
-//			response.getWriter().close();
-		}
-		catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-
-	}
-		
-	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response)
-	{
-		/// Check if user is logged in
-		HttpSession session = request.getSession(false);
-		if( session == null )
+		if( session == null || session.getAttribute("uid") == null )
 		{
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
@@ -206,20 +118,14 @@ public class ReportService  extends HttpServlet
 				return;
 			}
 			
-			/// Prepare to transfer username to report daemon
-			StringWriter writer = new StringWriter();
-			IOUtils.copy(request.getInputStream(), writer);
-			String data = writer.toString();
-
-			data += "&user="+username;
-			
 			String pathinfo = request.getPathInfo();
 			String urlTarget = "http://127.0.0.1:8081";
-			if( pathinfo != null )
-				urlTarget += pathinfo;
+			/// FIXME: Add user id in filename
+			if( pathinfo != null && pathinfo.length() >0 )
+			{
+				urlTarget += "/"+username+"__"+pathinfo.substring(1);
+			}
 			System.out.println("Path: "+pathinfo+" -> "+urlTarget);
-			
-			System.out.println("Sending: "+data);
 			
 			/// Create connection
 			URL urlConn = new URL(urlTarget);
@@ -245,11 +151,144 @@ public class ReportService  extends HttpServlet
 			}
 
 			connection.connect();
+			
+			/// Those 2 lines are needed, otherwise, no request sent
+			int code = connection.getResponseCode();
+			String msg = connection.getResponseMessage();
+
+			if( code != HttpURLConnection.HTTP_OK )
+			{
+				logger.error("Couldn't send file: "+msg);
+				response.setStatus(code);
+				PrintWriter writer = response.getWriter();
+				writer.write(msg);
+				writer.close();
+			}
+			else
+			{
+				OutputStream output = response.getOutputStream();
+				/// Send data to report daemon
+				InputStream inputData = connection.getInputStream();
+				IOUtils.copy(inputData, output);
+				inputData.close();
+				output.close();
+			}
+
+			// Close connection to report daemon
+			connection.disconnect();
+		}
+		catch( Exception e )
+		{
+			e.printStackTrace();
+			response.setStatus(500);
+		}
+		finally
+		{
+			/// Close connections
+			try
+			{
+				if( c != null )
+					c.close();
+	//			request.getReader().close();
+	//			response.getWriter().close();
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+
+	}
+		
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+	{
+		/// Check if user is logged in
+		HttpSession session = request.getSession(false);
+//		/*
+		if( session == null )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
+
+		int uid = (Integer) session.getAttribute("uid");
+		if( uid == 0 )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
+		//*/
+		
+		Connection c = null;
+		try
+		{
+			/// Find user's username
+			c = SqlUtils.getConnection(session.getServletContext());
+			String userinfo = dataProvider.getInfUser(c, 1, uid);
+			Document doc = DomUtils.xmlString2Document(userinfo, null);
+			NodeList usernameNodes = doc.getElementsByTagName("username");
+			String username = usernameNodes.item(0).getTextContent();
+
+			if( null == username)
+			{
+				response.setStatus(400);
+				PrintWriter writer = response.getWriter();
+				writer.append("Username error");
+				writer.close();
+				return;
+			}
+			
+			/// Prepare to transfer username to report daemon
+			StringWriter writer = new StringWriter();
+			IOUtils.copy(request.getInputStream(), writer);
+			String data = writer.toString();
+
+			data += "&user="+username;
+			
+			String pathinfo = request.getPathInfo();
+			String urlTarget = "http://127.0.0.1:8081";
+			if( pathinfo != null )
+				urlTarget += pathinfo;
+//			System.out.println("Path: "+pathinfo+" -> "+urlTarget);
+			
+			/// Create connection
+			URL urlConn = new URL(urlTarget);
+			HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
+			connection.setDoOutput(true);
+			connection.setUseCaches(false);
+			connection.setInstanceFollowRedirects(false);
+			String method = request.getMethod();
+			connection.setRequestMethod(method);
+
+			String context = request.getContextPath();
+			connection.setRequestProperty("app", context);
+
+			/// Transfer headers
+			String key = "";
+			String value = "";
+			Enumeration<String> header = request.getHeaderNames();
+			while( header.hasMoreElements() )
+			{
+				key = header.nextElement();
+				value = request.getHeader(key);
+				/// Prevent case when "connection: closed" make post not send data
+				if( key.equals("connection") ){ continue; }
+				
+				connection.setRequestProperty(key, value);
+			}
+
+			connection.connect();
 
 			/// Send data to report daemon
+//			System.out.println("Sending: "+data);
 			ByteArrayInputStream bais = new ByteArrayInputStream(data.getBytes());
 			OutputStream outputData = connection.getOutputStream();
-			IOUtils.copy(bais, outputData);
+			int transferred = IOUtils.copy(bais, outputData);
+			if(  transferred == data.length() )
+				logger.debug("Send: Complete");
+			else
+				logger.error("Send mismatch: "+transferred+" != "+data.length());
 
 			/// Those 2 lines are needed, otherwise, no request sent
 			int code = connection.getResponseCode();
@@ -257,6 +296,10 @@ public class ReportService  extends HttpServlet
 
 			if( code != HttpURLConnection.HTTP_OK )
 				logger.error("Couldn't send file: "+msg);
+			else
+			{
+				logger.debug("Code: ("+code+") msg: "+msg);
+			}
 			
 			/// Retrieving info
 			InputStream objReturn = connection.getInputStream();
@@ -267,7 +310,6 @@ public class ReportService  extends HttpServlet
 			
 			// Close connection to report daemon
 			connection.disconnect();
-			System.out.println("Send: OK");
 			
 			objReturn.close();
 			os.close();
@@ -276,6 +318,7 @@ public class ReportService  extends HttpServlet
 		{
 			e.printStackTrace();
 			logger.error(e.getMessage());
+			response.setStatus(500);
 		}
 		finally
 		{
