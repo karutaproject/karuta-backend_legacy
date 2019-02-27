@@ -73,6 +73,13 @@ public class ShibeServlet extends HttpServlet {
 			connexion = SqlUtils.getConnection(session.getServletContext());
 			String userId = dataProvider.getUserId( connexion, rem, null );
 			uid = Integer.parseInt(userId);
+			if(uid == 0 )
+			{
+				System.out.println("Testing shibe user: "+rem+"("+userId+")");
+				userId = dataProvider.createUser(connexion, rem, rem+"@fixme.fixme");
+				uid = Integer.parseInt(userId);
+				System.out.println("Testing shibe user (2): "+userId);
+			}
 			session.setAttribute("uid", uid);
 			session.setAttribute("user", rem);
 			session.setAttribute("fromshibe", 1);
@@ -96,6 +103,7 @@ public class ShibeServlet extends HttpServlet {
 		if( uid > 0 )
 		{
 			String location = ConfigUtils.get("ui_redirect_location");
+			System.out.println("Location: "+location);
 			response.sendRedirect(location);
 			response.getWriter().close();;
 		}
