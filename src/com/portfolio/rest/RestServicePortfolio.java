@@ -1777,6 +1777,10 @@ public class RestServicePortfolio
 
 			return returnValue;
 		}
+		catch( RestWebApplicationException rwe )
+		{
+			throw rwe;
+		}
 		catch(Exception ex)
 		{
 			logger.error(ex.getMessage());
