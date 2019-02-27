@@ -694,6 +694,12 @@ public class MysqlDataProvider implements DataProvider {
 				st.executeUpdate();
 				st.close();
 
+				/// Portfolio group
+				sql = "DELETE FROM portfolio_group_members WHERE portfolio_id=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, portfolioUuid);
+				st.executeUpdate();
+				st.close();
 			}
 			catch( Exception e )
 			{
