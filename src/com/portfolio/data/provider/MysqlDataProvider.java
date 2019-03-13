@@ -6212,7 +6212,7 @@ public class MysqlDataProvider implements DataProvider {
 					"node_uuid binary(16)  NOT NULL, " +
 					"node_parent_uuid binary(16) DEFAULT NULL, " +
 					"node_order int(12) NOT NULL, " +
-					"metadata_wad varchar(2798) NOT NULL, " +
+//					"metadata_wad varchar(2798) NOT NULL, " +
 					"res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_res_node_uuid binary(16) DEFAULT NULL, " +
 					"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -6242,7 +6242,7 @@ public class MysqlDataProvider implements DataProvider {
 					"node_uuid VARCHAR2(32)  NOT NULL, " +
 					"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"node_order NUMBER(12) NOT NULL, " +
-					"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
+//					"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
 					"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
@@ -6334,18 +6334,18 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// We'll put all node cached dated the same than portfolio. Related to checking cache validity
 			if (dbserveur.equals("mysql")){
-				sql = "INSERT INTO t_node_cache(node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) ";
-				sql += "SELECT SQL_NO_CACHE n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
+				sql = "INSERT INTO t_node_cache(node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) ";
+				sql += "SELECT SQL_NO_CACHE n.node_uuid, n.node_parent_uuid, n.node_order, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
 						"FROM node n, portfolio p " +
 						"WHERE n.portfolio_id=p.portfolio_id AND p.portfolio_id=(" +
 						"SELECT n1.portfolio_id " +
 						"FROM node n1, portfolio p " +
 						"WHERE n1.portfolio_id=p.portfolio_id AND n1.code=? AND p.active=1) " +
-						"ON DUPLICATE KEY UPDATE node_parent_uuid=n.node_parent_uuid, node_order=n.node_order, metadata_wad=n.metadata_wad, res_node_uuid=n.res_node_uuid, res_res_node_uuid=n.res_res_node_uuid, res_context_node_uuid=n.res_context_node_uuid, shared_res=n.shared_res, shared_node=n.shared_node, shared_node_res=n.shared_node_res, shared_res_uuid=n.shared_res_uuid, shared_node_uuid=n.shared_node_uuid, shared_node_res_uuid=n.shared_node_res_uuid, asm_type=n.asm_type, xsi_type=n.xsi_type, semtag=n.semtag, semantictag=n.semantictag, label=n.label, code=n.code, descr=n.descr, format=n.format, modif_user_id=n.modif_user_id, modif_date=n.modif_date, portfolio_id=n.portfolio_id";
+						"ON DUPLICATE KEY UPDATE node_parent_uuid=n.node_parent_uuid, node_order=n.node_order, res_node_uuid=n.res_node_uuid, res_res_node_uuid=n.res_res_node_uuid, res_context_node_uuid=n.res_context_node_uuid, shared_res=n.shared_res, shared_node=n.shared_node, shared_node_res=n.shared_node_res, shared_res_uuid=n.shared_res_uuid, shared_node_uuid=n.shared_node_uuid, shared_node_res_uuid=n.shared_node_res_uuid, asm_type=n.asm_type, xsi_type=n.xsi_type, semtag=n.semtag, semantictag=n.semantictag, label=n.label, code=n.code, descr=n.descr, format=n.format, modif_user_id=n.modif_user_id, modif_date=n.modif_date, portfolio_id=n.portfolio_id";
 			} else if (dbserveur.equals("oracle")){
 				/// FIXME: Not entirely sure it works...
 				sql = "MERGE INTO t_node_cache t USING(";
-				sql += "SELECT /*+ SQL_NO_CACHE */ n.node_uuid, n.node_parent_uuid, n.node_order, n.metadata_wad, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
+				sql += "SELECT /*+ SQL_NO_CACHE */ n.node_uuid, n.node_parent_uuid, n.node_order, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
 						"FROM node n, portfolio p " +
 						"WHERE n.portfolio_id=p.portfolio_id AND p.portfolio_id=(" +
 						"SELECT n1.portfolio_id " +
@@ -6353,10 +6353,10 @@ public class MysqlDataProvider implements DataProvider {
 						"WHERE n1.portfolio_id=p.portfolio_id AND n1.code=? AND p.active=1)) n3 " +
 						"on (t.node_uuid = n3.node_uuid) " + 
 						"WHEN MATCHED THEN UPDATE " +
-						"SET t.node_parent_uuid=n3.node_parent_uuid, t.node_order=n3.node_order, t.metadata_wad=n3.metadata_wad, t.res_node_uuid=n3.res_node_uuid, t.res_res_node_uuid=n3.res_res_node_uuid, t.res_context_node_uuid=n3.res_context_node_uuid, t.shared_res=n3.shared_res, t.shared_node=n3.shared_node, t.shared_node_res=n3.shared_node_res, t.shared_res_uuid=n3.shared_res_uuid, t.shared_node_uuid=n3.shared_node_uuid, t.shared_node_res_uuid=n3.shared_node_res_uuid, t.asm_type=n3.asm_type, t.xsi_type=n3.xsi_type, t.semtag=n3.semtag, t.semantictag=n3.semantictag, t.label=n3.label, t.code=n3.code, t.descr=n3.descr, t.format=n3.format, t.modif_user_id=n3.modif_user_id, t.modif_date=n3.modif_date, t.portfolio_id=n3.portfolio_id " +
+						"SET t.node_parent_uuid=n3.node_parent_uuid, t.node_order=n3.node_order, t.res_node_uuid=n3.res_node_uuid, t.res_res_node_uuid=n3.res_res_node_uuid, t.res_context_node_uuid=n3.res_context_node_uuid, t.shared_res=n3.shared_res, t.shared_node=n3.shared_node, t.shared_node_res=n3.shared_node_res, t.shared_res_uuid=n3.shared_res_uuid, t.shared_node_uuid=n3.shared_node_uuid, t.shared_node_res_uuid=n3.shared_node_res_uuid, t.asm_type=n3.asm_type, t.xsi_type=n3.xsi_type, t.semtag=n3.semtag, t.semantictag=n3.semantictag, t.label=n3.label, t.code=n3.code, t.descr=n3.descr, t.format=n3.format, t.modif_user_id=n3.modif_user_id, t.modif_date=n3.modif_date, t.portfolio_id=n3.portfolio_id " +
 						"WHEN NOT MATCHED THEN " +
-						"INSERT (t.node_uuid,t.node_parent_uuid, t.node_order, t.metadata_wad, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id) " +
-						"VALUES (n3.node_uuid,n3.node_parent_uuid, n3.node_order, n3.metadata_wad, n3.res_node_uuid, n3.res_res_node_uuid, n3.res_context_node_uuid, n3.shared_res, n3.shared_node, n3.shared_node_res, n3.shared_res_uuid, n3.shared_node_uuid, n3.shared_node_res_uuid, n3.asm_type, n3.xsi_type, n3.semtag, n3.semantictag, n3.label, n3.code, n3.descr, n3.format, n3.modif_user_id, n3.modif_date, n3.portfolio_id)";
+						"INSERT (t.node_uuid,t.node_parent_uuid, t.node_order, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id) " +
+						"VALUES (n3.node_uuid,n3.node_parent_uuid, n3.node_order, n3.res_node_uuid, n3.res_res_node_uuid, n3.res_context_node_uuid, n3.shared_res, n3.shared_node, n3.shared_node_res, n3.shared_res_uuid, n3.shared_node_uuid, n3.shared_node_res_uuid, n3.asm_type, n3.xsi_type, n3.semtag, n3.semantictag, n3.label, n3.code, n3.descr, n3.format, n3.modif_user_id, n3.modif_date, n3.portfolio_id)";
 			}
 
 			st = c.prepareStatement(sql);
@@ -6437,7 +6437,7 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid binary(16)  NOT NULL, " +
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
 						"node_order int(12) NOT NULL, " +
-						"metadata_wad varchar(2798) NOT NULL, " +
+//						"metadata_wad varchar(2798) NOT NULL, " +
 						"res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_res_node_uuid binary(16) DEFAULT NULL, " +
 						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
@@ -6467,7 +6467,7 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid VARCHAR2(32)  NOT NULL, " +
 						"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
-						"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
+//						"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
 						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
@@ -6507,7 +6507,8 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")){
 					sql += "SELECT sys_guid(), ";
 				}
-				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+//				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+				sql += "node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 						"FROM node n " +
 						"WHERE n.portfolio_id=(SELECT portfolio_id FROM node n1 WHERE n1.node_uuid=uuid2bin(?))";
 				st = c.prepareStatement(sql);
@@ -6527,7 +6528,8 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")){
 					sql += "SELECT sys_guid(), ";
 				}
-				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+//				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+				sql += "node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 						"FROM t_node_cache n " +
 						"WHERE n.portfolio_id=uuid2bin(?)";
 				st = c.prepareStatement(sql);
@@ -7263,9 +7265,8 @@ public class MysqlDataProvider implements DataProvider {
 			c.setAutoCommit(false);
 
 			/// Structure, Join because the TEXT fields are copied from the base nodes
-			// FIXME possibly move TEXT as bigger VARCHAR, but might want more mem
 			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
-					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, n.metadata, t.metadata_wad, n.metadata_epm, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id " +
+					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, n.metadata, n.metadata_wad, n.metadata_epm, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id " +
 					"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
