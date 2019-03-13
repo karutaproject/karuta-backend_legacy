@@ -11062,6 +11062,10 @@ public class MysqlDataProvider implements DataProvider {
 				{
 					email = DomUtils.getInnerXml(children2.item(y));
 				}
+				else if(children2.item(y).getNodeName().equals("firstname"))
+				{ firstname = DomUtils.getInnerXml(children2.item(y)); }
+				else if(children2.item(y).getNodeName().equals("lastname"))
+				{ lastname = DomUtils.getInnerXml(children2.item(y)); }
 			}
 			
 			/// Checking if previous password match
@@ -11096,10 +11100,28 @@ public class MysqlDataProvider implements DataProvider {
 				if( email != null )
 				{
 					sql = "UPDATE credential SET email = ? WHERE  userid = ?";
-	
+
 					st = c.prepareStatement(sql);
 					st.setString(1, email);
 					st.setInt(2, userId);
+					st.executeUpdate();
+				}
+				if( firstname != null )
+				{
+					sql = "UPDATE credential SET display_firstname = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setString(1, firstname);
+					st.setInt(2, userid2);
+					st.executeUpdate();
+				}
+				if( lastname != null )
+				{
+					sql = "UPDATE credential SET display_lastname = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setString(1, lastname);
+					st.setInt(2, userid2);
 					st.executeUpdate();
 				}
 			}
