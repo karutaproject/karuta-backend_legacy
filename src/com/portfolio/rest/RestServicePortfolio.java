@@ -1058,6 +1058,11 @@ public class RestServicePortfolio
 		
 		try
 		{
+			if( ui.userId == 0 )
+			{
+				return Response.status(Status.FORBIDDEN).build();
+			}
+			
 			if( resources == null )
 				resources = "false";
 			c = SqlUtils.getConnection(servContext);
