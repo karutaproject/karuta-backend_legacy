@@ -84,7 +84,7 @@ public class EmploiStoreService extends HttpServlet
 		String clientsecret = ConfigUtils.get("ROMEclientsecret");
 		String scopestr = ConfigUtils.get("ROMEscope");
 		
-		String scope = String.format("application_%s%20%s", clientid, scopestr);
+		String scope = String.format("application_%s%%20%s", clientid, scopestr);
 		String body = String.format("grant_type=client_credentials&client_id=%s&client_secret=%s&scope=%s", clientid, clientsecret, scope);
 		
 		try
