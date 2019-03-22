@@ -76,7 +76,7 @@ public class ShibeServlet extends HttpServlet {
 			if(uid == 0 )
 			{
 				System.out.println("Testing shibe user: "+rem+"("+userId+")");
-				userId = dataProvider.createUser(connexion, rem, rem+"@fixme.fixme");
+				userId = dataProvider.createUser(connexion, rem, null);
 				uid = Integer.parseInt(userId);
 				System.out.println("Testing shibe user (2): "+userId);
 			}
