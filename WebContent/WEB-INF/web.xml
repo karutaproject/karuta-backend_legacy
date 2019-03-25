@@ -16,6 +16,10 @@
 		<listener-class>com.portfolio.data.utils.Manager</listener-class>
 	</listener>
 	
+	<session-config>
+		<session-timeout>60</session-timeout>
+	</session-config>
+	
 	<servlet>
 		<servlet-name>Jersey REST Service</servlet-name>
 		<servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
