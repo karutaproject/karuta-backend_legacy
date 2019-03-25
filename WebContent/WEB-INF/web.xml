@@ -35,6 +35,17 @@
 	</servlet-mapping>
 
 	<servlet>
+		<description>OAuth 2.0 Authentication</description>
+		<display-name>OAuth2</display-name>
+		<servlet-name>OAuth2</servlet-name>
+		<servlet-class>com.portfolio.security.OAuth2</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>OAuth2</servlet-name>
+		<url-pattern>/oauth2</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<description>Exporting portfolio in zipped HTML format</description>
 		<display-name>ExportHTML</display-name>
 		<servlet-name>ExportHTML</servlet-name>
