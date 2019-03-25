@@ -45,6 +45,23 @@
 		<url-pattern>/oauth2</url-pattern>
 	</servlet-mapping>
 
+<!--
+	<servlet>
+		<description>I'm just a small proxy</description>
+		<display-name>MiniProxy</display-name>
+		<servlet-name>MiniProxy</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.MiniProxy</servlet-class>
+		<init-param>
+			<param-name>baseURL</param-name>
+			<param-value>https://FIXED.BASE.URL/api</param-value>
+		</init-param>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>MiniProxy</servlet-name>
+		<url-pattern>/opendatasoft/*</url-pattern>
+	</servlet-mapping>
+	-->
+	
 	<servlet>
 		<description>Exporting portfolio in zipped HTML format</description>
 		<display-name>ExportHTML</display-name>
