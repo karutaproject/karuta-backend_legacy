@@ -142,6 +142,7 @@ public class RestServicePortfolio
 	
 	static BufferedWriter editLog = null;
 	static BufferedWriter errorLog = null;
+	static BufferedWriter securityLog = null;
 
 	static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
 	static final String logFormatShort = "%7$s\n";
@@ -164,6 +165,9 @@ public class RestServicePortfolio
 			String errorlog = ConfigUtils.get("error_log");
 			if( !"".equals(errorlog) && errorlog != null )
 				errorLog = LogUtils.getLog(errorlog);
+			String securitylog = ConfigUtils.get("security_log");
+			if( !"".equals(securitylog) && securitylog != null )
+				securityLog = LogUtils.getLog(securitylog);
 
 			// Initialize data provider and cas
 			casUrlValidation =  ConfigUtils.get("casUrlValidation") ;
@@ -553,9 +557,16 @@ public class RestServicePortfolio
 
 			String queryuser = "";
 			if(credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId))
+			{
 				queryuser = dataProvider.putInfUser(c, ui.userId, userid, xmlInfUser);
+			}
 			else if(ui.userId == userid)	/// Changing self
+			{
+				String ip = httpServletRequest.getRemoteAddr();
+				securityLog.write(String.format("[%s] ", ip));
+				securityLog.flush();
 				queryuser = dataProvider.UserChangeInfo(c, ui.userId, userid, xmlInfUser);
+			}
 			else
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
 
@@ -5029,6 +5040,11 @@ public class RestServicePortfolio
 				
 				if( result )
 				{
+					if( securityLog != null )
+					{
+						String ip = httpServletRequest.getRemoteAddr();
+						securityLog.write(String.format("[%s] [%s] asked to reset password\n", ip, username));
+					}
 					String cc_email = ConfigUtils.get("sys_email");
 					// Send email
 					MailUtils.postMail(sc, email, cc_email, "Password change for Karuta", content, logger);

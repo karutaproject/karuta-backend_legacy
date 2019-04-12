@@ -18,6 +18,7 @@ package com.portfolio.data.provider;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -106,6 +107,7 @@ import com.mysql.jdbc.Statement;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.FileUtils;
+import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.PostForm;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.rest.RestWebApplicationException;
@@ -122,6 +124,7 @@ public class MysqlDataProvider implements DataProvider {
 	final Logger logger = LoggerFactory.getLogger(MysqlDataProvider.class);
 
 	final private Credential cred = new Credential();
+	static BufferedWriter securityLog = null;
 	private String dbserveur = null;
 
 	@Override
@@ -134,6 +137,9 @@ public class MysqlDataProvider implements DataProvider {
 	public MysqlDataProvider() throws Exception
 	{
 		dbserveur = ConfigUtils.get("serverType");
+		String securitylog = ConfigUtils.get("security_log");
+		if( !"".equals(securitylog) && securitylog != null )
+			securityLog = LogUtils.getLog(securitylog);
 	}
 
 	public Integer getMysqlNodeNextOrderChildren(Connection c, String nodeUuid)  throws Exception
@@ -11085,6 +11091,8 @@ public class MysqlDataProvider implements DataProvider {
 			/// Executing changes if valid
 			if( isOK )
 			{
+				try
+				{
 				if( password != null )
 				{
 					sql = "UPDATE credential SET password = UNHEX(SHA1(?)) WHERE  userid = ?";
@@ -11096,6 +11104,12 @@ public class MysqlDataProvider implements DataProvider {
 					st.setString(1, password);
 					st.setInt(2, userId);
 					st.executeUpdate();
+					
+					if( securityLog != null )
+					{
+							securityLog.write(String.format("[%s] Changed password\n", username));
+							securityLog.flush();
+					}
 				}
 				if( email != null )
 				{
@@ -11123,6 +11137,11 @@ public class MysqlDataProvider implements DataProvider {
 					st.setString(1, lastname);
 					st.setInt(2, userid2);
 					st.executeUpdate();
+				}
+				}
+				catch( IOException e )
+				{
+					e.printStackTrace();
 				}
 			}
 			
