@@ -5001,6 +5001,10 @@ public class RestServicePortfolio
 		String retText = "";
 		Connection c = null;
 
+		String resetEnable = ConfigUtils.get("enable_password_reset");
+		if( resetEnable != null && ( "y".equals(resetEnable.toLowerCase()) || "true".equals(resetEnable.toLowerCase()) ) )
+		{
+		
 		try
 		{
 			Document doc = DomUtils.xmlString2Document(xml, new StringBuffer());
@@ -5074,6 +5078,7 @@ public class RestServicePortfolio
 				if( c != null ) c.close();
 			}
 			catch( SQLException e ){ e.printStackTrace(); }
+		}
 		}
 
 		return Response.status(retVal).entity(retText).build();
