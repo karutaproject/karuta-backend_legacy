@@ -6942,9 +6942,46 @@ public class MysqlDataProvider implements DataProvider {
 					sqlUpdateSB = "MERGE INTO t_group_rights d USING (SELECT (SELECT grid FROM t_group_right_info WHERE label=?) AS grid, uuid2bin(?) AS id, 1 AS SB, 0 AS RD) t ON (d.grid=t.grid AND d.id=t.id)  WHEN MATCHED THEN UPDATE SET d.SB=1 WHEN NOT MATCHED THEN INSERT (grid, id, SB, RD) VALUES (t.grid, t.id, t.SB, t.RD)";
 				PreparedStatement stSB = c.prepareStatement(sqlUpdateSB);
 	
+				
+				//////// Copy metadata_wad since it's needed in a specific manipulation
+				//// Actual column is TEXT which can't be put in memory
+				if (dbserveur.equals("mysql")){
+					sql = "CREATE TEMPORARY TABLE t_meta(" +
+							"new_uuid binary(16) UNIQUE NOT NULL, " +
+							"portfolio_id binary(16) NOT NULL, " +
+							"metadata TEXT NOT NULL," +
+							"metadata_wad TEXT NOT NULL," +
+							"metadata_epm TEXT NOT NULL" +
+							" ) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
+					st = c.prepareStatement(sql);
+					st.execute();
+					st.close();
+				} else if (dbserveur.equals("oracle")){
+					String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_meta(" +
+							"new_uuid VARCHAR2(32) NOT NULL, " +
+							"portfolio_id VARCHAR2(32) NOT NULL, " +
+							"metadata CLOB NOT NULL " +
+							"metadata_wad CLOB NOT NULL " +
+							"metadata_epm CLOB NOT NULL " +
+							",  CONSTRAINT t_struc_2_UK_uuid UNIQUE (new_uuid)) ON COMMIT PRESERVE ROWS";
+					sql = "{call create_or_empty_table('t_meta','"+v_sql+"')}";
+					CallableStatement ocs = c.prepareCall(sql) ;
+					ocs.execute();
+					ocs.close();
+				}
+
+				/// Put metadata_wad inside a separate temp table that will be written on disk
+				/// Only manipulation related to it ('user' case) will have impact
+				sql = "INSERT INTO t_meta (new_uuid, portfolio_id, metadata, metadata_wad, metadata_epm) " +
+						"SELECT t.new_uuid, t.portfolio_id, n.metadata, n.metadata_wad, n.metadata_epm " +
+						"FROM t_data_node t, node n WHERE t.node_uuid=n.node_uuid";
+				st = c.prepareStatement(sql);
+				st.executeUpdate();
+				st.close();
+				
 				// Selection des metadonnees
-				sql = "SELECT bin2uuid(t.new_uuid) AS uuid, bin2uuid(t.portfolio_id) AS puuid, n.metadata, n.metadata_wad, n.metadata_epm " +
-						"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
+				sql = "SELECT bin2uuid(t.new_uuid) AS uuid, bin2uuid(t.portfolio_id) AS puuid, t.metadata_wad " +
+						"FROM t_meta t";
 				st = c.prepareStatement(sql);
 				res = st.executeQuery();
 	
@@ -6966,7 +7003,7 @@ public class MysqlDataProvider implements DataProvider {
 						meta = meta.replaceAll(onlyuser, login);
 	
 						/// Replace metadata with actual username
-						sql = "UPDATE t_data_node t SET t.metadata_wad=? WHERE t.new_uuid=uuid2bin(?)";
+						sql = "UPDATE t_meta t SET t.metadata_wad=? WHERE t.new_uuid=uuid2bin(?)";
 						st = c.prepareStatement(sql);
 						st.setString(1, meta);
 						st.setString(2, uuid);
@@ -7272,8 +7309,8 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// Structure, Join because the TEXT fields are copied from the base nodes
 			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
-					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, n.metadata, n.metadata_wad, n.metadata_epm, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id " +
-					"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
+					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, tm.metadata, tm.metadata_wad, tm.metadata_epm, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id " +
+					"FROM t_data_node t, t_meta tm WHERE t.new_uuid=tm.new_uuid";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
@@ -7368,7 +7405,7 @@ public class MysqlDataProvider implements DataProvider {
 				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
-					sql = "DROP TEMPORARY TABLE IF EXISTS t_data_node, t_group_right_info, t_group_rights, t_res_node, t_struc, t_struc_2";
+					sql = "DROP TEMPORARY TABLE IF EXISTS t_data_node, t_group_right_info, t_group_rights, t_res_node, t_struc, t_struc_2, t_meta";
 					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
