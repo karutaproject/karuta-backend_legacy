@@ -107,7 +107,7 @@ POST: Instancie un noeud et évalue les droits des attributs
 >
 >{semantictag} = Semantic tag of the imported/copied node /tag sémantique de l'élément à copier
 >
->{code} = Portfolio code of imported/copied source node / code du portfolio dans lequel chercher le tag sémantique
+>{code} = Portfolio code of the source node / code du portfolio dans lequel chercher le tag sémantique
 >
 > Return:
 > uuid of the new node / identifiant du nouvel élément créé.
