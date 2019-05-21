@@ -110,6 +110,7 @@ POST: Instancie un noeud et évalue les droits des attributs
 >{code} = Portfolio code of the source node / code du portfolio dans lequel chercher le tag sémantique
 >
 > Return:
+>
 > uuid of the new node / identifiant du nouvel élément créé.
 
 ### /nodes?portfoliocode={code}&semtag={tag}&semtag_parent={parent-tag}&code_parent={parent-code}
