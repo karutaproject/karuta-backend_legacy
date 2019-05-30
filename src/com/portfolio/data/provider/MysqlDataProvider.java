@@ -15962,9 +15962,10 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		try
 		{
 			Date date = new Date();
-			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=UNHEX(SHA1(?))";
+			/// Credential checking use hashing, we'll never reach this.
+			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=UNHEX(?)";
 			if (dbserveur.equals("oracle")){
-				sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=crypt(?)";
+				sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=?";
 			}
 			st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){

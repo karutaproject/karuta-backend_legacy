@@ -79,6 +79,7 @@ public class ShibeServlet extends HttpServlet {
 				userId = dataProvider.createUser(connexion, rem, null);
 				uid = Integer.parseInt(userId);
 				System.out.println("Testing shibe user (2): "+userId);
+				session.setAttribute("updatefromshibe", 1);
 			}
 			session.setAttribute("uid", uid);
 			session.setAttribute("user", rem);
