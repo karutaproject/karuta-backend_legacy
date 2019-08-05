@@ -11042,6 +11042,20 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
+	public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname , String email ) throws SQLException
+	{
+		String sql = "UPDATE credential SET display_firstname = ?, display_lastname = ?, email = ? WHERE userid = ?";
+		PreparedStatement st = c.prepareStatement(sql);
+		st.setString(1, fname);
+		st.setString(2, lname);
+		st.setString(3, email);
+		st.setInt(4, userid2);
+		st.executeUpdate();
+
+		return null;
+	}
+	
+	@Override
 	public String UserChangeInfo(Connection c, int userId, int userid2, String in) throws SQLException
 	{
 		if(userId != userid2)
@@ -15963,7 +15977,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		{
 			Date date = new Date();
 			/// Credential checking use hashing, we'll never reach this.
-			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=UNHEX(?)";
+			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=SUBSTR(PASSWORD(?), 26)";
 			if (dbserveur.equals("oracle")){
 				sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=?";
 			}

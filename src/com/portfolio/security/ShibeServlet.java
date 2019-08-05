@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Enumeration;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
@@ -49,6 +50,7 @@ public class ShibeServlet extends HttpServlet {
 	@Override
   public void init()
 	{
+		System.setProperty("https.protocols", "TLSv1.2");
 		sc = getServletConfig();
 	  ServletContext application = getServletConfig().getServletContext();
 	  try
@@ -73,13 +75,20 @@ public class ShibeServlet extends HttpServlet {
 			connexion = SqlUtils.getConnection(session.getServletContext());
 			String userId = dataProvider.getUserId( connexion, rem, null );
 			uid = Integer.parseInt(userId);
+			
 			if(uid == 0 )
 			{
-				System.out.println("Testing shibe user: "+rem+"("+userId+")");
+				System.out.println("[SHIBESERV] Creating account");
 				userId = dataProvider.createUser(connexion, rem, null);
 				uid = Integer.parseInt(userId);
-				System.out.println("Testing shibe user (2): "+userId);
-				session.setAttribute("updatefromshibe", 1);
+				
+				/// Update values
+				String mail = (String) request.getAttribute(ConfigUtils.get("shib_email"));
+				String cn = (String) request.getAttribute(ConfigUtils.get("shib_name"));
+				String[] namefrag = cn.split(" ");
+				/// Regular function need old password to update
+				/// But external account generate password unreachable with regular method
+				dataProvider.putInfUserInternal(connexion, uid, uid, namefrag[1], namefrag[0], mail);
 			}
 			session.setAttribute("uid", uid);
 			session.setAttribute("user", rem);

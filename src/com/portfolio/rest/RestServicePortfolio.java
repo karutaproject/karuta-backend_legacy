@@ -31,6 +31,7 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
@@ -314,46 +315,9 @@ public class RestServicePortfolio
 			/// Add shibboleth info if needed
 			HttpSession session = httpServletRequest.getSession(false);
 			Integer fromshibe = (Integer) session.getAttribute("fromshibe");
-			Integer updatefromshibe = (Integer) session.getAttribute("updatefromshibe");
-			String alist = ConfigUtils.get("shib_attrib");
-			HashMap<String, String> updatevals = new HashMap<String, String>();
-			if( fromshibe != null && fromshibe == 1 && alist != null )
+			if( fromshibe != null && fromshibe == 1 )
 			{
-				/// Fetch and construct needed data
-				String[] attriblist = alist.split(",");
-				int lastst = xmluser.lastIndexOf("<");
-				StringBuilder shibuilder = new StringBuilder( xmluser.substring(0, lastst) );
-				
-				for( String attrib : attriblist )
-				{
-					String value = (String) httpServletRequest.getAttribute(attrib);
-					shibuilder.append("<").append(attrib).append(">")
-					.append(value)
-					.append("</").append(attrib).append(">");
-					/// Pre-process values
-					if( 1 == updatefromshibe )
-					{
-						String colname = ConfigUtils.get(attrib);
-						updatevals.put(colname, value);
-					}
-				}
-				/// Update values
-				if( 1 == updatefromshibe )
-				{
-					String xmlInfUser = String.format("<user id=\"%s\">" +
-							"<firstname>%s</firstname>" +
-							"<lastname>%s</lastname>" +
-							"<email>%s</email>" +
-							"</user>",
-							ui.userId, updatevals.get("display_firstname"), updatevals.get("display_lastname"),updatevals.get("email"));
-					/// User update its own info automatically
-					dataProvider.UserChangeInfo(c, ui.userId, ui.userId, xmlInfUser);
-					/// Consider it done
-					session.removeAttribute("updatefromshibe");
-				}
-				/// Add it as last tag after "moving" the closing tag
-				shibuilder.append(xmluser.substring(lastst));
-				xmluser = shibuilder.toString();
+				/// If we need some special stuff
 			}
 			
 			return Response.ok(xmluser).build();
@@ -4985,6 +4949,7 @@ public class RestServicePortfolio
 			status = 500;
 			retVal = ex.getMessage();
 			logger.error(ex.getMessage());
+			ex.printStackTrace();
 			logRestRequest(httpServletRequest, xmlCredential, ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
 		}
 		finally
