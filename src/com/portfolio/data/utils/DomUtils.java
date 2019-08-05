@@ -29,6 +29,8 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -59,8 +61,8 @@ import org.w3c.dom.ls.LSSerializer;
 import org.w3c.tidy.Tidy;
 import org.xml.sax.InputSource;
 
-import com.mysql.jdbc.Connection;
-import com.mysql.jdbc.PreparedStatement;
+//import com.mysql.jdbc.Connection;
+//import com.mysql.jdbc.PreparedStatement;
 
 /*
 <%-- SAX classes --%>
