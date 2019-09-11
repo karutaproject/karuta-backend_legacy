@@ -34,25 +34,28 @@ CREATE TABLE IF NOT EXISTS `node` (
   `metadata` text COLLATE utf8_unicode_ci NOT NULL,
   `metadata_wad` text COLLATE utf8_unicode_ci NOT NULL,
   `metadata_epm` text COLLATE utf8_unicode_ci NOT NULL,
-  `res_node_uuid` binary(16) DEFAULT NULL,
-  `res_res_node_uuid` binary(16) DEFAULT NULL,
-  `res_context_node_uuid` binary(16) DEFAULT NULL,
-  `shared_res` int(1) NOT NULL,
-  `shared_node` int(1) NOT NULL,
-  `shared_node_res` int(1) NOT NULL,
-  `shared_res_uuid` binary(16) DEFAULT NULL,
-  `shared_node_uuid` binary(16) DEFAULT NULL,
-  `shared_node_res_uuid` binary(16) DEFAULT NULL,
-  `asm_type` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `xsi_type` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `res_content` binary(16) DEFAULT NULL,	-- (modif)
+  `res_res_content` binary(16) DEFAULT NULL,	-- (modif)
+  `res_context_content` binary(16) DEFAULT NULL,	-- (modif)
+--  `shared_res` int(1) NOT NULL,	-- (modif)
+--  `shared_node` int(1) NOT NULL,	-- (modif)
+--  `shared_node_res` int(1) NOT NULL,	-- (modif)
+--  `shared_res_uuid` binary(16) DEFAULT NULL,	-- (modif)
+--  `shared_node_uuid` binary(16) DEFAULT NULL,	-- (modif)
+--  `shared_node_res_uuid` binary(16) DEFAULT NULL,	-- (modif)
+  `asm_type` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL,	-- Would be redundant with xsi_type_node
+  `xsi_type_node` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL,	-- (changed) node type
+  `xsi_type_res` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL,	-- (changed) content type
   `semtag` varchar(250) COLLATE utf8_unicode_ci DEFAULT NULL,
   `semantictag` varchar(250) COLLATE utf8_unicode_ci DEFAULT NULL,
   `label` varchar(250) COLLATE utf8_unicode_ci DEFAULT NULL,
   `code` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `descr` varchar(250) COLLATE utf8_unicode_ci DEFAULT NULL,
   `format` varchar(30) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `modif_user_id` int(12) NOT NULL,
-  `modif_date` timestamp NULL DEFAULT NULL,
+  `modif_user_id_node` int(12) NOT NULL,	-- (changed) container changed
+  `modif_user_id_res` int(12) NOT NULL,	-- (changed) resource content changed
+  `modif_date_node` timestamp NULL DEFAULT NULL,	-- (changed)
+  `modif_date_res` timestamp NULL DEFAULT NULL,	-- (changed)
   `portfolio_id` binary(16) DEFAULT NULL,
   PRIMARY KEY (`node_uuid`),
   KEY `portfolio_id` (`portfolio_id`),
