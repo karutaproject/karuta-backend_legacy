@@ -39,6 +39,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -3739,6 +3740,87 @@ public class MysqlDataProvider implements DataProvider {
 
 				time4 = System.currentTimeMillis();
 
+				/// Filter dates, directly change the temp rights list
+				///// Remove node for simple users if there's a date limitation
+				sql = "DELETE FROM t_rights WHERE id=uuid2bin(?)";
+				PreparedStatement stFilter = c.prepareStatement(sql);
+
+				// Fetch metadata
+				sql = "SELECT bin2uuid(node_uuid) AS node_uuid, metadata_wad FROM node n, t_rights tsp " +
+						"WHERE n.node_uuid=tsp.id " +
+						"AND ((metadata_wad LIKE '%seestart%') OR (metadata_wad LIKE '%seeend%'))";
+				st = c.prepareStatement(sql);
+				ResultSet res = st.executeQuery();
+				String meta = "";
+				while( res.next() )
+				{
+					/// Checking if date has been declared
+					meta = res.getString("metadata_wad");
+					
+					String seestartReg = "seestart=\"([^\"]*)";
+					String seeendReg = "seeend=\\\"([^\\\"]*)";
+					Pattern seestartPat = Pattern.compile(seestartReg);
+					Pattern seeendPat = Pattern.compile(seeendReg);
+					Matcher startMatcher = seestartPat.matcher(meta);
+					Matcher endMatcher = seeendPat.matcher(meta);
+					String seestart = null;
+					String seeend = null;
+					if (startMatcher.find()) seestart = startMatcher.group(1);
+					if( endMatcher.find() ) seeend = endMatcher.group(1);
+					
+					String uuid = res.getString("node_uuid");
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					long currentTime = System.currentTimeMillis();
+					// Nothing on that line
+					try
+					{
+						if( seestart == null && seeend == null ) continue;
+						else if( seestart != null && seeend == null )
+						{	// Only a start view
+							Date dt;
+								dt = sdf.parse(seestart);
+							long starttime = dt.getTime();
+							if( starttime > currentTime )
+							{
+								stFilter.setString(1, uuid);
+								stFilter.executeUpdate();
+							}
+						}
+						else if ( seestart == null && seeend != null )
+						{	// Only end view
+							Date dt = sdf.parse(seeend);
+							long endtime = dt.getTime();
+							if( endtime < currentTime )
+							{
+								stFilter.setString(1, uuid);
+								stFilter.executeUpdate();
+							}
+						}
+						else
+						{	// Restriction on start and end
+							Date dt = sdf.parse(seestart);
+							long starttime = dt.getTime();
+							dt = sdf.parse(seeend);
+							long endtime = dt.getTime();
+							if( endtime < currentTime || starttime > currentTime )
+							{
+								stFilter.setString(1, uuid);
+								stFilter.executeUpdate();
+							}
+						}
+					}
+					catch( ParseException e )
+					{
+						// For some reason, date isn't formatted correctly
+						// Should never happen
+						e.printStackTrace();
+					}
+				}
+				res.close();
+				stFilter.close();
+				st.close();
+				
+				
 				/*
 				/// Debug stuff for Oracle
 				sql = "SELECT gr.grid, gr.id, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD " +
@@ -4266,6 +4348,86 @@ public class MysqlDataProvider implements DataProvider {
 					st.executeUpdate();
 					st.close();
 				}
+				
+				///// Remove node for simple users if there's a date limitation
+				sql = "DELETE FROM t_struc_parentid WHERE node=uuid2bin(?)";
+				PreparedStatement stFilter = c.prepareStatement(sql);
+
+				// Fetch metadata
+				sql = "SELECT bin2uuid(uuid) AS node_uuid, metadata_wad FROM node n, t_struc_parentid tsp " +
+						"WHERE n.node_uuid=tsp.node_uuid " +
+						"AND ((metadata_wad LIKE '%seestart%') OR (metadata_wad LIKE '%seeend%'))";
+				st = c.prepareStatement(sql);
+				res = st.executeQuery();
+				String meta = "";
+				while( res.next() )
+				{
+					/// Checking if date has been declared
+					meta = res.getString("metadata_wad");
+					
+					String seestartReg = "seestart=\"([^\"]*)";
+					String seeendReg = "seeend=\\\"([^\\\"]*)";
+					Pattern seestartPat = Pattern.compile(seestartReg);
+					Pattern seeendPat = Pattern.compile(seeendReg);
+					Matcher startMatcher = seestartPat.matcher(meta);
+					Matcher endMatcher = seeendPat.matcher(meta);
+					String seestart = null;
+					String seeend = null;
+					if (startMatcher.find()) seestart = startMatcher.group(1);
+					if( endMatcher.find() ) seeend = endMatcher.group(1);
+					
+					String uuid = res.getString("node_uuid");
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					long currentTime = System.currentTimeMillis();
+					// Nothing on that line
+					try
+					{
+						if( seestart == null && seeend == null ) continue;
+						else if( seestart != null && seeend == null )
+						{	// Only a start view
+							Date dt;
+								dt = sdf.parse(seestart);
+							long starttime = dt.getTime();
+							if( starttime > currentTime )
+							{
+								stFilter.setString(1, uuid);
+								stFilter.executeUpdate();
+							}
+						}
+						else if ( seestart == null && seeend != null )
+						{	// Only end view
+							Date dt = sdf.parse(seeend);
+							long endtime = dt.getTime();
+							if( endtime < currentTime )
+							{
+								stFilter.setString(1, uuid);
+								stFilter.executeUpdate();
+							}
+						}
+						else
+						{	// Restriction on start and end
+							Date dt = sdf.parse(seestart);
+							long starttime = dt.getTime();
+							dt = sdf.parse(seeend);
+							long endtime = dt.getTime();
+							if( endtime < currentTime || starttime > currentTime )
+							{
+								stFilter.setString(1, uuid);
+								stFilter.executeUpdate();
+							}
+						}
+					}
+					catch( ParseException e )
+					{
+						// For some reason, date isn't formatted correctly
+						// Should never happen
+						e.printStackTrace();
+					}
+				}
+				res.close();
+				stFilter.close();
+				st.close();
+
 				
 				// Aggregation des droits avec 'all', l'appartenance du groupe de l'utilisateur, et les droits propres e l'utilisateur
 				if (dbserveur.equals("mysql")){
