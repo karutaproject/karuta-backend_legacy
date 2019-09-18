@@ -4553,15 +4553,6 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid binary(16)  NOT NULL, " +
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
 						"node_order int(12) NOT NULL, " +
-						"res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
-						"shared_res int(1) NOT NULL, " +
-						"shared_node int(1) NOT NULL, " +
-						"shared_node_res int(1) NOT NULL, " +
-						"shared_res_uuid BINARY(16)  NULL, " +
-						"shared_node_uuid BINARY(16) NULL, " +
-						"shared_node_res_uuid BINARY(16) NULL, " +
 						"portfolio_id binary(16) DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 				st = c.prepareStatement(sql);
 				st.execute();
@@ -4571,15 +4562,6 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid VARCHAR2(32)  NOT NULL, " +
 						"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
-						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
-						"shared_res NUMBER(1) NOT NULL, " +
-						"shared_node NUMBER(1) NOT NULL, " +
-						"shared_node_res NUMBER(1) NOT NULL, " +
-						"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"portfolio_id VARCHAR2(32) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_node','"+v_sql+"')}";
 				CallableStatement ocs = c.prepareCall(sql) ;
@@ -4592,9 +4574,6 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "CREATE TEMPORARY TABLE t_struc_node_resids(" +
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16), " +
-						"res_node_uuid binary(16), " +
-						"res_res_node_uuid binary(16), " +
-						"res_context_node_uuid binary(16), " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 				st = c.prepareStatement(sql);
 				st.execute();
@@ -4603,9 +4582,6 @@ public class MysqlDataProvider implements DataProvider {
 				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_node_resids(" +
 						"uuid VARCHAR2(32) NOT NULL, " +
 						"node_parent_uuid VARCHAR2(32), " +
-						"res_node_uuid VARCHAR2(32), " +
-						"res_res_node_uuid VARCHAR2(32), " +
-						"res_context_node_uuid VARCHAR2(32), " +
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_node_resids_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_node_resids','"+v_sql+"')}";
@@ -4618,9 +4594,6 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "CREATE TEMPORARY TABLE t_struc_node_resids_2(" +
 						"uuid binary(16) UNIQUE NOT NULL, " +
 						"node_parent_uuid binary(16) NOT NULL, " +
-						"res_node_uuid binary(16), " +
-						"res_res_node_uuid binary(16), " +
-						"res_context_node_uuid binary(16), " +
 						"t_level INT) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 				st = c.prepareStatement(sql);
 				st.execute();
@@ -4629,9 +4602,6 @@ public class MysqlDataProvider implements DataProvider {
 				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_struc_node_resids_2(" +
 						"uuid VARCHAR2(32) NOT NULL, " +
 						"node_parent_uuid VARCHAR2(32), " +
-						"res_node_uuid VARCHAR2(32), " +
-						"res_res_node_uuid VARCHAR2(32), " +
-						"res_context_node_uuid VARCHAR2(32), " +
 						"t_level NUMBER(10,0)"+
 						",  CONSTRAINT t_struc_node_resids_2_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_struc_node_resids_2','"+v_sql+"')}";
@@ -4640,28 +4610,11 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
-			/// Pour le filtrage des ressources
-			if (dbserveur.equals("mysql")){
-				sql = "CREATE TEMPORARY TABLE t_res_uuid(" +
-						"uuid binary(16) UNIQUE NOT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
-				st = c.prepareStatement(sql);
-				st.execute();
-				st.close();
-			} else if (dbserveur.equals("oracle")){
-				String v_sql = "CREATE GLOBAL TEMPORARY TABLE t_res_uuid(" +
-						"uuid VARCHAR2(32) NOT NULL, " +
-						"  CONSTRAINT t_res_UK_uuid UNIQUE (uuid)) ON COMMIT PRESERVE ROWS";
-				sql = "{call create_or_empty_table('t_res_uuid','"+v_sql+"')}";
-				CallableStatement ocs = c.prepareCall(sql) ;
-				ocs.execute();
-				ocs.close();
-			}
-
 			t2 = System.currentTimeMillis();
 
 			/// Copy portfolio base info
-			sql = "INSERT INTO t_node(node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, portfolio_id) " +
-					"SELECT node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, portfolio_id " +
+			sql = "INSERT INTO t_node(node_uuid, node_parent_uuid, node_order, portfolio_id) " +
+					"SELECT node_uuid, node_parent_uuid, node_order, portfolio_id " +
 					"FROM node WHERE portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
 			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
@@ -4669,7 +4622,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.close();
 			
 			/// Find parent for re-ordering the remaining childs
-			sql = "SELECT bin2uuid(node_parent_uuid) FROM t_node WHERE node_uuid=uuid2bin(?)";
+			sql = "SELECT bin2uuid(node_parent_uuid) FROM node WHERE node_uuid=uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
 			ResultSet res = st.executeQuery();
@@ -4681,8 +4634,8 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// Liste les noeud a filtrer
 			// Initiale
-			sql = "INSERT INTO t_struc_node_resids(uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) " +
-					"SELECT node_uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, 0 " +
+			sql = "INSERT INTO t_struc_node_resids(uuid, node_parent_uuid, t_level) " +
+					"SELECT node_uuid, node_parent_uuid, 0 " +
 					"FROM t_node WHERE node_uuid=uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
@@ -4695,11 +4648,11 @@ public class MysqlDataProvider implements DataProvider {
 			int level = 0;
 			int added = 1;
 			if (dbserveur.equals("mysql")){
-				sql = "INSERT IGNORE INTO t_struc_node_resids_2(uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) ";
+				sql = "INSERT IGNORE INTO t_struc_node_resids_2(uuid, node_parent_uuid, t_level) ";
 				} else if (dbserveur.equals("oracle")){
-					sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_node_resids_2,t_struc_node_resids_2_UK_uuid)*/ INTO t_struc_node_resids_2(uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, t_level) ";
+					sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_node_resids_2,t_struc_node_resids_2_UK_uuid)*/ INTO t_struc_node_resids_2(uuid, node_parent_uuid, t_level) ";
 				}
-				sql += "SELECT node_uuid, node_parent_uuid, res_node_uuid, res_res_node_uuid, res_context_node_uuid, ? " +
+				sql += "SELECT node_uuid, node_parent_uuid, ? " +
 					"FROM t_node WHERE node_parent_uuid IN (SELECT uuid FROM t_struc_node_resids t " +
 					"WHERE t.t_level=?)";
 			st = c.prepareStatement(sql);
@@ -4726,36 +4679,6 @@ public class MysqlDataProvider implements DataProvider {
 
 			t4 = System.currentTimeMillis();
 
-			/// On liste les ressources e effacer
-			if (dbserveur.equals("mysql")){
-				sql = "INSERT INTO t_res_uuid(uuid) SELECT res_node_uuid FROM t_struc_node_resids WHERE res_node_uuid <> 0x0000000000000000000000000000000";
-			} else if (dbserveur.equals("oracle")){
-				sql = "INSERT INTO t_res_uuid(uuid) SELECT res_node_uuid FROM t_struc_node_resids WHERE res_node_uuid <> '00000000000000000000000000000000'";
-			}
-			st = c.prepareStatement(sql);
-			st.executeUpdate();
-			st.close();
-
-			if (dbserveur.equals("mysql")){
-				sql = "INSERT INTO t_res_uuid(uuid) SELECT res_res_node_uuid FROM t_struc_node_resids WHERE res_res_node_uuid <> 0x0000000000000000000000000000000";
-			} else if (dbserveur.equals("oracle")){
-				sql = "INSERT INTO t_res_uuid(uuid) SELECT res_res_node_uuid FROM t_struc_node_resids WHERE res_res_node_uuid <> '00000000000000000000000000000000'";
-			}
-			st = c.prepareStatement(sql);
-			st.executeUpdate();
-			st.close();
-
-			if (dbserveur.equals("mysql")){
-				sql = "INSERT INTO t_res_uuid(uuid) SELECT res_context_node_uuid FROM t_struc_node_resids WHERE res_context_node_uuid <> 0x0000000000000000000000000000000";
-			} else if (dbserveur.equals("oracle")){
-				sql = "INSERT INTO t_res_uuid(uuid) SELECT res_context_node_uuid FROM t_struc_node_resids WHERE res_context_node_uuid <> '00000000000000000000000000000000'";
-			}
-			if (dbserveur.equals("mysql")){
-			} else if (dbserveur.equals("oracle")){
-			}
-			st = c.prepareStatement(sql);
-			st.executeUpdate();
-			st.close();
 
 			t5 = System.currentTimeMillis();
 
@@ -4764,22 +4687,21 @@ public class MysqlDataProvider implements DataProvider {
 			touchPortfolio(c, nodeUuid, null);
 
 			/// On efface
-			/*
-			// Les ressources
+			// From rights table
 			if( "mysql".equals(dbserveur) )
 			{
-				sql = "DELETE rt FROM t_res_uuid tru LEFT JOIN resource_table rt ON tru.uuid=rt.node_uuid";
+				sql = "DELETE gr FROM t_struc_node_resids tsnr LEFT JOIN group_rights gr ON tsnr.uuid=g.id";
 			}
 			else	// FIXME Not sure if it's correct
 			{
-				sql = "DELETE resource_table WHERE (node_uuid) IN (SELECT uuid FROM t_res_uuid)";
+				sql = "DELETE group_rights WHERE (id) IN (SELECT uuid FROM t_struc_node_resids)";
 			}
 			st = c.prepareStatement(sql);
-			st.executeUpdate();
+			result = st.executeUpdate();
 			st.close();
-			//*/
-
-			// Les noeuds
+			
+			
+			/// From node table
 			if( "mysql".equals(dbserveur) )
 			{
 				sql = "DELETE n FROM t_struc_node_resids tsnr LEFT JOIN node n ON tsnr.uuid=n.node_uuid";
@@ -4827,7 +4749,7 @@ public class MysqlDataProvider implements DataProvider {
 				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
-					sql = "DROP TEMPORARY TABLE IF EXISTS t_node, t_struc_node_resids, t_struc_node_resids_2, t_res_uuid";
+					sql = "DROP TEMPORARY TABLE IF EXISTS t_node, t_struc_node_resids, t_struc_node_resids_2";
 					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
@@ -4883,15 +4805,9 @@ public class MysqlDataProvider implements DataProvider {
 						"metadata text NOT NULL, " +
 						"metadata_wad text NOT NULL, " +
 						"metadata_epm text NOT NULL, " +
-						"res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
-						"shared_res int(1) NOT NULL, " +
-						"shared_node int(1) NOT NULL, " +
-						"shared_node_res int(1) NOT NULL, " +
-						"shared_res_uuid BINARY(16)  NULL, " +
-						"shared_node_uuid BINARY(16) NULL, " +
-						"shared_node_res_uuid BINARY(16) NULL, " +
+						"res_content text DEFAULT NULL, " +
+						"res_res_content text DEFAULT NULL, " +
+						"res_context_content text)  DEFAULT NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
 						"xsi_type varchar(50)  DEFAULT NULL, " +
 						"semtag varchar(100) DEFAULT NULL, " +
@@ -4916,15 +4832,9 @@ public class MysqlDataProvider implements DataProvider {
 						"metadata CLOB DEFAULT NULL, " +
 						"metadata_wad CLOB DEFAULT NULL, " +
 						"metadata_epm CLOB DEFAULT NULL, " +
-						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
-						"shared_res NUMBER(1) NOT NULL, " +
-						"shared_node NUMBER(1) NOT NULL, " +
-						"shared_node_res NUMBER(1) NOT NULL, " +
-						"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+						"res_content CLOB DEFAULT NULL, " +
+						"res_res_content CLB DEFAULT NULL, " +
+						"res_context_content CLOB  DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
 						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
@@ -4943,6 +4853,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// Pour la copie des donnees
+			/*
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_res(" +
 						"new_uuid binary(16) NOT NULL, " +  /// Pour la copie d'une nouvelle structure
@@ -4969,6 +4880,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.execute();
 				ocs.close();
 			}
+			//*/
 
 			/// Pour la mise e jour de la liste des enfants/parents
 			if (dbserveur.equals("mysql")){
@@ -5053,13 +4965,13 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// Copie de la structure
-			sql = "INSERT INTO t_data(new_uuid, node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid , shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) ";
+			sql = "INSERT INTO t_data(new_uuid, node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content , asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) ";
 			if (dbserveur.equals("mysql")){
 				sql += "SELECT uuid2bin(UUID()), ";
 			} else if (dbserveur.equals("oracle")){
 				sql += "SELECT sys_guid(), ";
 			}
-			sql += "node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid , shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, ?, modif_date, portfolio_id " +
+			sql += "node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content , asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, ?, modif_date, portfolio_id " +
 					"FROM node n " +
 					"WHERE portfolio_id=uuid2bin(?)";
 			st = c.prepareStatement(sql);
@@ -5069,160 +4981,12 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
-			if( !copyshared )
-			{
-				/// Liste les noeud a filtrer
-				sql = "INSERT INTO t_struc(node_order, new_uuid, uuid, node_parent_uuid, t_level) " +
-						"SELECT node_order, new_uuid, node_uuid, node_parent_uuid, 0 FROM t_data WHERE shared_node=1";
-				st = c.prepareStatement(sql);
-				st.executeUpdate();
-				st.close();
-
-				int level = 0;
-				int added = 1;
-				if (dbserveur.equals("mysql")){
-					sql = "INSERT IGNORE INTO t_struc_2(node_order, new_uuid, uuid, node_parent_uuid, t_level) ";
-				} else if (dbserveur.equals("oracle")){
-					sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_2,t_struc_2_UK_uuid)*/ INTO t_struc_2(node_order, new_uuid, uuid, node_parent_uuid, t_level) ";
-				}
-				sql += "SELECT d.node_order, d.new_uuid, d.node_uuid, d.node_parent_uuid, ? " +
-						"FROM t_data d WHERE d.node_parent_uuid IN (SELECT uuid FROM t_struc t " +
-						"WHERE t.t_level=?)";
-
-				String sqlTemp=null;
-				if (dbserveur.equals("mysql")){
-					sqlTemp = "INSERT IGNORE INTO t_struc SELECT * FROM t_struc_2;";
-				} else if (dbserveur.equals("oracle")){
-					sqlTemp = "INSERT /*+ ignore_row_on_dupkey_index(t_struc,t_struc_UK_uuid)*/ INTO t_struc SELECT * FROM t_struc_2";
-				}
-				PreparedStatement stTemp = c.prepareStatement(sqlTemp);
-
-				st = c.prepareStatement(sql);
-				while( added != 0 )
-				{
-					st.setInt(1, level+1);
-					st.setInt(2, level);
-					st.executeUpdate();
-					added = stTemp.executeUpdate();   // On s'arrete quand rien e ete ajoute
-					level = level + 1;    // Prochaine etape
-				}
-				st.close();
-				stTemp.close();
-
-				// Retire les noeuds en dessous du shared
-				sql = "DELETE FROM t_struc WHERE uuid IN (SELECT node_uuid FROM t_data WHERE shared_node=1)";
-				st = c.prepareStatement(sql);
-				st.executeUpdate();
-				st.close();
-
-				sql = "DELETE FROM t_data WHERE node_uuid IN (SELECT uuid FROM t_struc)";
-				st = c.prepareStatement(sql);
-				st.executeUpdate();
-				st.close();
-
-				sql = "DELETE FROM t_struc";
-				st = c.prepareStatement(sql);
-				st.executeUpdate();
-				st.close();
-
-			}
-
 			/// Copie les uuid pour la resolution des parents/enfants
 			sql = "INSERT INTO t_struc(node_order, new_uuid, uuid, node_parent_uuid) " +
 					"SELECT node_order, new_uuid, node_uuid, node_parent_uuid FROM t_data";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
-
-			if( !copyshared )
-			{
-				/// Cas special pour shared_node=1
-				// Le temps qu'on refasse la liste des enfants, on va enlever le noeud plus tard
-				sql = "UPDATE t_data SET shared_node_uuid=node_uuid WHERE shared_node=1";
-				st = c.prepareStatement(sql);
-				st.executeUpdate();
-				st.close();
-
-				// Met a jour t_struc pour la redirection. C'est pour la list des enfants
-				// FIXME: A verifier les appels qui modifie la liste des enfants.
-				if (dbserveur.equals("mysql")){
-					sql = "UPDATE t_struc s INNER JOIN t_data d ON s.uuid=d.node_uuid " +
-						"SET s.new_uuid=d.node_uuid WHERE d.shared_node=1";
-				} else if (dbserveur.equals("oracle")){
-					sql = "UPDATE t_struc s SET s.new_uuid=(SELECT d.node_uuid FROM t_struc s2 INNER JOIN t_data d ON s2.uuid=d.node_uuid WHERE d.shared_node=1) WHERE EXISTS (SELECT 1 FROM t_struc s2 INNER JOIN t_data d ON s2.uuid=d.node_uuid WHERE d.shared_node=1)";
-				}
-				st = c.prepareStatement(sql);
-				st.executeUpdate();
-				st.close();
-			}
-
-			/// Copie des donnees non partages (shared=0)
-			// Specific
-			/*
-			sql = "INSERT INTO t_res(new_uuid, node_uuid, xsi_type, content, user_id, modif_user_id, modif_date) ";
-			if (dbserveur.equals("mysql")){
-				sql += "SELECT uuid2bin(UUID()), ";
-			} else if (dbserveur.equals("oracle")){
-				sql += "SELECT sys_guid(), ";
-			}
-			sql += "r.node_uuid, r.xsi_type, r.content, r.user_id, r.modif_user_id, r.modif_date " +
-					"FROM t_data d " +
-					"LEFT JOIN resource_table r ON d.res_node_uuid=r.node_uuid " +
-					"WHERE ";
-			if( !copyshared )
-				sql += "shared_res=0 AND ";
-			if (dbserveur.equals("mysql")){
-				sql += "d.res_node_uuid <> 0x0000000000000000000000000000000"; // Binaire non null
-			} else if (dbserveur.equals("oracle")){
-				sql += "d.res_node_uuid <> '00000000000000000000000000000000'"; // Binaire non null
-			}
-			st = c.prepareStatement(sql);
-			st.executeUpdate();
-			st.close();
-
-			sql = "INSERT INTO t_res(new_uuid, node_uuid, xsi_type, content, user_id, modif_user_id, modif_date) ";
-			if (dbserveur.equals("mysql")){
-				sql += "SELECT uuid2bin(UUID()), ";
-			} else if (dbserveur.equals("oracle")){
-				sql += "SELECT sys_guid(), ";
-			}
-			sql += "r.node_uuid, r.xsi_type, r.content, r.user_id, r.modif_user_id, r.modif_date " +
-					"FROM t_data d " +
-					"LEFT JOIN resource_table r ON d.res_context_node_uuid=r.node_uuid " +
-					"WHERE ";
-			if( !copyshared )
-				sql += "shared_node=0 AND ";
-			if (dbserveur.equals("mysql")){
-				sql += "d.res_context_node_uuid <> 0x0000000000000000000000000000000";
-			} else if (dbserveur.equals("oracle")){
-				sql += "d.res_context_node_uuid <> '00000000000000000000000000000000'";
-			}
-			st = c.prepareStatement(sql);
-			st.executeUpdate();
-			st.close();
-
-			// nodeRes
-			sql = "INSERT INTO t_res(new_uuid, node_uuid, xsi_type, content, user_id, modif_user_id, modif_date) ";
-			if (dbserveur.equals("mysql")){
-				sql += "SELECT uuid2bin(UUID()), ";
-			} else if (dbserveur.equals("oracle")){
-				sql += "SELECT sys_guid(), ";
-			}
-			sql += "r.node_uuid, r.xsi_type, r.content, r.user_id, r.modif_user_id, r.modif_date " +
-					"FROM t_data d " +
-					"LEFT JOIN resource_table r ON d.res_res_node_uuid=r.node_uuid " +
-					"WHERE ";
-			if( !copyshared )
-				sql += "shared_node_res=0 AND ";
-			if (dbserveur.equals("mysql")){
-				sql += "d.res_res_node_uuid <> 0x0000000000000000000000000000000";
-			} else if (dbserveur.equals("oracle")){
-				sql += "d.res_res_node_uuid <> '00000000000000000000000000000000'";
-			}
-			st = c.prepareStatement(sql);
-			st.executeUpdate();
-			st.close();
-			//*/
 
 			/// Changement du uuid du portfolio
 			sql = "UPDATE t_data t SET t.portfolio_id=uuid2bin(?)";
@@ -5234,9 +4998,9 @@ public class MysqlDataProvider implements DataProvider {
 			/// Resolution des nouveaux uuid avec les parents
 			// Avec la structure (et droits sur la structure)
 			if (dbserveur.equals("mysql")){
-				sql = "UPDATE t_rights ri, t_data d SET ri.id=d.new_uuid WHERE ri.id=d.node_uuid AND d.shared_node=0";
+				sql = "UPDATE t_rights ri, t_data d SET ri.id=d.new_uuid WHERE ri.id=d.node_uuid";
 			} else if (dbserveur.equals("oracle")){
-				sql = "UPDATE t_rights ri SET ri.id=(SELECT new_uuid FROM t_data d WHERE ri.id=d.node_uuid AND d.shared_node=0) WHERE EXISTS (SELECT 1 FROM t_data d WHERE ri.id=d.node_uuid AND d.shared_node=0)";
+				sql = "UPDATE t_rights ri SET ri.id=(SELECT new_uuid FROM t_data d WHERE ri.id=d.node_uuid) WHERE EXISTS (SELECT 1 FROM t_data d WHERE ri.id=d.node_uuid)";
 			}
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
@@ -5250,14 +5014,15 @@ public class MysqlDataProvider implements DataProvider {
 
 			// Avec les ressources (et droits des ressources)
 			if (dbserveur.equals("mysql")){
-				sql = "UPDATE t_rights ri, t_res re SET ri.id = re.new_uuid WHERE re.node_uuid=ri.id";
+				sql = "UPDATE t_rights ri, t_struc re SET ri.id = re.new_uuid WHERE re.node_uuid=ri.id";
 			} else if (dbserveur.equals("oracle")){
-				sql = "UPDATE t_rights ri SET ri.id=(SELECT new_uuid FROM t_res re WHERE re.node_uuid=ri.id) WHERE EXISTS (SELECT 1 FROM t_res re WHERE re.node_uuid=ri.id)";
+				sql = "UPDATE t_rights ri SET ri.id=(SELECT new_uuid FROM t_struc re WHERE re.node_uuid=ri.id) WHERE EXISTS (SELECT 1 FROM t_res re WHERE re.node_uuid=ri.id)";
 			}
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
 
+			/*
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d INNER JOIN t_res r ON d.res_node_uuid=r.node_uuid " +
 					"SET d.res_node_uuid=r.new_uuid";
@@ -5287,6 +5052,7 @@ public class MysqlDataProvider implements DataProvider {
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
+			//*/
 
 			/// Mise e jour de la liste des enfants (! requete particuliere)
 			/// L'ordre determine le rendu visuel final du xml
@@ -5306,11 +5072,10 @@ public class MysqlDataProvider implements DataProvider {
 			// Mise e jour du code dans le contenu du noeud (blech)
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d " +
-					"LEFT JOIN t_res r ON d.res_res_node_uuid=r.new_uuid " +  // Il faut utiliser le nouveau uuid
-					"SET r.res_res_content=REPLACE(r.res_res_content, CONCAT(\"<code>\",d.code,\"</code>\"), ?) " +
+					"SET d.res_res_content=REPLACE(d.res_res_content, CONCAT(\"<code>\",d.code,\"</code>\"), ?) " +
 					"WHERE d.asm_type='asmRoot'";
 			} else if (dbserveur.equals("oracle")){
-				sql = "UPDATE t_res r SET r.res_res_content=(SELECT REPLACE(n.res_res_content, d.code, ?) FROM t_data d LEFT JOIN t_res r2 ON d.res_res_node_uuid=r2.new_uuid WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d WHERE d.res_res_node_uuid=r.new_uuid AND d.asm_type='asmRoot')";
+				sql = "UPDATE t_data r SET r.res_res_content=(SELECT REPLACE(d.res_res_content, d.code, ?) FROM t_data d WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d WHERE d.res_res_node_uuid=r.new_uuid AND d.asm_type='asmRoot')";
 			}
 			st = c.prepareStatement(sql);
 			st.setString(1, "<code>"+newCode+"</code>");
@@ -5691,8 +5456,8 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// On copie tout dans les vrai tables
 			/// Structure
-			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
-					"SELECT new_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id) " +
+					"SELECT new_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id " +
 					"FROM t_data";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
@@ -5758,7 +5523,7 @@ public class MysqlDataProvider implements DataProvider {
 				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
-					sql = "DROP TEMPORARY TABLE IF EXISTS t_data, t_res, t_struc, t_struc_2, t_rights";
+					sql = "DROP TEMPORARY TABLE IF EXISTS t_data, t_struc, t_struc_2, t_rights";
 					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
@@ -5806,15 +5571,9 @@ public class MysqlDataProvider implements DataProvider {
 						"metadata text NOT NULL, " +
 						"metadata_wad text NOT NULL, " +
 						"metadata_epm text NOT NULL, " +
-						"res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
-						"shared_res int(1) NOT NULL, " +
-						"shared_node int(1) NOT NULL, " +
-						"shared_node_res int(1) NOT NULL, " +
-						"shared_res_uuid BINARY(16)  NULL, " +
-						"shared_node_uuid BINARY(16) NULL, " +
-						"shared_node_res_uuid BINARY(16) NULL, " +
+						"res_content text DEFAULT NULL, " +
+						"res_res_content text DEFAULT NULL, " +
+						"res_context_content text DEFAULT NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
 						"xsi_type varchar(50)  DEFAULT NULL, " +
 						"semtag varchar(100) DEFAULT NULL, " +
@@ -5839,15 +5598,9 @@ public class MysqlDataProvider implements DataProvider {
 						"metadata CLOB DEFAULT NULL, " +
 						"metadata_wad CLOB DEFAULT NULL, " +
 						"metadata_epm CLOB DEFAULT NULL, " +
-						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
-						"shared_res NUMBER(1) NOT NULL, " +
-						"shared_node NUMBER(1) NOT NULL, " +
-						"shared_node_res NUMBER(1) NOT NULL, " +
-						"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+						"res_content CLOB DEFAULT NULL, " +
+						"res_res_content CLOB DEFAULT NULL, " +
+						"res_context_content CLOB  DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
 						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
@@ -5865,6 +5618,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.close();
 			}
 
+			/*
 			/// Pour la copie des donnees
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_res(" +
@@ -5892,6 +5646,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.execute();
 				ocs.close();
 			}
+			//*/
 
 			/// Pour la mise e jour de la liste des enfants/parents
 			if (dbserveur.equals("mysql")){
@@ -5920,13 +5675,13 @@ public class MysqlDataProvider implements DataProvider {
 
 			/////////
 			/// Copie de la structure
-			sql = "INSERT INTO t_data(new_uuid, node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid , shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) ";
+			sql = "INSERT INTO t_data(new_uuid, node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id) ";
 			if (dbserveur.equals("mysql")){
 				sql += "SELECT uuid2bin(UUID()), ";
 			} else if (dbserveur.equals("oracle")){
 				sql += "SELECT sys_guid(), ";
 			}
-			sql += "node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid , shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, ?, modif_date, portfolio_id " +
+			sql += "node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, ?, modif_date_node, portfolio_id " +
 					"FROM node n " +
 					"WHERE portfolio_id=uuid2bin(?)";
 			st = c.prepareStatement(sql);
@@ -6018,6 +5773,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.executeUpdate();
 			st.close();
 
+			/*
 			// Avec les ressources (et droits des ressources)
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d INNER JOIN t_res r ON d.res_node_uuid=r.node_uuid " +
@@ -6048,6 +5804,7 @@ public class MysqlDataProvider implements DataProvider {
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
+			//*/
 
 			/// Mise e jour de la liste des enfants (! requete particuliere)
 			/// L'ordre determine le rendu visuel final du xml
@@ -6067,11 +5824,10 @@ public class MysqlDataProvider implements DataProvider {
 			// Mise e jour du code dans le contenu du noeud
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE t_data d " +
-					"LEFT JOIN t_res r ON d.res_res_node_uuid=r.new_uuid " +  // Il faut utiliser le nouveau uuid
-					"SET r.res_res_content=REPLACE(r.res_res_content, d.code, ?) " +
+					"SET d.res_res_content=REPLACE(d.res_res_content, d.code, ?) " +
 					"WHERE d.asm_type='asmRoot'";
 			} else if (dbserveur.equals("oracle")){
-				sql = "UPDATE t_res r SET r.res_res_content=(SELECT REPLACE(n.res_res_content, d.code, ?) FROM t_data d LEFT JOIN t_res r2 ON d.res_res_node_uuid=r2.new_uuid WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d WHERE d.res_res_node_uuid=r.new_uuid AND d.asm_type='asmRoot')";
+				sql = "UPDATE t_data d SET d.res_res_content=(SELECT REPLACE(d.res_res_content, d.code, ?) FROM t_data d WHERE d.asm_type='asmRoot') WHERE EXISTS (SELECT 1 FROM t_data d WHERE d.res_res_node_uuid=r.new_uuid AND d.asm_type='asmRoot')";
 			}
 			st = c.prepareStatement(sql);
 			st.setString(1, newCode);
@@ -6089,8 +5845,8 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// On copie tout dans les vrai tables
 			/// Structure
-			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
-					"SELECT new_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id) " +
+					"SELECT new_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id " +
 					"FROM t_data";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
@@ -6169,7 +5925,7 @@ public class MysqlDataProvider implements DataProvider {
 				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
-					sql = "DROP TEMPORARY TABLE IF EXISTS t_data, t_res, t_struc";
+					sql = "DROP TEMPORARY TABLE IF EXISTS t_data, t_struc";
 					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
@@ -6199,15 +5955,15 @@ public class MysqlDataProvider implements DataProvider {
 					"node_parent_uuid binary(16) DEFAULT NULL, " +
 					"node_order int(12) NOT NULL, " +
 //					"metadata_wad varchar(2798) NOT NULL, " +
-					"res_node_uuid binary(16) DEFAULT NULL, " +
-					"res_res_node_uuid binary(16) DEFAULT NULL, " +
-					"res_context_node_uuid binary(16)  DEFAULT NULL, " +
-					"shared_res int(1) NOT NULL, " +
-					"shared_node int(1) NOT NULL, " +
-					"shared_node_res int(1) NOT NULL, " +
-					"shared_res_uuid BINARY(16)  NULL, " +
-					"shared_node_uuid BINARY(16) NULL, " +
-					"shared_node_res_uuid BINARY(16) NULL, " +
+//					"res_node_uuid binary(16) DEFAULT NULL, " +
+//					"res_res_node_uuid binary(16) DEFAULT NULL, " +
+//					"res_context_node_uuid binary(16)  DEFAULT NULL, " +
+//					"shared_res int(1) NOT NULL, " +
+//					"shared_node int(1) NOT NULL, " +
+//					"shared_node_res int(1) NOT NULL, " +
+//					"shared_res_uuid BINARY(16)  NULL, " +
+//					"shared_node_uuid BINARY(16) NULL, " +
+//					"shared_node_res_uuid BINARY(16) NULL, " +
 					"asm_type varchar(50) DEFAULT NULL, " +
 					"xsi_type varchar(50)  DEFAULT NULL, " +
 					"semtag varchar(100) DEFAULT NULL, " +
@@ -6229,15 +5985,15 @@ public class MysqlDataProvider implements DataProvider {
 					"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"node_order NUMBER(12) NOT NULL, " +
 //					"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
-					"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-					"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-					"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
-					"shared_res NUMBER(1) NOT NULL, " +
-					"shared_node NUMBER(1) NOT NULL, " +
-					"shared_node_res NUMBER(1) NOT NULL, " +
-					"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
-					"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-					"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+//					"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//					"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//					"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
+//					"shared_res NUMBER(1) NOT NULL, " +
+//					"shared_node NUMBER(1) NOT NULL, " +
+//					"shared_node_res NUMBER(1) NOT NULL, " +
+//					"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+//					"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//					"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 					"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 					"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
 					"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
@@ -6246,8 +6002,8 @@ public class MysqlDataProvider implements DataProvider {
 					"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 					"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 					"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
-					"modif_user_id NUMBER(12) NOT NULL, " +
-					"modif_date timestamp DEFAULT NULL, " +
+					"modif_user_id_node NUMBER(12) NOT NULL, " +
+					"modif_date_node timestamp DEFAULT NULL, " +
 					"portfolio_id VARCHAR2(32) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 			sql = "{call create_or_empty_table('t_node_cache','"+v_sql+"')}";
 			CallableStatement ocs = c.prepareCall(sql) ;
@@ -6320,18 +6076,18 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// We'll put all node cached dated the same than portfolio. Related to checking cache validity
 			if (dbserveur.equals("mysql")){
-				sql = "INSERT INTO t_node_cache(node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) ";
-				sql += "SELECT SQL_NO_CACHE n.node_uuid, n.node_parent_uuid, n.node_order, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
+				sql = "INSERT INTO t_node_cache(node_uuid, node_parent_uuid, node_order, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id) ";
+				sql += "SELECT SQL_NO_CACHE n.node_uuid, n.node_parent_uuid, n.node_order, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id_node, p.modif_date_node, n.portfolio_id " +
 						"FROM node n, portfolio p " +
 						"WHERE n.portfolio_id=p.portfolio_id AND p.portfolio_id=(" +
 						"SELECT n1.portfolio_id " +
 						"FROM node n1, portfolio p " +
 						"WHERE n1.portfolio_id=p.portfolio_id AND n1.code=? AND p.active=1) " +
-						"ON DUPLICATE KEY UPDATE node_parent_uuid=n.node_parent_uuid, node_order=n.node_order, res_node_uuid=n.res_node_uuid, res_res_node_uuid=n.res_res_node_uuid, res_context_node_uuid=n.res_context_node_uuid, shared_res=n.shared_res, shared_node=n.shared_node, shared_node_res=n.shared_node_res, shared_res_uuid=n.shared_res_uuid, shared_node_uuid=n.shared_node_uuid, shared_node_res_uuid=n.shared_node_res_uuid, asm_type=n.asm_type, xsi_type_node=n.xsi_type_node, semtag=n.semtag, semantictag=n.semantictag, label=n.label, code=n.code, descr=n.descr, format=n.format, modif_user_id=n.modif_user_id, modif_date=n.modif_date, portfolio_id=n.portfolio_id";
+						"ON DUPLICATE KEY UPDATE node_parent_uuid=n.node_parent_uuid, node_order=n.node_order, asm_type=n.asm_type, xsi_type_node=n.xsi_type_node, semtag=n.semtag, semantictag=n.semantictag, label=n.label, code=n.code, descr=n.descr, format=n.format, modif_user_id_node=n.modif_user_id_node, modif_date_node=n.modif_date_node, portfolio_id=n.portfolio_id";
 			} else if (dbserveur.equals("oracle")){
 				/// FIXME: Not entirely sure it works...
 				sql = "MERGE INTO t_node_cache t USING(";
-				sql += "SELECT /*+ SQL_NO_CACHE */ n.node_uuid, n.node_parent_uuid, n.node_order, n.res_node_uuid, n.res_res_node_uuid, n.res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, n.shared_res_uuid, n.shared_node_uuid, n.shared_node_res_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, p.modif_date, n.portfolio_id " +
+				sql += "SELECT /*+ SQL_NO_CACHE */ n.node_uuid, n.node_parent_uuid, n.node_order, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id_node, p.modif_date_node, n.portfolio_id " +
 						"FROM node n, portfolio p " +
 						"WHERE n.portfolio_id=p.portfolio_id AND p.portfolio_id=(" +
 						"SELECT n1.portfolio_id " +
@@ -6339,10 +6095,10 @@ public class MysqlDataProvider implements DataProvider {
 						"WHERE n1.portfolio_id=p.portfolio_id AND n1.code=? AND p.active=1)) n3 " +
 						"on (t.node_uuid = n3.node_uuid) " + 
 						"WHEN MATCHED THEN UPDATE " +
-						"SET t.node_parent_uuid=n3.node_parent_uuid, t.node_order=n3.node_order, t.res_node_uuid=n3.res_node_uuid, t.res_res_node_uuid=n3.res_res_node_uuid, t.res_context_node_uuid=n3.res_context_node_uuid, t.shared_res=n3.shared_res, t.shared_node=n3.shared_node, t.shared_node_res=n3.shared_node_res, t.shared_res_uuid=n3.shared_res_uuid, t.shared_node_uuid=n3.shared_node_uuid, t.shared_node_res_uuid=n3.shared_node_res_uuid, t.asm_type=n3.asm_type, t.xsi_type_node=n3.xsi_type_node, t.semtag=n3.semtag, t.semantictag=n3.semantictag, t.label=n3.label, t.code=n3.code, t.descr=n3.descr, t.format=n3.format, t.modif_user_id=n3.modif_user_id, t.modif_date=n3.modif_date, t.portfolio_id=n3.portfolio_id " +
+						"SET t.node_parent_uuid=n3.node_parent_uuid, t.node_order=n3.node_order, t.asm_type=n3.asm_type, t.xsi_type_node=n3.xsi_type_node, t.semtag=n3.semtag, t.semantictag=n3.semantictag, t.label=n3.label, t.code=n3.code, t.descr=n3.descr, t.format=n3.format, t.modif_user_id_node=n3.modif_user_id_node, t.modif_date_node=n3.modif_date_node, t.portfolio_id=n3.portfolio_id " +
 						"WHEN NOT MATCHED THEN " +
-						"INSERT (t.node_uuid,t.node_parent_uuid, t.node_order, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type_node, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id) " +
-						"VALUES (n3.node_uuid,n3.node_parent_uuid, n3.node_order, n3.res_node_uuid, n3.res_res_node_uuid, n3.res_context_node_uuid, n3.shared_res, n3.shared_node, n3.shared_node_res, n3.shared_res_uuid, n3.shared_node_uuid, n3.shared_node_res_uuid, n3.asm_type, n3.xsi_type_node, n3.semtag, n3.semantictag, n3.label, n3.code, n3.descr, n3.format, n3.modif_user_id, n3.modif_date, n3.portfolio_id)";
+						"INSERT (t.node_uuid,t.node_parent_uuid, t.node_order, t.asm_type, t.xsi_type_node, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id_node, t.modif_date_node, t.portfolio_id) " +
+						"VALUES (n3.node_uuid,n3.node_parent_uuid, n3.node_order, n3.asm_type, n3.xsi_type_node, n3.semtag, n3.semantictag, n3.label, n3.code, n3.descr, n3.format, n3.modif_user_id_node, n3.modif_date_node, n3.portfolio_id)";
 			}
 
 			st = c.prepareStatement(sql);
@@ -6424,15 +6180,15 @@ public class MysqlDataProvider implements DataProvider {
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
 						"node_order int(12) NOT NULL, " +
 //						"metadata_wad varchar(2798) NOT NULL, " +
-						"res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
-						"shared_res int(1) NOT NULL, " +
-						"shared_node int(1) NOT NULL, " +
-						"shared_node_res int(1) NOT NULL, " +
-						"shared_res_uuid BINARY(16)  NULL, " +
-						"shared_node_uuid BINARY(16) NULL, " +
-						"shared_node_res_uuid BINARY(16) NULL, " +
+//						"res_node_uuid binary(16) DEFAULT NULL, " +
+//						"res_res_node_uuid binary(16) DEFAULT NULL, " +
+//						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
+//						"shared_res int(1) NOT NULL, " +
+//						"shared_node int(1) NOT NULL, " +
+//						"shared_node_res int(1) NOT NULL, " +
+//						"shared_res_uuid BINARY(16)  NULL, " +
+//						"shared_node_uuid BINARY(16) NULL, " +
+//						"shared_node_res_uuid BINARY(16) NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
 						"xsi_type varchar(50)  DEFAULT NULL, " +
 						"semtag varchar(100) DEFAULT NULL, " +
@@ -6454,15 +6210,15 @@ public class MysqlDataProvider implements DataProvider {
 						"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
 //						"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
-						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
-						"shared_res NUMBER(1) NOT NULL, " +
-						"shared_node NUMBER(1) NOT NULL, " +
-						"shared_node_res NUMBER(1) NOT NULL, " +
-						"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
+//						"shared_res NUMBER(1) NOT NULL, " +
+//						"shared_node NUMBER(1) NOT NULL, " +
+//						"shared_node_res NUMBER(1) NOT NULL, " +
+//						"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
 						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
@@ -6494,7 +6250,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql += "SELECT sys_guid(), ";
 				}
 //				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
-				sql += "node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+				sql += "node_uuid, node_parent_uuid, node_order, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 						"FROM node n " +
 						"WHERE n.portfolio_id=(SELECT portfolio_id FROM node n1 WHERE n1.node_uuid=uuid2bin(?))";
 				st = c.prepareStatement(sql);
@@ -6571,6 +6327,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t2 = System.currentTimeMillis();
 
+			/*
 			/// Pour la copie des donnees
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_res_node(" +
@@ -6596,6 +6353,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.execute();
 				ocs.close();
 			}
+			//*/
 
 			t3 = System.currentTimeMillis();
 
@@ -6757,6 +6515,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			t12 = System.currentTimeMillis();
 
+			/*
 			// Avec les ressources
 			sql = "UPDATE t_data_node t " +
 					"SET t.res_node_uuid = (SELECT new_uuid FROM t_res_node r WHERE r.node_uuid= t.res_node_uuid)";
@@ -6779,6 +6538,7 @@ public class MysqlDataProvider implements DataProvider {
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
+			//*/
 
 			t15 = System.currentTimeMillis();
 
@@ -7290,9 +7050,9 @@ public class MysqlDataProvider implements DataProvider {
 			c.setAutoCommit(false);
 
 			/// Structure, Join because the TEXT fields are copied from the base nodes
-			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
-					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, tm.metadata, tm.metadata_wad, tm.metadata_epm, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type_node, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id " +
-					"FROM t_data_node t, t_meta tm WHERE t.new_uuid=tm.new_uuid";
+			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id) " +
+					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, tm.metadata, tm.metadata_wad, tm.metadata_epm, n.res_content, n.res_res_content, n.res_context_content, t.asm_type, t.xsi_type_node, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id_node, t.modif_date_node, t.portfolio_id " +
+					"FROM t_data_node t, t_meta tm, node n WHERE t.new_uuid=tm.new_uuid AND t.node_uuid=n.node_uuid";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
@@ -7389,7 +7149,7 @@ public class MysqlDataProvider implements DataProvider {
 				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
-					sql = "DROP TEMPORARY TABLE IF EXISTS t_data_node, t_group_right_info, t_group_rights, t_res_node, t_struc, t_struc_2, t_meta";
+					sql = "DROP TEMPORARY TABLE IF EXISTS t_data_node, t_group_right_info, t_group_rights, t_struc, t_struc_2, t_meta";
 					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();
@@ -7490,15 +7250,15 @@ public class MysqlDataProvider implements DataProvider {
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
 						"node_order int(12) NOT NULL, " +
 //						"metadata_wad varchar(2798) NOT NULL, " +
-						"res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
-						"shared_res int(1) NOT NULL, " +
-						"shared_node int(1) NOT NULL, " +
-						"shared_node_res int(1) NOT NULL, " +
-						"shared_res_uuid BINARY(16)  NULL, " +
-						"shared_node_uuid BINARY(16) NULL, " +
-						"shared_node_res_uuid BINARY(16) NULL, " +
+//						"res_node_uuid binary(16) DEFAULT NULL, " +
+//						"res_res_node_uuid binary(16) DEFAULT NULL, " +
+//						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
+//						"shared_res int(1) NOT NULL, " +
+//						"shared_node int(1) NOT NULL, " +
+//						"shared_node_res int(1) NOT NULL, " +
+//						"shared_res_uuid BINARY(16)  NULL, " +
+//						"shared_node_uuid BINARY(16) NULL, " +
+//						"shared_node_res_uuid BINARY(16) NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
 						"xsi_type varchar(50)  DEFAULT NULL, " +
 						"semtag varchar(100) DEFAULT NULL, " +
@@ -7520,15 +7280,15 @@ public class MysqlDataProvider implements DataProvider {
 						"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
 //						"metadata_wad VARCHAR2(2798 CHAR) DEFAULT NULL, " +
-						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
-						"shared_res NUMBER(1) NOT NULL, " +
-						"shared_node NUMBER(1) NOT NULL, " +
-						"shared_node_res NUMBER(1) NOT NULL, " +
-						"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
+//						"shared_res NUMBER(1) NOT NULL, " +
+//						"shared_node NUMBER(1) NOT NULL, " +
+//						"shared_node_res NUMBER(1) NOT NULL, " +
+//						"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
 						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
 						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
@@ -7557,7 +7317,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql += "SELECT sys_guid(), ";
 				}
 //				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
-					sql += "node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+					sql += "node_uuid, node_parent_uuid, node_order, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id " +
 						"FROM node n " +
 						"WHERE n.portfolio_id=(SELECT portfolio_id FROM node n1 WHERE n1.node_uuid=uuid2bin(?))";
 				st = c.prepareStatement(sql);
@@ -7579,7 +7339,7 @@ public class MysqlDataProvider implements DataProvider {
 					sql += "SELECT sys_guid(), ";
 				}
 //				sql += "node_uuid, node_parent_uuid, node_order, metadata_wad, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
-				sql += "node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+				sql += "node_uuid, node_parent_uuid, node_order, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
 						"FROM t_node_cache n " +
 						"WHERE portfolio_id=uuid2bin(?)";
 				st = c.prepareStatement(sql);
@@ -7635,6 +7395,7 @@ public class MysqlDataProvider implements DataProvider {
 			
 //			t2 = System.currentTimeMillis();
 
+			/*
 			/// Pour la copie des donnees
 			if (dbserveur.equals("mysql")){
 				sql = "CREATE TEMPORARY TABLE t_res_node(" +
@@ -7660,6 +7421,7 @@ public class MysqlDataProvider implements DataProvider {
 				ocs.execute();
 				ocs.close();
 			}
+			//*/
 
 //			t3 = System.currentTimeMillis();
 
@@ -7822,6 +7584,7 @@ public class MysqlDataProvider implements DataProvider {
 
 //			t12 = System.currentTimeMillis();
 
+			/*
 			// Avec les ressources
 			sql = "UPDATE t_data_node t " +
 					"SET t.res_node_uuid = (SELECT new_uuid FROM t_res_node r WHERE r.node_uuid= t.res_node_uuid)";
@@ -7844,6 +7607,7 @@ public class MysqlDataProvider implements DataProvider {
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
+			//*/
 
 //			t15 = System.currentTimeMillis();
 
@@ -7890,9 +7654,9 @@ public class MysqlDataProvider implements DataProvider {
 			c.setAutoCommit(false);
 
 			/// Structure
-			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_order, metadata, metadata_wad, metadata_epm, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) " +
-					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, n.metadata, n.metadata_wad, n.metadata_epm, t.res_node_uuid, t.res_res_node_uuid, t.res_context_node_uuid, t.shared_res, t.shared_node, t.shared_node_res, t.shared_res_uuid, t.shared_node_uuid, t.shared_node_res_uuid, t.asm_type, t.xsi_type_node, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id, t.modif_date, t.portfolio_id " +
-					"FROM t_data_node t LEFT JOIN node n ON t.node_uuid=n.node_uuid";
+			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id) " +
+					"SELECT t.new_uuid, t.node_parent_uuid, t.node_order, n.metadata, n.metadata_wad, n.metadata_epm, n.res_content, n.res_res_content, n.res_context_content, t.asm_type, t.xsi_type_node, t.semtag, t.semantictag, t.label, t.code, t.descr, t.format, t.modif_user_id_node, t.modif_date_node, t.portfolio_id " +
+					"FROM t_data_node t, node n WHERE t.node_uuid=n.node_uuid";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
 			st.close();
@@ -7969,6 +7733,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// Ajout des droits des resources
 			// Apparement inutile si l'on s'en occupe qu'au niveau du contexte...
+			/*
 			sql = "INSERT INTO group_rights(grid, id, RD, WR, DL, SB, AD, types_id, rules_id) " +
 					"SELECT gr.grid, r.new_uuid, gr.RD, gr.WR, gr.DL, gr.SB, gr.AD, gr.types_id, gr.rules_id " +
 					"FROM t_res_node r " +
@@ -7979,6 +7744,7 @@ public class MysqlDataProvider implements DataProvider {
 			st.setInt(1, groupId);
 			st.executeUpdate();
 			st.close();
+			//*/
 
 //			end = System.currentTimeMillis();
 
@@ -8010,7 +7776,7 @@ public class MysqlDataProvider implements DataProvider {
 				c.setAutoCommit(true);
 				// Les 'pooled connection' ne se ferment pas vraiment. On nettoie manuellement les tables temporaires...
 				if (dbserveur.equals("mysql")){
-					sql = "DROP TEMPORARY TABLE IF EXISTS t_data_node, t_res_node, t_struc, t_struc_2";
+					sql = "DROP TEMPORARY TABLE IF EXISTS t_data_node, t_struc, t_struc_2";
 					st = c.prepareStatement(sql);
 					st.execute();
 					st.close();

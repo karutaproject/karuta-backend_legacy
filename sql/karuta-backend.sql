@@ -34,9 +34,9 @@ CREATE TABLE IF NOT EXISTS `node` (
   `metadata` text COLLATE utf8_unicode_ci NOT NULL,
   `metadata_wad` text COLLATE utf8_unicode_ci NOT NULL,
   `metadata_epm` text COLLATE utf8_unicode_ci NOT NULL,
-  `res_content` binary(16) DEFAULT NULL,	-- (modif)
-  `res_res_content` binary(16) DEFAULT NULL,	-- (modif)
-  `res_context_content` binary(16) DEFAULT NULL,	-- (modif)
+  `res_content` text DEFAULT NULL,	-- (modif)
+  `res_res_content` text DEFAULT NULL,	-- (modif)
+  `res_context_content` text DEFAULT NULL,	-- (modif)
 --  `shared_res` int(1) NOT NULL,	-- (modif)
 --  `shared_node` int(1) NOT NULL,	-- (modif)
 --  `shared_node_res` int(1) NOT NULL,	-- (modif)
