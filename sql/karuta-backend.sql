@@ -61,10 +61,7 @@ CREATE TABLE IF NOT EXISTS `node` (
   KEY `portfolio_id` (`portfolio_id`),
   KEY `node_parent_uuid` (`node_parent_uuid`),
   KEY `node_order` (`node_order`),
-  KEY `asm_type` (`asm_type`),
-  KEY `res_node_uuid` (`res_node_uuid`),
-  KEY `res_res_node_uuid` (`res_res_node_uuid`),
-  KEY `res_context_node_uuid` (`res_context_node_uuid`)
+  KEY `asm_type` (`asm_type`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
@@ -96,25 +93,6 @@ CREATE TABLE IF NOT EXISTS `portfolio` (
 
 
 -- --------------------------------------------------------
-
---
--- Structure de la table `resource`
---
-
-CREATE TABLE IF NOT EXISTS `resource_table` (
-  `node_uuid` binary(16) NOT NULL,
-  `xsi_type` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `content` text COLLATE utf8_unicode_ci,
-  `user_id` int(11) DEFAULT NULL,
-  `modif_user_id` int(12) NOT NULL,
-  `modif_date` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`node_uuid`),
-  FULLTEXT KEY `content` (`content`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
---
--- Contenu de la table `resource`
---
 
 -- SECURITE
 
