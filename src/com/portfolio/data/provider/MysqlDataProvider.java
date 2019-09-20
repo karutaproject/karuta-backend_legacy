@@ -761,10 +761,10 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			if (dbserveur.equals("mysql")){
 				sql  = "REPLACE INTO node(node_uuid,node_parent_uuid,node_children_uuid,node_order,";
-				sql += "asm_type,xsi_type_node,shared_res,shared_node,shared_node_res,shared_res_uuid,shared_node_uuid,shared_node_res_uuid, metadata,metadata_wad,metadata_epm,semtag,semantictag,label,code,descr,format,modif_user_id,modif_date,portfolio_id) ";
-				sql += "VALUES(uuid2bin(?),uuid2bin(?),?,?,?,?,?,?,?,uuid2bin(?),uuid2bin(?),uuid2bin(?),?,?,?,?,?,?,?,?,?,?,?,uuid2bin(?))";
+				sql += "asm_type,xsi_type_node, metadata,metadata_wad,metadata_epm,semtag,semantictag,label,code,descr,format,modif_user_id_node,modif_user_id_res,modif_date_node,modif_date_res,portfolio_id) ";
+				sql += "VALUES(uuid2bin(?),uuid2bin(?),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,uuid2bin(?))";
 			} else if (dbserveur.equals("oracle")){
-				sql = "MERGE INTO node d USING (SELECT uuid2bin(?) node_uuid,uuid2bin(?) node_parent_uuid,? node_children_uuid,? node_order,? asm_type,? xsi_type_node,? shared_res,? shared_node,? shared_node_res,uuid2bin(?) shared_res_uuid,uuid2bin(?) shared_node_uuid,uuid2bin(?) shared_node_res_uuid,? metadata,? metadata_wad,? metadata_epm,? semtag,? semantictag,? label,? code,? descr,? format,? modif_user_id,? modif_date,uuid2bin(?) portfolio_id FROM DUAL) s ON (d.node_uuid = s.node_uuid) WHEN MATCHED THEN UPDATE SET d.node_parent_uuid=s.node_parent_uuid,d.node_children_uuid=s.node_children_uuid,d.node_order=s.node_order,d.asm_type=s.asm_type,d.xsi_type_node=s.xsi_type_node,d.shared_res=s.shared_res,d.shared_node=s.shared_node,d.shared_node_res=s.shared_node_res,d.shared_res_uuid=s.shared_res_uuid,d.shared_node_uuid=s.shared_node_uuid,d.shared_node_res_uuid=s.shared_node_res_uuid,d.metadata=s.metadata,d.metadata_wad=s.metadata_wad,d.metadata_epm=s.metadata_epm,d.semtag=s.semtag,d.semantictag=s.semantictag,d.label=s.label,d.code=s.code,d.descr=s.descr,d.format=s.format,d.modif_user_id=s.modif_user_id,d.modif_date=s.modif_date,d.portfolio_id=s.portfolio_id WHEN NOT MATCHED THEN INSERT (d.node_uuid,d.node_parent_uuid,d.node_children_uuid,d.node_order,d.asm_type,d.xsi_type_node,d.shared_res,d.shared_node,d.shared_node_res,d.shared_res_uuid,d.shared_node_uuid,d.shared_node_res_uuid,d.metadata,d.metadata_wad,d.metadata_epm,d.semtag,d.semantictag,d.label,d.code,d.descr,d.format,d.modif_user_id,d.modif_date,d.portfolio_id) VALUES (s.node_uuid,s.node_parent_uuid,s.node_children_uuid,s.node_order,s.asm_type,s.xsi_type_node,s.shared_res,s.shared_node,s.shared_node_res,s.shared_res_uuid,s.shared_node_uuid,s.shared_node_res_uuid,s.metadata,s.metadata_wad,s.metadata_epm,s.semtag,s.semantictag,s.label,s.code,s.descr,s.format,s.modif_user_id,s.modif_date,s.portfolio_id)";
+				sql = "MERGE INTO node d USING (SELECT uuid2bin(?) node_uuid,uuid2bin(?) node_parent_uuid,? node_children_uuid,? node_order,? asm_type,? xsi_type_node,? metadata,? metadata_wad,? metadata_epm,? semtag,? semantictag,? label,? code,? descr,? format,? modif_user_id_node,? modif_user_id_res,? modif_date_node,? modif_date_res,uuid2bin(?) portfolio_id FROM DUAL) s ON (d.node_uuid = s.node_uuid) WHEN MATCHED THEN UPDATE SET d.node_parent_uuid=s.node_parent_uuid,d.node_children_uuid=s.node_children_uuid,d.node_order=s.node_order,d.asm_type=s.asm_type,d.xsi_type_node=s.xsi_type_node,d.shared_res=s.shared_res,d.shared_node=s.shared_node,d.shared_node_res=s.shared_node_res,d.shared_res_uuid=s.shared_res_uuid,d.shared_node_uuid=s.shared_node_uuid,d.shared_node_res_uuid=s.shared_node_res_uuid,d.metadata=s.metadata,d.metadata_wad=s.metadata_wad,d.metadata_epm=s.metadata_epm,d.semtag=s.semtag,d.semantictag=s.semantictag,d.label=s.label,d.code=s.code,d.descr=s.descr,d.format=s.format,d.modif_user_id=s.modif_user_id,d.modif_date=s.modif_date,d.portfolio_id=s.portfolio_id WHEN NOT MATCHED THEN INSERT (d.node_uuid,d.node_parent_uuid,d.node_children_uuid,d.node_order,d.asm_type,d.xsi_type_node,d.shared_res,d.shared_node,d.shared_node_res,d.shared_res_uuid,d.shared_node_uuid,d.shared_node_res_uuid,d.metadata,d.metadata_wad,d.metadata_epm,d.semtag,d.semantictag,d.label,d.code,d.descr,d.format,d.modif_user_id,d.modif_date,d.portfolio_id) VALUES (s.node_uuid,s.node_parent_uuid,s.node_children_uuid,s.node_order,s.asm_type,s.xsi_type_node,s.shared_res,s.shared_node,s.shared_node_res,s.shared_res_uuid,s.shared_node_uuid,s.shared_node_res_uuid,s.metadata,s.metadata_wad,s.metadata_epm,s.semtag,s.semantictag,s.label,s.code,s.descr,s.format,s.modif_user_id,s.modif_date,s.portfolio_id)";
 			}
 			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
@@ -773,28 +773,25 @@ public class MysqlDataProvider implements DataProvider {
 			st.setInt(4, order);
 			st.setString(5, asmType);
 			st.setString(6, xsiType);
-			st.setInt(7, sharedRes);
-			st.setInt(8, sharedNode);
-			st.setInt(9, sharedNodeRes);
-			st.setString(10,sharedResUuid);
-			st.setString(11,sharedNodeUuid);
-			st.setString(12,sharedNodeResUuid);
-			st.setString(13, metadata);
-			st.setString(14, metadataWad);
-			st.setString(15, metadataEpm);
-			st.setString(16, semtag);
-			st.setString(17,semanticTag);
-			st.setString(18, label);
-			st.setString(19, code);
-			st.setString(20, descr);
-			st.setString(21, format);
-			st.setInt(22, modifUserId);
+			st.setString(7, metadata);
+			st.setString(8, metadataWad);
+			st.setString(9, metadataEpm);
+			st.setString(10, semtag);
+			st.setString(11,semanticTag);
+			st.setString(12, label);
+			st.setString(13, code);
+			st.setString(14, descr);
+			st.setString(15, format);
+			st.setInt(16, modifUserId);
+			st.setInt(17, modifUserId);
 			if (dbserveur.equals("mysql")){
-				st.setString(23, SqlUtils.getCurrentTimeStamp());
+				st.setString(18, SqlUtils.getCurrentTimeStamp());
+				st.setString(19, SqlUtils.getCurrentTimeStamp());
 			} else if (dbserveur.equals("oracle")){
-				st.setTimestamp(23, SqlUtils.getCurrentTimeStamp2());
+				st.setTimestamp(18, SqlUtils.getCurrentTimeStamp2());
+				st.setTimestamp(19, SqlUtils.getCurrentTimeStamp2());
 			}
-			st.setString(24, portfolioUuid);
+			st.setString(20, portfolioUuid);
 
 			return st.executeUpdate();
 		}
@@ -896,14 +893,14 @@ public class MysqlDataProvider implements DataProvider {
 			/// Met à jour les enfants
 			if (dbserveur.equals("mysql")){
 				sql = "UPDATE node n1, "
-					+ "(SELECT GROUP_CONCAT(bin2uuid(COALESCE(n2.shared_node_uuid,n2.node_uuid)) ORDER BY n2.node_order) AS value "
+					+ "(SELECT GROUP_CONCAT(bin2uuid(COALESCE(n2.node_uuid)) ORDER BY n2.node_order) AS value "
 					+ "FROM node n2 "
 					+ "WHERE n2.node_parent_uuid=uuid2bin(?) "
 					+ "GROUP BY n2.node_parent_uuid) tmp "
 					+ "SET n1.node_children_uuid=tmp.value "
 					+ "WHERE n1.node_uuid=uuid2bin(?)";
 			} else if (dbserveur.equals("oracle")){
-		          sql = "UPDATE node SET node_children_uuid=(SELECT LISTAGG(bin2uuid(COALESCE(n2.shared_node_uuid,n2.node_uuid)), ',') WITHIN GROUP (ORDER BY n2.node_order) AS value FROM node n2 WHERE n2.node_parent_uuid=uuid2bin(?) GROUP BY n2.node_parent_uuid) WHERE node_uuid=uuid2bin(?)";
+				sql = "UPDATE node SET node_children_uuid=(SELECT LISTAGG(bin2uuid(COALESCE(n2.node_uuid)), ',') WITHIN GROUP (ORDER BY n2.node_order) AS value FROM node n2 WHERE n2.node_parent_uuid=uuid2bin(?) GROUP BY n2.node_parent_uuid) WHERE node_uuid=uuid2bin(?)";
 			}
 			st = c.prepareStatement(sql);
 			st.setString(1, nodeUuid);
@@ -960,28 +957,24 @@ public class MysqlDataProvider implements DataProvider {
 				if( "nodeRes".equals(xsiType) ) colName = "res_res_content";
 				else if( "context".equals(xsiType) ) colName = "res_context_content";
 				
-				if (dbserveur.equals("mysql")){
-					sql  = "REPLACE INTO node(node_uuid,xsi_type_res,?,modif_user_id_node, modif_user_id_res ,modif_date_node) ";
-					sql += "VALUES(uuid2bin(?),?,?,?,?,?)";
-				} else if (dbserveur.equals("oracle")){
-					sql = "MERGE INTO node d USING (SELECT uuid2bin(?) node_uuid,? xsi_type_res,? ?,? user_id,? modif_user_id,? modif_date FROM DUAL) s ON (d.node_uuid = s.node_uuid) WHEN MATCHED THEN UPDATE SET d.xsi_type_res = s.xsi_type_res, d.content = s.content, d.user_id = s.user_id, d.modif_user_id = s.modif_user_id, d.modif_date = s.modif_date WHEN NOT MATCHED THEN INSERT (d.node_uuid, d.xsi_type_res, d.content, d.user_id, d.modif_user_id, d.modif_date) VALUES (s.node_uuid, s.xsi_type_res, s.content, s.user_id, s.modif_user_id, s.modif_date)";
-				}
+				sql  = "UPDATE node SET xsi_type_res = ?,"+colName+" = ?,modif_user_id_res = ?, modif_user_id_res=? ,modif_date_res=? ";
+				sql += "WHERE node_uuid=uuid2bin(?)";
 				st = c.prepareStatement(sql);
-				st.setString(1, colName);
-				st.setString(2,uuid);
-				st.setString(3,xsiType);
-				st.setString(4, content);
-				st.setInt(5,userId);
-				st.setInt(6, userId);
+				st.setString(1,xsiType);
+				st.setString(2, content);
+				st.setInt(3,userId);
+				st.setInt(4, userId);
 				if (dbserveur.equals("mysql")){
-					st.setString(7, SqlUtils.getCurrentTimeStamp());
+					st.setString(5, SqlUtils.getCurrentTimeStamp());
 				} else if (dbserveur.equals("oracle")){
-					st.setTimestamp(7, SqlUtils.getCurrentTimeStamp2());
+					st.setTimestamp(5, SqlUtils.getCurrentTimeStamp2());
 				}
+				st.setString(6,parentUuid);
 
 				st.executeUpdate();
 				if( st != null ) try{ st.close(); }catch( SQLException e ){ e.printStackTrace(); }
 			}
+			/*
 			// Ensuite on met à jour les id ressource au niveau du noeud parent
 			if(xsiType.equals("nodeRes"))
 			{
@@ -1018,6 +1011,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			st.executeUpdate();
 			status= st.getUpdateCount();
+			//*/
 		}
 		catch(Exception ex)
 		{
@@ -8972,6 +8966,7 @@ public class MysqlDataProvider implements DataProvider {
 		//if(forcedUuidParent!=null)
 
 		// Si le noeud est de type asmResource, on stocke le innerXML du noeud
+//		/*
 		if(node.getNodeName().equals("asmResource"))
 		{
 			if(portfolioModelId!=null)
@@ -8995,6 +8990,7 @@ public class MysqlDataProvider implements DataProvider {
 			else insertMysqlResource(c, uuid,parentUuid,xsiType,DomUtils.getInnerXml(node),portfolioModelId, sharedNodeResParent,sharedResParent, userId);
 
 		}
+		//*/
 
 		// On reparcourt ensuite les enfants pour continuer la recursivite
 		//		if(children!=null && sharedNode!=1)
@@ -9028,9 +9024,8 @@ public class MysqlDataProvider implements DataProvider {
 					}
 				}
 			}
+			updateMysqlNodeChildren(c, uuid);
 		}
-
-		updateMysqlNodeChildren(c, forcedUuidParent);
 
 		return uuid;
 	}
@@ -11815,7 +11810,7 @@ public class MysqlDataProvider implements DataProvider {
 			res = st.executeQuery();
 
 			if( res.next() )
-				status = res.getString("content");
+				status = res.getString("res_content");
 		}
 		catch( Exception e )
 		{
