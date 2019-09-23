@@ -4355,7 +4355,7 @@ public class MysqlDataProvider implements DataProvider {
 
 				// Fetch metadata
 				sql = "SELECT bin2uuid(uuid) AS node_uuid, metadata_wad FROM node n, t_struc_parentid tsp " +
-						"WHERE n.node_uuid=tsp.node_uuid " +
+						"WHERE n.node_uuid=tsp.uuid " +
 						"AND ((metadata_wad LIKE '%seestart%') OR (metadata_wad LIKE '%seeend%'))";
 				st = c.prepareStatement(sql);
 				res = st.executeQuery();
