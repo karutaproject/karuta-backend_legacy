@@ -8154,8 +8154,7 @@ public class MysqlDataProvider implements DataProvider {
 	public boolean postChangeNodeParent( Connection c, int userid, String uuid, String uuidParent)
 	{
 		/// FIXME something with parent uuid too
-		if(!cred.isAdmin(c, userid) && !cred.isDesigner(c, userid, uuid) )
-			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
+//			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		if( uuid.equals(uuidParent) ) // Ajouter un noeud e lui-meme
 			return false;
@@ -8166,6 +8165,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
+			/// Keep origin parent uuid
 			sql = "SELECT bin2uuid(node_parent_uuid) AS puuid " +
 					"FROM node " +
 					"WHERE node_uuid=uuid2bin(?)";
@@ -8179,18 +8179,55 @@ public class MysqlDataProvider implements DataProvider {
 				puuid = res.getString("puuid");
 			}
 
-			int next = getMysqlNodeNextOrderChildren(c, uuidParent);
+			/// Admin and designer can move regardless
+			if( cred.isAdmin(c, userid) || cred.isDesigner(c, userid, uuid) )
+			{
+				int next = getMysqlNodeNextOrderChildren(c, uuidParent);
 
-			c.setAutoCommit(false);
+				c.setAutoCommit(false);
 
-			sql = "UPDATE node " +
-					"SET node_parent_uuid=uuid2bin(?), node_order=? " +
-					"WHERE node_uuid=uuid2bin(?)";
-			st = c.prepareStatement(sql);
-			st.setString(1, uuidParent);
-			st.setInt(2, next);
-			st.setString(3, uuid);
-			st.executeUpdate();
+				sql = "UPDATE node " +
+						"SET node_parent_uuid=uuid2bin(?), node_order=? " +
+						"WHERE node_uuid=uuid2bin(?)";
+				st = c.prepareStatement(sql);
+				st.setString(1, uuidParent);
+				st.setInt(2, next);
+				st.setString(3, uuid);
+				st.executeUpdate();
+			}
+			else
+			{
+				/// Check if source and destination are writable by user and in same portfolio/same grid
+				sql = "SELECT gr2.WR " +
+						"FROM group_rights gr2, " +
+						"(SELECT n1.portfolio_id, gi1.grid " +
+						"FROM group_user gu1, group_info gi1, group_rights gr1, node n1 " +
+						"WHERE gu1.userid=? " +
+						"AND gu1.gid=gi1.gid AND gi1.grid=gr1.grid AND gr1.WR=1 " +
+						"AND gr1.id=uuid2bin(?) AND gr1.id=n1.node_uuid) AS t1 " +
+						"WHERE t1.grid=gr2.grid AND gr2.id=uuid2bin(?);"; 
+				st = c.prepareStatement(sql);
+				st.setInt(1, userid);
+				st.setString(2, uuid);
+				st.setString(3, uuidParent);
+				res = st.executeQuery();
+
+				if( res.next() )	// Move OK
+				{
+					int next = getMysqlNodeNextOrderChildren(c, uuidParent);
+
+					c.setAutoCommit(false);
+
+					sql = "UPDATE node " +
+							"SET node_parent_uuid=uuid2bin(?), node_order=? " +
+							"WHERE node_uuid=uuid2bin(?)";
+					st = c.prepareStatement(sql);
+					st.setString(1, uuidParent);
+					st.setInt(2, next);
+					st.setString(3, uuid);
+					st.executeUpdate();
+				}
+			}
 
 			/// Update children list, origin and destination
 			updateMysqlNodeChildren(c, puuid);
