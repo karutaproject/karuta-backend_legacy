@@ -1643,9 +1643,9 @@ public class MysqlDataProvider implements DataProvider {
 		if( cred.isAdmin(c, userId) )
 		{
 			if (!dbserveur.equals("oracle")){
-				sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.node_uuid) as res_node_uuid,  bin2uuid(n.node_uuid) as res_res_node_uuid, bin2uuid(n.node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, n.res_content, n.xsi_type_res, n.res_rescontent, n.res_context_content ";
+				sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.node_uuid) as res_node_uuid,  bin2uuid(n.node_uuid) as res_res_node_uuid, bin2uuid(n.node_uuid) as res_context_node_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id_node, n.modif_user_id_res, n.modif_date_node, n.modif_date_res, bin2uuid(n.portfolio_id) as portfolio_id, n.res_content, n.xsi_type_res, n.res_res_content, n.res_context_content ";
 			}else{
-				sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date as portfolio_modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.node_uuid) as res_node_uuid,  bin2uuid(n.node_uuid) as res_res_node_uuid, bin2uuid(n.node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, n.res_content as res_content, n.xsi_type_res as xsi_type_res, n.res_res_content as res_res_content, n.res_context_content as res_context_content ";
+				sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date as portfolio_modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.node_uuid) as res_node_uuid,  bin2uuid(n.node_uuid) as res_res_node_uuid, bin2uuid(n.node_uuid) as res_context_node_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id_node, n.modif_user_id_res, n.modif_date_node, n.modif_date_res, bin2uuid(n.portfolio_id) as portfolio_id, n.res_content as res_content, n.xsi_type_res as xsi_type_res, n.res_res_content as res_res_content, n.res_context_content as res_context_content ";
 			}
 			sql_count = " SELECT count(*) AS c ";
 			sql_suffix = " FROM portfolio p, node n " +
@@ -1739,10 +1739,10 @@ public class MysqlDataProvider implements DataProvider {
 		else
 		{
 			if (!dbserveur.equals("oracle")){
-				sql = "SELECT DISTINCT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.node_uuid) as res_node_uuid,  bin2uuid(n.node_uuid) as res_res_node_uuid, bin2uuid(n.node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, n.res_content, xsi_type_res, n.res_res_content, n.res_context_content " ;
+				sql = "SELECT DISTINCT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.node_uuid) as res_node_uuid,  bin2uuid(n.node_uuid) as res_res_node_uuid, bin2uuid(n.node_uuid) as res_context_node_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id_node, n.modif_user_id_res, n.modif_date_node, n.modif_date_res, bin2uuid(n.portfolio_id) as portfolio_id, n.res_content, xsi_type_res, n.res_res_content, n.res_context_content " ;
 			}else{
 //				sql = "SELECT DISTINCT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date as portfolio_modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.res_node_uuid) as res_node_uuid,  bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, r1.content as r1_content, r1.xsi_type as r1_xsi_type, r2.content as r2_content, r2.xsi_type as r2_xsi_type, r3.content as r3_content, r3.xsi_type as r3_xsi_type " ;
-				sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date as portfolio_modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.node_uuid) as res_node_uuid,  bin2uuid(n.node_uuid) as res_res_node_uuid, bin2uuid(n.node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, n.res_content as res_content, n.xsi_type_res as xsi_type_res, n.res_res_content as res_res_content, n.res_context_content as res_context_content ";
+				sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date as portfolio_modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.node_uuid) as res_node_uuid,  bin2uuid(n.node_uuid) as res_res_node_uuid, bin2uuid(n.node_uuid) as res_context_node_uuid, n.asm_type, n.xsi_type_node, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id_node, n.modif_user_id_res, n.modif_date_node, n.modif_date_res, bin2uuid(n.portfolio_id) as portfolio_id, n.res_content as res_content, n.xsi_type_res as xsi_type_res, n.res_res_content as res_res_content, n.res_context_content as res_context_content ";
 
 			}
 			sql_count = " SELECT count(DISTINCT p.root_node_uuid) AS c ";
@@ -1848,7 +1848,7 @@ public class MysqlDataProvider implements DataProvider {
 				while(res.next())
 				{
 					String isOwner = "N";
-					String ownerId = res.getString("modif_user_id");
+					String ownerId = res.getString("modif_user_id_node");
 					if( Integer.parseInt(ownerId) == userId )
 						isOwner = "Y";
 					
@@ -1863,11 +1863,6 @@ public class MysqlDataProvider implements DataProvider {
 					}
 					String nodeUuid = res.getString("root_node_uuid");
 					
-					if(res.getString("shared_node_uuid")!=null)	// FIXME, add to query
-					{
-						out.append(getNodeXmlOutput(c, res.getString("shared_node_uuid"),true,null,userId,groupId, null,true));
-					}
-					else
 					{
 						String nodetype = res.getString("asm_type");
 						out.append("<").append(nodetype).append(" id=\"").append(res.getString("node_uuid")).append("\">");
@@ -1919,11 +1914,9 @@ public class MysqlDataProvider implements DataProvider {
 								out.append("<semanticTag/>");
 						}
 						
-						String resresuuid = res.getString("res_res_node_uuid");
-						if( resresuuid != null && !"".equals(resresuuid) )
 						{
 							String xsitype = "nodeRes";
-							out.append("<asmResource id='").append(resresuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+							out.append("<asmResource id='").append(nodeUuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
 							String resrescont = "";
 							if (dbserveur.equals("oracle")){
 								resrescont = res.getString("res_res_content");
@@ -1935,11 +1928,9 @@ public class MysqlDataProvider implements DataProvider {
 							out.append("</asmResource>");
 						}
 						
-						String rescontuuid = res.getString("res_context_node_uuid");
-						if( rescontuuid != null && !"".equals(rescontuuid) )
 						{
 							String xsitype = "context";
-							out.append("<asmResource id='").append(rescontuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+							out.append("<asmResource id='").append(nodeUuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
 							String resrescont = "";
 							if (dbserveur.equals("oracle")){
 								resrescont = res.getString("res_context_content");
@@ -1951,8 +1942,6 @@ public class MysqlDataProvider implements DataProvider {
 							out.append("</asmResource>");
 						}
 						
-						String resnodeuuid = res.getString("res_node_uuid");
-						if( resnodeuuid != null && !"".equals(resnodeuuid) )
 						{
 							String xsitype = "";
 							if (dbserveur.equals("oracle")){
@@ -1960,7 +1949,7 @@ public class MysqlDataProvider implements DataProvider {
 							}else{
 								xsitype = res.getString("n.xsi_type_res");
 							}
-							out.append("<asmResource id='").append(resnodeuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+							out.append("<asmResource id='").append(nodeUuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
 							String resrescont = "";
 							if (dbserveur.equals("oracle")){
 								resrescont = res.getString("res_content");
