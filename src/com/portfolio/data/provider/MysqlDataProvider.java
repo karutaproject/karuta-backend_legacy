@@ -14396,8 +14396,8 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	@Override
 	public String postRights(Connection c, int userId, String uuid, String role, NodeRight rights)
 	{
-		if( !cred.isAdmin(c, userId) )
-			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
+		if( !cred.isAdmin(c, userId) && !cred.isOwnerFromNode(c, userId, uuid) )
+			throw new RestWebApplicationException(Status.FORBIDDEN, "No rights");
 
 		try
 		{
