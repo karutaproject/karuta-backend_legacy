@@ -2082,13 +2082,32 @@ public class RestServicePortfolio
 	@Path("/portfolios/zip")
 	@GET
 	@Consumes("application/zip")	// Envoie donn�e brut
-	public Object getPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("portfolios") String portfolioList, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance, @QueryParam("lang") String lang )
+	public Object getPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("portfolios") String portfolioList, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance, @QueryParam("lang") String lang, @QueryParam("archive") String archive )
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try
 		{
+			File archiveFolder = null;
+			boolean doArchive = false;
+			if( archive != null && "y".equals(archive.toLowerCase()) )
+			{
+					/// Check if archive folder exist
+					String servName = servContext.getContextPath();
+					String path = servContext.getRealPath("/");
+					File base = new File(path+".."+File.separatorChar+"..");
+					String tomcatRoot;
+					tomcatRoot = base.getCanonicalPath();
+					path = tomcatRoot + servName +"_archive"+File.separatorChar;
+					
+					/// Check if folder exists
+					archiveFolder = new File(path);
+					if( !archiveFolder.exists() )
+						archiveFolder.mkdirs();
+					doArchive = true;
+			}
+			
 			HttpSession session = httpServletRequest.getSession(false);
 			String [] list = portfolioList.split(",");
 			File[] files = new File[list.length];
@@ -2125,8 +2144,12 @@ public class RestServicePortfolio
 			}
 			
 			// Make a big zip of it
+			Date time = new Date();
+			SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+			String timeFormat = dt.format(time);
+
 			File tempDir = new File(System.getProperty("java.io.tmpdir", null));
-			File bigZip = File.createTempFile("project_", ".zip", tempDir);
+			File bigZip = File.createTempFile("project_"+timeFormat, ".zip", tempDir);
 			
 			// Add content to it
 			FileOutputStream fos = new FileOutputStream(bigZip);
@@ -2153,29 +2176,41 @@ public class RestServicePortfolio
 			}
 			zos.close();
 
-			/// Return zip file
-			RandomAccessFile f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
-			byte[] b = new byte[(int)f.length()];
-			f.read(b);
-			f.close();
-
-			Date time = new Date();
-			SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-			String timeFormat = dt.format(time);
-
-			Response response = Response
-					.ok(b, MediaType.APPLICATION_OCTET_STREAM)
-					.header("content-disposition","attachment; filename = \""+name+"-"+timeFormat+".zip\"")
-					.build();
-
 			// Delete all zipped file
 			for( int i=0; i<files.length; ++i )
 				files[i].delete();
 			
-			// And the over-arching zip
-			bigZip.delete();
+			Response response;
+			if( doArchive )	// Keep bigzip inside archive folder
+			{
+				bigZip.renameTo(archiveFolder);
+				response = Response
+							.ok("Archive created")
+							.build();
+			}
+			else	// Return to browser
+			{
+				/// Return zip file
+				RandomAccessFile f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
+				byte[] b = new byte[(int)f.length()];
+				f.read(b);
+				f.close();
+	
+				response = Response
+						.ok(b, MediaType.APPLICATION_OCTET_STREAM)
+						.header("content-disposition","attachment; filename = \""+name+"-"+timeFormat+".zip\"")
+						.build();
+	
+				// Delete over-arching zip
+				bigZip.delete();
+			}
 
 			return response;
+		}
+		catch( IOException e )
+		{
+			e.printStackTrace();
+			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, e.getMessage());
 		}
 		catch(Exception ex)
 		{
