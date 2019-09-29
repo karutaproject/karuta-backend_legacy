@@ -3769,7 +3769,7 @@ public class MysqlDataProvider implements DataProvider {
 					if( endMatcher.find() ) seeend = endMatcher.group(1);
 					
 					String uuid = res.getString("node_uuid");
-					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd HH:mm");
 					long currentTime = System.currentTimeMillis();
 					// Nothing on that line
 					try
@@ -4377,7 +4377,7 @@ public class MysqlDataProvider implements DataProvider {
 					if( endMatcher.find() ) seeend = endMatcher.group(1);
 					
 					String uuid = res.getString("node_uuid");
-					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd HH:mm");
 					long currentTime = System.currentTimeMillis();
 					// Nothing on that line
 					try

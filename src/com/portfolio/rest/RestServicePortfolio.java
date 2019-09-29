@@ -2183,7 +2183,8 @@ public class RestServicePortfolio
 			Response response;
 			if( doArchive )	// Keep bigzip inside archive folder
 			{
-				bigZip.renameTo(archiveFolder);
+				File archiveFile = File.createTempFile("project_"+timeFormat+"_", ".zip", archiveFolder);
+				bigZip.renameTo(archiveFile);
 				response = Response
 							.ok("Archive created")
 							.build();
@@ -2201,9 +2202,9 @@ public class RestServicePortfolio
 						.header("content-disposition","attachment; filename = \""+name+"-"+timeFormat+".zip\"")
 						.build();
 	
-				// Delete over-arching zip
-				bigZip.delete();
 			}
+			// Delete over-arching zip
+			bigZip.delete();
 
 			return response;
 		}
