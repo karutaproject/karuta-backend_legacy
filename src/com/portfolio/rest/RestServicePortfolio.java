@@ -2183,10 +2183,12 @@ public class RestServicePortfolio
 			Response response;
 			if( doArchive )	// Keep bigzip inside archive folder
 			{
-				File archiveFile = File.createTempFile("project_"+timeFormat+"_", ".zip", archiveFolder);
-				bigZip.renameTo(archiveFile);
+				String filename = name+"-"+timeFormat+".zip";
+				File archiveFile = new File(archiveFolder.getAbsolutePath()+File.separator+filename);
+				archiveFile.createNewFile();
+				bigZip.renameTo(archiveFile);	// Return filename generated
 				response = Response
-							.ok("Archive created")
+							.ok(filename)
 							.build();
 			}
 			else	// Return to browser
