@@ -3334,7 +3334,7 @@ public class MysqlDataProvider implements DataProvider {
 
 	private void reconstructTree( StringBuilder data, t_tree node, HashMap<String, t_tree> entries )
 	{
-		if( node.childString == null ) return;
+		if( node == null || node.childString == null ) return;
 		
 		String[] childsId = node.childString.split(",");
 		data.append(node.data);
@@ -3769,7 +3769,7 @@ public class MysqlDataProvider implements DataProvider {
 					if( endMatcher.find() ) seeend = endMatcher.group(1);
 					
 					String uuid = res.getString("node_uuid");
-					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd HH:mm");
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 					long currentTime = System.currentTimeMillis();
 					// Nothing on that line
 					try
@@ -4350,7 +4350,7 @@ public class MysqlDataProvider implements DataProvider {
 				}
 				
 				///// Remove node for simple users if there's a date limitation
-				sql = "DELETE FROM t_struc_parentid WHERE node=uuid2bin(?)";
+				sql = "DELETE FROM t_struc_parentid WHERE uuid=uuid2bin(?)";
 				PreparedStatement stFilter = c.prepareStatement(sql);
 
 				// Fetch metadata
@@ -4377,7 +4377,7 @@ public class MysqlDataProvider implements DataProvider {
 					if( endMatcher.find() ) seeend = endMatcher.group(1);
 					
 					String uuid = res.getString("node_uuid");
-					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-mm-dd HH:mm");
+					SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 					long currentTime = System.currentTimeMillis();
 					// Nothing on that line
 					try
