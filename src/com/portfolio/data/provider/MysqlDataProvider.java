@@ -1914,34 +1914,40 @@ public class MysqlDataProvider implements DataProvider {
 								out.append("<semanticTag/>");
 						}
 						
+						String resrescont = "";
+						if (dbserveur.equals("oracle")){
+							resrescont = res.getString("res_res_content");
+						}else{
+							resrescont = res.getString("n.res_res_content");
+						}
 						{
 							String xsitype = "nodeRes";
 							out.append("<asmResource id='").append(nodeUuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
-							String resrescont = "";
-							if (dbserveur.equals("oracle")){
-								resrescont = res.getString("res_res_content");
-							}else{
-								resrescont = res.getString("n.res_res_content");
-							}
 							if( resrescont != null && !"".equals(resrescont) )
 								out.append(resrescont);
 							out.append("</asmResource>");
 						}
 						
+						if (dbserveur.equals("oracle")){
+							resrescont = res.getString("res_context_content");
+						}else{
+							resrescont = res.getString("n.res_context_content");
+						}
 						{
 							String xsitype = "context";
 							out.append("<asmResource id='").append(nodeUuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
-							String resrescont = "";
-							if (dbserveur.equals("oracle")){
-								resrescont = res.getString("res_context_content");
-							}else{
-								resrescont = res.getString("n.res_context_content");
-							}
 							if( resrescont != null && !"".equals(resrescont) )
 								out.append(resrescont);
 							out.append("</asmResource>");
 						}
 						
+						if (dbserveur.equals("oracle")){
+							resrescont = res.getString("res_content");
+						}else{
+							resrescont = res.getString("n.res_content");
+						}
+						/// added resource is optional
+						if( resrescont != null && !"".equals(resrescont) )
 						{
 							String xsitype = "";
 							if (dbserveur.equals("oracle")){
@@ -1950,14 +1956,7 @@ public class MysqlDataProvider implements DataProvider {
 								xsitype = res.getString("n.xsi_type_res");
 							}
 							out.append("<asmResource id='").append(nodeUuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
-							String resrescont = "";
-							if (dbserveur.equals("oracle")){
-								resrescont = res.getString("res_content");
-							}else{
-								resrescont = res.getString("n.res_content");
-							}
-							if( resrescont != null && !"".equals(resrescont) )
-								out.append(resrescont);
+							out.append(resrescont);
 							out.append("</asmResource>");
 						}
 						out.append("</"+nodetype+">");
