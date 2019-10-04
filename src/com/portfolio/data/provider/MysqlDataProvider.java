@@ -3258,6 +3258,7 @@ public class MysqlDataProvider implements DataProvider {
 
 		time2 = System.currentTimeMillis();
 
+		/*
 		resNode = getSharedMysqlStructure(c, portfolioUuid,userId, groupId, cutoff);
 
 		time3 = System.currentTimeMillis();
@@ -3269,6 +3270,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 
 		time4 = System.currentTimeMillis();
+		//*/
 
 		/// Reconstruct functional tree
 		t_tree root = entries.get(rootuuid);
@@ -3606,7 +3608,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
-						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.node_uuid) AS res_node_uuid, n.modif_date_node, " +
+						"bin2uuid(n.node_uuid) AS res_node_uuid, n.modif_date_node, " +
 						"n.xsi_type_res AS r1_type, n.res_content AS res_content, n.modif_date_res AS modif_date_res, bin2uuid(n.node_uuid) as res_res_node_uuid, " +
 						"n.res_res_content AS res_res_content, bin2uuid(n.node_uuid) as res_context_node_uuid, " +
 						"n.res_context_content AS res_context_content, n.asm_type, n.xsi_type_node, " +
@@ -3732,7 +3734,7 @@ public class MysqlDataProvider implements DataProvider {
 				/// Actuelle selection des donnees
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
-						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.node_uuid) AS res_node_uuid, n.modif_date_node, " +
+						"bin2uuid(n.node_uuid) AS res_node_uuid, n.modif_date_node, " +
 						"n.xsi_type_res AS r1_type, n.res_content AS res_content, n.modif_date_res AS r1_modif_date_res, bin2uuid(n.node_uuid) as res_res_node_uuid, " +
 						"n.res_res_content AS res_res_content, bin2uuid(n.node_uuid) as res_context_node_uuid, " +
 						"n.res_context_content AS res_context_content, n.asm_type, n.xsi_type_node, " +
@@ -3763,7 +3765,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
-						"n.shared_node AS shared_node, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, bin2uuid(n.node_uuid) AS res_node_uuid, n.modif_date_node, " +
+						"bin2uuid(n.node_uuid) AS res_node_uuid, n.modif_date_node, " +
 						"n.xsi_type_res AS r1_type, n.res_content AS res_content, n.modif_date_res AS modif_date_res, bin2uuid(n.node_uuid) as res_res_node_uuid, " +
 						"n.res_res_content AS res_res_content, bin2uuid(n.node_uuid) as res_context_node_uuid, " +
 						"n.res_context_content AS res_context_content, n.asm_type, n.xsi_type_node, " +
@@ -3822,6 +3824,7 @@ public class MysqlDataProvider implements DataProvider {
 	/// C'est separe car les noeud ne provenant pas d'un meme portfolio, on ne peut pas les selectionner rapidement
 	/// Autre possibilite serait de garder ce meme type de fonctionnement pour une selection par niveau d'un portfolio.
 	/// TODO: A faire un 'benchmark' dessus
+	@Deprecated
 	private ResultSet getSharedMysqlStructure(Connection c, String portfolioUuid, int userId,  int groupId, Integer cutoff) throws SQLException
 	{
 		PreparedStatement st = null;
