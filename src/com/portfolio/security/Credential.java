@@ -1295,18 +1295,50 @@ public class Credential
 	}
 	//*/
 
+	public boolean isOwnerFromNode( Connection c, Integer userId, String node )
+	{
+		if( userId == null )
+			return false;
+
+		ResultSet rs=null;
+		PreparedStatement stmt=null;
+		try
+		{
+			String query = "SELECT modif_user_id " +
+					"FROM node " +
+					"WHERE asm_type='asmRoot' AND modif_user_id=? " +
+					"AND portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
+			stmt=c.prepareStatement(query);
+			stmt.setInt(1, userId);
+			stmt.setString(2, node);
+			rs = stmt.executeQuery();
+
+			if( rs.next() )
+				return true;
+		}
+		catch( SQLException e )
+		{
+			e.printStackTrace();
+			return false;
+		}
+		finally
+		{
+			if( rs!=null ) try { rs.close(); } catch( SQLException e ) { e.printStackTrace(); }
+			if( stmt!=null ) try { stmt.close(); } catch( SQLException e ) { e.printStackTrace(); }
+		}
+		return false;
+	}
+
 	public boolean isOwner( Connection c, Integer userId, String portfolio )
 	{
 		if( userId == null )
 			return false;
 
-		///
 		ResultSet rs=null;
 		PreparedStatement stmt=null;
 		try
 		{
-			/// FIXME
-			String query = "SELECT modif_user_id FROM node WHERE modif_user_id=? AND portfolio_id=uuid2bin(?)";
+			String query = "SELECT modif_user_id FROM node WHERE asm_type='asmRoot' AND modif_user_id=? AND portfolio_id=uuid2bin(?)";
 			stmt=c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			stmt.setString(2, portfolio);
