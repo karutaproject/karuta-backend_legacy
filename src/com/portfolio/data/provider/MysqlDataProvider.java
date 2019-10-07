@@ -4796,17 +4796,20 @@ public class MysqlDataProvider implements DataProvider {
 						"metadata_epm text NOT NULL, " +
 						"res_content text DEFAULT NULL, " +
 						"res_res_content text DEFAULT NULL, " +
-						"res_context_content text)  DEFAULT NULL, " +
+						"res_context_content text DEFAULT NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
-						"xsi_type varchar(50)  DEFAULT NULL, " +
+						"xsi_type_node varchar(50)  DEFAULT NULL, " +
+						"xsi_type_res varchar(50)  DEFAULT NULL, " +
 						"semtag varchar(100) DEFAULT NULL, " +
 						"semantictag varchar(100) DEFAULT NULL, " +
 						"label varchar(100)  DEFAULT NULL, " +
 						"code varchar(255)  DEFAULT NULL, " +
 						"descr varchar(100)  DEFAULT NULL, " +
 						"format varchar(30) DEFAULT NULL, " +
-						"modif_user_id int(12) NOT NULL, " +
-						"modif_date timestamp NULL DEFAULT NULL, " +
+						"modif_user_id_node int(12) NOT NULL, " +
+						"modif_user_id_res int(12) NOT NULL, " +
+						"modif_date_node timestamp NULL DEFAULT NULL, " +
+						"modif_date_res timestamp NULL DEFAULT NULL, " +
 						"portfolio_id binary(16) DEFAULT NULL) DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 				st = c.prepareStatement(sql);
 				st.execute();
@@ -4825,15 +4828,18 @@ public class MysqlDataProvider implements DataProvider {
 						"res_res_content CLB DEFAULT NULL, " +
 						"res_context_content CLOB  DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
-						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
+						"xsi_type_node VARCHAR2(50 CHAR)  DEFAULT NULL, " +
+						"xsi_type_res varchar(50)  DEFAULT NULL, " +
 						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 						"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 						"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"code VARCHAR2(255 CHAR)  DEFAULT NULL, " +
 						"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
-						"modif_user_id NUMBER(12) NOT NULL, " +
-						"modif_date timestamp DEFAULT NULL, " +
+						"modif_user_id_node NUMBER(12) NOT NULL, " +
+						"modif_user_id_res NUMBER(12) NOT NULL, " +
+						"modif_date_node timestamp DEFAULT NULL, " +
+						"modif_date_res timestamp DEFAULT NULL, " +
 						"portfolio_id VARCHAR2(32) DEFAULT NULL) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_data','"+v_sql+"')}";
 				CallableStatement ocs = c.prepareCall(sql) ;
@@ -4954,18 +4960,19 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// Copie de la structure
-			sql = "INSERT INTO t_data(new_uuid, node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content , asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id) ";
+			sql = "INSERT INTO t_data(new_uuid, node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content , asm_type, xsi_type_node, xsi_type_res, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_user_id_res, modif_date_node, modif_date_res, portfolio_id) ";
 			if (dbserveur.equals("mysql")){
 				sql += "SELECT uuid2bin(UUID()), ";
 			} else if (dbserveur.equals("oracle")){
 				sql += "SELECT sys_guid(), ";
 			}
-			sql += "node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content , asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, ?, modif_date, portfolio_id " +
+			sql += "node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content , asm_type, xsi_type_node, xsi_type_res, semtag, semantictag, label, code, descr, format, ?, ?, modif_date_node, modif_date_res, portfolio_id " +
 					"FROM node n " +
 					"WHERE portfolio_id=uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setInt(1, userId);	// User asking to instanciate a portfolio will always have the right to modify it
-			st.setString(2, portfolioUuid);
+			st.setInt(2, userId);	
+			st.setString(3, portfolioUuid);
 
 			st.executeUpdate();
 			st.close();
@@ -5003,9 +5010,9 @@ public class MysqlDataProvider implements DataProvider {
 
 			// Avec les ressources (et droits des ressources)
 			if (dbserveur.equals("mysql")){
-				sql = "UPDATE t_rights ri, t_struc re SET ri.id = re.new_uuid WHERE re.node_uuid=ri.id";
+				sql = "UPDATE t_rights ri, t_struc re SET ri.id = re.new_uuid WHERE re.uuid=ri.id";
 			} else if (dbserveur.equals("oracle")){
-				sql = "UPDATE t_rights ri SET ri.id=(SELECT new_uuid FROM t_struc re WHERE re.node_uuid=ri.id) WHERE EXISTS (SELECT 1 FROM t_res re WHERE re.node_uuid=ri.id)";
+				sql = "UPDATE t_rights ri SET ri.id=(SELECT new_uuid FROM t_struc re WHERE re.node_uuid=ri.id) WHERE EXISTS (SELECT 1 FROM t_res re WHERE re.uuid=ri.id)";
 			}
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
@@ -5445,8 +5452,8 @@ public class MysqlDataProvider implements DataProvider {
 
 			/// On copie tout dans les vrai tables
 			/// Structure
-			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id) " +
-					"SELECT new_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_date_node, portfolio_id " +
+			sql = "INSERT INTO node(node_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, xsi_type_res, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_user_id_res, modif_date_node, modif_date_res, portfolio_id) " +
+					"SELECT new_uuid, node_parent_uuid, node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, xsi_type_res, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_user_id_res, modif_date_node, modif_date_res, portfolio_id " +
 					"FROM t_data";
 			st = c.prepareStatement(sql);
 			st.executeUpdate();
@@ -5469,7 +5476,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql += "d.modif_user_id";
 			else
 				sql += "p.user_id";
-			sql += ", p.model_id, d.modif_user_id, p.modif_date, p.active " +
+			sql += ", p.model_id, d.modif_user_id_node, p.modif_date, p.active " +
 					"FROM t_data d INNER JOIN portfolio p " +
 					"ON d.node_uuid=p.root_node_uuid";
 
