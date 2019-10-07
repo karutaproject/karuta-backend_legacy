@@ -4003,25 +4003,28 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid binary(16)  NOT NULL, " +
 						"node_parent_uuid binary(16) DEFAULT NULL, " +
 						"node_order int(12) NOT NULL, " +
-						"res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_res_node_uuid binary(16) DEFAULT NULL, " +
-						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
-						"shared_res int(1) NOT NULL, " +
-						"shared_node int(1) NOT NULL, " +
-						"shared_node_res int(1) NOT NULL, " +
-						"shared_res_uuid BINARY(16)  NULL, " +
-						"shared_node_uuid BINARY(16) NULL, " +
-						"shared_node_res_uuid BINARY(16) NULL, " +
+//						"res_node_uuid binary(16) DEFAULT NULL, " +
+//						"res_res_node_uuid binary(16) DEFAULT NULL, " +
+//						"res_context_node_uuid binary(16)  DEFAULT NULL, " +
+//						"shared_res int(1) NOT NULL, " +
+//						"shared_node int(1) NOT NULL, " +
+//						"shared_node_res int(1) NOT NULL, " +
+//						"shared_res_uuid BINARY(16)  NULL, " +
+//						"shared_node_uuid BINARY(16) NULL, " +
+//						"shared_node_res_uuid BINARY(16) NULL, " +
 						"asm_type varchar(50) DEFAULT NULL, " +
-						"xsi_type varchar(50)  DEFAULT NULL, " +
+						"xsi_type_node varchar(50)  DEFAULT NULL, " +
+						"xsi_type_res varchar(50)  DEFAULT NULL, " +
 						"semtag varchar(100) DEFAULT NULL, " +
 						"semantictag varchar(100) DEFAULT NULL, " +
 						"label varchar(100)  DEFAULT NULL, " +
 						"code varchar(100)  DEFAULT NULL, " +
 						"descr varchar(100)  DEFAULT NULL, " +
 						"format varchar(30) DEFAULT NULL, " +
-						"modif_user_id int(12) NOT NULL, " +
-						"modif_date timestamp NULL DEFAULT NULL, " +
+						"modif_user_id_node int(12) NOT NULL, " +
+						"modif_user_id_res int(12) NOT NULL, " +
+						"modif_date_node timestamp NULL DEFAULT NULL, " +
+						"modif_date_res timestamp NULL DEFAULT NULL, " +
 						"portfolio_id binary(16) DEFAULT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 				st = c.prepareStatement(sql);
 				st.execute();
@@ -4063,25 +4066,28 @@ public class MysqlDataProvider implements DataProvider {
 						"node_uuid VARCHAR2(32)  NOT NULL, " +
 						"node_parent_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"node_order NUMBER(12) NOT NULL, " +
-						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
-						"shared_res NUMBER(1) NOT NULL, " +
-						"shared_node NUMBER(1) NOT NULL, " +
-						"shared_node_res NUMBER(1) NOT NULL, " +
-						"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
-						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"res_res_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"res_context_node_uuid VARCHAR2(32)  DEFAULT NULL, " +
+//						"shared_res NUMBER(1) NOT NULL, " +
+//						"shared_node NUMBER(1) NOT NULL, " +
+//						"shared_node_res NUMBER(1) NOT NULL, " +
+//						"shared_res_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"shared_node_uuid VARCHAR2(32) DEFAULT NULL, " +
+//						"shared_node_res_uuid VARCHAR2(32) DEFAULT NULL, " +
 						"asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
-						"xsi_type VARCHAR2(50 CHAR)  DEFAULT NULL, " +
+						"xsi_type_node VARCHAR2(50 CHAR)  DEFAULT NULL, " +
+						"xsi_type_res VARCHAR2(50 CHAR)  DEFAULT NULL, " +
 						"semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 						"semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
 						"label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
 						"format VARCHAR2(30 CHAR) DEFAULT NULL, " +
-						"modif_user_id NUMBER(12) DEFAULT NULL, " +
-						"modif_date timestamp DEFAULT NULL, " +
+						"modif_user_id_node NUMBER(12) DEFAULT NULL, " +
+						"modif_user_id_res NUMBER(12) DEFAULT NULL, " +
+						"modif_date_node timestamp DEFAULT NULL, " +
+						"modif_date_res timestamp DEFAULT NULL, " +
 						"portfolio_id VARCHAR2(32) DEFAULT NULL, CONSTRAINT t_node_UK_id UNIQUE (node_uuid)) ON COMMIT PRESERVE ROWS";
 				sql = "{call create_or_empty_table('t_node','"+v_sql+"')}";
 				CallableStatement ocs = c.prepareCall(sql) ;
@@ -4140,13 +4146,13 @@ public class MysqlDataProvider implements DataProvider {
 			
 			if (dbserveur.equals("oracle")){
 				sql = "INSERT INTO t_node " +
-						"SELECT node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+						"SELECT node_uuid, node_parent_uuid, node_order, asm_type, xsi_type_node, xsi_type_res, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_user_id_res, modif_date_node, modif_date_res, portfolio_id " +
 						"FROM node n " +
 						"WHERE n.portfolio_id=uuid2bin(?)";
 			}else{
 				/// Init temp data table
-				sql = "INSERT INTO t_node (node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id)" +
-						" SELECT distinct node_uuid, node_parent_uuid, node_order, res_node_uuid, res_res_node_uuid, res_context_node_uuid, shared_res, shared_node, shared_node_res, shared_res_uuid, shared_node_uuid, shared_node_res_uuid, asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date, portfolio_id " +
+				sql = "INSERT INTO t_node (node_uuid, node_parent_uuid, node_order, asm_type, xsi_type_node, xsi_type_res, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_user_id_res, modif_date_node, modif_date_res, portfolio_id)" +
+						" SELECT distinct node_uuid, node_parent_uuid, node_order, asm_type, xsi_type_node, xsi_type_res, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_user_id_res, modif_date_node, modif_date_res, portfolio_id " +
 						" FROM node n " +
 						" WHERE n.portfolio_id=uuid2bin(?)";
 			}
@@ -4160,7 +4166,7 @@ public class MysqlDataProvider implements DataProvider {
 			/// Initialise la descente des noeuds, si il y a un partage on partira de le, sinon du noeud par defaut
 			/// FIXME: There will be something with shared_node_uuid
 			sql = "INSERT INTO t_struc_parentid(uuid, node_parent_uuid, t_level) " +
-					"SELECT COALESCE(n.shared_node_uuid, n.node_uuid), n.node_parent_uuid, 0 " +
+					"SELECT n.node_uuid, n.node_parent_uuid, 0 " +
 					"FROM t_node n " +
 					"WHERE n.node_uuid=uuid2bin(?)";
 			st = c.prepareStatement(sql);
@@ -4179,7 +4185,7 @@ public class MysqlDataProvider implements DataProvider {
 			} else if (dbserveur.equals("oracle")){
 				sql = "INSERT /*+ ignore_row_on_dupkey_index(t_struc_parentid_2,t_struc_parentid_2_UK_uuid)*/ INTO t_struc_parentid_2(uuid, node_parent_uuid, t_level) ";
 			}
-			sql += "SELECT COALESCE(n.shared_node_uuid, n.node_uuid), n.node_parent_uuid, ? " +
+			sql += "SELECT n.node_uuid, n.node_parent_uuid, ? " +
 					"FROM t_node n WHERE n.portfolio_id=uuid2bin(?) AND n.node_parent_uuid IN (SELECT uuid FROM t_struc_parentid t " +
 					"WHERE t.t_level=?)";
 
@@ -4277,10 +4283,8 @@ public class MysqlDataProvider implements DataProvider {
 					" n.node_children_uuid, " +
 					" n.node_order," +
 					" n.metadata, n.metadata_wad, n.metadata_epm," +
-					" n.shared_node AS shared_node," +
-					" bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid," +
-					" bin2uuid(n.res_node_uuid) AS res_node_uuid," +
-					" n.modif_date_node," +
+					" n.modif_date_node, n.modif_date_res, " +
+					" bin2uuid(n.node_uuid) AS res_node_uuid," +
 					" n.xsi_type_res AS r1_type, n.res_content AS res_content," +     // donnee res_node
 					" bin2uuid(n.node_uuid) as res_res_node_uuid," +
 					" n.res_res_content AS res_res_content," +     // donnee res_res_node
