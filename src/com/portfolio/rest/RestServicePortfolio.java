@@ -551,8 +551,11 @@ public class RestServicePortfolio
 			else if(ui.userId == userid)	/// Changing self
 			{
 				String ip = httpServletRequest.getRemoteAddr();
-				securityLog.write(String.format("[%s] ", ip));
-				securityLog.flush();
+				if( securityLog != null )
+				{
+					securityLog.write(String.format("[%s] ", ip));
+					securityLog.flush();
+				}
 				queryuser = dataProvider.UserChangeInfo(c, ui.userId, userid, xmlInfUser);
 			}
 			else
