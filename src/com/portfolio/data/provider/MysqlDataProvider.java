@@ -11290,7 +11290,7 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname , String email ) throws SQLException
 	{
-		String sql = "UPDATE credential SET display_firstname = ?, display_lastname = ?, email = ? WHERE userid = ?";
+		String sql = "UPDATE credential SET display_firstname = ?, display_lastname = ?, email = ?, is_designer = 1 WHERE userid = ?";
 		PreparedStatement st = c.prepareStatement(sql);
 		st.setString(1, fname);
 		st.setString(2, lname);
