@@ -11114,7 +11114,7 @@ public class MysqlDataProvider implements DataProvider {
 			{
 				if( cred.isAdmin(c, userId) )
 				{
-					changeLevel = 2;
+					changeLevel = 0;
 				}
 				else if( cred.isCreator(c, userId) )
 				{
