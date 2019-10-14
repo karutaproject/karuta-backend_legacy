@@ -8389,6 +8389,10 @@ public class MysqlDataProvider implements DataProvider {
 					st.setString(3, uuid);
 					st.executeUpdate();
 				}
+				else
+				{
+					return false;
+				}
 			}
 
 			/// Update children list, origin and destination
