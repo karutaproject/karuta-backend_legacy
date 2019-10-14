@@ -16222,11 +16222,21 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		try
 		{
 			Date date = new Date();
+			String asDesigner = ConfigUtils.get("createAsDesigner");
+			String isDesigner = "";
+			if( asDesigner != null && "y".equals(asDesigner.toLowerCase()) )
+			{
+				isDesigner = ", is_designer=1";
+			}
+
+			
+			
 			/// Credential checking use hashing, we'll never reach this.
 			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=SUBSTR(PASSWORD(?), 26)";
 			if (dbserveur.equals("oracle")){
 				sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=?";
 			}
+			sql += isDesigner;
 			st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
 				st = c.prepareStatement(sql, new String[]{"userid"});
