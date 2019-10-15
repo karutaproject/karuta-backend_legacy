@@ -1,25 +1,5 @@
 -- Table creation only
 
---
--- Structure de la table `log`
---
-CREATE TABLE IF NOT EXISTS `log_table` (
-  `log_id` int(12) NOT NULL AUTO_INCREMENT,
-  `log_date` datetime NOT NULL,
-  `log_url` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `log_method` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
-  `log_headers` text COLLATE utf8_unicode_ci NOT NULL,
-  `log_in_body` text COLLATE utf8_unicode_ci,
-  `log_out_body` text COLLATE utf8_unicode_ci,
-  `log_code` int(12) NOT NULL,
-  PRIMARY KEY (`log_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
---
--- Contenu de la table `log`
---
-
-
 -- --------------------------------------------------------
 
 --
@@ -207,34 +187,6 @@ CREATE TABLE IF NOT EXISTS `group_group` (
   PRIMARY KEY (`gid`,`child_gid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
--- Annotation
-CREATE TABLE IF NOT EXISTS `annotation` (
-  `nodeid` binary(16) NOT NULL,
-  `rank` int(11) NOT NULL,
-  `text` text COLLATE utf8_unicode_ci,
-  `c_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `a_user` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `wad_identifier` varchar(45) COLLATE utf8_unicode_ci DEFAULT NULL,
-  PRIMARY KEY (`nodeid`,`rank`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
---
-
-
--- Data
--- DEFAULT uuid2bin(UUID()) for id?, owner: uid from credential
-CREATE TABLE IF NOT EXISTS `data_table` (
-  `id` binary(16) NOT NULL,
-  `owner` bigint(20) NOT NULL,
-  `creator` bigint(20) NOT NULL,
-  `type` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `mimetype` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `filename` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `c_date` bigint(20) DEFAULT NULL,
-  `data` blob,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
---
 
 
 INSERT IGNORE INTO `credential` VALUES (1, 'root', 0, 1, 0, 1, 'root', '', NULL, UNHEX(SHA1('mati')), NULL, NULL, '');
