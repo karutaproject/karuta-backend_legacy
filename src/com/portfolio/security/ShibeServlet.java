@@ -78,7 +78,7 @@ public class ShibeServlet extends HttpServlet {
 			
 			if(uid == 0 )
 			{
-				System.out.println("[SHIBESERV] Creating account");
+				System.out.println("[SHIBESERV] Creating account for "+rem);
 				userId = dataProvider.createUser(connexion, rem, null);
 				uid = Integer.parseInt(userId);
 				
