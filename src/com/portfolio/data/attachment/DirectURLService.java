@@ -246,7 +246,13 @@ public class DirectURLService  extends HttpServlet {
 						
 						email = username+"@"+domainname+"."+tld;
 					}
+					else
+					{
+						String add = UUID.randomUUID().toString();
+						email += add;
+					}
 					
+					/*
 					/// Check if user exist by logging in
 					login = dataProvider.logViaEmail(c, email);
 					if( login != null )
@@ -262,6 +268,7 @@ public class DirectURLService  extends HttpServlet {
 					}
 					
 					else if( !isLogged )
+						//*/
 					{
 						login = new String[] {"0","0","0"};
 						try
