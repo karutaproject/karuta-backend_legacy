@@ -547,9 +547,12 @@ public class FileServlet  extends HttpServlet
 			if(!credential.hasNodeRight(c, userId, groupId, uuid, Credential.WRITE))
 			{
 				response.sendError(HttpServletResponse.SC_FORBIDDEN);
+				return;
 				//throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit WRITE sur le noeud "+nodeUuid);
 			}
 	
+//			System.out.println("FileServlet::doPost: "+url+" from user: "+userId );
+
 			String data;
 			String fileid = "";
 			
@@ -633,6 +636,8 @@ public class FileServlet  extends HttpServlet
 				int status = client.executeMethod(get);
 				if (status != HttpStatus.SC_OK) {
 					System.err.println("Method failed: " + get.getStatusLine());
+					response.sendError(status);
+					return;
 				}
 
 				// Retrieve inputData
@@ -703,7 +708,11 @@ public class FileServlet  extends HttpServlet
 				String msg = connection.getResponseMessage();
 
 				if( code != HttpURLConnection.HTTP_OK )
+				{
 					logger.error("Couldn't send file: "+msg);
+					response.sendError(code);
+					return;
+				}
 				
 				/// Retrieving info
 				InputStream objReturn = connection.getInputStream();
