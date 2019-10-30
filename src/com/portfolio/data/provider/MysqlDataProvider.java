@@ -11408,7 +11408,7 @@ public class MysqlDataProvider implements DataProvider {
 					
 					if( securityLog != null )
 					{
-							securityLog.write(String.format("[%s] Changed password\n", username));
+							securityLog.write(String.format("[User %s] Changed password\n", userId));
 							securityLog.flush();
 					}
 				}

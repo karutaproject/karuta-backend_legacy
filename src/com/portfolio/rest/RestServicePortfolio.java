@@ -553,7 +553,7 @@ public class RestServicePortfolio
 				String ip = httpServletRequest.getRemoteAddr();
 				if( securityLog != null )
 				{
-					securityLog.write(String.format("[%s] ", ip));
+					securityLog.write(String.format("[%s] self change info %u\n", ip, userid));
 					securityLog.flush();
 				}
 				queryuser = dataProvider.UserChangeInfo(c, ui.userId, userid, xmlInfUser);
