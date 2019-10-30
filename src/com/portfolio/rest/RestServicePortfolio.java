@@ -5252,12 +5252,40 @@ public class RestServicePortfolio
 	 *	return:
 	 **/
 	@Path("/credential/logout")
+	@GET
+	public Response logoutGET(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest)
+	{
+		HttpSession session = httpServletRequest.getSession(false);
+//	String backend = sc.getServletContext().getContextPath();
+	Integer fromshibe = (Integer) session.getAttribute("fromshibe");
+	if( session != null )
+		session.invalidate();
+	
+	String logoutredir = null;
+	if( fromshibe != null && fromshibe == 1 )
+	{
+		//// Redirect to shibe logout
+		String redir = ConfigUtils.get("shib_logout");
+		logoutredir = String.format("/Shibboleth.sso/Logout?return=%s", redir);
+//		return Response.status(302).header("Location", logoutredir).build();
+	}
+	else
+	{
+		// Just redirect to base UI location
+		logoutredir  = ConfigUtils.get("baseui_redirect_location");
+	}
+		
+		return Response.status(301).header("Location", logoutredir).build();
+	}
+
+	@Path("/credential/logout")
 	@POST
-	public Response logout(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest)
+	public Response logoutPOST(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest)
 	{
 		HttpSession session = httpServletRequest.getSession(false);
 		if( session != null )
 			session.invalidate();
+		
 		return  Response.ok("logout").build();
 	}
 
