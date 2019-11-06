@@ -83,12 +83,28 @@ public class ShibeServlet extends HttpServlet {
 				uid = Integer.parseInt(userId);
 				
 				/// Update values
+				String fn = (String) request.getAttribute(ConfigUtils.get("shib_firstname"));
+				String ln = (String) request.getAttribute(ConfigUtils.get("shib_lastname"));
 				String mail = (String) request.getAttribute(ConfigUtils.get("shib_email"));
-				String cn = (String) request.getAttribute(ConfigUtils.get("shib_name"));
-				String[] namefrag = cn.split(" ");
-				/// Regular function need old password to update
-				/// But external account generate password unreachable with regular method
-				dataProvider.putInfUserInternal(connexion, uid, uid, namefrag[1], namefrag[0], mail);
+				if( fn != null || ln != null )
+				{
+					/// Regular function need old password to update
+					/// But external account generate password unreachable with regular method
+					dataProvider.putInfUserInternal(connexion, uid, uid, fn, ln, mail);
+				}
+				else
+				{
+					String cn = (String) request.getAttribute(ConfigUtils.get("shib_fullname"));
+					String[] namefrag = cn.split(" ");
+					if(namefrag.length > 1)
+					{
+						dataProvider.putInfUserInternal(connexion, uid, uid, namefrag[1], namefrag[0], mail);
+					}
+					else
+					{
+						dataProvider.putInfUserInternal(connexion, uid, uid, namefrag[0], namefrag[0], mail);
+					}
+				}
 			}
 			session.setAttribute("uid", uid);
 			session.setAttribute("user", rem);

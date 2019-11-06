@@ -11294,12 +11294,23 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname , String email ) throws SQLException
 	{
-		String sql = "UPDATE credential SET display_firstname = ?, display_lastname = ?, email = ?, is_designer = 1, other = 'xlimited' WHERE userid = ?";
+		String asDesigner = ConfigUtils.get("createAsDesigner");
+		int isDesigner = 0;
+		String other = "";
+		if( asDesigner != null && "y".equals(asDesigner.toLowerCase()) )
+		{
+			isDesigner = 1;
+			other = "xlimited";
+		}
+
+		String sql = "UPDATE credential SET display_firstname = ?, display_lastname = ?, email = ?, is_designer = ?, other = ? WHERE userid = ?";
 		PreparedStatement st = c.prepareStatement(sql);
 		st.setString(1, fname);
 		st.setString(2, lname);
 		st.setString(3, email);
-		st.setInt(4, userid2);
+		st.setInt(4, isDesigner);
+		st.setString(5, other);
+		st.setInt(6, userid2);
 		st.executeUpdate();
 
 		return null;
