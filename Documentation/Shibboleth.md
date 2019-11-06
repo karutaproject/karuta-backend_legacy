@@ -7,6 +7,7 @@ Karuta as service provider (SP)
 File editing
 -
 Some informations are provided by the institution tech service, kindly ask them about it.
+
 - /etc/shibboleth/shibboleth2.xml
 
 >\<ApplicationDefaults entityID="Karuta"  
@@ -34,13 +35,23 @@ backingFilePath: Local xml file describing the remote identity provider, usually
 - /etc/shibboleth/attribute-map.xml
 
 List of attributes needed sent by the identity provider server.  
-They are put inside the /rest/api/credential information, need matching attribute name inside `shib_attrib` from `configKaruta.properties`  
-Need at least the username
-
 >\<Attribute name="urn:mace:dir:attribute-def:{USERNAME}" id="{USER ATTRIBUTE}" />  
 >\<Attribute name="urn:oid:{OID}" id="{USER ATTRIBUTE}" />  
 >\<Attribute name="urn:mace:dir:attribute-def:dob" id="dob" />  
 >\<Attribute name="urn:oid:{OID}" id="dob"/>
+
+
+Attribute matching is done inside `configKaruta.properties`  
+
+>\# ==== Shibboleth attrib =====  
+>\## If shib_firstname or shib_lastname is set, shib_fullname is ignored  
+>\#shib_firstname=firstname  
+>\#shib_lastname=lastname  
+>\## Assume format is only 2 part "[Last name] [First name]"  
+>\#shib_fullname=fullname  
+>\#shib_email=email  
+>\#shib_logout=https://{IDP_SERVER}/idp/profile/Logout
+
 
 Service testing
 -
