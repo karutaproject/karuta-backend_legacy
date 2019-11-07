@@ -49,6 +49,7 @@ import org.jose4j.jwt.JwtClaims;
 import org.jose4j.jwt.consumer.JwtConsumer;
 import org.jose4j.jwt.consumer.JwtConsumerBuilder;
 import org.jose4j.jwt.consumer.JwtContext;
+import org.jose4j.keys.resolvers.JwksVerificationKeyResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -185,18 +186,16 @@ public class OAuth2 extends HttpServlet {
 
 						JwtContext jwtContext = firstPassJwtConsumer.process(id_token);
 						String issuer = jwtContext.getJwtClaims().getIssuer();
-						//// Checking auth server key, default to 0
+						//// Checking auth server key, use auto-key resolver
 						HttpsJwks keyUrl = new HttpsJwks(ConfigUtils.get("URLKeys"));
-						JsonWebKey rsaJsonWebKey = keyUrl.getJsonWebKeys().get(0);
-						rsaJsonWebKey.setKeyId("k1");
-						Key verificationKey = rsaJsonWebKey.getKey();
+						JwksVerificationKeyResolver verificationKeyResolver = new JwksVerificationKeyResolver(keyUrl.getJsonWebKeys());
 
 						AlgorithmConstraints algorithmConstraints = new AlgorithmConstraints(ConstraintType.WHITELIST,
 								AlgorithmIdentifiers.RSA_USING_SHA256, AlgorithmIdentifiers.RSA_USING_SHA384);
 
 						JwtConsumer secondPassJwtConsumer = new JwtConsumerBuilder()
 								.setExpectedIssuer(issuer)
-								.setVerificationKey(verificationKey)
+								.setVerificationKeyResolver(verificationKeyResolver)
 								.setRequireExpirationTime()
 								.setAllowedClockSkewInSeconds(30)
 								.setRequireSubject()
