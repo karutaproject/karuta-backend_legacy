@@ -1387,7 +1387,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 			sql = "SELECT bin2uuid(p.portfolio_id) AS portfolio_id " +
 					"FROM portfolio p, node n " +
-					"WHERE p.active=1 AND p.portfolio_id=n.portfolio_id AND n.code = ? AND n.asm_type='asmRoot'";
+					"WHERE p.active=1 AND p.portfolio_id=n.portfolio_id AND p.root_node_uuid=n.node_uuid AND n.code = ?";
 			st = c.prepareStatement(sql);
 			st.setString(1, portfolioCode);
 			res = st.executeQuery();
