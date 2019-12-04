@@ -421,11 +421,16 @@ public class LTIServlet extends HttpServlet {
 		userId = dataProvider.getUserId( connexion, username, email );
 		if ( "0".equals(userId) ) {
 			//create it
-			/*
-			userId = dataProvider.createUser(connexion, username, email);
-			outTrace.append("\nCreate User (self) results: " + userId);
-			//*/
-			outTrace.append("\nUser not created: " + username);
+			String lticreate = ConfigUtils.get("lti_create_user");
+			if( lticreate != null && "y".equals(lticreate.toLowerCase()) )
+			{
+				userId = dataProvider.createUser(connexion, username, email);
+				outTrace.append("\nCreate User (self) results: " + userId);
+			}
+			else
+			{
+				outTrace.append("\nUser not created: " + username);
+			}
 		}
 		else {
 			outTrace.append("\nUser found: " + userId);
