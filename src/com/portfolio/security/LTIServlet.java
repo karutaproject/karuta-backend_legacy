@@ -413,11 +413,21 @@ public class LTIServlet extends HttpServlet {
 
 		//// FIXME: Complete this with other info from LTI
 		//Does the user already exist?
-		String username = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+		String username = null;
 		String email = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
 //		if( username == null )	/// If all fail, at least we get the context_id
 //			username = (String)payload.get(BasicLTIConstants.CONTEXT_ID);
 
+    final String useemail = ConfigUtils.get("lti_email_as_username");
+		if( useemail != null && "y".equals(useemail) )
+		{
+			username = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
+		}
+		else
+		{
+			username = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+		}
+		
 		userId = dataProvider.getUserId( connexion, username, email );
 		if ( "0".equals(userId) ) {
 			//create it
