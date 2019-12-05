@@ -166,13 +166,14 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 
+	@Deprecated
 	public ResultSet getMysqlNode(Connection c, String nodeUuid, int userId,  int groupId) throws SQLException
 	{
 		PreparedStatement st;
 		String sql;
-
 		// On recupere d'abord les informations dans la table structures
-		sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid,  node_children_uuid as node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid,  bin2uuid(res_res_node_uuid) as res_res_node_uuid,  bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, shared_node_res,bin2uuid(shared_res_uuid) AS shared_res_uuid, bin2uuid(shared_node_uuid) AS shared_node_uuid, bin2uuid(shared_node_res_uuid) AS shared_node_res_uuid,asm_type, xsi_type_node, semtag, semantictag, label, code, descr, format, modif_user_id, modif_date,  bin2uuid(portfolio_id) as portfolio_id FROM node WHERE node_uuid = uuid2bin(?) ";
+		sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid, node_children_uuid as node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, res_content, res_res_content, res_context_content, asm_type, xsi_type_node, xsi_type_res, semtag, semantictag, label, code, descr, format, modif_user_id_node, modif_user_id_res,modif_date_node, modif_date_res, bin2uuid(portfolio_id) as portfolio_id " +
+				"FROM node WHERE node_uuid = uuid2bin(?) ";
 		st = c.prepareStatement(sql);
 		st.setString(1, nodeUuid);
 
@@ -1059,13 +1060,12 @@ public class MysqlDataProvider implements DataProvider {
 				st = c.prepareStatement(sql);
 				st.setString(1, content);
 				st.setInt(2,userId);
-				st.setInt(3, userId);
 				if (dbserveur.equals("mysql")){
-					st.setString(4, SqlUtils.getCurrentTimeStamp());
+					st.setString(3, SqlUtils.getCurrentTimeStamp());
 				} else if (dbserveur.equals("oracle")){
-					st.setTimestamp(4, SqlUtils.getCurrentTimeStamp2());
+					st.setTimestamp(3, SqlUtils.getCurrentTimeStamp2());
 				}
-				st.setString(5,uuid);
+				st.setString(4,uuid);
 
 				return st.executeUpdate();
 			}
@@ -3735,7 +3735,7 @@ public class MysqlDataProvider implements DataProvider {
 				sql = "SELECT bin2uuid(n.node_uuid) AS node_uuid, " +
 						"node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, " +
 						"bin2uuid(n.node_uuid) AS res_node_uuid, n.modif_date_node, " +
-						"n.xsi_type_res AS r1_type, n.res_content AS res_content, n.modif_date_res AS r1_modif_date_res, bin2uuid(n.node_uuid) as res_res_node_uuid, " +
+						"n.xsi_type_res AS r1_type, n.res_content AS res_content, n.modif_date_res AS modif_date_res, bin2uuid(n.node_uuid) as res_res_node_uuid, " +
 						"n.res_res_content AS res_res_content, bin2uuid(n.node_uuid) as res_context_node_uuid, " +
 						"n.res_context_content AS res_context_content, n.asm_type, n.xsi_type_node, " +
 						"tr.RD, tr.WR, tr.SB, tr.DL, gr.types_id, gr.rules_id " +
@@ -10342,8 +10342,12 @@ public class MysqlDataProvider implements DataProvider {
 
 		try
 		{
-			sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_node_uuid) AS res_node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, bin2uuid(res_context_node_uuid) AS res_context_node_uuid, " +
-					"node_children_uuid, code, asm_type, label, node_order " +
+			sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid, node_children_uuid, node_order, " +
+					"metadata, metadata_wad, metadata_epm, " +
+					"res_content, res_res_content, res_context_content, " +
+					"asm_type, xsi_type_node, xsi_type_res, semtag, semantictag, " +
+					"label, code, descr, format, " +
+					"modif_user_id_node, modif_user_id_res, modif_date_node, modif_date_res, bin2uuid(portfolio_id) as portfolio_id " +
 					"FROM node WHERE portfolio_id = uuid2bin(?) AND " +
 					"semantictag LIKE ? ORDER BY code, node_order";
 			st = c.prepareStatement(sql);
@@ -15255,6 +15259,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 	}
 
 
+	@Deprecated
 	@Override
 	public String getRessource(Connection c, String nodeUuid, int userId, int groupId, String type) throws SQLException
 	{
@@ -15476,17 +15481,46 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					stTemp.close();
 
 					/// SELECT semtag from under parent_tag, parent_code
-					sql = "SELECT bin2uuid(node_uuid) AS node_uuid, asm_type " +
-							"FROM t_s_node_2 " +
-							"WHERE semantictag LIKE ? AND node_uuid IN (SELECT uuid FROM t_struc_parentid) " +
-							"ORDER BY code, node_order";
+					sql = "SELECT bin2uuid(tsn.node_uuid) as node_uuid, bin2uuid(tsn.node_parent_uuid) as node_parent_uuid, node_children_uuid, tsn.node_order AS node_order, " +
+							"metadata, metadata_wad, metadata_epm, " +
+							"res_content, res_res_content, res_context_content, " +
+							"tsn.asm_type, xsi_type_node, xsi_type_res, tsn.semtag AS semtag, tsn.semantictag AS semantictag, " +
+							"label, tsn.code AS code, descr, format, " +
+							"modif_user_id_node, modif_user_id_res, modif_date_node, modif_date_res, bin2uuid(portfolio_id) as portfolio_id " +
+							"FROM t_s_node_2 tsn, node n " +
+							"WHERE tsn.semantictag LIKE ? AND tsn.node_uuid IN (SELECT uuid FROM t_struc_parentid) AND tsn.node_uuid=n.node_uuid " +
+							"ORDER BY tsn.code, tsn.node_order";
 					st = c.prepareStatement(sql);
 					st.setString(1, "%"+semtag+"%");
 					res3 = st.executeQuery();
 
 					result += "<nodes>";
-					while( res3.next() )	/// FIXME Could be done in a better way
+					while( res3.next() )
 					{
+						result += "<node ";
+						result += DomUtils.getXmlAttributeOutput("id", res3.getString("node_uuid"));
+						result += ">";
+						
+						result += "<"+res3.getString("asm_type")+" id='"+res3.getString("node_uuid")+"'>";
+						result += "<metadata "+res3.getString("metadata")+"/>";
+						result += "<metadata-epm "+res3.getString("metadata_epm")+"/>";
+						result += "<metadata-wad "+res3.getString("metadata_wad")+"/>";
+						
+						result += "<asmResource id='"+res3.getString("node_uuid")+"' contextid='"+res3.getString("node_uuid")+"' xsi_type='"+res3.getString("xsi_type_res")+"'>";
+						result += res3.getString("res_content");
+						result += "</asmResource>";
+
+						result += "<asmResource id='"+res3.getString("node_uuid")+"' contextid='"+res3.getString("node_uuid")+"' xsi_type='nodeRes'>";
+						result += res3.getString("res_res_content");
+						result += "</asmResource>";
+
+						result += "<asmResource id='"+res3.getString("node_uuid")+"' contextid='"+res3.getString("node_uuid")+"' xsi_type='context'>";
+						result += res3.getString("res_context_content");
+						result += "</asmResource>";
+
+						result += "</"+res3.getString("asm_type")+">";
+
+						/*
 						result += "<node ";
 						result += DomUtils.getXmlAttributeOutput("id", res3.getString("node_uuid"));
 						result += ">";
@@ -15498,6 +15532,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						{
 							result += getRessource(c, res3.getString("node_uuid"), userId, groupId, "nonContext");
 						}
+						//*/
 						result += "</node>";
 					}
 					result += "</nodes>";
@@ -15540,6 +15575,27 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						result += "<node ";
 						result += DomUtils.getXmlAttributeOutput("id", res1.getString("node_uuid"));
 						result += ">";
+						
+						result += "<"+res1.getString("asm_type")+" id='"+res1.getString("node_uuid")+"'>";
+						result += "<metadata "+res1.getString("metadata")+"/>";
+						result += "<metadata-epm "+res1.getString("metadata_epm")+"/>";
+						result += "<metadata-wad "+res1.getString("metadata_wad")+"/>";
+						
+						result += "<asmResource id='"+res1.getString("node_uuid")+"' contextid='"+res1.getString("node_uuid")+"' xsi_type='"+res1.getString("xsi_type_res")+"'>";
+						result += res1.getString("res_content");
+						result += "</asmResource>";
+
+						result += "<asmResource id='"+res1.getString("node_uuid")+"' contextid='"+res1.getString("node_uuid")+"' xsi_type='nodeRes'>";
+						result += res1.getString("res_res_content");
+						result += "</asmResource>";
+
+						result += "<asmResource id='"+res1.getString("node_uuid")+"' contextid='"+res1.getString("node_uuid")+"' xsi_type='context'>";
+						result += res1.getString("res_context_content");
+						result += "</asmResource>";
+
+						result += "</"+res1.getString("asm_type")+">";
+
+						/*
 						if (res1.getString("asm_type").equalsIgnoreCase("asmContext"))
 						{
 							result += getRessource(c, res1.getString("node_uuid"), userId, groupId, "Context");
@@ -15548,6 +15604,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						{
 							result += getRessource(c, res1.getString("node_uuid"), userId, groupId, "nonContext");
 						}
+						//*/
 						result += "</node>";
 					}
 					result += "</nodes>";
