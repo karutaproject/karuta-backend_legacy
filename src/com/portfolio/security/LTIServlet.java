@@ -435,6 +435,10 @@ public class LTIServlet extends HttpServlet {
 			if( lticreate != null && "y".equals(lticreate.toLowerCase()) )
 			{
 				userId = dataProvider.createUser(connexion, username, email);
+				int uid = Integer.parseInt(userId);
+				String famName = (String)payload.get(BasicLTIConstants.LIS_PERSON_NAME_FAMILY);
+				String gibName = (String)payload.get(BasicLTIConstants.LIS_PERSON_NAME_GIVEN);
+				dataProvider.putInfUserInternal(connexion, uid, uid, gibName, famName, email);
 				outTrace.append("\nCreate User (self) results: " + userId);
 			}
 			else
