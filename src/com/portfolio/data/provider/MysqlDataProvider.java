@@ -15351,6 +15351,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
 		String result = "";
+		StringBuilder data = new StringBuilder(256);
 
 		try
 		{
@@ -15494,31 +15495,30 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					st.setString(1, "%"+semtag+"%");
 					res3 = st.executeQuery();
 
-					result += "<nodes>";
+					data.append("<nodes>");
 					while( res3.next() )
 					{
-						result += "<node ";
-						result += DomUtils.getXmlAttributeOutput("id", res3.getString("node_uuid"));
-						result += ">";
+						data.append("<node id='").append(res3.getString("node_uuid"));
+						data.append("'>");
 						
-						result += "<"+res3.getString("asm_type")+" id='"+res3.getString("node_uuid")+"'>";
-						result += "<metadata "+res3.getString("metadata")+"/>";
-						result += "<metadata-epm "+res3.getString("metadata_epm")+"/>";
-						result += "<metadata-wad "+res3.getString("metadata_wad")+"/>";
+						data.append("<").append(res3.getString("asm_type")).append(" id='").append(res3.getString("node_uuid")).append("'>");
+						data.append("<metadata ").append(res3.getString("metadata")).append("/>");
+						data.append("<metadata-epm ").append(res3.getString("metadata_epm")).append("/>");
+						data.append("<metadata-wad ").append(res3.getString("metadata_wad")).append("/>");
 						
-						result += "<asmResource id='"+res3.getString("node_uuid")+"' contextid='"+res3.getString("node_uuid")+"' xsi_type='"+res3.getString("xsi_type_res")+"'>";
-						result += res3.getString("res_content");
-						result += "</asmResource>";
+						data.append("<asmResource id='").append(res3.getString("node_uuid")).append("' contextid='").append(res3.getString("node_uuid")).append("' xsi_type='").append(res3.getString("xsi_type_res")).append("'>");
+						data.append(res3.getString("res_content"));
+						data.append("</asmResource>");
 
-						result += "<asmResource id='"+res3.getString("node_uuid")+"' contextid='"+res3.getString("node_uuid")+"' xsi_type='nodeRes'>";
-						result += res3.getString("res_res_content");
-						result += "</asmResource>";
+						data.append("<asmResource id='").append(res3.getString("node_uuid")).append("' contextid='").append(res3.getString("node_uuid")).append("' xsi_type='nodeRes'>");
+						data.append(res3.getString("res_res_content"));
+						data.append("</asmResource>");
 
-						result += "<asmResource id='"+res3.getString("node_uuid")+"' contextid='"+res3.getString("node_uuid")+"' xsi_type='context'>";
-						result += res3.getString("res_context_content");
-						result += "</asmResource>";
+						data.append("<asmResource id='").append(res3.getString("node_uuid")).append("' contextid='").append(res3.getString("node_uuid")).append("' xsi_type='context'>");
+						data.append(res3.getString("res_context_content"));
+						data.append("</asmResource>");
 
-						result += "</"+res3.getString("asm_type")+">";
+						data.append("</").append(res3.getString("asm_type")).append(">");
 
 						/*
 						result += "<node ";
@@ -15533,9 +15533,9 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 							result += getRessource(c, res3.getString("node_uuid"), userId, groupId, "nonContext");
 						}
 						//*/
-						result += "</node>";
+						data.append("</node>");
 					}
-					result += "</nodes>";
+					data.append("</nodes>");
 				}
 				catch(Exception ex)
 				{
@@ -15543,7 +15543,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 					return null;
 				}
 
-				return result;
+				return data.toString();
 			}
 			else
 			{
@@ -15568,32 +15568,31 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						return null;
 					}
 
-					result += "<nodes>";
+					data.append("<nodes>");
+//					result += "<nodes>";
 
 					while(res1.next())
 					{
-						result += "<node ";
-						result += DomUtils.getXmlAttributeOutput("id", res1.getString("node_uuid"));
-						result += ">";
+						data.append("<node id='").append(res1.getString("node_uuid")).append("'>");
 						
-						result += "<"+res1.getString("asm_type")+" id='"+res1.getString("node_uuid")+"'>";
-						result += "<metadata "+res1.getString("metadata")+"/>";
-						result += "<metadata-epm "+res1.getString("metadata_epm")+"/>";
-						result += "<metadata-wad "+res1.getString("metadata_wad")+"/>";
+						data.append("<").append(res1.getString("asm_type")).append(" id='").append(res1.getString("node_uuid")).append("'>");
+						data.append("<metadata ").append(res1.getString("metadata")).append("/>");
+						data.append("<metadata-epm ").append(res1.getString("metadata_epm")).append("/>");
+						data.append("<metadata-wad ").append(res1.getString("metadata_wad")).append("/>");
 						
-						result += "<asmResource id='"+res1.getString("node_uuid")+"' contextid='"+res1.getString("node_uuid")+"' xsi_type='"+res1.getString("xsi_type_res")+"'>";
-						result += res1.getString("res_content");
-						result += "</asmResource>";
+						data.append("<asmResource id='").append(res1.getString("node_uuid")).append("' contextid='").append(res1.getString("node_uuid")).append("' xsi_type='").append(res1.getString("xsi_type_res")).append("'>");
+						data.append(res1.getString("res_content"));
+						data.append("</asmResource>");
 
-						result += "<asmResource id='"+res1.getString("node_uuid")+"' contextid='"+res1.getString("node_uuid")+"' xsi_type='nodeRes'>";
-						result += res1.getString("res_res_content");
-						result += "</asmResource>";
+						data.append("<asmResource id='").append(res1.getString("node_uuid")).append("' contextid='").append(res1.getString("node_uuid")).append("' xsi_type='nodeRes'>");
+						data.append(res1.getString("res_res_content"));
+						data.append("</asmResource>");
 
-						result += "<asmResource id='"+res1.getString("node_uuid")+"' contextid='"+res1.getString("node_uuid")+"' xsi_type='context'>";
-						result += res1.getString("res_context_content");
-						result += "</asmResource>";
+						data.append("<asmResource id='").append(res1.getString("node_uuid")).append("' contextid='").append(res1.getString("node_uuid")).append("' xsi_type='context'>");
+						data.append(res1.getString("res_context_content"));
+						data.append("</asmResource>");
 
-						result += "</"+res1.getString("asm_type")+">";
+						data.append("</").append(res1.getString("asm_type")).append(">");
 
 						/*
 						if (res1.getString("asm_type").equalsIgnoreCase("asmContext"))
@@ -15605,9 +15604,9 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 							result += getRessource(c, res1.getString("node_uuid"), userId, groupId, "nonContext");
 						}
 						//*/
-						result += "</node>";
+						data.append("</node>");
 					}
-					result += "</nodes>";
+					data.append("</nodes>");
 				}
 			}
 		}
@@ -15637,7 +15636,7 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			}
 		}
 
-		return result;
+		return data.toString();
 	}
 
 	@Override
