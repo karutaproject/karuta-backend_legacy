@@ -316,7 +316,7 @@ public class LTIServlet extends HttpServlet {
 			}
 			//*/
 
-			String userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+			String userName = ConfigUtils.get("lti_userid");
 			if( userName == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
 				userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
 			session.setAttribute("uid", Integer.parseInt(userId));
