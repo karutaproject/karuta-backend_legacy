@@ -209,6 +209,8 @@ public class LTIServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		request.setCharacterEncoding("UTF-8");
+		
 		StringBuffer outTrace = new StringBuffer();
 		String logFName = null;
 		Connection connexion = null;			// hors du try pour fermer dans finally
