@@ -255,10 +255,25 @@ public class LTIServlet extends HttpServlet {
 			if( !"0".equals(userId) ) // FIXME: Need more checking and/or change uid String to int
 			{
 				session.setAttribute("uid", Integer.parseInt(userId));
-				String userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
-				if( userName == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
+		    final String useemail = ConfigUtils.get("lti_email_as_username");
+				String userName="";
+				if( useemail != null && "y".equals(useemail) )
+				{
 					userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
+				}
+				else
+				{
+					final String ltiuserName = ConfigUtils.get("lti_userid");
+					if( ltiuserName != null && !"".equals(ltiuserName) )
+						userName = (String)payload.get(ltiuserName);
+					else
+						userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+				}
+				
+				session.setAttribute("uid", Integer.parseInt(userId));
 				session.setAttribute("user", userName);
+				session.setAttribute("username", userName);
+				session.setAttribute("useridentifier", userName);
 			}
 			else
 			{
@@ -273,9 +288,9 @@ public class LTIServlet extends HttpServlet {
 			String ltiRole = (String)payload.get(BasicLTIConstants.ROLES);
 			String contextRole = (String)payload.get("ext_sakai_role");
 			String inputRole = contextRole == null ? ltiRole : contextRole;
-			outTrace.append("\nLTI Role: " + ltiRole);
-			outTrace.append("\nContext Role: " + contextRole);
-			outTrace.append("\nInput Role: " + inputRole);
+//			outTrace.append("\nLTI Role: " + ltiRole);
+//			outTrace.append("\nContext Role: " + contextRole);
+//			outTrace.append("\nInput Role: " + inputRole);
 //			String siteGroupId = getOrCreateGroup(connexion, contextLabel, "topUser", outTrace);
 
 			StringBuffer siteGroup = new StringBuffer();
@@ -318,14 +333,14 @@ public class LTIServlet extends HttpServlet {
 			}
 			//*/
 
-			String userName = ConfigUtils.get("lti_userid");
-			if( userName == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
-				userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
-			session.setAttribute("uid", Integer.parseInt(userId));
-			session.setAttribute("username", userName);
+//			String userName = ConfigUtils.get("lti_userid");
+//			if( userName == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
+//				userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
+//			session.setAttribute("uid", Integer.parseInt(userId));
+//			session.setAttribute("username", userName);
 //			session.setAttribute("userRole", wadRole);
 //			session.setAttribute("gid", Integer.parseInt(siteRoleGroupId));
-			session.setAttribute("useridentifier", userName);
+//			session.setAttribute("useridentifier", userName);
 
 			String link = processEncrypted(request, payload);
 
@@ -427,7 +442,15 @@ public class LTIServlet extends HttpServlet {
 		}
 		else
 		{
-			username = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+			final String ltiuserName = ConfigUtils.get("lti_userid");
+			if( ltiuserName != null && !"".equals(ltiuserName) )
+			{
+				username = (String)payload.get(ltiuserName);
+			}
+			else
+			{
+				username = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+			}
 		}
 		
 		userId = dataProvider.getUserId( connexion, username, email );
