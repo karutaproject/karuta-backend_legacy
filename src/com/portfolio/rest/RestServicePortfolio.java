@@ -936,6 +936,8 @@ public class RestServicePortfolio
 
 		/// Temp file in temp directory
 		File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+		if( !tempDir.isDirectory() )
+			tempDir.mkdirs();
 		File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
 
 		FileOutputStream fos = new FileOutputStream(tempZip);
