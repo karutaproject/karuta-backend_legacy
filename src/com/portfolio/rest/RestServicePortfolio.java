@@ -2154,6 +2154,8 @@ public class RestServicePortfolio
 			String timeFormat = dt.format(time);
 
 			File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+			if( !tempDir.isDirectory() )
+				tempDir.mkdirs();
 			File bigZip = File.createTempFile("project_"+timeFormat, ".zip", tempDir);
 			
 			// Add content to it
