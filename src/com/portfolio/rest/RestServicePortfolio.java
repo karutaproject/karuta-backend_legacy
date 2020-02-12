@@ -5261,23 +5261,32 @@ public class RestServicePortfolio
 	{
 		HttpSession session = httpServletRequest.getSession(false);
 //	String backend = sc.getServletContext().getContextPath();
-	Integer fromshibe = (Integer) session.getAttribute("fromshibe");
-	if( session != null )
-		session.invalidate();
-	
-	String logoutredir = null;
-	if( fromshibe != null && fromshibe == 1 )
-	{
-		//// Redirect to shibe logout
-		String redir = ConfigUtils.get("shib_logout");
-		logoutredir = String.format("/Shibboleth.sso/Logout?return=%s", redir);
-//		return Response.status(302).header("Location", logoutredir).build();
-	}
-	else
-	{
-		// Just redirect to base UI location
-		logoutredir  = ConfigUtils.get("baseui_redirect_location");
-	}
+		String logoutredir = ConfigUtils.get("shib_logout");
+		if( session == null )
+		{
+			// If value is set, this redirection takes priority
+			if( logoutredir != null && !"".equals(logoutredir) )
+			{
+				return Response.status(301).header("Location", logoutredir).build();
+			}
+		}
+		Integer fromshibe = (Integer) session.getAttribute("fromshibe");
+		if( session != null )
+			session.invalidate();
+		
+		if( fromshibe != null && fromshibe == 1 )
+		{
+			//// Redirect to shibe logout
+			//String redir = ConfigUtils.get("shib_logout");
+			// Default URL
+			logoutredir = "/Shibboleth.sso/Logout";
+	//		return Response.status(302).header("Location", logoutredir).build();
+		}
+		else
+		{
+			// Just redirect to base UI location
+			logoutredir  = ConfigUtils.get("baseui_redirect_location");
+		}
 		
 		return Response.status(301).header("Location", logoutredir).build();
 	}
