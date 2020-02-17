@@ -162,6 +162,10 @@ public class ExportHTMLService  extends HttpServlet {
 				String servername = request.getScheme()+"://"+request.getServerName()+":"+request.getServerPort()+"/";
 				link = servername+link.replace("../../../", "");	// Main CSS files
 			}
+			else if( link.contains("../../") )	// Usual location
+			{
+				link = appliname+link.replace("../../", "");	// other css
+			}
 			else
 			{
 				link = appliname+link.replace("../", "application/");	// specific CSS files (usual location)
