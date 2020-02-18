@@ -11527,6 +11527,9 @@ public class MysqlDataProvider implements DataProvider {
 							if(children2.item(y).getNodeName().equals("other")){	other = DomUtils.getInnerXml(children2.item(y));	}
 						}
 
+						if( username != null && username.length() < 2 ) continue;
+						if( password!= null && password.length() < 2 ) continue;
+						
 						//On ajoute l'utilisateur dans la base de donnees
 						sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer, other) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)),?,?,?)";
 						stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
