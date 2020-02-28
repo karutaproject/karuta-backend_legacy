@@ -5207,13 +5207,18 @@ public class RestServicePortfolio
 			//session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
 			c = SqlUtils.getConnection(servContext);
 			userId =  dataProvider.getUserId(c, sv.getUser(), null);
-			if(userId!=null)
+			if(userId!=null)	// User exist
 			{
 				session.setAttribute("user", sv.getUser());
 				session.setAttribute("uid",Integer.parseInt(userId));
 			}
 			else
 			{
+				String casCreate = ConfigUtils.get("casCreateAccount");
+				if( casCreate != null && "y".equals(casCreate.toLowerCase()) )
+				{
+					dataProvider.createUser(c, sv.getUser(), null );
+				}
 				return Response.status(403).entity("Login "+sv.getUser()+" not found or bad CAS auth (bad ticket or bad url service : "+completeURL+") : "+sv.getErrorMessage()).build();
 			}
 
