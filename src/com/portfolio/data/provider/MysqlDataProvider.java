@@ -16241,18 +16241,20 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 		{
 			Date date = new Date();
 			String asDesigner = ConfigUtils.get("createAsDesigner");
-			String isDesigner = "";
+			int isDesigner = 0;
+			String other = "";
 			if( asDesigner != null && "y".equals(asDesigner.toLowerCase()) )
 			{
-				isDesigner = ", is_designer=1";
+				isDesigner = 1;
+				other = "xlimited";
 			}
 
 			
 			
 			/// Credential checking use hashing, we'll never reach this.
-			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=SUBSTR(PASSWORD(?), 26)";
+			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', is_designer=?, other=?, password=SUBSTR(PASSWORD(?), 26)";
 			if (dbserveur.equals("oracle")){
-				sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', password=?";
+				sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', is_designer=?, other=?, password=?";
 			}
 			sql += isDesigner;
 			st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -16265,7 +16267,9 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 				st.setString(3, email);
 			else
 				st.setString(3, "");
-			st.setString(4, date.toString()+"somesalt");
+			st.setInt(4, isDesigner);
+			st.setString(5, other);
+			st.setString(6, date.toString()+"somesalt");
 			st.executeUpdate();
 			res = st.getGeneratedKeys();
 			if( res.next() )
