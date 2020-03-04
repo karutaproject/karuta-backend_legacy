@@ -114,7 +114,7 @@ POST: Instancie un noeud et évalue les droits des attributs
 GET: récupère des noeuds selon code et tag
 
 ### /nodes/node/{parent-id}
-PSOT: Ajoute un noeud
+POST: Ajoute un noeud
 > Parameters:
 > None
 >
@@ -134,9 +134,9 @@ PSOT: Ajoute un noeud
     </asmResource>
 </asmContext> 
 
-< node id='sdkjjd-sdkso kkqokas235rkd83kjd-sje8' />
+<node id='sdkjjd-sdkso kkqokas235rkd83kjd-sje8' />
 
-DELETE: Eface le noeud et enfants
+DELETE: Efface le noeud et enfants
 > Parameters:
 > None
 >
