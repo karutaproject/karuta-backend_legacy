@@ -16,4 +16,4 @@ of the REST calls
 
 ## Database
 Simplified view of the database
-![Simplified database view](./DB.png "Simplified database view")
+![Simplified database view](./db.png "Simplified database view")
