@@ -83,11 +83,14 @@ public class ShibeServlet extends HttpServlet {
 				uid = Integer.parseInt(userId);
 				
 				/// Update values
-				String fn = (String) request.getAttribute(ConfigUtils.get("shib_firstname"));
-				String ln = (String) request.getAttribute(ConfigUtils.get("shib_lastname"));
+				String fn = ConfigUtils.get("shib_firstname");
+				String ln = ConfigUtils.get("shib_lastname");
 				String mail = (String) request.getAttribute(ConfigUtils.get("shib_email"));
-				if( fn != null || ln != null )
+				if( (fn != null && !"".equals(fn) ) && (ln != null && !"".equals(ln) ) )
 				{
+					fn = (String) request.getAttribute(fn);
+					ln = (String) request.getAttribute(ln);
+					
 					/// Regular function need old password to update
 					/// But external account generate password unreachable with regular method
 					dataProvider.putInfUserInternal(connexion, uid, uid, fn, ln, mail);
