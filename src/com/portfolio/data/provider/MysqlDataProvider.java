@@ -16256,7 +16256,6 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 			if (dbserveur.equals("oracle")){
 				sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', is_designer=?, other=?, password=?";
 			}
-			sql += isDesigner;
 			st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			if (dbserveur.equals("oracle")){
 				st = c.prepareStatement(sql, new String[]{"userid"});
