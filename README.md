@@ -7,6 +7,7 @@ Karuta is a very flexible environment to design, test and deploy simple and soph
 -------
 #### Download Karuta
 To download executable files go to [ePortfolium website](http://www.eportfolium.com/site/karuta_download_en.htm)
+
 -------
 #### Installing Karuta Source Code
 Tomcat 7 is recommended.
