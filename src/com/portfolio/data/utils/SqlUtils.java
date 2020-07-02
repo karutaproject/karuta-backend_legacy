@@ -24,8 +24,8 @@ import javax.naming.NamingException;
 import javax.servlet.ServletContext;
 import javax.sql.DataSource;
 
-import org.apache.commons.dbcp.cpdsadapter.DriverAdapterCPDS;
-import org.apache.commons.dbcp.datasources.SharedPoolDataSource;
+import org.apache.commons.dbcp2.cpdsadapter.DriverAdapterCPDS;
+import org.apache.commons.dbcp2.datasources.SharedPoolDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,8 +95,8 @@ public class SqlUtils
 				/// TODO: Complete it with other parameters, also, benchmark
 				/// Configuring other stuff
 				tds.setValidationQuery("SELECT 1 FROM DUAL");
-				tds.setTestOnBorrow(true);
-				tds.setTestWhileIdle(true);
+				tds.setDefaultTestOnBorrow(true);
+				tds.setDefaultTestWhileIdle(true);
 				tds.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 				
 				String maxwait = ConfigUtils.get("DB.MaxWait");
@@ -113,11 +113,11 @@ public class SqlUtils
 				if( waiteviction == null ) waiteviction = "60000";
 				if( numtesteviction == null ) numtesteviction = "10";
 				
-				tds.setMaxWait(Integer.decode(maxwait));
-				tds.setMaxActive(Integer.decode(maxtotal));
-				tds.setMaxIdle(Integer.decode(maxidle));
-				tds.setTimeBetweenEvictionRunsMillis(Integer.decode(waiteviction));
-				tds.setNumTestsPerEvictionRun(Integer.decode(numtesteviction));
+				tds.setDefaultMaxWaitMillis(Integer.decode(maxwait));
+				tds.setMaxTotal(Integer.decode(maxtotal));
+				tds.setDefaultMaxIdle(Integer.decode(maxidle));
+				tds.setDefaultTimeBetweenEvictionRunsMillis(Integer.decode(waiteviction));
+				tds.setDefaultNumTestsPerEvictionRun(Integer.decode(numtesteviction));
 				
 				ds = tds;
 			}
