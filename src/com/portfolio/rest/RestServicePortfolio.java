@@ -103,6 +103,7 @@ import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.data.utils.javaUtils;
 import com.portfolio.eventbus.KEvent;
 import com.portfolio.eventbus.KEventbus;
+import com.portfolio.security.ConnexionLdap;
 import com.portfolio.security.Credential;
 import com.portfolio.security.NodeRight;
 import com.portfolio.socialnetwork.Elgg;
@@ -3006,7 +3007,7 @@ public class RestServicePortfolio
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		Date time = new Date();
-		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
 		String timeFormat = dt.format(time);
 		String logformat = "";
 		if( "false".equals(info) )
@@ -4932,6 +4933,10 @@ public class RestServicePortfolio
 				login = templogin[0];
 			}
 
+			/// Test LDAP
+//			ConnexionLdap cldap = new ConnexionLdap();
+//			cldap.getLdapConnexion();
+
 			int dummy = 0;
 			c = SqlUtils.getConnection(servContext);
 			String[] resultCredential = dataProvider.postCredentialFromXml(c, dummy, login, password, substit);
@@ -5128,6 +5133,7 @@ public class RestServicePortfolio
 	@Path("/credential/login/cas")
 	public Response postCredentialFromCas( String content, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		System.out.println("RECEIVED POST CAS: tok: "+token+" tix: "+ticket+" red: "+redir);
 		return getCredentialFromCas(user, token, groupId, ticket, redir, sc, httpServletRequest);
 	}
 	
@@ -5172,7 +5178,6 @@ public class RestServicePortfolio
 			requestURL = httpServletRequest.getRequestURL();
 			if( proto == null )
 			{
-				System.out.println("cas usuel");
 				if (redir != null) {
 					requestURL.append("?redir=").append(redir);
 				}
@@ -5187,7 +5192,7 @@ public class RestServicePortfolio
 				completeURL = requestURL.replace(0, requestURL.indexOf(":"), proto).toString();
 			}
 			/// completeURL should be the same provided in the "service" parameter
-			// System.out.println(String.format("Service: %s\n", completeURL));
+//			System.out.println(String.format("Service: %s\n", completeURL));
 
 			sv.setService(completeURL);
 			sv.setServiceTicket(ticket);
@@ -5200,6 +5205,12 @@ public class RestServicePortfolio
 				System.out.println(String.format("CAS response: %s\n", xmlResponse));
 				return Response.status(Status.FORBIDDEN).entity("CAS error").build();
 			}
+			/*
+			else
+			{
+				System.out.println("SHOULD BE FINE: "+xmlResponse);
+			}
+			//*/
 			
 
 			//<cas:user>vassoilm</cas:user>
@@ -5211,15 +5222,46 @@ public class RestServicePortfolio
 			{
 				session.setAttribute("user", sv.getUser());
 				session.setAttribute("uid",Integer.parseInt(userId));
+				
+				String ldapUrl = ConfigUtils.get("ldap.provider.url");
+				String ldapParam = ConfigUtils.get("ldap.parameter");
+				if( ldapUrl != null )
+				{
+					ConnexionLdap cldap = new ConnexionLdap();
+					String[] ldapvalues = cldap.getLdapValue(sv.getUser());
+//					System.out.println("LDAP CONNECTION OK: "+ldapvalues.toString());
+				}
 			}
 			else
 			{
 				String casCreate = ConfigUtils.get("casCreateAccount");
 				if( casCreate != null && "y".equals(casCreate.toLowerCase()) )
 				{
+					String ldapUrl = ConfigUtils.get("ldap.provider.url");
+					if( ldapUrl != null )
+					{
+						ConnexionLdap cldap = new ConnexionLdap();
+						String ldapParam = ConfigUtils.get("ldap.parameter");
+						String[] ldapvalues = cldap.getLdapValue(sv.getUser());
+//						for( int i=0; i<ldapvalues.length; i++ )
+//							System.out.println("LDAP CONNECTION OK: "+ldapvalues[i]);
+						if( ldapParam == null || ldapvalues[0].startsWith("7") )
+						{
+							userId = dataProvider.createUser(c, sv.getUser(), null );
+							int uid = Integer.parseInt(userId);
+							dataProvider.putInfUserInternal(c, uid, uid, ldapvalues[1], ldapvalues[2], ldapvalues[3]);
+							System.out.println("USERID: "+sv.getUser()+" "+userId);
+							session.setAttribute("user", sv.getUser());
+							session.setAttribute("uid",Integer.parseInt(userId));
+						}
+					}
+					else
+					{
 						userId = dataProvider.createUser(c, sv.getUser(), null );
+						System.out.println("USERID: "+sv.getUser()+" "+userId);
 						session.setAttribute("user", sv.getUser());
 						session.setAttribute("uid",Integer.parseInt(userId));
+					}
 				}
 				else
 					return Response.status(403).entity("Login "+sv.getUser()+" not found or bad CAS auth (bad ticket or bad url service : "+completeURL+") : "+sv.getErrorMessage()).build();
