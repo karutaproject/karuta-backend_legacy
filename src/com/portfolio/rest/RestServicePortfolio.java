@@ -1053,7 +1053,7 @@ public class RestServicePortfolio
 	 *	return:
 	 *	see 'content' of "GET /rest/api/portfolios/portfolio/{portfolio-id}"
 	 **/
-	@Path("/portfolios/portfolio/code/{code}")
+	@Path("/portfolios/portfolio/code/{code : .+}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Object getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources )
