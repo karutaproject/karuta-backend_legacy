@@ -397,7 +397,7 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
-	public ResultSet getMysqlUsers(Connection c, Integer userId, String username, String firstname, String lastname)
+	public ResultSet getMysqlUsers(Connection c, Integer userId, String username, String firstname, String lastname, String email)
 	{
 		PreparedStatement st;
 		String sql;
@@ -412,6 +412,7 @@ public class MysqlDataProvider implements DataProvider {
 			if( username != null ) count++;
 			if( firstname != null ) count++;
 			if( lastname != null ) count++;
+			if( email != null ) count++;
 			if( count >0 )
 			{
 				sql += "WHERE ";
@@ -430,6 +431,12 @@ public class MysqlDataProvider implements DataProvider {
 				if( lastname != null )
 				{
 					sql += "display_lastname LIKE ? ";
+					if( count > 1 )
+						sql += "AND ";
+				}
+				if( email != null )
+				{
+					sql += "email LIKE ? ";
 				}
 			}
 			sql += "ORDER BY c.userid";
@@ -449,6 +456,11 @@ public class MysqlDataProvider implements DataProvider {
 			if( lastname != null )
 			{
 				st.setString(start, "%"+lastname+"%");
+				start++;
+			}
+			if( email != null )
+			{
+				st.setString(start, "%"+email+"%");
 				start++;
 			}
 
@@ -9615,9 +9627,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getUsers(Connection c, int userId, String username, String firstname, String lastname) throws Exception
+	public Object getUsers(Connection c, int userId, String username, String firstname, String lastname, String email) throws Exception
 	{
-		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname);
+		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname, email);
 
 		String result = "<users>";
 		int curUser = 0;
@@ -10823,9 +10835,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getListUsers(Connection c, int userId, String username, String firstname, String lastname)
+	public String getListUsers(Connection c, int userId, String username, String firstname, String lastname, String email)
 	{
-		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname);
+		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname, email);
 
 		StringBuilder result = new StringBuilder();
 		result.append("<users>");
