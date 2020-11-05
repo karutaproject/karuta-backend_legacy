@@ -151,12 +151,12 @@
       <version>2.2.4</version>
       <scope>compile</scope>
     </dependency>
-    <!--
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
-      <version>4.3.4</version>
-    </dependency>
+      <version>4.5.12</version>
+		</dependency>
+    <!--
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpcore</artifactId>
