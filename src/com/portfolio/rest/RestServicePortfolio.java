@@ -548,6 +548,8 @@ public class RestServicePortfolio
 			if(credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId))
 			{
 				queryuser = dataProvider.putInfUser(c, ui.userId, userid, xmlInfUser);
+				if( queryuser == null )
+					throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
 			}
 			else if(ui.userId == userid)	/// Changing self
 			{

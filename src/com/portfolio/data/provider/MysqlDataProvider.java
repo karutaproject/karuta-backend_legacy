@@ -11276,7 +11276,7 @@ public class MysqlDataProvider implements DataProvider {
 					break;
 					
 				case 2:	/// admin/designer account without password given
-					if( is_designer != null )
+					if( is_designer != null && userId == userid2 )
 					{
 						int is_designerInt = 0;
 						if( "1".equals(is_designer) )
@@ -11289,6 +11289,8 @@ public class MysqlDataProvider implements DataProvider {
 						st.setInt(2, userId);	// Change for self only
 						st.executeUpdate();
 					}
+					else
+						return null;
 					break;
 					
 				default:
