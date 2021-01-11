@@ -2857,8 +2857,37 @@ public class MysqlDataProvider implements DataProvider {
 			res.close();
 			st.close();
 
-			c.setAutoCommit(false);
+			/// Clear previous rights and groups
+			// Rights on node
+			String clear = "DELETE FROM group_rights WHERE grid IN (SELECT grid FROM group_right_info WHERE portfolio_id=uuid2bin(?))";
+			PreparedStatement stclear = c.prepareStatement(clear);
+			stclear.setString(1, portfolioUuid);
+			stclear.execute();
+			stclear.close();
 
+			/// Users in group
+			clear = "DELETE FROM group_user WHERE gid IN (SELECT gid FROM group_info gi, group_right_info gri WHERE portfolio_id=uuid2bin(?) AND gi.grid=gri.grid)";
+			stclear = c.prepareStatement(clear);
+			stclear.setString(1, portfolioUuid);
+			stclear.execute();
+			stclear.close();
+			
+			/// User groups
+			clear = "DELETE FROM group_info WHERE grid IN (SELECT grid FROM group_right_info WHERE portfolio_id=uuid2bin(?))";
+			stclear = c.prepareStatement(clear);
+			stclear.setString(1, portfolioUuid);
+			stclear.execute();
+			stclear.close();
+
+			/// Rights group
+			clear = "DELETE FROM group_right_info WHERE portfolio_id=uuid2bin(?)";
+			stclear = c.prepareStatement(clear);
+			stclear.setString(1, portfolioUuid);
+			stclear.execute();
+			stclear.close();
+
+			c.setAutoCommit(false);
+			
 			/// On insere les donnees pre-compile
 			Iterator<String> entries = resolve.groups.keySet().iterator();
 
