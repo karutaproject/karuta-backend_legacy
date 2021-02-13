@@ -5,7 +5,7 @@ SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 
 SET @user := 'karuta';
 SET @db := 'karuta-backend';
-SET @pass := 'karuta-password';
+SET @pass := 'karuta_password';
 
 SET @sql = CONCAT("CREATE USER '",@user,"'@localhost IDENTIFIED BY '",@pass,"'");
 PREPARE stmt FROM @sql;
