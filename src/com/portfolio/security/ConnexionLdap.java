@@ -15,6 +15,9 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
+import javax.naming.ldap.Control;
+import javax.naming.ldap.InitialLdapContext;
+import javax.naming.ldap.LdapContext;
 
 import com.portfolio.data.utils.ConfigUtils;
 
@@ -55,30 +58,44 @@ public class ConnexionLdap {
 		Attributes matchAttrs = new BasicAttributes(true);
 
 		// Recherche des utilisateurs
+		LdapContext lctx = new InitialLdapContext();
 
 		// recuperation des propriétés
 		Hashtable<String, Object> env = new Hashtable<String, Object>();
 		env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
 		env.put(Context.PROVIDER_URL, ConfigUtils.get("ldap.provider.url"));
 		
+		Control[] control = new Control[] { null };
+		LdapContext ldapContext = new InitialLdapContext(env, control);
+		
 		String username = ConfigUtils.get("ldap.context.name");
 		String password = ConfigUtils.get("ldap.context.credential");
 		env.put(Context.SECURITY_AUTHENTICATION, "simple");
 		env.put(Context.SECURITY_PRINCIPAL, username);
 		env.put(Context.SECURITY_CREDENTIALS, password);
-		env.put(Context.SECURITY_PROTOCOL,"ssl");
+		
+		String checkSSL = ConfigUtils.get("ldap.provider.useSSL");
+		if( checkSSL != null && "Y".equals(checkSSL.toUpperCase()) )
+			env.put(Context.SECURITY_PROTOCOL,"ssl");
 //		env.put("java.naming.ldap.factory.socket", "javax.net.ssl.SSLSocketFactory");
 
-//		env.put("com.sun.jndi.ldap.trace.ber", System.err);
-		
-		DirContext ctx = new InitialDirContext(env); // Connexion !
-		String contextName = ConfigUtils.get("ldap.baseDn");
-		NamingEnumeration answer = ctx.search(contextName, matchAttrs);
+		LdapContext ctx = (LdapContext) new InitialDirContext(env); // Connexion !
 
+		/// Limit return values
+		String attribFirstN = ConfigUtils.get("ldap.user.firstname");
+		String attribLastN = ConfigUtils.get("ldap.user.lastname");
+		String attribMail = ConfigUtils.get("ldap.user.mail");
+		String returnAttrib[] = {attribFirstN, attribLastN, attribMail};
+		
 		SearchControls controle = new SearchControls();
+		controle.setReturningAttributes(returnAttrib);
 		controle.setSearchScope(SearchControls.SUBTREE_SCOPE);
-		String critere = "uid=" + usern;
+		
+		String checkParam = ConfigUtils.get("ldap.parameter");
+		String critere = String.format("(%s=%s)", checkParam, usern);
+		
 		DirContext ictx = new InitialDirContext(env);
+		String contextName = ConfigUtils.get("ldap.baseDn");
 		NamingEnumeration<SearchResult> e = ictx.search(contextName, critere, controle);
 		String retval = null;
 		String fname = null;
@@ -88,25 +105,15 @@ public class ConnexionLdap {
 			SearchResult r = e.next();
 
 			Attributes attribs = r.getAttributes();
-			String checkParam = ConfigUtils.get("ldap.parameter");
-			if(checkParam != null)
-			{
-				Attribute attobj = attribs.get(checkParam);
-				if( attobj != null ) retval = attobj.get().toString();
-				else retval = "";
-			}
-			else
-				retval = "";
-			
-			Attribute fobj = attribs.get(ConfigUtils.get("ldap.user.firstname"));
+			Attribute fobj = attribs.get(attribFirstN);
 			if( fobj != null ) fname = fobj.get().toString();
 			else fname = "";
 			
-			Attribute lobj = attribs.get(ConfigUtils.get("ldap.user.lastname"));
+			Attribute lobj = attribs.get(attribLastN);
 			if( lobj != null ) lname = lobj.get().toString();
 			else lname = "";
 			
-			Attribute mobj = attribs.get(ConfigUtils.get("ldap.user.mail"));
+			Attribute mobj = attribs.get(attribMail);
 			if( mobj != null ) mail = mobj.get().toString();
 			else mail = "";
 		}
