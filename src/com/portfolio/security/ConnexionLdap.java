@@ -15,9 +15,6 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
-import javax.naming.ldap.Control;
-import javax.naming.ldap.InitialLdapContext;
-import javax.naming.ldap.LdapContext;
 
 import com.portfolio.data.utils.ConfigUtils;
 
@@ -57,16 +54,10 @@ public class ConnexionLdap {
 
 		Attributes matchAttrs = new BasicAttributes(true);
 
-		// Recherche des utilisateurs
-		LdapContext lctx = new InitialLdapContext();
-
 		// recuperation des propriétés
 		Hashtable<String, Object> env = new Hashtable<String, Object>();
 		env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
 		env.put(Context.PROVIDER_URL, ConfigUtils.get("ldap.provider.url"));
-		
-		Control[] control = new Control[] { null };
-		LdapContext ldapContext = new InitialLdapContext(env, control);
 		
 		String username = ConfigUtils.get("ldap.context.name");
 		String password = ConfigUtils.get("ldap.context.credential");
@@ -78,8 +69,6 @@ public class ConnexionLdap {
 		if( checkSSL != null && "Y".equals(checkSSL.toUpperCase()) )
 			env.put(Context.SECURITY_PROTOCOL,"ssl");
 //		env.put("java.naming.ldap.factory.socket", "javax.net.ssl.SSLSocketFactory");
-
-		LdapContext ctx = (LdapContext) new InitialDirContext(env); // Connexion !
 
 		/// Limit return values
 		String attribFirstN = ConfigUtils.get("ldap.user.firstname");
@@ -117,7 +106,7 @@ public class ConnexionLdap {
 			if( mobj != null ) mail = mobj.get().toString();
 			else mail = "";
 		}
-		ctx.close();// fermeture de la connexion au ldap
+		ictx.close();// fermeture de la connexion au ldap
 		
 		return new String[]{retval, fname, lname, mail};
 	}
