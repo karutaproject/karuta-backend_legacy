@@ -566,7 +566,9 @@ public class MysqlDataProvider implements DataProvider {
 				st.setTimestamp(6, SqlUtils.getCurrentTimeStamp2());
 			}
 
-			return st.executeUpdate();
+			int update = st.executeUpdate();
+			st.close();
+			return update;
 
 		}
 		catch(Exception ex)
@@ -10308,19 +10310,23 @@ public class MysqlDataProvider implements DataProvider {
 
 		javax.servlet.http.HttpSession session = httpServletRequest.getSession(true);
 		String ppath = session.getServletContext().getRealPath("/");
-		String outsideDir =ppath.substring(0,ppath.lastIndexOf(File.separator))+"_files"+File.separator;
-		File outsideDirectoryFile = new File(outsideDir);
-		System.out.println(outsideDir);
+		int lastSlash = ppath.lastIndexOf("/", ppath.length()-2);
+		String baseDirString =ppath.substring(lastSlash+1,ppath.lastIndexOf(File.separator))+"_files"+File.separator;
+		File baseDir = new File(repository, baseDirString);
+		System.out.println(baseDirString);
 		// if the directory does not exist, create it
-		if (!outsideDirectoryFile.exists())
+		if (!baseDir.exists())
 		{
-			outsideDirectoryFile.mkdir();
+			baseDir.mkdirs();
 		}
 
 		//Creation du zip
 		String portfolioUuidPreliminaire = UUID.randomUUID().toString();
-		filename = outsideDir+"xml_"+portfolioUuidPreliminaire+".zip";
-		FileOutputStream outZip = new FileOutputStream(filename);
+		filename = baseDirString+"xml_"+portfolioUuidPreliminaire+".zip";
+		File filezip = new File(baseDir, "xml_"+portfolioUuidPreliminaire+".zip");
+		if( !filezip.exists() )
+			filezip.createNewFile();
+		FileOutputStream outZip = new FileOutputStream(filezip);
 
 		int len;
 
@@ -10332,16 +10338,16 @@ public class MysqlDataProvider implements DataProvider {
 		outZip.close();
 
 		//-- unzip --
-		foldersfiles = unzip(filename,outsideDir+portfolioUuidPreliminaire+File.separator);
+		foldersfiles = unzip(filezip.getAbsolutePath(), baseDir.getAbsolutePath()+File.separator+portfolioUuidPreliminaire+File.separator);
 		// Unzip just the next zip level. I hope there will be no zipped documents...
-		String[] zipFiles = findFiles(outsideDir+portfolioUuidPreliminaire+File.separator, "zip");
+		String[] zipFiles = findFiles(foldersfiles, "zip");
 		for( int i=0; i<zipFiles.length; ++i )
 		{
-			unzip(zipFiles[i], outsideDir+portfolioUuidPreliminaire+File.separator);
+			unzip(zipFiles[i], foldersfiles);
 		}
 		
-		xmlFiles = findFiles(outsideDir+portfolioUuidPreliminaire+File.separator, "xml");
-		allFiles = findFiles(outsideDir+portfolioUuidPreliminaire+File.separator, null);
+		xmlFiles = findFiles(foldersfiles, "xml");
+		allFiles = findFiles(foldersfiles, null);
 
 		////// Lecture du fichier de portfolio
 		StringBuffer outTrace = new StringBuffer();
@@ -10515,10 +10521,17 @@ public class MysqlDataProvider implements DataProvider {
 			}
 		}
 
-		File zipfile = new File(filename);
-		zipfile.delete();
-		File zipdir = new File(outsideDir+portfolioUuidPreliminaire+File.separator);
+		/// Need to delete files before removing folder
+		for( String filename_item : allFiles )
+		{
+			File file = new File(filename_item);
+			file.delete();
+		}
+//		File zipfile = new File(filename);
+		filezip.delete();
+		File zipdir = new File(foldersfiles);
 		zipdir.delete();
+		baseDir.delete();	/// If another import is running, won't delete directory
 
 		return portfolioUuid;
 	}
