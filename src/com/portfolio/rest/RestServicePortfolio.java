@@ -5248,6 +5248,7 @@ public class RestServicePortfolio
 //						for( int i=0; i<ldapvalues.length; i++ )
 //							System.out.println("LDAP CONNECTION OK: "+ldapvalues[i]);
 //						if( ldapParam == null || ldapvalues[0].startsWith("7") )
+						if (ldapvalues[1] != null | ldapvalues[2] != null | ldapvalues[3] != null) //si le filtre ldap a renvoyé des valeurs
 						{
 							userId = dataProvider.createUser(c, sv.getUser(), null );
 							int uid = Integer.parseInt(userId);
@@ -5255,6 +5256,10 @@ public class RestServicePortfolio
 							System.out.println("USERID: "+sv.getUser()+" "+userId);
 							session.setAttribute("user", sv.getUser());
 							session.setAttribute("uid",Integer.parseInt(userId));
+						}
+						else
+						{
+							return Response.status(400).entity("Login "+sv.getUser()+" don't have access to Karuta").build();
 						}
 					}
 					else

@@ -81,7 +81,8 @@ public class ConnexionLdap {
 		controle.setSearchScope(SearchControls.SUBTREE_SCOPE);
 		
 		String checkParam = ConfigUtils.get("ldap.parameter");
-		String critere = String.format("(%s=%s)", checkParam, usern);
+		String critere  = checkParam.replace("%u", usern); //filtre LDAP avec %u = userid (cas)
+		//String critere = String.format("(%s=%s)", checkParam, usern);
 		
 		DirContext ictx = new InitialDirContext(env);
 		String contextName = ConfigUtils.get("ldap.baseDn");
