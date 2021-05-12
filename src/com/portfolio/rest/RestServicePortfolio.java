@@ -4897,6 +4897,12 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public Response  postCredentialFromXml(String xmlCredential, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		String activelogin = ConfigUtils.get("activate_login");
+		if( "N".equals(activelogin) )
+		{
+			return Response.status(Status.NOT_FOUND).build();
+		}
+		
 		HttpSession session = httpServletRequest.getSession(true);
 		initService( httpServletRequest );
 		KEvent event = new KEvent();
