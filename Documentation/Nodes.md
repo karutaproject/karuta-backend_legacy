@@ -102,16 +102,13 @@ PUT: Replace resource
 ### /nodes/node/[copy|import]/{dest-id}?srcetag={semantictag}&srcecode={code}
 POST: Instancie un noeud et évalue les droits des attributs
 > Parameters:
->
->{dest-id} = Parent uuid / identifiant du noeud parent dans lequel coller l'élément
->
->{semantictag} = Semantic tag of the imported/copied node /tag sémantique de l'élément à copier
->
->{code} = Portfolio code of the source node / code du portfolio dans lequel chercher le tag sémantique
+> - {dest-id} = identifiant du noeud parent dans lequel coller l'élément
+> - {semantictag} = tag sémantique de l'élément à copier
+> - {code} = code du portfolio dans lequel chercher le tag sémantique
 >
 > Return:
->
-> uuid of the new node / identifiant du nouvel élément créé.
+> code du nouvel élément créé.
+
 
 ### /nodes?portfoliocode={code}&semtag={tag}&semtag_parent={parent-tag}&code_parent={parent-code}
 GET: récupère des noeuds selon code et tag
