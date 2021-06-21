@@ -143,14 +143,14 @@ public interface DataProvider {
 	public Object deleteResource(Connection c, String resourceUuid, int userId, int groupId) throws Exception;
 
 	/// Relatif aux utilisateurs
-	public String getListUsers(Connection c, int userId, String username, String firstname, String lastname);
+	public String getListUsers(Connection c, int userId, String username, String firstname, String lastname, String email);
 	public Object getUser(Connection c, int userId) throws Exception;
 	public String getUserID(Connection c, int currentUser, String username);
 	public String getInfUser(Connection c, int userId, int userid2);
 	public Object getUserGroups(Connection c, int userId) throws Exception;
 	public String getUserGroupByPortfolio(Connection c, String portfolioUuid, int userId);
 	// Apparently unused, keep getListUsers
-	public Object getUsers(Connection c, int userId, String username, String firstname, String lastname) throws Exception;
+	public Object getUsers(Connection c, int userId, String username, String firstname, String lastname, String email) throws Exception;
 	public String getUsersByRole(Connection c, int userId, String portfolioUuid, String role) throws SQLException;
 
 	public Object putUser(Connection c, int userId,String oAuthToken,String oAuthSecret) throws Exception;

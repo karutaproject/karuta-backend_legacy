@@ -397,7 +397,7 @@ public class MysqlDataProvider implements DataProvider {
 		return null;
 	}
 
-	public ResultSet getMysqlUsers(Connection c, Integer userId, String username, String firstname, String lastname)
+	public ResultSet getMysqlUsers(Connection c, Integer userId, String username, String firstname, String lastname, String email)
 	{
 		PreparedStatement st;
 		String sql;
@@ -412,6 +412,7 @@ public class MysqlDataProvider implements DataProvider {
 			if( username != null ) count++;
 			if( firstname != null ) count++;
 			if( lastname != null ) count++;
+			if( email != null ) count++;
 			if( count >0 )
 			{
 				sql += "WHERE ";
@@ -430,6 +431,12 @@ public class MysqlDataProvider implements DataProvider {
 				if( lastname != null )
 				{
 					sql += "display_lastname LIKE ? ";
+					if( count > 1 )
+						sql += "AND ";
+				}
+				if( email != null )
+				{
+					sql += "email LIKE ? ";
 				}
 			}
 			sql += "ORDER BY c.userid";
@@ -449,6 +456,11 @@ public class MysqlDataProvider implements DataProvider {
 			if( lastname != null )
 			{
 				st.setString(start, "%"+lastname+"%");
+				start++;
+			}
+			if( email != null )
+			{
+				st.setString(start, "%"+email+"%");
 				start++;
 			}
 
@@ -554,7 +566,9 @@ public class MysqlDataProvider implements DataProvider {
 				st.setTimestamp(6, SqlUtils.getCurrentTimeStamp2());
 			}
 
-			return st.executeUpdate();
+			int update = st.executeUpdate();
+			st.close();
+			return update;
 
 		}
 		catch(Exception ex)
@@ -2845,8 +2859,37 @@ public class MysqlDataProvider implements DataProvider {
 			res.close();
 			st.close();
 
-			c.setAutoCommit(false);
+			/// Clear previous rights and groups
+			// Rights on node
+			String clear = "DELETE FROM group_rights WHERE grid IN (SELECT grid FROM group_right_info WHERE portfolio_id=uuid2bin(?))";
+			PreparedStatement stclear = c.prepareStatement(clear);
+			stclear.setString(1, portfolioUuid);
+			stclear.execute();
+			stclear.close();
 
+			/// Users in group
+			clear = "DELETE FROM group_user WHERE gid IN (SELECT gid FROM group_info gi, group_right_info gri WHERE portfolio_id=uuid2bin(?) AND gi.grid=gri.grid)";
+			stclear = c.prepareStatement(clear);
+			stclear.setString(1, portfolioUuid);
+			stclear.execute();
+			stclear.close();
+			
+			/// User groups
+			clear = "DELETE FROM group_info WHERE grid IN (SELECT grid FROM group_right_info WHERE portfolio_id=uuid2bin(?))";
+			stclear = c.prepareStatement(clear);
+			stclear.setString(1, portfolioUuid);
+			stclear.execute();
+			stclear.close();
+
+			/// Rights group
+			clear = "DELETE FROM group_right_info WHERE portfolio_id=uuid2bin(?)";
+			stclear = c.prepareStatement(clear);
+			stclear.setString(1, portfolioUuid);
+			stclear.execute();
+			stclear.close();
+
+			c.setAutoCommit(false);
+			
 			/// On insere les donnees pre-compile
 			Iterator<String> entries = resolve.groups.keySet().iterator();
 
@@ -9615,9 +9658,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getUsers(Connection c, int userId, String username, String firstname, String lastname) throws Exception
+	public Object getUsers(Connection c, int userId, String username, String firstname, String lastname, String email) throws Exception
 	{
-		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname);
+		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname, email);
 
 		String result = "<users>";
 		int curUser = 0;
@@ -10267,19 +10310,23 @@ public class MysqlDataProvider implements DataProvider {
 
 		javax.servlet.http.HttpSession session = httpServletRequest.getSession(true);
 		String ppath = session.getServletContext().getRealPath("/");
-		String outsideDir =ppath.substring(0,ppath.lastIndexOf(File.separator))+"_files"+File.separator;
-		File outsideDirectoryFile = new File(outsideDir);
-		System.out.println(outsideDir);
+		int lastSlash = ppath.lastIndexOf("/", ppath.length()-2);
+		String baseDirString =ppath.substring(lastSlash+1,ppath.lastIndexOf(File.separator))+"_files"+File.separator;
+		File baseDir = new File(repository, baseDirString);
+		System.out.println(baseDirString);
 		// if the directory does not exist, create it
-		if (!outsideDirectoryFile.exists())
+		if (!baseDir.exists())
 		{
-			outsideDirectoryFile.mkdir();
+			baseDir.mkdirs();
 		}
 
 		//Creation du zip
 		String portfolioUuidPreliminaire = UUID.randomUUID().toString();
-		filename = outsideDir+"xml_"+portfolioUuidPreliminaire+".zip";
-		FileOutputStream outZip = new FileOutputStream(filename);
+		filename = baseDirString+"xml_"+portfolioUuidPreliminaire+".zip";
+		File filezip = new File(baseDir, "xml_"+portfolioUuidPreliminaire+".zip");
+		if( !filezip.exists() )
+			filezip.createNewFile();
+		FileOutputStream outZip = new FileOutputStream(filezip);
 
 		int len;
 
@@ -10291,16 +10338,16 @@ public class MysqlDataProvider implements DataProvider {
 		outZip.close();
 
 		//-- unzip --
-		foldersfiles = unzip(filename,outsideDir+portfolioUuidPreliminaire+File.separator);
+		foldersfiles = unzip(filezip.getAbsolutePath(), baseDir.getAbsolutePath()+File.separator+portfolioUuidPreliminaire+File.separator);
 		// Unzip just the next zip level. I hope there will be no zipped documents...
-		String[] zipFiles = findFiles(outsideDir+portfolioUuidPreliminaire+File.separator, "zip");
+		String[] zipFiles = findFiles(foldersfiles, "zip");
 		for( int i=0; i<zipFiles.length; ++i )
 		{
-			unzip(zipFiles[i], outsideDir+portfolioUuidPreliminaire+File.separator);
+			unzip(zipFiles[i], foldersfiles);
 		}
 		
-		xmlFiles = findFiles(outsideDir+portfolioUuidPreliminaire+File.separator, "xml");
-		allFiles = findFiles(outsideDir+portfolioUuidPreliminaire+File.separator, null);
+		xmlFiles = findFiles(foldersfiles, "xml");
+		allFiles = findFiles(foldersfiles, null);
 
 		////// Lecture du fichier de portfolio
 		StringBuffer outTrace = new StringBuffer();
@@ -10474,10 +10521,17 @@ public class MysqlDataProvider implements DataProvider {
 			}
 		}
 
-		File zipfile = new File(filename);
-		zipfile.delete();
-		File zipdir = new File(outsideDir+portfolioUuidPreliminaire+File.separator);
+		/// Need to delete files before removing folder
+		for( String filename_item : allFiles )
+		{
+			File file = new File(filename_item);
+			file.delete();
+		}
+//		File zipfile = new File(filename);
+		filezip.delete();
+		File zipdir = new File(foldersfiles);
 		zipdir.delete();
+		baseDir.delete();	/// If another import is running, won't delete directory
 
 		return portfolioUuid;
 	}
@@ -10823,9 +10877,9 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String getListUsers(Connection c, int userId, String username, String firstname, String lastname)
+	public String getListUsers(Connection c, int userId, String username, String firstname, String lastname, String email)
 	{
-		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname);
+		ResultSet res = getMysqlUsers(c, userId, username, firstname, lastname, email);
 
 		StringBuilder result = new StringBuilder();
 		result.append("<users>");
@@ -11264,7 +11318,7 @@ public class MysqlDataProvider implements DataProvider {
 					break;
 					
 				case 2:	/// admin/designer account without password given
-					if( is_designer != null )
+					if( is_designer != null && userId == userid2 )
 					{
 						int is_designerInt = 0;
 						if( "1".equals(is_designer) )
@@ -11277,6 +11331,8 @@ public class MysqlDataProvider implements DataProvider {
 						st.setInt(2, userId);	// Change for self only
 						st.executeUpdate();
 					}
+					else
+						return null;
 					break;
 					
 				default:

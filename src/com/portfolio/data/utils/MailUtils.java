@@ -79,6 +79,7 @@ public class MailUtils
 		String useAuth = ConfigUtils.get("smtp.useauth");
 		String serverport = ConfigUtils.get("smtp.port");
 		String enabletls = ConfigUtils.get("smtp.starttls");
+		String tlsver = ConfigUtils.get("smtp.tlsver");
 
 		//Set the host smtp address
 		Properties props = new Properties();
@@ -89,6 +90,7 @@ public class MailUtils
 		props.put("mail.smtp.auth", useAuth);
 		props.put("mail.smtp.port", serverport);
 		props.put("mail.smtp.starttls.enable",enabletls);
+		props.put("mail.smtp.ssl.protocols",tlsver);
 
 		Session session;
 		if( "true".equals(useAuth) )

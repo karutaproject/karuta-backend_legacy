@@ -408,7 +408,7 @@ public class RestServicePortfolio
 	@Path("/users")
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
-	public String getUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("username") String username, @QueryParam("firstname") String firstname, @QueryParam("lastname") String lastname, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
+	public String getUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("username") String username, @QueryParam("firstname") String firstname, @QueryParam("lastname") String lastname, @QueryParam("group") int groupId, @QueryParam("email") String email, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
 		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
@@ -421,7 +421,7 @@ public class RestServicePortfolio
 
 			String xmlGroups = "";
 			if(credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId))
-				xmlGroups = dataProvider.getListUsers(c, ui.userId, username, firstname, lastname);
+				xmlGroups = dataProvider.getListUsers(c, ui.userId, username, firstname, lastname, email);
 			else if(ui.userId != 0)
 				xmlGroups = dataProvider.getInfUser(c, ui.userId, ui.userId);
 			else
@@ -548,6 +548,8 @@ public class RestServicePortfolio
 			if(credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId))
 			{
 				queryuser = dataProvider.putInfUser(c, ui.userId, userid, xmlInfUser);
+				if( queryuser == null )
+					throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
 			}
 			else if(ui.userId == userid)	/// Changing self
 			{
@@ -1053,7 +1055,7 @@ public class RestServicePortfolio
 	 *	return:
 	 *	see 'content' of "GET /rest/api/portfolios/portfolio/{portfolio-id}"
 	 **/
-	@Path("/portfolios/portfolio/code/{code}")
+	@Path("/portfolios/portfolio/code/{code : .+}")
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Object getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,@Context ServletConfig sc,@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources )
@@ -4895,6 +4897,12 @@ public class RestServicePortfolio
 	@Consumes(MediaType.APPLICATION_XML)
 	public Response  postCredentialFromXml(String xmlCredential, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,@Context HttpServletRequest httpServletRequest)
 	{
+		String activelogin = ConfigUtils.get("activate_login");
+		if( "N".equals(activelogin) )
+		{
+			return Response.status(Status.NOT_FOUND).build();
+		}
+		
 		HttpSession session = httpServletRequest.getSession(true);
 		initService( httpServletRequest );
 		KEvent event = new KEvent();
@@ -5205,7 +5213,7 @@ public class RestServicePortfolio
 				System.out.println(String.format("CAS response: %s\n", xmlResponse));
 				return Response.status(Status.FORBIDDEN).entity("CAS error").build();
 			}
-			/*
+//			/*
 			else
 			{
 				System.out.println("SHOULD BE FINE: "+xmlResponse);
@@ -5214,8 +5222,8 @@ public class RestServicePortfolio
 			
 
 			//<cas:user>vassoilm</cas:user>
-			//session.setAttribute("user", sv.getUser());
-			//session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
+			session.setAttribute("user", sv.getUser());
+//			session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
 			c = SqlUtils.getConnection(servContext);
 			userId =  dataProvider.getUserId(c, sv.getUser(), null);
 			if( !"0".equals(userId) )	// User exist
@@ -5245,7 +5253,8 @@ public class RestServicePortfolio
 						String[] ldapvalues = cldap.getLdapValue(sv.getUser());
 //						for( int i=0; i<ldapvalues.length; i++ )
 //							System.out.println("LDAP CONNECTION OK: "+ldapvalues[i]);
-						if( ldapParam == null || ldapvalues[0].startsWith("7") )
+//						if( ldapParam == null || ldapvalues[0].startsWith("7") )
+						if (ldapvalues[1] != null | ldapvalues[2] != null | ldapvalues[3] != null) //si le filtre ldap a renvoyé des valeurs
 						{
 							userId = dataProvider.createUser(c, sv.getUser(), null );
 							int uid = Integer.parseInt(userId);
@@ -5253,6 +5262,10 @@ public class RestServicePortfolio
 							System.out.println("USERID: "+sv.getUser()+" "+userId);
 							session.setAttribute("user", sv.getUser());
 							session.setAttribute("uid",Integer.parseInt(userId));
+						}
+						else
+						{
+							return Response.status(400).entity("Login "+sv.getUser()+" don't have access to Karuta").build();
 						}
 					}
 					else
