@@ -244,7 +244,7 @@ public class DirectURLService  extends HttpServlet {
 						String domainname = UUID.randomUUID().toString();
 						String tld = UUID.randomUUID().toString();
 						
-						email = username+"@"+domainname+"."+tld;
+						email = username+"#"+domainname+"."+tld;
 					}
 					else
 					{
