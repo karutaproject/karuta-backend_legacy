@@ -478,7 +478,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname , String email) throws SQLException {
+	public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname , String email, String affiliation) throws SQLException {
 		// TODO Auto-generated method stub
 		return null;
 	}

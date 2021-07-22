@@ -93,7 +93,7 @@ public class ShibeServlet extends HttpServlet {
 					
 					/// Regular function need old password to update
 					/// But external account generate password unreachable with regular method
-					dataProvider.putInfUserInternal(connexion, uid, uid, fn, ln, mail);
+					dataProvider.putInfUserInternal(connexion, uid, uid, fn, ln, mail, null);
 				}
 				else
 				{
@@ -101,11 +101,11 @@ public class ShibeServlet extends HttpServlet {
 					String[] namefrag = cn.split(" ");
 					if(namefrag.length > 1)
 					{
-						dataProvider.putInfUserInternal(connexion, uid, uid, namefrag[1], namefrag[0], mail);
+						dataProvider.putInfUserInternal(connexion, uid, uid, namefrag[1], namefrag[0], mail, null);
 					}
 					else
 					{
-						dataProvider.putInfUserInternal(connexion, uid, uid, namefrag[0], namefrag[0], mail);
+						dataProvider.putInfUserInternal(connexion, uid, uid, namefrag[0], namefrag[0], mail, null);
 					}
 				}
 			}

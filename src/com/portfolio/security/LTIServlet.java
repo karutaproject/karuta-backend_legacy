@@ -473,7 +473,7 @@ public class LTIServlet extends HttpServlet {
 				int uid = Integer.parseInt(userId);
 				String famName = (String)payload.get(BasicLTIConstants.LIS_PERSON_NAME_FAMILY);
 				String gibName = (String)payload.get(BasicLTIConstants.LIS_PERSON_NAME_GIVEN);
-				dataProvider.putInfUserInternal(connexion, uid, uid, gibName, famName, email);
+				dataProvider.putInfUserInternal(connexion, uid, uid, gibName, famName, email, null);
 				outTrace.append("\nCreate User (self) results: " + userId);
 			}
 			else

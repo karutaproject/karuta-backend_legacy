@@ -11348,7 +11348,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname , String email ) throws SQLException
+	public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname , String email, String affiliation ) throws SQLException
 	{
 		String asDesigner = ConfigUtils.get("createAsDesigner");
 		int isDesigner = 0;
@@ -11356,7 +11356,11 @@ public class MysqlDataProvider implements DataProvider {
 		if( asDesigner != null && "y".equals(asDesigner.toLowerCase()) )
 		{
 			isDesigner = 1;
-			other = "xlimited";
+			other = "xlimited;";
+		}
+		if( affiliation != null )
+		{
+			other += "affiliation="+ affiliation +";";
 		}
 
 		String sql = "UPDATE credential SET display_firstname = ?, display_lastname = ?, email = ?, is_designer = ?, other = ? WHERE userid = ?";

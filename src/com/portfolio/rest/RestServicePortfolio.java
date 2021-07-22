@@ -5258,7 +5258,7 @@ public class RestServicePortfolio
 						{
 							userId = dataProvider.createUser(c, sv.getUser(), null );
 							int uid = Integer.parseInt(userId);
-							dataProvider.putInfUserInternal(c, uid, uid, ldapvalues[1], ldapvalues[2], ldapvalues[3]);
+							dataProvider.putInfUserInternal(c, uid, uid, ldapvalues[1], ldapvalues[2], ldapvalues[3], ldapvalues[4]);
 							System.out.println("USERID: "+sv.getUser()+" "+userId);
 							session.setAttribute("user", sv.getUser());
 							session.setAttribute("uid",Integer.parseInt(userId));

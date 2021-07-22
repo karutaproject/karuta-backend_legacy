@@ -155,7 +155,7 @@ public interface DataProvider {
 
 	public Object putUser(Connection c, int userId,String oAuthToken,String oAuthSecret) throws Exception;
 	public String putInfUser(Connection c, int userId, int userid2, String xmlPortfolio) throws SQLException;
-	public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname , String email ) throws SQLException;
+	public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname , String email, String affiliation ) throws SQLException;
 	public String UserChangeInfo(Connection c, int userId, int userid2, String in) throws SQLException;
 
 	public Object postUser(Connection c, String xmluser, int userId) throws SQLException, Exception;
