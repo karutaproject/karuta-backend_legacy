@@ -19,12 +19,11 @@ public  class javaUtils {
 
 	public static String getCompleteStackTrace(Exception ex)
 	{
-		String returnValue = ex.getCause()+":"+ex.getClass()+": "+ex.getLocalizedMessage()+"\n";
+		StringBuilder returnValue = new StringBuilder(ex.getCause() + ":" + ex.getClass() + ": " + ex.getLocalizedMessage() + "\n");
 		StackTraceElement[] stackTraceElement = ex.getStackTrace();
-		for(int i=0;i<stackTraceElement.length;i++)
-		{
-			returnValue += "\t"+stackTraceElement[i].toString()+"\n";
+		for (StackTraceElement traceElement : stackTraceElement) {
+			returnValue.append("\t").append(traceElement.toString()).append("\n");
 		}
-		return returnValue;
+		return returnValue.toString();
 	}
 }

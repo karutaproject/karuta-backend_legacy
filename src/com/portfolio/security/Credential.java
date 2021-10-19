@@ -40,7 +40,7 @@ import com.portfolio.data.utils.ConfigUtils;
  */
 public class Credential
 {
-	final Logger logger = LoggerFactory.getLogger(Credential.class);
+	private final static Logger logger = LoggerFactory.getLogger(Credential.class);
 
 //	private final Connection connection;
 	public static final String NONE = "none";
@@ -55,13 +55,12 @@ public class Credential
 	private String dbserveur = null;
 
 	/**
-	 * @param connection
 	 * @see HttpServlet#HttpServlet()
 	 */
 	public Credential()
 	{
 		super();
-		dbserveur = ConfigUtils.get("serverType");
+		dbserveur = ConfigUtils.getInstance().getProperty("serverType");
 //		this.connection = connection;
 	}
 
@@ -92,7 +91,7 @@ public class Credential
 		}
 		catch(Exception ex)
 		{
-			ex.printStackTrace();
+			logger.error("Managed error", ex);
 			return grid;
 		}
 	}
@@ -112,7 +111,7 @@ public class Credential
 			st.setInt(1, ownerId);
 			st.setString(2, portfolioId);
 			st.executeUpdate();
-			
+
 			sql = "UPDATE portfolio SET modif_user_id=? WHERE portfolio_id = uuid2bin(?)";
 			st = c.prepareStatement(sql);
 			st.setInt(1, ownerId);
@@ -134,7 +133,7 @@ public class Credential
 		}
 		return retval;
 	}
-	
+
 	public int getMysqlUserUid(Connection c, String login) throws Exception
 	{
 		PreparedStatement st;
@@ -218,7 +217,7 @@ public class Credential
 				{
 					st.close();
 					res.close();
-					
+
 					sql = "SELECT gu.userid FROM group_user gu, group_info gi, group_right_info gri " +
 							"WHERE gu.gid=gi.gid AND gi.grid=gri.grid AND " +
 							"gu.userid=? AND gri.portfolio_id=uuid2bin(?)";
@@ -329,7 +328,7 @@ public class Credential
 				}
 
 				t2 = System.currentTimeMillis();
-				
+
 				/// Sinon on évalue le droit donnée directement
 				sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
 						"FROM group_rights gr, group_user gu, group_info gi " +
@@ -348,10 +347,10 @@ public class Credential
 					nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
 					nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
 				}
-				
+
 				st.close();
 				res.close();
-				
+
 				t3 = System.currentTimeMillis();
 
 				/// Les droits donné spécifiquement à l'utilisateur
@@ -379,7 +378,7 @@ public class Credential
 				st.close();
 
 				t4 = System.currentTimeMillis();
-				
+
 				/// Les droits que l'on a du groupe "all"
 				/// NOTE: Pas de vérification si la personne est dans le groupe 'all'
 				///  Le fonctionnement voulu est différent de ce que j'avais prévu, mais ça marche aussi
@@ -405,7 +404,7 @@ public class Credential
 				}
 				res.close();
 				st.close();
-				
+
 				t5 = System.currentTimeMillis();
 			} // fin else
 
@@ -415,7 +414,7 @@ public class Credential
 				nodeRight.read = true;
 			}
 			t6 = System.currentTimeMillis();
-			
+
 			/*
 			long checkSysInfo = t1-t0;
 			long groupSelect = t2-t1;
@@ -1439,4 +1438,3 @@ public class Credential
 	}
 
 }
-

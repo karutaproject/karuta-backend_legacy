@@ -16,48 +16,37 @@
 package com.portfolio.eventbus;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
-public class KEventbus
-{
-	List<KEventHandler> handlerList = new ArrayList<KEventHandler>();
+public class KEventbus {
+    List<KEventHandler> handlerList = new ArrayList<KEventHandler>();
 
-	public KEventbus()
-	{
-	}
+    public KEventbus() {
+    }
 
-	public boolean processEvent( KEvent event )
-	{
-		Iterator<KEventHandler> handlerIter = handlerList.iterator();
-		while( handlerIter.hasNext() )
-		{
-			KEventHandler handler = handlerIter.next();
-			handler.processEvent(event);
-		}
-		return true;
-	}
+    public boolean processEvent(KEvent event) {
+        for (KEventHandler handler : handlerList) {
+            handler.processEvent(event);
+        }
+        return true;
+    }
 
-	public boolean addChain( KEventHandler handler )
-	{
-		boolean val = false;
-		if( !handlerList.contains(handler) )
-		{
-			handlerList.add(handler);
-			val = true;
-		}
-		return val;
-	}
+    public boolean addChain(KEventHandler handler) {
+        boolean val = false;
+        if (!handlerList.contains(handler)) {
+            handlerList.add(handler);
+            val = true;
+        }
+        return val;
+    }
 
-	public boolean removeChain( KEventHandler handler )
-	{
-		boolean val = false;
-		if( handlerList.contains(handler) )
-		{
-			handlerList.remove(handler);
-			val = true;
-		}
-		return val;
-	}
+    public boolean removeChain(KEventHandler handler) {
+        boolean val = false;
+        if (handlerList.contains(handler)) {
+            handlerList.remove(handler);
+            val = true;
+        }
+        return val;
+    }
 
 }

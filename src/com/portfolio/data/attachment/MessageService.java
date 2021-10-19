@@ -20,6 +20,7 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServlet;
@@ -27,197 +28,182 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import com.portfolio.data.utils.ConfigUtils;
+import com.portfolio.data.utils.MailUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.portfolio.data.utils.ConfigUtils;
-import com.portfolio.data.utils.MailUtils;
+public class MessageService extends HttpServlet {
 
-public class MessageService  extends HttpServlet {
+    /**
+     *
+     */
+    private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
+    private static final long serialVersionUID = 9188067506635747901L;
 
-	/**
-	 *
-	 */
-	final Logger logger = LoggerFactory.getLogger(MessageService.class);
-	private static final long serialVersionUID = 9188067506635747901L;
+    boolean hasNodeReadRight = false;
+    boolean hasNodeWriteRight = false;
+    int userId;
+    int groupId = -1;
+    HttpSession session;
 
-	boolean hasNodeReadRight = false;
-	boolean hasNodeWriteRight = false;
-	int userId;
-	int groupId = -1;
-	HttpSession session;
+    public void initialize(HttpServletRequest httpServletRequest) throws Exception {
+        ConfigUtils.init(getServletContext());
+    }
 
-	public void initialize(HttpServletRequest httpServletRequest)
-	{
-	}
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) {
+        /// Check if user has an account
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
 
-	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response)
-	{
-		/// Check if user has an account
-		HttpSession session = request.getSession(false);
-		if( session == null )
-		{
-			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-			return;
-		}
+        int uid = (Integer) session.getAttribute("uid");
+        if (uid == 0) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
 
-		int uid = (Integer) session.getAttribute("uid");
-		if( uid == 0 )
-		{
-			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-			return;
-		}
+        /// From
+        /// Recipient
+        String recipient = request.getParameter("recipient");
+        /// CC
+        String recipient_cc = request.getParameter("recipient_cc");
+        /// BCC
+        String recipient_bcc = request.getParameter("recipient_bcc");
+        /// Subject
+        String subject = request.getParameter("subject");
+        /// Message
+        String message = request.getParameter("message");
 
-		/// From
-		/// Recipient
-		String recipient = request.getParameter("recipient");
-		/// CC
-		String recipient_cc = request.getParameter("recipient_cc");
-		/// BCC
-		String recipient_bcc = request.getParameter("recipient_bcc");
-		/// Subject
-		String subject = request.getParameter("subject");
-		/// Message
-		String message = request.getParameter("message");
+        ServletConfig config = getServletConfig();
+        String notification = ConfigUtils.getInstance().getProperty("notification");
 
-		ServletConfig config = getServletConfig();
-		String notification = ConfigUtils.get("notification");
+        logger.debug("Message to '{}'", notification);
+        switch (notification) {
+            case "email":
+                try {
+                    MailUtils.postMail(config, recipient, recipient_cc, subject, message, logger);
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                    //TODO Something is missing
+                }
+                break;
+            case "sakai":
+                /// Recipient is username list rather than email address
+                final String[] recip = recipient.split(",");
+                final String[] var = getSakaiTicket();
 
-		logger.debug("Message to: "+notification);
-		if( "email".equals(notification) )
-		{
-			try
-			{
-				MailUtils.postMail(config, recipient, recipient_cc, subject, message, logger);
-			}
-			catch( Exception e )
-			{
-				logger.error(e.getMessage());
-			}
-		}
-		else if( "sakai".equals(notification) )
-		{
-			/// Recipient is username list rather than email address
-			String[] recip = recipient.split(",");
-			String[] var = getSakaiTicket();
+                for (String user : recip) {
+                    int status = sendMessage(var, user, message);
+                    logger.debug("Message sent to '{}' -> '{}' ", user, status);
+                }
+                break;
+            default:
+                logger.error("Unknown notification method {} ", notification);
+                throw new IllegalStateException(String.format("Unknown notification method '%s' ", notification));
+        }
 
-			for( int i=0; i<recip.length; ++i )
-			{
-				String user = recip[i];
-				int status = sendMessage(var, user, message);
-				logger.debug("Message sent to: "+user+" -> "+status);
-			}
-		}
-		try
-		{
-			response.getOutputStream().close();
-			request.getInputStream().close();
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-			logger.error(e.getMessage());
-		}
-	}
+        try {
+            response.getOutputStream().close();
+            request.getInputStream().close();
+        } catch (Exception e) {
+            logger.error("Intercepted error", e);
+            //TODO something is missing
+        }
+    }
 
-	int sendMessage( String auth[], String user, String message )
-	{
-		int ret = 500;
+    int sendMessage(String auth[], String user, String message) {
+        int ret = 500;
 
-		try
-		{
-			String urlParameters = "notification=\""+message+"\"&_sessionId="+auth[0];
+        try {
+            String urlParameters = "notification=\"" + message + "\"&_sessionId=" + auth[0];
 
-			/// Send for this user
-			String url = ConfigUtils.get("sakaiInterface");
-			URL urlTicker = new URL(url+user);
+            /// Send for this user
+            final String url = ConfigUtils.getInstance().getRequiredProperty("sakaiInterface");
+            URL urlTicker = new URL(url + user);
 
-			HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
-			connect.setDoOutput(true);
-			connect.setDoInput(true);
-			connect.setInstanceFollowRedirects(false);
-			connect.setRequestMethod("POST");
-			connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-			connect.setRequestProperty("charset", "utf-8");
-			connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
-			connect.setUseCaches(false);
-			connect.setRequestProperty("Cookie", auth[1]);
-			connect.connect();
+            HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
+            connect.setDoOutput(true);
+            connect.setDoInput(true);
+            connect.setInstanceFollowRedirects(false);
+            connect.setRequestMethod("POST");
+            connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            connect.setRequestProperty("charset", "utf-8");
+            connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
+            connect.setUseCaches(false);
+            connect.setRequestProperty("Cookie", auth[1]);
+            connect.connect();
 
-			DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
-			wr.writeBytes(urlParameters);
-			wr.flush();
-			wr.close();
+            DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
+            wr.writeBytes(urlParameters);
+            wr.flush();
+            wr.close();
 
-			ret = connect.getResponseCode();
+            ret = connect.getResponseCode();
 
-			logger.debug("Notification: "+ret);
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
+            logger.debug("Notification '{}'", ret);
+        } catch (Exception e) {
+            logger.error("Intercepted error", e);
+            //TODO something is missing
+        }
 
-		return ret;
-	}
+        return ret;
+    }
 
-	String[] getSakaiTicket()
-	{
-		String[] ret = {"",""};
-		try
-		{
-			/// Configurable?
-			String username = ConfigUtils.get("sakaiUsername");
-			String password = ConfigUtils.get("sakaiPassword");
-			String urlDirectSession = ConfigUtils.get("sakaiDirectSessionUrl");
+    String[] getSakaiTicket() {
+        String[] ret = {"", ""};
+        try {
+            /// Configurable?
+            final String username = ConfigUtils.getInstance().getRequiredProperty("sakaiUsername");
+            final String password = ConfigUtils.getInstance().getRequiredProperty("sakaiPassword");
+            final String urlDirectSession = ConfigUtils.getInstance().getRequiredProperty("sakaiDirectSessionUrl");
 
-			String urlParameters = "_username="+username+"&_password="+password;
+            final String urlParameters = "_username=" + username + "&_password=" + password;
 
-			/// Will have to use some context config
-			URL urlTicker = new URL(urlDirectSession);
+            /// Will have to use some context config
+            URL urlTicker = new URL(urlDirectSession);
 
-			HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
-			connect.setDoOutput(true);
-			connect.setDoInput(true);
-			connect.setInstanceFollowRedirects(false);
-			connect.setRequestMethod("POST");
-			connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-			connect.setRequestProperty("charset", "utf-8");
-			connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
-			connect.setUseCaches(false);
-			connect.connect();
+            HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
+            connect.setDoOutput(true);
+            connect.setDoInput(true);
+            connect.setInstanceFollowRedirects(false);
+            connect.setRequestMethod("POST");
+            connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            connect.setRequestProperty("charset", "utf-8");
+            connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
+            connect.setUseCaches(false);
+            connect.connect();
 
-			DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
-			wr.writeBytes(urlParameters);
-			wr.flush();
-			wr.close();
+            DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
+            wr.writeBytes(urlParameters);
+            wr.flush();
+            wr.close();
 
-			StringBuilder readTicket = new StringBuilder();
-			BufferedReader rd = new BufferedReader(new InputStreamReader(connect.getInputStream(), "UTF-8"));
-			char buffer[] = new char[1024];
-			int offset = 0;
-			int read = 0;
-			do
-			{
-				read = rd.read(buffer, offset, 1024);
-				offset += read;
-				readTicket.append(buffer);
-			}while( read == 1024 );
-			rd.close();
+            StringBuilder readTicket = new StringBuilder();
+            BufferedReader rd = new BufferedReader(new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
+            char buffer[] = new char[1024];
+            int offset = 0;
+            int read = 0;
+            do {
+                read = rd.read(buffer, offset, 1024);
+                offset += read;
+                readTicket.append(buffer);
+            } while (read == 1024);
+            rd.close();
 
-			ret[1] = connect.getHeaderField("Set-Cookie");
+            ret[1] = connect.getHeaderField("Set-Cookie");
 
-			connect.disconnect();
+            connect.disconnect();
 
-			ret[0] = readTicket.toString();
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
+            ret[0] = readTicket.toString();
+        } catch (Exception e) {
+            logger.error("Intercepted error", e);
+            //TODO something is missing
+        }
 
-		return ret;
-	}
+        return ret;
+    }
 }
-

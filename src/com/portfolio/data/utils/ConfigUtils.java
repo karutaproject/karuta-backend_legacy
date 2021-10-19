@@ -15,76 +15,122 @@
 
 package com.portfolio.data.utils;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.HashMap;
+import java.io.IOException;
+import java.util.Properties;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ConfigUtils
-{
-	static final Logger logger = LoggerFactory.getLogger(ConfigUtils.class);
-	static boolean hasLoaded = false;
-	static HashMap<String, String> attributes = new HashMap<String, String>();
-	static String filePath = "";
-	
-	public static boolean loadConfigFile( ServletContext context ) throws Exception
-	{
-		if( hasLoaded ) return true;
-		String path = "";
-		try
-		{
-			String servName = context.getContextPath();
-			path = context.getRealPath("/");
-			File base = new File(path+".."+File.separatorChar+"..");
-			String tomcatRoot = base.getCanonicalPath();
-			path = tomcatRoot + servName +"_config"+File.separatorChar;
+public class ConfigUtils {
+    public static final String KARUTA_ENV_HOME = "KARUTA_HOME";
+    public static final String KARUTA_PROP_HOME = "karuta.home";
 
-			attributes = new HashMap<String, String>();
-			filePath = path+"configKaruta.properties";
-			FileInputStream fichierSrce =  new FileInputStream(filePath);
-			BufferedReader readerSrce = new BufferedReader(new java.io.InputStreamReader(fichierSrce,"UTF-8"));
-			String line = null;
-			String variable = null;
-			String value = null;
-			while ((line = readerSrce.readLine())!=null){
-				if (!line.startsWith("#") && line.length()>2) { // ce n'est pas un commentaire et longueur>=3 ex: x=b est le minumum
-					int cut = line.indexOf("=");
-					variable = line.substring(0, cut).trim();
-					value = line.substring(cut+1).trim();
-					attributes.put(variable, value);
-				}
-			}
-			fichierSrce.close();
-			hasLoaded = true;
-			logger.info("Configuration file loaded: "+filePath);
-			
-			/// While we're at it, init logger
-			LogUtils.initDirectory(context);
-		}
-		catch(Exception e)
-		{
-//			e.printStackTrace();
-			logger.error("Can't load file :"+filePath+" ("+e.getMessage()+")");
-		}
-		finally
-		{
-		}
-		return hasLoaded;
-	}
+    private static final Logger logger = LoggerFactory.getLogger(ConfigUtils.class);
 
-	public static String get( String attribute )
-	{
-		return attributes.get(attribute);
-	}
-	
-	public static void clear( String attribute )
-	{
-		attributes.remove(attribute);
-	}
+    // Singleton pattern
+    private static ConfigUtils INSTANCE;
+
+    private boolean hasLoaded = false;
+    private final Properties properties = new Properties();
+    private String filePath;
+    private String configPath;
+    private String karutaHome;
+
+    private ConfigUtils(final ServletContext context) throws Exception {
+        if (hasLoaded) return;
+        try {
+            this.loadConfigDirectory(context);
+
+            filePath = configPath + "configKaruta.properties";
+            // loading properties
+            FileInputStream fileProps = new FileInputStream(filePath);
+            properties.load(fileProps);
+            fileProps.close();
+
+            hasLoaded = true;
+            logger.info("Configuration file loaded: {}", filePath);
+            logger.trace("Loaded properties: {}", properties);
+            /// While we're at it, init logger
+            LogUtils.initDirectory(context);
+        } catch (Exception e) {
+            logger.error("Can't load file :" + filePath, e);
+            throw e;
+        }
+    }
+
+    public static ConfigUtils getInstance() {
+        if (INSTANCE == null) {
+            throw new AssertionError("The init wasn't done !");
+        }
+        return INSTANCE;
+    }
+
+
+    public synchronized static ConfigUtils init(final ServletContext context) throws Exception {
+        if (INSTANCE == null) {
+            INSTANCE = new ConfigUtils(context);
+        }
+
+        return INSTANCE;
+    }
+
+    private void loadConfigDirectory(final ServletContext context) throws IOException, InternalError {
+        final String configEnvDir = System.getenv(KARUTA_ENV_HOME);
+        final String configPropDir = System.getProperty(KARUTA_PROP_HOME);
+        // The jvm property override the environment property if set
+        final String configDir = (configPropDir != null && !configPropDir.trim().isEmpty()) ? configPropDir : configEnvDir;
+        final String servName = context.getContextPath();
+        if (configDir != null && !configDir.trim().isEmpty()) {
+            final File base = new File(configDir.trim());
+            if (base.exists() && base.isDirectory() && base.canWrite()) {
+                try {
+                    karutaHome = base.getCanonicalPath();
+                    configPath = karutaHome + servName + "_config" + File.separatorChar;
+                    logger.info("Karuta-backend Servlet configpath @ " + configPath);
+                } catch (IOException e) {
+                    logger.error("The Configuration directory '" + configDir + "' wasn't defined", e);
+                    throw e;
+                }
+            } else {
+                throw new IllegalArgumentException("The environment variable '" + KARUTA_ENV_HOME + "' '" + configEnvDir
+                        + "' or the jvm property '" + KARUTA_PROP_HOME + "' '" + configPropDir
+                        + "' doesn't exist or isn't writable. Please provide a writable directory path !");
+            }
+        } else {
+            throw new IllegalArgumentException("The environment variable '" + KARUTA_ENV_HOME
+                    + "' or the jvm property '" + KARUTA_PROP_HOME + "' wasn't set.");
+        }
+    }
+
+    public String getRequiredProperty(final String key) throws IllegalStateException {
+        final String value = properties.getProperty(key);
+        if (value == null) {
+            throw new IllegalStateException("Required key '" + key + "' not found");
+        }
+        return value;
+    }
+
+    public String getProperty(final String key) {
+        return properties.getProperty(key);
+    }
+
+    public String getProperty(final String key, final String defaultValue) {
+        final String value = properties.getProperty(key);
+        if (value == null) {
+            return defaultValue;
+        }
+        return value;
+    }
+
+    public String getConfigPath() {
+        return configPath;
+    }
+
+    public String getKarutaHome() {
+        return karutaHome;
+    }
 }

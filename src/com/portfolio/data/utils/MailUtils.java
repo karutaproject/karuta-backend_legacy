@@ -28,126 +28,113 @@ import javax.servlet.ServletConfig;
 
 import org.slf4j.Logger;
 
-public class MailUtils
-{
-	//===============================================================
-	private static class SMTPAuthenticator extends javax.mail.Authenticator {
-	//===============================================================
-		private final javax.mail.PasswordAuthentication authentication;
+public class MailUtils {
+    //===============================================================
+    private static class SMTPAuthenticator extends javax.mail.Authenticator {
+        //===============================================================
+        private final javax.mail.PasswordAuthentication authentication;
 
-		public SMTPAuthenticator(String login, String password) {
-				authentication = new javax.mail.PasswordAuthentication(login, password);
-		}
+        public SMTPAuthenticator(String login, String password) {
+            authentication = new javax.mail.PasswordAuthentication(login, password);
+        }
 
-		@Override
-		protected javax.mail.PasswordAuthentication getPasswordAuthentication() {
-				return authentication;
-		}
-	}
+        @Override
+        protected javax.mail.PasswordAuthentication getPasswordAuthentication() {
+            return authentication;
+        }
+    }
 
-	//===============================================================
-	public static int postMail(ServletConfig config, String recipients_to,String recipients_cc,String subject, String content, Logger logger) throws Exception {
-	//===============================================================
-		if( recipients_to == null || subject == null || content == null )
-			return -1;
+    //===============================================================
+    public static int postMail(ServletConfig config, String recipients_to, String recipients_cc, String subject, String content, Logger logger) throws Exception {
+        //===============================================================
+        if (recipients_to == null || subject == null || content == null)
+            return -1;
 
-		/*
-		String path = config.getServletContext().getRealPath("/");
-		path = path.replaceFirst(File.separator+"$", "_config"+File.separator);
-		HashMap<String, String> configInfo = loadConfig(path+"configKaruta.properties");
-		//*/
+        boolean debug = false;
+        logger.debug("<br>postMail --in");
 
-		boolean debug = false;
-		logger.debug("<br>postMail --in");
+        String[] recip = recipients_to.split(",");
+        String[] recip_cc = null;
+        if (recipients_cc != null && !"".equals(recipients_cc))
+            recip_cc = recipients_cc.split(",");
 
-		String[] recip = recipients_to.split(",");
-		String[] recip_cc = null;
-		if( recipients_cc != null && !"".equals(recipients_cc) )
-			recip_cc = recipients_cc.split(",");
+		try {
+			final String mail_login = ConfigUtils.getInstance().getRequiredProperty("mail_login");
+			String mail_sender = ConfigUtils.getInstance().getProperty("mail_sender");
+			final String mail_password = ConfigUtils.getInstance().getProperty("mail_password");
 
-		String mail_login = ConfigUtils.get("mail_login");
-		String mail_sender = ConfigUtils.get("mail_sender");
-		String mail_password = ConfigUtils.get("mail_password");
-		
-		if( mail_login == null )
-			return -1;
-		
-		if( mail_sender == null )
-			mail_sender = mail_login;
+			if (mail_sender == null)
+				mail_sender = mail_login;
 
-		String smtpserver = ConfigUtils.get("smtp.server");
-		String useAuth = ConfigUtils.get("smtp.useauth");
-		String serverport = ConfigUtils.get("smtp.port");
-		String enabletls = ConfigUtils.get("smtp.starttls");
-		String tlsver = ConfigUtils.get("smtp.tlsver");
+			//Set the host smtp address
+			Properties props = new Properties();
 
-		//Set the host smtp address
-		Properties props = new Properties();
+			final String useAuth = ConfigUtils.getInstance().getRequiredProperty("smtp.useauth");
 
-		logger.debug("Connect to: "+smtpserver+":"+serverport+" useAuth: "+useAuth+" enabletls: "+enabletls);
+			props.put("mail.smtp.host", ConfigUtils.getInstance().getRequiredProperty("smtp.server"));
+			props.put("mail.smtp.auth", useAuth);
+			props.put("mail.smtp.port", ConfigUtils.getInstance().getRequiredProperty("smtp.port"));
+			props.put("mail.smtp.starttls.enable", ConfigUtils.getInstance().getRequiredProperty("smtp.starttls"));
+			props.put("mail.smtp.ssl.protocols", ConfigUtils.getInstance().getRequiredProperty("smtp.tlsver"));
 
-		props.put("mail.smtp.host", smtpserver);
-		props.put("mail.smtp.auth", useAuth);
-		props.put("mail.smtp.port", serverport);
-		props.put("mail.smtp.starttls.enable",enabletls);
-		props.put("mail.smtp.ssl.protocols",tlsver);
+			logger.debug("SMTP properties used: {}", props);
 
-		Session session;
-		if( "true".equals(useAuth) )
-		{
-			javax.mail.Authenticator auth = new SMTPAuthenticator(mail_login, mail_password);
-			session = Session.getInstance(props, auth);
-		}
-		else
-		{
-			session = Session.getInstance(props);
-		}
-
-		session.setDebug(debug);
-
-		// create a message
-		Message msg = new MimeMessage(session);
-
-		// set the from and to address
-		InternetAddress addressFrom = new InternetAddress(mail_sender);
-		msg.setFrom(addressFrom);
-		logger.debug("<br>addressFrom: "+addressFrom);
-
-		InternetAddress[] addressTo = new InternetAddress[recip.length];
-		for (int i = 0; i < recip.length; i++) {
-			addressTo[i] = new InternetAddress(recip[i]);
-			logger.debug("<br>addressTo: "+addressTo[i]);
-		}
-		if( recip_cc != null )
-		{
-			InternetAddress[] addressCC = new InternetAddress[recip_cc.length];
-			for (int i = 0; i < recip_cc.length; i++) {
-				addressCC[i] = new InternetAddress(recip_cc[i]);
-				logger.debug("<br>addressTo: "+addressCC[i]);
+			Session session;
+			if ("true".equals(useAuth)) {
+				javax.mail.Authenticator auth = new SMTPAuthenticator(mail_login, mail_password);
+				session = Session.getInstance(props, auth);
+			} else {
+				session = Session.getInstance(props);
 			}
-			msg.setRecipients(Message.RecipientType.CC, addressCC);
+
+			session.setDebug(debug);
+
+			// create a message
+			Message msg = new MimeMessage(session);
+
+			// set the from and to address
+			InternetAddress addressFrom = new InternetAddress(mail_sender);
+			msg.setFrom(addressFrom);
+			logger.debug("<br>addressFrom: {}", addressFrom);
+
+			InternetAddress[] addressTo = new InternetAddress[recip.length];
+			for (int i = 0; i < recip.length; i++) {
+				addressTo[i] = new InternetAddress(recip[i]);
+				logger.debug("<br>addressTo: {}", addressTo[i]);
+			}
+			if (recip_cc != null) {
+				InternetAddress[] addressCC = new InternetAddress[recip_cc.length];
+				for (int i = 0; i < recip_cc.length; i++) {
+					addressCC[i] = new InternetAddress(recip_cc[i]);
+					logger.debug("<br>addressTo: {}", addressCC[i]);
+				}
+				msg.setRecipients(Message.RecipientType.CC, addressCC);
+			}
+			msg.setRecipients(Message.RecipientType.TO, addressTo);
+			MimeMultipart multipart = new MimeMultipart("related");
+
+			// first part  (the html)
+			MimeBodyPart messageBodyPart = new MimeBodyPart();
+			messageBodyPart.setHeader("Content-Type", "text/html; charset=\"utf-8\"");
+			messageBodyPart.setContent(content, "text/html; charset=utf-8");
+
+			// add it
+			multipart.addBodyPart(messageBodyPart);
+
+			// put everything together
+			msg.setContent(multipart);
+
+			// Setting the Subject and Content Type
+			msg.setSubject(subject);
+			Transport.send(msg);
+			logger.debug("<br>postMail --out");
+
+			return 0;
+		} catch (IllegalStateException e) {
+			logger.error("Required properties aren't set to send email", e);
+			return -1;
 		}
-		msg.setRecipients(Message.RecipientType.TO, addressTo);
-		MimeMultipart multipart = new MimeMultipart("related");
-
-		// first part  (the html)
-		MimeBodyPart messageBodyPart = new MimeBodyPart();
-		messageBodyPart.setHeader("Content-Type","text/html; charset=\"utf-8\""); 
-		messageBodyPart.setContent(content, "text/html; charset=utf-8");
-
-		// add it
-		multipart.addBodyPart(messageBodyPart);
-
-		// put everything together
-		msg.setContent(multipart);
-
-		// Setting the Subject and Content Type
-		msg.setSubject(subject);
-		Transport.send(msg);
-		logger.debug("<br>postMail --out");
-
-		return 0;
-	}
+    }
 
 	/*
 	private static HashMap<String, String> loadConfig( String filename ) throws IOException

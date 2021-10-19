@@ -34,111 +34,88 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MiniProxy extends HttpServlet
-{
-	private static final long serialVersionUID = -5389232495090560087L;
+public class MiniProxy extends HttpServlet {
+    private static final long serialVersionUID = -5389232495090560087L;
 
-	static final Logger logger = LoggerFactory.getLogger(MiniProxy.class);
-	/**
-	 * 
-	 */
-	String baseURL;
+    private static final Logger logger = LoggerFactory.getLogger(MiniProxy.class);
+    /**
+     *
+     */
+    String baseURL;
 
-	public void init( ServletConfig config ) throws ServletException
-	{
-		super.init(config);
-		baseURL = getServletConfig().getInitParameter("baseURL");
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
+        baseURL = getServletConfig().getInitParameter("baseURL");
 
 //		System.setProperty("https.protocols", "TLSv1,TLSv1.1,TLSv1.2");
-	}
-	
-	@Override
-	protected void doGet(HttpServletRequest request, HttpServletResponse response)
-	{
-		/// Only people from our system can query
-		HttpSession session = request.getSession(false);
-		if( session == null || session.getAttribute("uid") == null )
-		{
-			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-			PrintWriter out;
-			try
-			{
-				out = response.getWriter();
-				out.write("403");
-				out.close();
-			}
-			catch( IOException e )
-			{
-				e.printStackTrace();
-			}
-			return;
-		}
+    }
 
-		try
-		{
-			///// Send wanted query
-			String pathinfo = request.getPathInfo();
-			String query = request.getQueryString();
-			if( "/".equals(pathinfo) || pathinfo == null )
-			{
-				pathinfo = "";
-				query = "?" + query;
-			}
-			else
-				query = "";
-			
-			String queryURL = String.format("%s%s%s", baseURL, pathinfo, query);
-			System.out.println("Query to: "+queryURL);
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+        /// Only people from our system can query
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("uid") == null) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            PrintWriter out;
+            try {
+                out = response.getWriter();
+                out.write("403");
+                out.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
 
-			URL urlConn = new URL(queryURL);
-			HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
-			connection.setDoOutput(true);
-			connection.setUseCaches(false);
-			connection.setInstanceFollowRedirects(false);
-			connection.setRequestMethod("GET");
+        try {
+            ///// Send wanted query
+            String pathinfo = request.getPathInfo();
+            String query = request.getQueryString();
+            if ("/".equals(pathinfo) || pathinfo == null) {
+                pathinfo = "";
+                query = "?" + query;
+            } else
+                query = "";
+
+            String queryURL = String.format("%s%s%s", baseURL, pathinfo, query);
+            System.out.println("Query to: " + queryURL);
+
+            URL urlConn = new URL(queryURL);
+            HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
+            connection.setDoOutput(true);
+            connection.setUseCaches(false);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestMethod("GET");
 //			connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-			
-			// Need some user agent, otherwise return 409
+
+            // Need some user agent, otherwise return 409
 //			connection.connect();
 
-			int code = connection.getResponseCode();
-			String msg = connection.getResponseMessage();
+            int code = connection.getResponseCode();
+            String msg = connection.getResponseMessage();
 
-			/// Write back answer if it went fine
-			if( code != HttpURLConnection.HTTP_OK )
-			{
-				logger.error("Couldn't get data: "+msg);
-				response.setStatus(code);
-				PrintWriter writer = response.getWriter();
-				writer.write(msg);
-				writer.close();
-			}
-			else
-			{
-				OutputStream output = response.getOutputStream();
-				InputStream inputData = connection.getInputStream();
-				IOUtils.copy(inputData, output);
-				inputData.close();
-				output.close();
-			}
+            /// Write back answer if it went fine
+            if (code != HttpURLConnection.HTTP_OK) {
+                logger.error("Couldn't get data: " + msg);
+                response.setStatus(code);
+                PrintWriter writer = response.getWriter();
+                writer.write(msg);
+                writer.close();
+            } else {
+                OutputStream output = response.getOutputStream();
+                InputStream inputData = connection.getInputStream();
+                IOUtils.copy(inputData, output);
+                inputData.close();
+                output.close();
+            }
 
-			connection.disconnect();
-		}
-		catch( MalformedURLException e )
-		{
-			e.printStackTrace();
-		}
-		catch( IOException e )
-		{
-			e.printStackTrace();
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
+            connection.disconnect();
+        } catch (Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+        }
 
-		response.setStatus(HttpServletResponse.SC_OK);
-		return;
-	}
+        response.setStatus(HttpServletResponse.SC_OK);
+        return;
+    }
 }
-

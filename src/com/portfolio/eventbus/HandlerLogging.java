@@ -18,6 +18,7 @@ package com.portfolio.eventbus;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.util.Enumeration;
 
@@ -27,96 +28,80 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.SqlUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
-import com.portfolio.data.provider.DataProvider;
-import com.portfolio.data.utils.SqlUtils;
 
+public class HandlerLogging implements KEventHandler {
 
-public class HandlerLogging implements KEventHandler
-{
-	HttpServletRequest httpServletRequest;
-	HttpSession session;
-	int userId;
-	int groupId;
-	DataProvider dataProvider;
-	Connection connection;
+	private static final Logger logger = LoggerFactory.getLogger(HandlerLogging.class);
+    HttpServletRequest httpServletRequest;
+    HttpSession session;
+    int userId;
+    int groupId;
+    DataProvider dataProvider;
+    Connection connection;
 
-	public HandlerLogging( HttpServletRequest request, DataProvider provider )
-	{
-		httpServletRequest = request;
-		dataProvider = provider;
-		try
-		{
-			connection = SqlUtils.getConnection(request.getSession().getServletContext());
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
+    public HandlerLogging(HttpServletRequest request, DataProvider provider) {
+        httpServletRequest = request;
+        dataProvider = provider;
+        try {
+            connection = SqlUtils.getConnection(request.getSession().getServletContext());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-		this.session = request.getSession(true);
-		Integer val = (Integer) session.getAttribute("uid");
-		if( val != null )
-			this.userId = val;
-		val = (Integer) session.getAttribute("gid");
-		if( val != null )
-			this.groupId = val;
-	}
+        this.session = request.getSession(true);
+        Integer val = (Integer) session.getAttribute("uid");
+        if (val != null)
+            this.userId = val;
+        val = (Integer) session.getAttribute("gid");
+        if (val != null)
+            this.groupId = val;
+    }
 
-	@Override
-	public boolean processEvent( KEvent event )
-	{
-		try
-		{
-			switch( event.eventType )
-			{
-				case LOGIN:
-					String httpHeaders = "";
-					Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
-					while(headerNames.hasMoreElements())
-					{
-						String headerName = headerNames.nextElement();
-						httpHeaders += headerName+": "+httpServletRequest.getHeader(headerName)+"\n";
-					}
-					String url = httpServletRequest.getRequestURL().toString();
-					if(httpServletRequest.getQueryString()!=null) url += "?" + httpServletRequest.getQueryString().toString();
-					dataProvider.writeLog(connection, url, httpServletRequest.getMethod().toString(),
-							httpHeaders, event.inputData, event.doc.toString(), event.status);
+    @Override
+    public boolean processEvent(KEvent event) {
+        try {
+            if (event.eventType == KEvent.EventType.LOGIN) {
+                StringBuilder httpHeaders = new StringBuilder();
+                Enumeration<String> headerNames = httpServletRequest.getHeaderNames();
+                while (headerNames.hasMoreElements()) {
+                    String headerName = headerNames.nextElement();
+                    httpHeaders.append(headerName).append(": ").append(httpServletRequest.getHeader(headerName)).append("\n");
+                }
+                String url = httpServletRequest.getRequestURL().toString();
+                if (httpServletRequest.getQueryString() != null) url += "?" + httpServletRequest.getQueryString();
+                dataProvider.writeLog(connection, url, httpServletRequest.getMethod(),
+                        httpHeaders.toString(), event.inputData, event.doc.toString(), event.status);
 
-					//// TODO Devrait aussi Žcrire une partie dans les fichiers
-					System.out.println("LOGIN EVENT");
-
-					break;
-
-				default:
-					break;
-			}
-		}
-		catch(Exception ex)
-		{
+                //// TODO Devrait aussi Ã©crire une partie dans les fichiers
+                logger.debug("LOGIN EVENT");
+            }
+        } catch (Exception ex) {
+			logger.error("Intercepted error", ex);
 			/*
 			ex.printStackTrace();
 			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 			//*/
-		}
-		finally
-		{
-		}
+        }
 
-		return true;
-	}
 
-	Document parseString( String data ) throws UnsupportedEncodingException, SAXException, IOException, ParserConfigurationException
-	{
-		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
-		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		Document doc = documentBuilder.parse(new ByteArrayInputStream(data.getBytes("UTF-8")));
-		doc.setXmlStandalone(true);
+        return true;
+    }
 
-		return doc;
-	}
+    Document parseString(String data) throws UnsupportedEncodingException, SAXException, IOException, ParserConfigurationException {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        Document doc = documentBuilder.parse(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)));
+        doc.setXmlStandalone(true);
+
+        return doc;
+    }
 
 }

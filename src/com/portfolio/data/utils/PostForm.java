@@ -31,34 +31,31 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
-public class PostForm
-{
-	public static boolean sendFile( String sessionid, String backend, String user, String uuid, String lang, File file ) throws Exception
-	{
-		CloseableHttpClient httpclient = HttpClients.createDefault();
+public class PostForm {
+    public static boolean sendFile(String sessionid, String backend, String user, String uuid, String lang, File file) throws Exception {
+        CloseableHttpClient httpclient = HttpClients.createDefault();
 
-		try
-		{
-			// Server + "/resources/resource/file/" + uuid +"?lang="+ lang
-			// "http://"+backend+"/user/"+user+"/file/"+uuid+"/"+lang+"ptype/fs";
-			String url = backend+"/resources/resource/file/"+uuid+"?lang="+ lang;
-			HttpPost post = new HttpPost(url);
-			post.setHeader("Cookie","JSESSIONID="+sessionid);	// So that the receiving servlet allow us
+        try {
+            // Server + "/resources/resource/file/" + uuid +"?lang="+ lang
+            // "http://"+backend+"/user/"+user+"/file/"+uuid+"/"+lang+"ptype/fs";
+            String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
+            HttpPost post = new HttpPost(url);
+            post.setHeader("Cookie", "JSESSIONID=" + sessionid);    // So that the receiving servlet allow us
 
-			/// Remove import language tag
-			String filename = file.getName();	/// NOTE: Since it's used with zip import, specific code.
-			int langindex = filename.lastIndexOf("_");
-			filename = filename.substring(0, langindex) + filename.substring(langindex+3);
+            /// Remove import language tag
+            String filename = file.getName();    /// NOTE: Since it's used with zip import, specific code.
+            int langindex = filename.lastIndexOf("_");
+            filename = filename.substring(0, langindex) + filename.substring(langindex + 3);
 
-			FileBody bin = new FileBody(file, ContentType.DEFAULT_BINARY, filename);	// File from import
+            FileBody bin = new FileBody(file, ContentType.DEFAULT_BINARY, filename);    // File from import
 
-			/// Form info
-			HttpEntity reqEntity = MultipartEntityBuilder.create()
-					.addPart("uploadfile", bin)
-					.build();
-			post.setEntity(reqEntity);
+            /// Form info
+            HttpEntity reqEntity = MultipartEntityBuilder.create()
+                    .addPart("uploadfile", bin)
+                    .build();
+            post.setEntity(reqEntity);
 
-			CloseableHttpResponse response = httpclient.execute(post);
+            CloseableHttpResponse response = httpclient.execute(post);
 
 			/*
 			try
@@ -80,41 +77,37 @@ public class PostForm
 				response.close();
 			}
 			//*/
-		}
-		finally
-		{
-			httpclient.close();
-		}
+        } finally {
+            httpclient.close();
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	public static boolean rewriteFile( String sessionid, String backend, String user, String uuid, String lang, File file ) throws Exception
-	{
-		CloseableHttpClient httpclient = HttpClients.createDefault();
+    public static boolean rewriteFile(String sessionid, String backend, String user, String uuid, String lang, File file) throws Exception {
+        CloseableHttpClient httpclient = HttpClients.createDefault();
 
-		try
-		{
-			// Server + "/resources/resource/file/" + uuid +"?lang="+ lang
-			// "http://"+backend+"/user/"+user+"/file/"+uuid+"/"+lang+"ptype/fs";
-			String url = backend+"/resources/resource/file/"+uuid+"?lang="+ lang;
-			HttpPut put = new HttpPut(url);
-			put.setHeader("Cookie","JSESSIONID="+sessionid);	// So that the receiving servlet allow us
+        try {
+            // Server + "/resources/resource/file/" + uuid +"?lang="+ lang
+            // "http://"+backend+"/user/"+user+"/file/"+uuid+"/"+lang+"ptype/fs";
+            String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
+            HttpPut put = new HttpPut(url);
+            put.setHeader("Cookie", "JSESSIONID=" + sessionid);    // So that the receiving servlet allow us
 
-			/// Remove import language tag
-			String filename = file.getName();	/// NOTE: Since it's used with zip import, specific code.
-			int langindex = filename.lastIndexOf("_");
-			filename = filename.substring(0, langindex) + filename.substring(langindex+3);
+            /// Remove import language tag
+            String filename = file.getName();    /// NOTE: Since it's used with zip import, specific code.
+            int langindex = filename.lastIndexOf("_");
+            filename = filename.substring(0, langindex) + filename.substring(langindex + 3);
 
-			FileBody bin = new FileBody(file, ContentType.DEFAULT_BINARY, filename);	// File from import
+            FileBody bin = new FileBody(file, ContentType.DEFAULT_BINARY, filename);    // File from import
 
-			/// Form info
-			HttpEntity reqEntity = MultipartEntityBuilder.create()
-					.addPart("uploadfile", bin)
-					.build();
-			put.setEntity(reqEntity);
+            /// Form info
+            HttpEntity reqEntity = MultipartEntityBuilder.create()
+                    .addPart("uploadfile", bin)
+                    .build();
+            put.setEntity(reqEntity);
 
-			CloseableHttpResponse response = httpclient.execute(put);
+            CloseableHttpResponse response = httpclient.execute(put);
 
 			/*
 			try
@@ -136,64 +129,55 @@ public class PostForm
 				response.close();
 			}
 			//*/
-		}
-		finally
-		{
-			httpclient.close();
-		}
+        } finally {
+            httpclient.close();
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	public static boolean updateResource( String sessionid, String backend, String uuid, String lang, String json ) throws Exception
-	{
-		/// Parse and create xml from JSON
-		JSONObject files = (JSONObject) JSONValue.parse(json);
-		JSONArray array = (JSONArray) files.get("files");
+    public static boolean updateResource(String sessionid, String backend, String uuid, String lang, String json) throws Exception {
+        /// Parse and create xml from JSON
+        JSONObject files = (JSONObject) JSONValue.parse(json);
+        JSONArray array = (JSONArray) files.get("files");
 
-		if( "".equals(lang) || lang == null  )
-			lang = "fr";
+        if ("".equals(lang) || lang == null)
+            lang = "fr";
 
-		JSONObject obj = (JSONObject) array.get(0);
-		String ressource = "";
-		String attLang = " lang=\""+lang+"\"";
-		ressource += "<asmResource>"+
-				"<filename"+attLang+">"+ obj.get("name") +"</filename>" + // filename
-				"<size"+attLang+">"+ obj.get("size") +"</size>" +
-				"<type"+attLang+">"+ obj.get("type") +"</type>"+
+        JSONObject obj = (JSONObject) array.get(0);
+        String ressource = "";
+        String attLang = " lang=\"" + lang + "\"";
+        ressource += "<asmResource>" +
+                "<filename" + attLang + ">" + obj.get("name") + "</filename>" + // filename
+                "<size" + attLang + ">" + obj.get("size") + "</size>" +
+                "<type" + attLang + ">" + obj.get("type") + "</type>" +
 //		obj.get("url");	// Backend source, when there is multiple backend
-				"<fileid"+attLang+">"+ obj.get("fileid") +"</fileid>"+
-				"</asmResource>";
+                "<fileid" + attLang + ">" + obj.get("fileid") + "</fileid>" +
+                "</asmResource>";
 
 
-		/// Send data to resource
-		/// Server + "/resources/resource/file/" + uuid +"?lang="+ lang
-		CloseableHttpClient httpclient = HttpClients.createDefault();
-		try
-		{
-			HttpPut put = new HttpPut("http://"+backend+"/rest/api/resources/resource/"+uuid);
-			put.setHeader("Cookie","JSESSIONID="+sessionid);	// So that the receiving servlet allow us
+        /// Send data to resource
+        /// Server + "/resources/resource/file/" + uuid +"?lang="+ lang
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        try {
+            HttpPut put = new HttpPut("http://" + backend + "/rest/api/resources/resource/" + uuid);
+            put.setHeader("Cookie", "JSESSIONID=" + sessionid);    // So that the receiving servlet allow us
 
-			StringEntity se = new StringEntity(ressource);
-			se.setContentEncoding("application/xml");
-			put.setEntity(se);
+            StringEntity se = new StringEntity(ressource);
+            se.setContentEncoding("application/xml");
+            put.setEntity(se);
 
-			CloseableHttpResponse response = httpclient.execute(put);
+            CloseableHttpResponse response = httpclient.execute(put);
 
-			try
-			{
-				HttpEntity resEntity = response.getEntity();
-			}
-			finally
-			{
-				response.close();
-			}
-		}
-		finally
-		{
-			httpclient.close();
-		}
+            try {
+                HttpEntity resEntity = response.getEntity();
+            } finally {
+                response.close();
+            }
+        } finally {
+            httpclient.close();
+        }
 
-		return false;
-	}
+        return false;
+    }
 }
