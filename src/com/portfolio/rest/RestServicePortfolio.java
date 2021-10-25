@@ -15,7 +15,6 @@
 
 package com.portfolio.rest;
 
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -75,7 +74,6 @@ import javax.xml.xpath.XPathFactory;
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
-import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.MailUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.data.utils.javaUtils;
@@ -112,7 +110,14 @@ import org.w3c.dom.NodeList;
 /// I hate this line, sometime it works with a '/', sometime it doesn't
 @Path("/api")
 public class RestServicePortfolio {
-    private final static Logger logger = LoggerFactory.getLogger(RestServicePortfolio.class);
+    private static final SimpleDateFormat DT = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+    private static final SimpleDateFormat DT2 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+    private static final Logger logger = LoggerFactory.getLogger(RestServicePortfolio.class);
+
+    private static final Logger securityLog = LoggerFactory.getLogger("securityLogger");
+    private static final Logger authLog = LoggerFactory.getLogger("authLogger");
+    private static final Logger errorLog = LoggerFactory.getLogger("errorLogger");
+    private static final Logger editLog = LoggerFactory.getLogger("editLogger");
 
     class UserInfo {
         String subUser = "";
@@ -138,10 +143,6 @@ public class RestServicePortfolio {
 
     KEventbus eventbus = new KEventbus();
 
-    static BufferedWriter editLog = null;
-    static BufferedWriter errorLog = null;
-    static BufferedWriter securityLog = null;
-
     static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
     static final String logFormatShort = "%7$s\n";
 
@@ -152,18 +153,6 @@ public class RestServicePortfolio {
         try {
             // Loading configKaruta.properties
             ConfigUtils.init(sc.getServletContext());
-
-            // User action logging
-            String editlog = ConfigUtils.getInstance().getProperty("edit_log");
-            if (!"".equals(editlog) && editlog != null)
-                editLog = LogUtils.getLog(editlog);
-            // General error log
-            String errorlog = ConfigUtils.getInstance().getProperty("error_log");
-            if (!"".equals(errorlog) && errorlog != null)
-                errorLog = LogUtils.getLog(errorlog);
-            String securitylog = ConfigUtils.getInstance().getProperty("security_log");
-            if (!"".equals(securitylog) && securitylog != null)
-                securityLog = LogUtils.getLog(securitylog);
 
             // Initialize data provider and cas
             casUrlValidation = ConfigUtils.getInstance().getProperty("casUrlValidation");
@@ -194,34 +183,6 @@ public class RestServicePortfolio {
      **/
     public UserInfo checkCredential(HttpServletRequest request, String login, String token, String group) {
         HttpSession session = request.getSession(true);
-
-		/*
-		String referer = (String) request.getHeader("referer");	// Can be spoofed
-		String source = (String) session.getAttribute("source");
-		if( source != null )
-		{
-			if( referer == null )
-			{
-				session.invalidate();
-				session = request.getSession(true);
-			}
-			else
-			{
-				int last = referer.lastIndexOf("/");
-				int stop = referer.indexOf("?");
-				String page = "";
-				if(stop > 0)
-					page = referer.substring(last+1, stop);
-				else
-					page = referer.substring(last+1);
-				if( !page.equals(source) )
-				{
-					session.invalidate();
-					session = request.getSession(true);
-				}
-			}
-		}
-		//*/
 
         UserInfo ui = new UserInfo();
         Integer val = (Integer) session.getAttribute("uid");
@@ -276,9 +237,9 @@ public class RestServicePortfolio {
             /// Add shibboleth info if needed
             HttpSession session = httpServletRequest.getSession(false);
             Integer fromshibe = (Integer) session.getAttribute("fromshibe");
-			/// If we need some special stuff
+            /// If we need some special stuff
 
-			return Response.ok(xmluser).build();
+            return Response.ok(xmluser).build();
         } catch (Exception ex) {
             logger.error("Managed error", ex);
             logRestRequest(httpServletRequest, "getCredential", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
@@ -483,10 +444,7 @@ public class RestServicePortfolio {
             } else if (ui.userId == userid)    /// Changing self
             {
                 String ip = httpServletRequest.getRemoteAddr();
-                if (securityLog != null) {
-                    securityLog.write(String.format("[%s] self change info %u\n", ip, userid));
-                    securityLog.flush();
-                }
+                securityLog.info("[{}] self change info '{}'}", ip, userid);
                 queryuser = dataProvider.UserChangeInfo(c, ui.userId, userid, xmlInfUser);
             } else
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
@@ -731,9 +689,7 @@ public class RestServicePortfolio {
 
             if (response == null) {
                 /// Finding back code. Not really pretty
-                Date time = new Date();
-                SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-                String timeFormat = dt.format(time);
+                String timeFormat = DT.format(new Date());
                 Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
                 NodeList codes = doc.getDocumentElement().getElementsByTagName("code");
                 // Le premier c'est celui du root
@@ -1868,9 +1824,7 @@ public class RestServicePortfolio {
             }
 
             // Make a big zip of it
-            Date time = new Date();
-            SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-            String timeFormat = dt.format(time);
+            String timeFormat = DT.format(new Date());
 
             File tempDir = new File(System.getProperty("java.io.tmpdir", null));
             if (!tempDir.isDirectory())
@@ -2587,17 +2541,13 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.putNodeMetadata(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
             if (returnValue.equals("faux")) {
-                errorLog.write(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                errorLog.flush();
-                editLog.write(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
+                errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
+                editLog.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
             logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-            if (editLog != null) {
-                editLog.write(String.format(logformat, "OK", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
-            }
+
+            editLog.info(String.format(logformat, "OK", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
@@ -2636,9 +2586,7 @@ public class RestServicePortfolio {
 
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
-        Date time = new Date();
-        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
+        String timeFormat = DT.format(new Date());
         String logformat = "";
         if ("false".equals(info))
             logformat = logFormatShort;
@@ -2649,17 +2597,12 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.putNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
-                errorLog.write(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                errorLog.flush();
-                editLog.write(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
+                errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
+                editLog.info(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
             logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-            if (editLog != null) {
-                editLog.write(String.format(logformat, "OK", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
-            }
+            editLog.info(String.format(logformat, "OK", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
@@ -2698,9 +2641,7 @@ public class RestServicePortfolio {
 
         UserInfo ui = checkCredential(httpServletRequest, null, null, null);
         Connection c = null;
-        Date time = new Date();
-        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
+        String timeFormat = DT.format(new Date());
         String logformat = "";
         if ("false".equals(info))
             logformat = logFormatShort;
@@ -2711,24 +2652,18 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.putNodeMetadataEpm(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
-                errorLog.write(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                errorLog.flush();
-                editLog.write(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
+                errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
+                editLog.info(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
             if ("erreur".equals(returnValue)) {
-                errorLog.write(String.format(logformat, "NMOD", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                errorLog.flush();
-                editLog.write(String.format(logformat, "NMOD", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
+                errorLog.error(String.format(logformat, "NMOD", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
+                editLog.info(String.format(logformat, "NMOD", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.NOT_MODIFIED, "Erreur");
             }
 
-            if (editLog != null) {
-                editLog.write(String.format(logformat, "OK", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
-            }
+            editLog.info(String.format(logformat, "OK", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
+
             logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
             return returnValue;
@@ -2768,9 +2703,7 @@ public class RestServicePortfolio {
 
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
-        Date time = new Date();
-        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
+        String timeFormat = DT.format(new Date());
         String logformat = "";
         if ("false".equals(info))
             logformat = logFormatShort;
@@ -2781,16 +2714,13 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.putNodeNodeContext(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
-                errorLog.write(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                errorLog.flush();
-                editLog.write(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
+                errorLog.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
+                editLog.info(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
             logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
             if (editLog != null) {
-                editLog.write(String.format(logformat, "OK", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
+                editLog.info(String.format(logformat, "OK", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
             }
 
             return returnValue;
@@ -2826,9 +2756,7 @@ public class RestServicePortfolio {
 
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
-        Date time = new Date();
-        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
+        String timeFormat = DT.format(new Date());
         String logformat = "";
         if ("false".equals(info))
             logformat = logFormatShort;
@@ -2843,17 +2771,13 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.putNodeNodeResource(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
-                errorLog.write(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                errorLog.flush();
-                editLog.write(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
+                errorLog.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
+                editLog.info(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
             logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
-            if (editLog != null) {
-                editLog.write(String.format(logformat, "OK", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-                editLog.flush();
-            }
+
+            editLog.info(String.format(logformat, "OK", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
@@ -3417,12 +3341,11 @@ public class RestServicePortfolio {
 		event.inputData = xmlResource;
 		//*/
         Connection c = null;
-        Date time = new Date();
-        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
+        String timeFormat = DT.format(new Date());
         String logformat = "";
         if ("false".equals(info))
             logformat = logFormatShort;
+
         else
             logformat = logFormat;
 
@@ -3430,20 +3353,15 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.putResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId).toString();
             logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
-            if (editLog != null) {
-                editLog.write(String.format(logformat, "OK", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
-                editLog.flush();
-            }
+            editLog.info(String.format(logformat, "OK", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
 
 //			eventbus.processEvent(event);
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
             try {
-                errorLog.write(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
-                errorLog.flush();
-                editLog.write(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
-                editLog.flush();
+                errorLog.error(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
+                editLog.info(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
             } catch (Exception exex) {
                 logger.error(exex.getMessage());
             }
@@ -3454,8 +3372,7 @@ public class RestServicePortfolio {
             throw ex;
         } catch (Exception ex) {
             try {
-                errorLog.write(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
-                errorLog.flush();
+                errorLog.error(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
             } catch (Exception exex) {
                 logger.error(exex.getMessage());
             }
@@ -3916,7 +3833,7 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             int nbResourceDeleted = Integer.parseInt(dataProvider.deleteGroupRights(c, groupId, groupRightId, ui.userId).toString());
             if (nbResourceDeleted == 0) {
-                System.out.print("supprim�");
+                logger.info("supprimé");
             }
             logRestRequest(httpServletRequest, null, null, Status.OK.getStatusCode());
 
@@ -4099,7 +4016,7 @@ public class RestServicePortfolio {
             documentBuilder = documentBuilderFactory.newDocumentBuilder();
             document = documentBuilder.newDocument();
             document.setXmlStandalone(true);
-            Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlGroups.getBytes("UTF-8")));
+            Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlGroups.getBytes(StandardCharsets.UTF_8)));
             NodeList groups = doc.getElementsByTagName("group");
             if (groups.getLength() == 1) {
                 Node groupnode = groups.item(0);
@@ -4163,15 +4080,6 @@ public class RestServicePortfolio {
         int status = 0;
         Connection c = null;
 
-        String authlog = ConfigUtils.getInstance().getRequiredProperty("auth_log");
-        BufferedWriter authLog = null;
-        try {
-            if (!"".equals(authlog) && authlog != null)
-                authLog = LogUtils.getLog(authlog);
-        } catch (IOException e1) {
-            logger.error("Could not create authentification log file");
-        }
-
         try {
             Document doc = DomUtils.xmlString2Document(xmlCredential, new StringBuffer());
             Element credentialElement = doc.getDocumentElement();
@@ -4197,12 +4105,12 @@ public class RestServicePortfolio {
             // 0: xml de retour
             // 1,2: username, uid
             // 3,4: substitute name, substitute id
+            String timeFormat = DT2.format(new Date());
             if (resultCredential == null) {
                 event.status = 403;
                 retVal = "invalid credential";
 
-                if (authLog != null)
-                    authLog.write(String.format("Authentication error for user '%s' date '%s'\n", login, LogUtils.getCurrentDate()));
+                authLog.info(String.format("Authentication error for user '%s' date '%s'\n", login, timeFormat));
             } else if (!"0".equals(resultCredential[2])) {
                 //				String tokenID = resultCredential[2];
 
@@ -4214,8 +4122,8 @@ public class RestServicePortfolio {
                     session.setAttribute("uid", subid);
                     session.setAttribute("subuser", resultCredential[1]);
                     session.setAttribute("subuid", uid);
-                    if (authLog != null)
-                        authLog.write(String.format("Authentication success for user '%s' date '%s' (Substitution)\n", login, LogUtils.getCurrentDate()));
+
+                    authLog.info(String.format("Authentication success for user '%s' date '%s' (Substitution)\n", login, timeFormat));
                 } else {
                     String login1 = resultCredential[1];
                     int userId = Integer.parseInt(resultCredential[2]);
@@ -4224,8 +4132,8 @@ public class RestServicePortfolio {
                     session.setAttribute("uid", userId);
                     session.setAttribute("subuser", "");
                     session.setAttribute("subuid", 0);
-                    if (authLog != null)
-                        authLog.write(String.format("Authentication success for user '%s' date '%s'\n", login, LogUtils.getCurrentDate()));
+
+                    authLog.info(String.format("Authentication success for user '%s' date '%s'\n", login, timeFormat));
                 }
 
                 event.status = 200;
@@ -4248,13 +4156,7 @@ public class RestServicePortfolio {
         } finally {
             try {
                 if (c != null) c.close();
-                if (authLog != null) {
-                    authLog.flush();
-                    authLog.close();
-                }
             } catch (SQLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -4315,7 +4217,7 @@ public class RestServicePortfolio {
                     if (result) {
                         if (securityLog != null) {
                             String ip = httpServletRequest.getRemoteAddr();
-                            securityLog.write(String.format("[%s] [%s] asked to reset password\n", ip, username));
+                            securityLog.info("[{}] [{}] asked to reset password", ip, username);
                         }
                         String cc_email = ConfigUtils.getInstance().getProperty("sys_email");
                         // Send email
@@ -4438,10 +4340,10 @@ public class RestServicePortfolio {
                 final String ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
                 if (ldapUrl != null) {
                     ConnexionLdap cldap = new ConnexionLdap();
-					if (logger.isDebugEnabled()) {
-						final String[] ldapvalues = cldap.getLdapValue(sv.getUser());
-						logger.debug("LDAP CONNECTION OK: {}", ldapvalues.toString());
-					}
+                    if (logger.isDebugEnabled()) {
+                        final String[] ldapvalues = cldap.getLdapValue(sv.getUser());
+                        logger.debug("LDAP CONNECTION OK: {}", ldapvalues.toString());
+                    }
                 }
             } else {
                 final String casCreate = ConfigUtils.getInstance().getProperty("casCreateAccount");

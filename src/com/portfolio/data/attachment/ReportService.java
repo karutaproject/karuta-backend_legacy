@@ -37,7 +37,6 @@ import javax.servlet.http.HttpSession;
 
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.DomUtils;
-import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.SqlUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -58,8 +57,6 @@ public class ReportService extends HttpServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         try {
-            LogUtils.initDirectory(getServletContext());
-
             dataProvider = SqlUtils.initProvider();
         } catch (Exception e) {
             logger.error("Can't init servlet", e);

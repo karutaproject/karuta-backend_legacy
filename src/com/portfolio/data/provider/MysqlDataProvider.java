@@ -18,7 +18,6 @@ package com.portfolio.data.provider;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -82,7 +81,6 @@ import javax.xml.xpath.XPathFactory;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.FileUtils;
-import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.PostForm;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.rest.RestWebApplicationException;
@@ -114,9 +112,9 @@ import org.xml.sax.SAXException;
 public class MysqlDataProvider implements DataProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(MysqlDataProvider.class);
+    private static final Logger securityLog = LoggerFactory.getLogger("securityLogger");
 
     final private Credential cred = new Credential();
-    static BufferedWriter securityLog = null;
     private String dbserveur = null;
 
     @Override
@@ -127,9 +125,6 @@ public class MysqlDataProvider implements DataProvider {
 
     public MysqlDataProvider() throws Exception {
         dbserveur = ConfigUtils.getInstance().getRequiredProperty("serverType");
-        final String securitylog = ConfigUtils.getInstance().getProperty("security_log");
-        if (!"".equals(securitylog) && securitylog != null)
-            securityLog = LogUtils.getLog(securitylog);
     }
 
     public Integer getMysqlNodeNextOrderChildren(Connection c, String nodeUuid) throws Exception {
@@ -10504,49 +10499,41 @@ public class MysqlDataProvider implements DataProvider {
             }
             /// Executing changes if valid
             if (isOK) {
-                try {
-                    if (password != null) {
-                        sql = "UPDATE credential SET password = UNHEX(SHA1(?)) WHERE  userid = ?";
-                        if (dbserveur.equals("oracle")) {
-                            sql = "UPDATE credential SET password = crypt(?) WHERE  userid = ?";
-                        }
-
-                        st = c.prepareStatement(sql);
-                        st.setString(1, password);
-                        st.setInt(2, userId);
-                        st.executeUpdate();
-
-                        if (securityLog != null) {
-                            securityLog.write(String.format("[User %s] Changed password\n", userId));
-                            securityLog.flush();
-                        }
+                if (password != null) {
+                    sql = "UPDATE credential SET password = UNHEX(SHA1(?)) WHERE  userid = ?";
+                    if (dbserveur.equals("oracle")) {
+                        sql = "UPDATE credential SET password = crypt(?) WHERE  userid = ?";
                     }
-                    if (email != null) {
-                        sql = "UPDATE credential SET email = ? WHERE  userid = ?";
 
-                        st = c.prepareStatement(sql);
-                        st.setString(1, email);
-                        st.setInt(2, userId);
-                        st.executeUpdate();
-                    }
-                    if (firstname != null) {
-                        sql = "UPDATE credential SET display_firstname = ? WHERE  userid = ?";
+                    st = c.prepareStatement(sql);
+                    st.setString(1, password);
+                    st.setInt(2, userId);
+                    st.executeUpdate();
+                    securityLog.info("User '{}' Changed password", userId);
+                }
+                if (email != null) {
+                    sql = "UPDATE credential SET email = ? WHERE  userid = ?";
 
-                        st = c.prepareStatement(sql);
-                        st.setString(1, firstname);
-                        st.setInt(2, userid2);
-                        st.executeUpdate();
-                    }
-                    if (lastname != null) {
-                        sql = "UPDATE credential SET display_lastname = ? WHERE  userid = ?";
+                    st = c.prepareStatement(sql);
+                    st.setString(1, email);
+                    st.setInt(2, userId);
+                    st.executeUpdate();
+                }
+                if (firstname != null) {
+                    sql = "UPDATE credential SET display_firstname = ? WHERE  userid = ?";
 
-                        st = c.prepareStatement(sql);
-                        st.setString(1, lastname);
-                        st.setInt(2, userid2);
-                        st.executeUpdate();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    st = c.prepareStatement(sql);
+                    st.setString(1, firstname);
+                    st.setInt(2, userid2);
+                    st.executeUpdate();
+                }
+                if (lastname != null) {
+                    sql = "UPDATE credential SET display_lastname = ? WHERE  userid = ?";
+
+                    st = c.prepareStatement(sql);
+                    st.setString(1, lastname);
+                    st.setInt(2, userid2);
+                    st.executeUpdate();
                 }
             }
 

@@ -54,8 +54,6 @@ public class ConfigUtils {
             hasLoaded = true;
             logger.info("Configuration file loaded: {}", filePath);
             logger.trace("Loaded properties: {}", properties);
-            /// While we're at it, init logger
-            LogUtils.initDirectory(context);
         } catch (Exception e) {
             logger.error("Can't load file :" + filePath, e);
             throw e;

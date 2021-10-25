@@ -25,8 +25,6 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -59,8 +57,8 @@ public class LoggingService extends HttpServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         try {
-            LogUtils.initDirectory(getServletContext());
             ConfigUtils.init(getServletContext());
+            LogUtils.initDirectory(getServletContext());
 
             dataProvider = SqlUtils.initProvider();
         } catch (Exception e) {
@@ -192,19 +190,14 @@ public class LoggingService extends HttpServlet {
 //				dataProvider.disconnect();
             }
 
-            /// Formatting
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-
             /// Complete path
-            Date date = new Date();
-            String datestring = dateFormat.format(date);
             InputStreamReader bis = new InputStreamReader(request.getInputStream(), StandardCharsets.UTF_8);
             BufferedReader bread = new BufferedReader(bis);
 
             BufferedWriter bwrite = LogUtils.getLog(filename);
             if (!raw) {
                 String outputformat = "%s : %s - '%s' -- ";
-                bwrite.write(String.format(outputformat, datestring, context, username));
+                bwrite.write(String.format(outputformat,  LogUtils.getCurrentDate(), context, username));
             }
             String s;
             while ((s = bread.readLine()) != null) {
@@ -221,8 +214,8 @@ public class LoggingService extends HttpServlet {
                 if (c != null) c.close();
                 request.getInputStream().close();
                 response.getWriter().close();
-            } catch (SQLException|IOException e) {
-                logger.error("Intercept error",e);
+            } catch (SQLException | IOException e) {
+                logger.error("Intercept error", e);
                 //TODO managing error
             }
         }
