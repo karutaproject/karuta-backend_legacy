@@ -29,6 +29,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -87,7 +88,7 @@ public class DomUtils
 	final static Logger logger = LoggerFactory.getLogger(DomUtils.class);
 
 //  =======================================
-	private static String dom2string(Document dom) throws Exception {  // à supprimer
+	private static String dom2string(Document dom) throws Exception {  // Ã  supprimer
 //  =======================================
 		Transformer transformer = TransformerFactory.newInstance().newTransformer();
 		StreamResult result = new StreamResult(new StringWriter());
@@ -298,7 +299,7 @@ return result.getWriter().toString();
 // -------------------------------------------------------------------------------
 	/*int xml2pdf (String ppath, String xslFName, Document xmldoc, String pdfFName, String param[], String paramVal[], StringBuffer outTrace, boolean trace) throws Exception {
 // -------------------------------------------------------------------------------
-	outTrace.append("<br>Entrée xml2pdf: ");
+	outTrace.append("<br>EntrÃ©e xml2pdf: ");
 	int result=1;
 	FopFactory fopFactory = FopFactory.newInstance();
 	FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
@@ -373,7 +374,7 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 //  ---------------------------------------------------
 	public  static void saveString (String str, String fileName) throws Exception {
 //  ---------------------------------------------------
-		Writer fwriter = new OutputStreamWriter(new FileOutputStream(fileName), "UTF-8");
+		Writer fwriter = new OutputStreamWriter(new FileOutputStream(fileName), StandardCharsets.UTF_8);
 		fwriter.write(str);
 		fwriter.close();
 	}
@@ -381,11 +382,13 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 //  ---------------------------------------------------
     private static void insererXML(Connection connexion,Document xmlSourceDoc, String partageableId, StringBuffer outTrace, boolean trace) throws Exception {
 //  ---------------------------------------------------
-	if (trace) outTrace.append("<br>insererPartageable -- entrée");
-	if (trace) outTrace.append("<br>partageableId="+partageableId);
+	if (trace) {
+		outTrace.append("<br>insererPartageable -- entrÃ©e");
+		outTrace.append("<br>partageableId=").append(partageableId);
+	}
 	// ===============chargement du document source ========================================
 
-	if (trace) outTrace.append("<br>lecture du document xml :" + partageableId+"...");
+	if (trace) outTrace.append("<br>lecture du document xml :").append(partageableId).append("...");
 	Document xmlPartageable = buildDOM(readXmlString(connexion, partageableId,outTrace));
 	if (trace) outTrace.append(" ok");
 
@@ -413,7 +416,7 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
         for (int i = 0; i < childNodes.getLength(); i++) {
            sb.append(lsSerializer.writeToString(childNodes.item(i)));
         }
-        // TODO Comprendre pourquoi CDATA est mal fermé
+        // TODO Comprendre pourquoi CDATA est mal fermÃ©
         if(sb.toString().startsWith("<![CDATA[")) sb.append("]]>");
         return DomUtils.filtrerInnerXml(sb.toString());
     }
@@ -467,14 +470,14 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 
 	public static String getNodeAttributesString(Node node)
 	{
-		String ret = "";
+		StringBuilder ret = new StringBuilder();
 		NamedNodeMap attributes = node.getAttributes();
 		for(int i=0;i<attributes.getLength();i++)
 		{
 			Attr attribute = (Attr)attributes.item(i);
-			ret += attribute.getName().trim() +"=\""+ StringEscapeUtils.escapeXml11(attribute.getValue().trim())+"\" ";
+			ret.append(attribute.getName().trim()).append("=\"").append(StringEscapeUtils.escapeXml11(attribute.getValue().trim())).append("\" ");
 		}
-		return ret;
+		return ret.toString();
 	}
 
 	public static String filtrerInnerXml(String chaine)
@@ -498,10 +501,10 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 	    tidy.setSmartIndent(true);
 	    tidy.setMakeClean(true);
 	    tidy.setForceOutput(true);
-	    ByteArrayInputStream inputStream = new ByteArrayInputStream(data.getBytes("UTF-8"));
+	    ByteArrayInputStream inputStream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
 	    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 	    tidy.parseDOM(inputStream, outputStream);
-	    return outputStream.toString("UTF-8");
+	    return outputStream.toString(StandardCharsets.UTF_8.toString());
 	}
 
 	//======================================
@@ -531,8 +534,8 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 	StringReader in = new StringReader(xml);
 	StringWriter out = new StringWriter();
 	Tidy tidy = new Tidy();
-	tidy.setInputEncoding("UTF-8");
-    tidy.setOutputEncoding("UTF-8");
+	tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
+    tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
     tidy.setWraplen(Integer.MAX_VALUE);
     tidy.setPrintBodyOnly(true);
 	tidy.setMakeClean(true);
