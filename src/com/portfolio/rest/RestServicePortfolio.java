@@ -76,7 +76,6 @@ import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.MailUtils;
 import com.portfolio.data.utils.SqlUtils;
-import com.portfolio.data.utils.javaUtils;
 import com.portfolio.eventbus.KEvent;
 import com.portfolio.eventbus.KEventbus;
 import com.portfolio.security.ConnexionLdap;
@@ -130,7 +129,6 @@ public class RestServicePortfolio {
     //	DataSource ds;
     DataProvider dataProvider;
     final Credential credential = new Credential();
-    int logRestRequests = 0;
     String label = null;
     String casUrlValidation = null;
     String elggDefaultApiUrl = null;
@@ -170,12 +168,6 @@ public class RestServicePortfolio {
         } catch (Exception e) {
             logger.error("CAN'T INIT REST SERVICE: ", e);
         }
-    }
-
-    @Deprecated
-    public void logRestRequest(HttpServletRequest httpServletRequest, String inBody, String outBody, int httpCode) {
-        logger.warn("Deprecated call!");
-
     }
 
     /**
@@ -232,7 +224,6 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
 
             String xmluser = dataProvider.getInfUser(c, ui.userId, ui.userId);
-            logRestRequest(httpServletRequest, "", xmluser, Status.OK.getStatusCode());
 
             /// Add shibboleth info if needed
             HttpSession session = httpServletRequest.getSession(false);
@@ -241,15 +232,13 @@ public class RestServicePortfolio {
 
             return Response.ok(xmluser).build();
         } catch (Exception ex) {
-            logger.error("Managed error", ex);
-            logRestRequest(httpServletRequest, "getCredential", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-
+            logger.error("getCredential - Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("getCredential - Managed error", e);
             }
         }
     }
@@ -276,19 +265,17 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
 
             String xmlGroups = (String) dataProvider.getUserGroups(c, ui.userId);
-            logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
             return xmlGroups;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("getCredential - Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -320,8 +307,10 @@ public class RestServicePortfolio {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
-        if (ui.userId == 0)
+        if (ui.userId == 0) {
+            logger.error("ui.userId not found!");
             throw new RestWebApplicationException(Status.FORBIDDEN, "Not logged in");
+        }
         try {
             c = SqlUtils.getConnection(servContext);
 
@@ -332,19 +321,17 @@ public class RestServicePortfolio {
                 xmlGroups = dataProvider.getInfUser(c, ui.userId, ui.userId);
             else
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
-            logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
             return xmlGroups;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("getUsers - Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -376,23 +363,21 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
 
             String xmluser = dataProvider.getInfUser(c, ui.userId, userid);
-            logRestRequest(httpServletRequest, "", xmluser, Status.OK.getStatusCode());
 
             return xmluser;
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("getUser - Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("getUser - Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -449,22 +434,18 @@ public class RestServicePortfolio {
             } else
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
 
-            logRestRequest(httpServletRequest, "", queryuser, Status.OK.getStatusCode());
-
             return queryuser;
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("putUser - Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-
+            logger.error("getUsers - Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, "Error : " + ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -487,20 +468,18 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
 
             String userid = dataProvider.getUserID(c, ui.userId, username);
-            logRestRequest(httpServletRequest, "", username, Status.OK.getStatusCode());
             return userid;
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.NOT_FOUND, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("getUsers - Managed error", e);
             }
         }
     }
@@ -530,19 +509,17 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
 
             String xmlgroupsUser = dataProvider.getRoleUser(c, ui.userId, useridCible);
-            logRestRequest(httpServletRequest, "", xmlgroupsUser, Status.OK.getStatusCode());
 
             return xmlgroupsUser;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -580,19 +557,17 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
 
             String xmlGroups = (String) dataProvider.getGroupRights(c, ui.userId, groupId);
-            logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
             return xmlGroups;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -615,6 +590,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String getGroupRightsInfos(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolioId") String portfolioId) {
         if (!isUUID(portfolioId)) {
+            logger.error("isUUID({}) is false", portfolioId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -625,19 +601,17 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
 
             String xmlGroups = dataProvider.getGroupRightsInfos(c, ui.userId, portfolioId);
-            logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
 
             return xmlGroups;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -672,6 +646,7 @@ public class RestServicePortfolio {
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, "application/zip", MediaType.APPLICATION_OCTET_STREAM})
     public Object getPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resource, @QueryParam("files") String files, @QueryParam("export") String export, @QueryParam("lang") String lang, @QueryParam("level") Integer cutoff) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -735,25 +710,25 @@ public class RestServicePortfolio {
                     } else
                         response = Response.ok(portfolio).type(MediaType.APPLICATION_XML).build();
 
-                    logRestRequest(httpServletRequest, null, portfolio, Status.OK.getStatusCode());
+
                 }
             }
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, null, "Portfolio " + portfolioUuid + " not found", Status.NOT_FOUND.getStatusCode());
+
             logger.info("Portfolio " + portfolioUuid + " not found");
             throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + ex.getStackTrace(), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -762,6 +737,7 @@ public class RestServicePortfolio {
 
     private File getZipFile(String portfolioUuid, String portfolioContent, String lang, Document doc, HttpSession session) throws IOException, XPathExpressionException {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -778,7 +754,7 @@ public class RestServicePortfolio {
         ZipEntry ze = new ZipEntry(portfolioUuid + ".xml");
         zos.putNextEntry(ze);
 
-        byte[] bytes = portfolioContent.getBytes("UTF-8");
+        byte[] bytes = portfolioContent.getBytes(StandardCharsets.UTF_8);
         zos.write(bytes);
 
         zos.closeEntry();
@@ -849,11 +825,11 @@ public class RestServicePortfolio {
                     totalread += inByte;
                     zos.write(buf, 0, inByte);
                 }
-                System.out.println("FILE: " + filenameext + " -> " + totalread);
+                logger.info("FILE: {} -> {}", filenameext, totalread);
                 content.close();
                 zos.closeEntry();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
             EntityUtils.consume(entity);
             ret.close();
@@ -900,25 +876,24 @@ public class RestServicePortfolio {
             if (MediaType.APPLICATION_JSON.equals(accept))    // Not really used
                 returnValue = XML.toJSONObject(returnValue).toString();
 
-            logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, null, "Portfolio code = " + code + " not found", Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio code = " + code + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + ex.getStackTrace(), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -966,7 +941,6 @@ public class RestServicePortfolio {
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
 
-                logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
                 return returnValue;
 
@@ -979,8 +953,7 @@ public class RestServicePortfolio {
                 String portfolioProjectId = null;
 
                 try {
-                    if (active.equals("false") || active.equals("0")) portfolioActive = false;
-                    else portfolioActive = true;
+                    portfolioActive = !active.equals("false") && !active.equals("0");
                 } catch (Exception ex) {
                     portfolioActive = true;
                 }
@@ -996,8 +969,7 @@ public class RestServicePortfolio {
                 ;
 
                 try {
-                    if (count.equals("true") || count.equals("1")) countOnly = true;
-                    else countOnly = false;
+                    countOnly = count.equals("true") || count.equals("1");
                 } catch (Exception ex) {
                     countOnly = false;
                 }
@@ -1006,8 +978,9 @@ public class RestServicePortfolio {
                 try {
                     portfolioCode = code;
                 } catch (Exception ex) {
+                    logger.error("Managed error", ex);
                 }
-                ;
+
                 if (portfolioCode != null) {
                     returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), portfolioCode, ui.userId, groupId, null, ui.subId).toString();
                 } else {
@@ -1024,28 +997,27 @@ public class RestServicePortfolio {
                     if (accept.equals(MediaType.APPLICATION_JSON))
                         returnValue = XML.toJSONObject(returnValue).toString();
                 }
-                logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
 
                 return returnValue;
             }
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.FORBIDDEN.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolios  not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1065,6 +1037,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("active") String active, @QueryParam("user") Integer userId) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -1080,20 +1053,19 @@ public class RestServicePortfolio {
 
             c = SqlUtils.getConnection(servContext);
             dataProvider.putPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, portfolioUuid, ui.userId, portfolioActive, groupId, null);
-            logRestRequest(httpServletRequest, xmlPortfolio, null, Status.OK.getStatusCode());
+
 
             return "";
 
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlPortfolio, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1119,13 +1091,13 @@ public class RestServicePortfolio {
 
             return Response.status(Status.OK).build();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1152,18 +1124,17 @@ public class RestServicePortfolio {
             // Check if logged user is either admin, or owner of the current portfolio
             if (credential.isAdmin(c, ui.userId) || credential.isOwner(c, ui.userId, portfolioUuid)) {
                 retval = credential.putPortfolioOwner(c, portfolioUuid, newOwner);
-                logRestRequest(httpServletRequest, xmlPortfolio, null, Status.OK.getStatusCode());
+
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlPortfolio, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -1184,6 +1155,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putPortfolioConfiguration(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portfolioUuid, @QueryParam("active") Boolean portfolioActive) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -1196,19 +1168,18 @@ public class RestServicePortfolio {
                 c = SqlUtils.getConnection(servContext);
                 dataProvider.putPortfolioConfiguration(c, portfolioUuid, portfolioActive, ui.userId);
             }
-            logRestRequest(httpServletRequest, xmlPortfolio, returnValue, Status.OK.getStatusCode());
+
 
             return returnValue;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlPortfolio, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1245,7 +1216,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String xmlUser = dataProvider.postUsers(c, xmluser, ui.userId);
-            logRestRequest(httpServletRequest, "", xmlUser, Status.OK.getStatusCode());
+
 
             if (xmlUser == null) {
                 return Response.status(Status.CONFLICT).entity("Existing user or invalid input").build();
@@ -1253,16 +1224,14 @@ public class RestServicePortfolio {
 
             return Response.ok(xmlUser).build();
         } catch (Exception ex) {
-            logger.error(ex.getMessage());
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmluser, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.BAD_REQUEST, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1285,10 +1254,10 @@ public class RestServicePortfolio {
 
             return Response.ok().build(); //.cookie(new NewCookie("label", label, name, null, null, 3600 /*maxAge*/, false)).build();
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
@@ -1322,10 +1291,10 @@ public class RestServicePortfolio {
 //			else throw new RestWebApplicationException(Status.FORBIDDEN, ui.userId+" ne fait pas parti du groupe "+groupId);
 
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
@@ -1352,21 +1321,21 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String xmlGroup = (String) dataProvider.postGroup(c, xmlgroup, ui.userId);
-            logRestRequest(httpServletRequest, "", xmlGroup, Status.OK.getStatusCode());
+
 
             return xmlGroup;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.BAD_REQUEST, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
 //			dataProvider.disconnect();
         }
@@ -1395,17 +1364,17 @@ public class RestServicePortfolio {
             } else throw new RestWebApplicationException(Status.FORBIDDEN, ui.userId + " ne fait pas parti du groupe " + groupId);
 
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1428,21 +1397,21 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             if (dataProvider.postRightGroup(c, groupRightId, groupId, ui.userId)) {
-                System.out.print("ajout�");
+                logger.trace("ajouté");
             } else throw new RestWebApplicationException(Status.FORBIDDEN, ui.userId + " ne fait pas parti du groupe " + groupId);
 
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
         return null;
@@ -1466,6 +1435,7 @@ public class RestServicePortfolio {
 		/*
 		if( !isUUID(portfolioId) )
 		{
+			logger.error("isUUID({}) is false", portfolioId);
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 		//*/
@@ -1498,7 +1468,7 @@ public class RestServicePortfolio {
             tgtcode = newcode;
 
             String returnValue = dataProvider.postInstanciatePortfolio(c, new MimeType("text/xml"), portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
-            logRestRequest(httpServletRequest, value + " to: " + returnValue, returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue.startsWith("no rights"))
                 throw new RestWebApplicationException(Status.FORBIDDEN, returnValue);
@@ -1509,19 +1479,18 @@ public class RestServicePortfolio {
             }
 
             return returnValue;
-        } catch (RestWebApplicationException rwe) {
-            throw rwe;
+        } catch (RestWebApplicationException e) {
+            logger.error("Managed error", e);
+            throw e;
         } catch (Exception ex) {
-            logger.error(ex.getMessage());
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, value + " --> Error", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1540,6 +1509,7 @@ public class RestServicePortfolio {
 		/*
 		if( !isUUID(portfolioId) )
 		{
+			logger.error("is UUID({}) is false", portfolioId);
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 		//*/
@@ -1568,19 +1538,18 @@ public class RestServicePortfolio {
             tgtcode = newcode;
 
             String returnValue = dataProvider.postCopyPortfolio(c, new MimeType("text/xml"), portfolioId, srccode, tgtcode, ui.userId, setOwner).toString();
-            logRestRequest(httpServletRequest, value + " to: " + returnValue, returnValue, Status.OK.getStatusCode());
+
 
             return Response.status(Status.OK).entity(returnValue).build();
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, value + " --> Error", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1658,7 +1627,7 @@ public class RestServicePortfolio {
 
                     String basepath = xsl.substring(0, xsl.indexOf(File.separator));
                     String firstStage = baseDir + File.separator + basepath + File.separator + "karuta" + File.separator + "xsl" + File.separator + "html2xml.xsl";
-                    System.out.println("FIRST: " + firstStage);
+                    logger.info("FIRST: {}", firstStage);
 
                     /// Storing transformed data
                     StringWriter dataTransformed = new StringWriter();
@@ -1674,13 +1643,13 @@ public class RestServicePortfolio {
                     /// Result as portfolio data to be imported
                     xmlPortfolio = dataTransformed.toString();
                 } catch (HttpException e) {
-                    e.printStackTrace();
+                    logger.error("Managed error", e);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error("Managed error", e);
                 } catch (TransformerConfigurationException e) {
-                    e.printStackTrace();
+                    logger.error("Managed error", e);
                 } catch (TransformerException e) {
-                    e.printStackTrace();
+                    logger.error("Managed error", e);
                 }
             }
         }
@@ -1693,23 +1662,22 @@ public class RestServicePortfolio {
 
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.postPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
-            logRestRequest(httpServletRequest, xmlPortfolio, returnValue, Status.OK.getStatusCode());
+
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, ex.getResponse().getStatus());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(ex.getStatus(), ex.getCustomMessage());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlPortfolio, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1736,17 +1704,17 @@ public class RestServicePortfolio {
                 return Response.status(403).build();
             }
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1887,18 +1855,17 @@ public class RestServicePortfolio {
 
             return response;
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Managed error", e);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, e.getMessage());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), modelId, Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1927,21 +1894,20 @@ public class RestServicePortfolio {
 
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, fileInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
-            logRestRequest(httpServletRequest, returnValue, returnValue, Status.OK.getStatusCode());
+
 
             return returnValue;
         } catch (RestWebApplicationException e) {
             throw e;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), modelId, Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -1957,6 +1923,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String deletePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({})", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -1967,28 +1934,27 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             Integer nbPortfolioDeleted = Integer.parseInt(dataProvider.deletePortfolio(c, portfolioUuid, ui.userId, groupId).toString());
             if (nbPortfolioDeleted == 0) {
-                logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+
 
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
             }
-            logRestRequest(httpServletRequest, null, null, Status.OK.getStatusCode());
+
 
             return "";
 
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2007,6 +1973,7 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public String getNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("level") Integer cutoff) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2021,7 +1988,7 @@ public class RestServicePortfolio {
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
-                logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
             } else {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -2029,25 +1996,23 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
-            ex.printStackTrace();
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (NullPointerException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
-            ex.printStackTrace();
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2065,6 +2030,7 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public String getNodeWithChildren(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("level") Integer cutoff) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2079,28 +2045,28 @@ public class RestServicePortfolio {
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
-                logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
 
                 return returnValue;
             } else {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2118,6 +2084,7 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public String getNodeMetadataWad(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2130,24 +2097,24 @@ public class RestServicePortfolio {
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
-                logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
 
                 return returnValue;
             } else {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2169,6 +2136,7 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public String getNodeRights(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2181,32 +2149,32 @@ public class RestServicePortfolio {
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
-                logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
             } else {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (NullPointerException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2223,6 +2191,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.TEXT_PLAIN)
     public String getNodePortfolioId(@CookieParam("user") String user, @CookieParam("credential") String token, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2243,17 +2212,18 @@ public class RestServicePortfolio {
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Error, shouldn't happen.");
             }
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(ex.getStatus(), ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2277,6 +2247,7 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public String postNodeRights(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2338,23 +2309,23 @@ public class RestServicePortfolio {
                 }
             }
 
-            logRestRequest(httpServletRequest, xmlNode, "Change rights", Status.OK.getStatusCode());
+
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (NullPointerException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -2374,6 +2345,7 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public String getNodeBySemanticTag(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-uuid") String portfolioUuid, @PathParam("semantictag") String semantictag, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2384,24 +2356,24 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.getNodeBySemanticTag(c, new MimeType("text/xml"), portfolioUuid, semantictag, ui.userId, groupId).toString();
             if (returnValue.length() != 0) {
-                logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
 
                 return returnValue;
             } else {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2419,6 +2391,7 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public String getNodesBySemanticTag(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-uuid") String portfolioUuid, @PathParam("semantictag") String semantictag, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2429,7 +2402,7 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.getNodesBySemanticTag(c, new MimeType("text/xml"), ui.userId, groupId, portfolioUuid, semantictag).toString();
             if (returnValue.length() != 0) {
-                logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
 
                 return returnValue;
             } else {
@@ -2437,17 +2410,17 @@ public class RestServicePortfolio {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2463,6 +2436,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2488,25 +2462,25 @@ public class RestServicePortfolio {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, xmlNode, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2522,6 +2496,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putNodeMetadata(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2545,27 +2520,27 @@ public class RestServicePortfolio {
                 editLog.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             editLog.info(String.format(logformat, "OK", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, xmlNode, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2581,6 +2556,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putNodeMetadataWad(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2601,26 +2577,26 @@ public class RestServicePortfolio {
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
             editLog.info(String.format(logformat, "OK", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, xmlNode, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2636,6 +2612,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putNodeMetadataEpm(String xmlNode, @PathParam("nodeid") String nodeUuid, @QueryParam("group") int groupId, @QueryParam("info") String info, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2664,25 +2641,24 @@ public class RestServicePortfolio {
 
             editLog.info(String.format(logformat, "OK", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
 
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, xmlNode, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2698,6 +2674,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2718,24 +2695,24 @@ public class RestServicePortfolio {
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
             if (editLog != null) {
                 editLog.info(String.format(logformat, "OK", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
             }
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2751,6 +2728,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2764,7 +2742,7 @@ public class RestServicePortfolio {
             logformat = logFormat;
 
         try {
-            /// Branchement pour l'interpr�tation du contenu, besoin de v�rifier les limitations ?
+            /// Branchement pour l'interprétation du contenu, besoin de vérifier les limitations ?
             //xmlNode = xmlNode.getBytes("UTF-8").toString();
             /// putNode(MimeType inMimeType, String nodeUuid, String in,int userId, int groupId)
             //          String returnValue = dataProvider.putNode(new MimeType("text/xml"),nodeUuid,xmlNode,this.userId,this.groupId).toString();
@@ -2775,23 +2753,23 @@ public class RestServicePortfolio {
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             editLog.info(String.format(logformat, "OK", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw ex;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2808,6 +2786,7 @@ public class RestServicePortfolio {
 		/*
 		if( !isUUID(srcuuid) || !isUUID(parentId) )
 		{
+		logger.error("isUUID({}) or isUUID({}) is false", srcuuid, parentId);
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 		//*/
@@ -2822,7 +2801,6 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.postImportNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
             if ("faux".equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -2830,17 +2808,17 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2857,6 +2835,7 @@ public class RestServicePortfolio {
 		/*
 		if( !isUUID(srcuuid) || !isUUID(parentId) )
 		{
+		logger.error("isUUID({}) or isUUID({}) is false", srcuuid, parentId);
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 		//*/
@@ -2872,7 +2851,7 @@ public class RestServicePortfolio {
 
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.postCopyNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -2882,17 +2861,17 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2917,7 +2896,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.getNodes(c, new MimeType("text/xml"), portfoliocode, semtag, ui.userId, groupId, semtag_parent, code_parent, cutoff).toString();
-            logRestRequest(httpServletRequest, "getNodes", returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -2927,16 +2906,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw ex;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "getNodes", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -2953,6 +2932,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public Response postNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") Integer group, @PathParam("parent-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("group") int groupId) {
         if (!isUUID(parentId)) {
+            logger.error("isUUID({})  is false", parentId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -2972,7 +2952,7 @@ public class RestServicePortfolio {
             } else // if( dataProvider.isAdmin(c, Integer.toString(ui.userId)) )
             {
                 String returnValue = dataProvider.postNode(c, new MimeType("text/xml"), parentId, xmlNode, ui.userId, groupId, false).toString();
-                logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
                 Response response;
                 if (returnValue == "faux") {
@@ -2988,17 +2968,17 @@ public class RestServicePortfolio {
 //			else
 //				return Response.status(403).entity("No").build();
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3015,6 +2995,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public Response postMoveNodeUp(String xmlNode, @PathParam("node-id") String nodeId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeId)) {
+            logger.error("isUUID({})  is false", nodeId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -3036,7 +3017,7 @@ public class RestServicePortfolio {
             } else {
                 c = SqlUtils.getConnection(servContext);
                 int returnValue = dataProvider.postMoveNodeUp(c, ui.userId, nodeId);
-                logRestRequest(httpServletRequest, xmlNode, Integer.toString(returnValue), Status.OK.getStatusCode());
+
 
                 if (returnValue == -1) {
                     response = Response.status(404).entity("Non-existing node").build();
@@ -3048,16 +3029,16 @@ public class RestServicePortfolio {
                 }
             }
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -3076,6 +3057,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public Response postChangeNodeParent(String xmlNode, @PathParam("node-id") String nodeId, @PathParam("parent-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeId) || !isUUID(parentId)) {
+            logger.error("isUUID({}) or isUUID({})  is false", nodeId, parentId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -3093,7 +3075,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             boolean returnValue = dataProvider.postChangeNodeParent(c, ui.userId, nodeId, parentId);
-            logRestRequest(httpServletRequest, xmlNode, Boolean.toString(returnValue), Status.OK.getStatusCode());
+
 
             Response response;
             if (returnValue == false) {
@@ -3104,16 +3086,16 @@ public class RestServicePortfolio {
 
             return response;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3130,6 +3112,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String postActionNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeId, @PathParam("action-name") String macro, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeId)) {
+            logger.error("isUUID({})  is false", nodeId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -3139,7 +3122,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.postMacroOnNode(c, ui.userId, nodeId, macro);
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "erreur") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -3147,16 +3130,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3172,6 +3155,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String deleteNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-uuid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({})  is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -3182,29 +3166,29 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             int nbDeletedNodes = Integer.parseInt(dataProvider.deleteNode(c, nodeUuid, ui.userId, groupId).toString());
             if (nbDeletedNodes == 0) {
-                logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            logRestRequest(httpServletRequest, null, null, Status.OK.getStatusCode());
+
 
             return "";
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3238,6 +3222,7 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public String getResource(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-parent-id") String nodeParentUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeParentUuid)) {
+            logger.error("isUUID({})  is false", nodeParentUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -3253,25 +3238,25 @@ public class RestServicePortfolio {
             }
             if (accept.equals(MediaType.APPLICATION_JSON))
                 returnValue = XML.toJSONObject(returnValue).toString();
-            logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Resource " + nodeParentUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3289,6 +3274,7 @@ public class RestServicePortfolio {
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     public String getResources(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -3300,19 +3286,19 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.getResources(c, new MimeType("text/xml"), portfolioUuid, ui.userId, groupId).toString();
             if (accept.equals(MediaType.APPLICATION_JSON))
                 returnValue = XML.toJSONObject(returnValue).toString();
-            logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
 
             return returnValue;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3328,6 +3314,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("node-parent-uuid") String nodeParentUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeParentUuid)) {
+            logger.error("isUUID({})  is false", nodeParentUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -3352,7 +3339,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.putResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId).toString();
-            logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
+
             editLog.info(String.format(logformat, "OK", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
 
 //			eventbus.processEvent(event);
@@ -3365,9 +3352,8 @@ public class RestServicePortfolio {
             } catch (Exception exex) {
                 logger.error(exex.getMessage());
             }
-            logger.error(ex.getMessage());
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlResource, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
+
 
             throw ex;
         } catch (Exception ex) {
@@ -3376,16 +3362,15 @@ public class RestServicePortfolio {
             } catch (Exception exex) {
                 logger.error(exex.getMessage());
             }
-            logger.error(ex.getMessage());
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlResource, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
+
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3401,6 +3386,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String postResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-parent-uuid") String nodeParentUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeParentUuid)) {
+            logger.error("isUUID({})  is false", nodeParentUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -3415,21 +3401,21 @@ public class RestServicePortfolio {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
+
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlResource, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3455,21 +3441,21 @@ public class RestServicePortfolio {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
+
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlResource, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3495,21 +3481,22 @@ public class RestServicePortfolio {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            //logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
+            //
             //        	dataProvider.disconnect();
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            //logRestRequest(httpServletRequest, xmlResource,  ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
+            //
             //			dataProvider.disconnect();
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3535,21 +3522,22 @@ public class RestServicePortfolio {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-            //logRestRequest(httpServletRequest, xmlResource, returnValue, Status.OK.getStatusCode());
+            //
             //        	dataProvider.disconnect();
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            //logRestRequest(httpServletRequest, xmlResource,  ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
+            //
             //			dataProvider.disconnect();
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3565,6 +3553,7 @@ public class RestServicePortfolio {
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     public String getRolePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("role") String role, @PathParam("portfolio-id") String portfolioId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         if (!isUUID(portfolioId)) {
+            logger.error("isUUID({})  is false", portfolioId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -3576,19 +3565,18 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.getRolePortfolio(c, new MimeType("text/xml"), role, portfolioId, ui.userId).toString();
             //			if(accept.equals(MediaType.APPLICATION_JSON))
             //				returnValue = XML.toJSONObject(returnValue).toString();
-            logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
 
             return returnValue;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3611,28 +3599,26 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.getRole(c, new MimeType("text/xml"), roleId, ui.userId).toString();
             if (returnValue.equals("")) {
-                logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+
 
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + roleId + " not found");
             }
 
-            logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + roleId + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3656,28 +3642,26 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.getModels(c, new MimeType("text/xml"), ui.userId).toString();
             if (returnValue.equals("")) {
-                logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+
 
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + " not found");
             }
 
-            logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3701,28 +3685,26 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.getModel(c, new MimeType("text/xml"), modelId, ui.userId).toString();
             if (returnValue.equals("")) {
-                logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+
 
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + " not found");
             }
 
-            logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3745,28 +3727,26 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.postModels(c, new MimeType("text/xml"), xmlModel, ui.userId).toString();
             if (returnValue.equals("")) {
-                logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+
 
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + " not found");
             }
 
-            logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3782,6 +3762,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String deleteResource(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("resource-id") String resourceUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(resourceUuid)) {
+            logger.error("isUUID({})  is false", resourceUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
@@ -3791,27 +3772,26 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             int nbResourceDeleted = Integer.parseInt(dataProvider.deleteResource(c, resourceUuid, ui.userId, groupId).toString());
             if (nbResourceDeleted == 0) {
-                logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+
 
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Resource " + resourceUuid + " not found");
             }
-            logRestRequest(httpServletRequest, null, null, Status.OK.getStatusCode());
+
 
             return "";
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Resource " + resourceUuid + " not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3835,23 +3815,22 @@ public class RestServicePortfolio {
             if (nbResourceDeleted == 0) {
                 logger.info("supprimé");
             }
-            logRestRequest(httpServletRequest, null, null, Status.OK.getStatusCode());
+
 
             return "";
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Resource  not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3879,29 +3858,27 @@ public class RestServicePortfolio {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
             int nbResourceDeleted = dataProvider.deleteUsers(c, ui.userId, userId);
-            logRestRequest(httpServletRequest, null, null, Status.OK.getStatusCode());
+
             if (nbResourceDeleted > 0)
                 message = "user " + userId + " deleted";
             else
                 message = "user " + userId + " not found";
 
-            logRestRequest(httpServletRequest, null, null, Status.OK.getStatusCode());
 
             return "";
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Resource  not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3927,25 +3904,24 @@ public class RestServicePortfolio {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
             int nbResourceDeleted = dataProvider.deleteUsers(c, ui.userId, userid);
-            logRestRequest(httpServletRequest, null, null, Status.OK.getStatusCode());
+
             if (nbResourceDeleted > 0)
                 message = "user " + userid + " deleted";
             else
                 message = "user " + userid + " not found";
         } catch (RestWebApplicationException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Resource  not found");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
         return message;
@@ -3962,6 +3938,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String getGroupsPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
@@ -3970,19 +3947,18 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String xmlGroups = dataProvider.getGroupsPortfolio(c, portfolioUuid, ui.userId);
-            logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
+
 
             return xmlGroups;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -3998,6 +3974,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String getUserGroupByPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -4008,7 +3985,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String xmlGroups = dataProvider.getUserGroupByPortfolio(c, portfolioUuid, ui.userId);
-            logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
+
 
             DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder documentBuilder = null;
@@ -4029,15 +4006,14 @@ public class RestServicePortfolio {
 
             return xmlGroups;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -4143,21 +4119,17 @@ public class RestServicePortfolio {
 
             return Response.status(event.status).entity(retVal).type(event.mediaType).build();
         } catch (RestWebApplicationException ex) {
-            ex.printStackTrace();
-            logger.error(ex.getLocalizedMessage());
-            logRestRequest(httpServletRequest, null, "invalid Credential or invalid group member", Status.FORBIDDEN.getStatusCode());
+            logger.error("Invalid credentials", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             status = 500;
             retVal = ex.getMessage();
-            logger.error(ex.getMessage());
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlCredential, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Invalid credentials", ex);
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -4227,20 +4199,16 @@ public class RestServicePortfolio {
                     }
                 }
             } catch (RestWebApplicationException ex) {
-                ex.printStackTrace();
-                logger.error(ex.getLocalizedMessage());
-                logRestRequest(httpServletRequest, null, "invalid Credential or invalid group member", Status.FORBIDDEN.getStatusCode());
+                logger.error("Managed error",ex);
                 throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
             } catch (Exception ex) {
-                logger.error(ex.getMessage());
-                ex.printStackTrace();
-                logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+                logger.error("Managed error",ex);
                 throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
             } finally {
                 try {
                     if (c != null) c.close();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    logger.error("Managed error", e);
                 }
             }
         }
@@ -4257,7 +4225,7 @@ public class RestServicePortfolio {
     @POST
     @Path("/credential/login/cas")
     public Response postCredentialFromCas(String content, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
-        System.out.println("RECEIVED POST CAS: tok: " + token + " tix: " + ticket + " red: " + redir);
+        logger.debug("RECEIVED POST CAS: tok: " + token + " tix: " + ticket + " red: " + redir);
         return getCredentialFromCas(user, token, groupId, ticket, redir, sc, httpServletRequest);
     }
 
@@ -4317,12 +4285,12 @@ public class RestServicePortfolio {
 
             xmlResponse = sv.getResponse();
             if (xmlResponse.contains("cas:authenticationFailure")) {
-                System.out.println(String.format("CAS response: %s\n", xmlResponse));
+                logger.info("CAS response: {}", xmlResponse);
                 return Response.status(Status.FORBIDDEN).entity("CAS error").build();
             }
 //			/*
             else {
-                System.out.println("SHOULD BE FINE: " + xmlResponse);
+                logger.info("SHOULD BE FINE: {}", xmlResponse);
             }
             //*/
 
@@ -4391,13 +4359,13 @@ public class RestServicePortfolio {
 
             return response;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :" + casUrlValidation);
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
 
         }
@@ -4460,6 +4428,7 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public String getNodeWithXSL(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @QueryParam("xsl-file") String xslFile, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("lang") String lang, @QueryParam("p1") String p1, @QueryParam("p2") String p2, @QueryParam("p3") String p3) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({})  is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -4481,7 +4450,7 @@ public class RestServicePortfolio {
             if (returnValue.length() != 0) {
                 if (MediaType.APPLICATION_JSON.equals(accept))
                     returnValue = XML.toJSONObject(returnValue).toString();
-                logRestRequest(httpServletRequest, null, returnValue, Status.OK.getStatusCode());
+
             } else {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -4489,21 +4458,21 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (NullPointerException ex) {
-            logRestRequest(httpServletRequest, null, null, Status.NOT_FOUND.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found or xsl not found :" + ex.getMessage());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, null, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -4519,6 +4488,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String postNodeFromModelBySemanticTag(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @PathParam("semantic-tag") String semantictag, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
+            logger.error("isUUID({})  is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -4528,7 +4498,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.postNodeFromModelBySemanticTag(c, new MimeType("text/xml"), nodeUuid, semantictag, ui.userId, groupId).toString();
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -4536,17 +4506,17 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -4574,14 +4544,15 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, uploadedInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
         } catch (RestWebApplicationException e) {
+            logger.error("Managed error", e);
             throw e;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Managed error", e);
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -4599,6 +4570,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String getUsersByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -4608,19 +4580,18 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String xmlUsers = dataProvider.getUsersByRole(c, ui.userId, portfolioUuid, role);
-            logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
+
 
             return xmlUsers;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -4636,6 +4607,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String getGroupsByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolioUuid)) {
+            logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -4645,19 +4617,18 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             String xmlGroups = dataProvider.getGroupsByRole(c, ui.userId, portfolioUuid, role);
-            logRestRequest(httpServletRequest, "", xmlGroups, Status.OK.getStatusCode());
+
 
             return xmlGroups;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -4691,20 +4662,19 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             response = dataProvider.postUserGroup(c, groupname, ui.userId);
-            logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
+
 
             if (response == -1)
                 throw new RestWebApplicationException(Status.NOT_MODIFIED, "Error in creation");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -4735,22 +4705,21 @@ public class RestServicePortfolio {
             } else {
                 // Add user in group
                 isOK = dataProvider.putUserInUserGroup(c, user, group, ui.userId);
-                logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
+
             }
             if (isOK)
                 return Response.status(200).entity("Changed").build();
             else
                 return Response.status(200).entity("Not OK").build();
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -4796,17 +4765,16 @@ public class RestServicePortfolio {
                 xmlUsers = dataProvider.getUserGroupList(c, ui.userId);
             else
                 xmlUsers = dataProvider.getUsersByUserGroup(c, group, ui.userId);
-            logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
+
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -4836,18 +4804,17 @@ public class RestServicePortfolio {
                 isOK = dataProvider.deleteUsersGroups(c, group, ui.userId);
             else
                 isOK = dataProvider.deleteUsersFromUserGroups(c, user, group, ui.userId);
-            logRestRequest(httpServletRequest, "", response, Status.OK.getStatusCode());
+
 
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
         return response;
@@ -4885,21 +4852,20 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             response = dataProvider.postPortfolioGroup(c, groupname, type, parent, ui.userId);
-            logRestRequest(httpServletRequest, "", "Add portfolio group", Status.OK.getStatusCode());
+
 
             if (response == -1) {
                 return Response.status(Status.NOT_MODIFIED).entity("Error in creation").build();
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -4925,19 +4891,18 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             int response = -1;
             response = dataProvider.putPortfolioInGroup(c, uuid, group, label, ui.userId);
-            logRestRequest(httpServletRequest, "", "Add user in group", Status.OK.getStatusCode());
+
 
             return Response.ok(Integer.toString(response)).build();
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -4984,17 +4949,16 @@ public class RestServicePortfolio {
                 xmlUsers = dataProvider.getPortfolioGroupList(c, ui.userId);
             else
                 xmlUsers = dataProvider.getPortfolioByPortfolioGroup(c, group, ui.userId);
-            logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
+
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
 
@@ -5023,18 +4987,17 @@ public class RestServicePortfolio {
                 response = dataProvider.deletePortfolioGroups(c, group, ui.userId);
             else
                 response = dataProvider.deletePortfolioFromPortfolioGroups(c, uuid, group, ui.userId);
-            logRestRequest(httpServletRequest, "", response, Status.OK.getStatusCode());
+
 
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
 
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
         return response;
@@ -5065,6 +5028,7 @@ public class RestServicePortfolio {
     public String postMacro(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("uuid") String uuid, @PathParam("macro-name") String macroName,
                             @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(uuid)) {
+            logger.error("isUUID({})  is false", uuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -5077,29 +5041,29 @@ public class RestServicePortfolio {
             // On execute l'action sur le noeud uuid
             if (uuid != null && macroName != null) {
                 returnValue = dataProvider.postMacroOnNode(c, ui.userId, uuid, macroName);
-                logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
                 if (returnValue == "faux") {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
             }
-            // Erreur de requ�te
+            // Erreur de requête
             else {
                 returnValue = "";
             }
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5280,7 +5244,6 @@ public class RestServicePortfolio {
                 }
             }
 
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5288,16 +5251,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5313,6 +5276,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String getRightsGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portfolio, @QueryParam("user") Integer queryuser, @QueryParam("role") String role) {
         if (!isUUID(portfolio)) {
+            logger.error("isUUID({})  is false", portfolio);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -5324,7 +5288,7 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             // Retourne le contenu du type
             returnValue = dataProvider.getRRGList(c, ui.userId, portfolio, queryuser, role);
-            logRestRequest(httpServletRequest, "getRightsGroup", returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5332,16 +5296,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "getRightsGroup", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5357,6 +5321,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String getPortfolioRightInfo(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portId) {
         if (!isUUID(portId)) {
+            logger.error("isUUID({})  is false", portId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -5369,7 +5334,7 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (portId != null) {
                 returnValue = dataProvider.getPortfolioInfo(c, ui.userId, portId);
-                logRestRequest(httpServletRequest, "getPortfolioRightInfo", returnValue, Status.OK.getStatusCode());
+
 
                 if (returnValue == "faux") {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5379,16 +5344,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "getPortfolioRightInfo", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5412,7 +5377,7 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (rrgId != null) {
                 returnValue = dataProvider.getRRGInfo(c, ui.userId, rrgId);
-                logRestRequest(httpServletRequest, "getRightInfo", returnValue, Status.OK.getStatusCode());
+
 
                 if (returnValue == "faux") {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5422,16 +5387,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "getRightInfo", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5455,7 +5420,7 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (rrgId != null) {
                 returnValue = dataProvider.putRRGUpdate(c, ui.userId, rrgId, xmlNode);
-                logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
                 if (returnValue == "faux") {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5465,16 +5430,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5490,6 +5455,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String postRightGroups(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolio, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolio)) {
+            logger.error("isUUID({})  is false", portfolio);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
 
@@ -5504,7 +5470,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             returnValue = dataProvider.postRRGCreate(c, ui.userId, portfolio, xmlNode);
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5512,16 +5478,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5543,7 +5509,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             returnValue = dataProvider.postRRGUsers(c, ui.userId, rrgId, xmlNode);
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5551,16 +5517,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5582,7 +5548,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             returnValue = dataProvider.postRRGUser(c, ui.userId, rrgId, queryuser);
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5590,16 +5556,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5621,7 +5587,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             returnValue = dataProvider.deleteRRG(c, ui.userId, rrgId);
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5629,16 +5595,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5660,7 +5626,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection(servContext);
             returnValue = dataProvider.deleteRRGUser(c, ui.userId, rrgId, queryuser);
-            logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
             if (returnValue == "faux") {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5668,16 +5634,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5701,7 +5667,7 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (portId != null) {
                 returnValue = dataProvider.deletePortfolioUser(c, ui.userId, portId);
-                logRestRequest(httpServletRequest, xmlNode, returnValue, Status.OK.getStatusCode());
+
 
                 if (returnValue == "faux") {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -5711,16 +5677,16 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, xmlNode, ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("Managed error", e);
             }
         }
     }
@@ -5760,13 +5726,12 @@ public class RestServicePortfolio {
             iLimit = 20;
         }
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-        System.out.println(ui.User);
+        logger.info(ui.User);
         try {
             Elgg elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User, elggDefaultUserPassword);
             return elgg.getSiteRiverFeed(iLimit);
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
@@ -5788,8 +5753,7 @@ public class RestServicePortfolio {
             Elgg elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User, elggDefaultUserPassword);
             return elgg.postWire(message);
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logRestRequest(httpServletRequest, "", javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
