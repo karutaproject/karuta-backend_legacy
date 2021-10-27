@@ -166,9 +166,6 @@ public class ExportHTMLService extends HttpServlet {
         //// Rewrite html link for the CSS
         String datastr = data.toString();
         datastr = datastr.replaceAll("href=\"[^\"]*(/[^\"]*.[css|less]\")", "href=\"css$1");
-//		System.out.println("============ CSS ============");
-//		System.out.println(datastr.substring(0, 2048));
-//		System.out.println("=============================");
 
         // Add export javascript file
         WriteURLInZip(session, appliname + "/exported.js", "exported.js", zos);

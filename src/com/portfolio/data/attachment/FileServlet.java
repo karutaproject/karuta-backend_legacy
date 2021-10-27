@@ -37,7 +37,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.naming.InitialContext;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -46,7 +45,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.sql.DataSource;
 import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -115,14 +113,6 @@ public class FileServlet extends HttpServlet {
 //			ourIPs.add("127.0.0.1");
 
             server = ConfigUtils.getInstance().getRequiredProperty(PROP_FILESERVER);
-
-            InitialContext cxt = new InitialContext();
-
-            /// Init this here, might fail depending on server hosting
-            DataSource ds = (DataSource) cxt.lookup("java:/comp/env/jdbc/portfolio-backend");
-            if (ds == null) {
-                throw new IllegalStateException("Data jdbc/portfolio-backend source not found!");
-            }
         } catch (Exception e) {
             logger.error("Unable to init the servlet", e);
             throw new ServletException("Unable to init the servlet", e);
@@ -467,7 +457,6 @@ public class FileServlet extends HttpServlet {
                 //throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit WRITE sur le noeud "+nodeUuid);
             }
 
-//			System.out.println("FileServlet::doPost: "+url+" from user: "+userId );
 
             String data;
             String fileid = "";
@@ -710,7 +699,7 @@ public class FileServlet extends HttpServlet {
 
             response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 
-            System.out.println("FileServlet::doGet: " + url + " from user: " + userId);
+            logger.info("FileServlet::doGet: {} from user: {}", url, userId);
             // ====== URI : /resources/file[/{lang}]/{context-id}
             // ====== PathInfo: /resources/file[/{uuid}?lang={fr|en}&size={S|L}] pathInfo
             //			String uri = request.getRequestURI();
@@ -725,8 +714,6 @@ public class FileServlet extends HttpServlet {
 
             /// FIXME: Passe la sécurité si la source provient de localhost, il faudrait un échange afin de s'assurer que n'importe quel servlet ne puisse y accéder
             String sourceip = request.getRemoteAddr();
-//			System.out.println("IP: "+sourceip);
-//			System.out.println(ourIPs);
 
             /// Vérification des droits d'accés
             // TODO: Might be something special with proxy and export/PDF, to investigate

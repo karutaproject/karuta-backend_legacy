@@ -343,11 +343,6 @@ public class MongoDBDataProvider implements DataProvider {
     }
 
     @Override
-    public int postShareGroup(Connection c, String portfolio, int user, Integer userId, String write) {
-        return 0;
-    }
-
-    @Override
     public int deleteShareGroup(Connection c, String portfolio, Integer userId) {
         return 0;
     }

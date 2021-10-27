@@ -372,21 +372,16 @@ public class Credential {
             }
             t6 = System.currentTimeMillis();
 
-			/*
-			long checkSysInfo = t1-t0;
-			long groupSelect = t2-t1;
-			long rightFromGroup = t3-t2;
-			long rightSpecificUser = t4-t3;
-			long rightFromAll = t5-t4;
-			long checkPublic = t6-t5;
-			System.out.println("=====Check Rights=====");
-			System.out.println("Check sys info: "+checkSysInfo);
-			System.out.println("Group selection: "+groupSelect);
-			System.out.println("Right from group: "+rightFromGroup);
-			System.out.println("Right for user: "+rightSpecificUser);
-			System.out.println("Right from all: "+rightFromAll);
-			System.out.println("Check public: "+checkPublic);
-			//*/
+			if (logger.isTraceEnabled()) {
+                final long checkSysInfo = t1 - t0;
+                final long groupSelect = t2 - t1;
+                final long rightFromGroup = t3 - t2;
+                final long rightSpecificUser = t4 - t3;
+                final long rightFromAll = t5 - t4;
+                final long checkPublic = t6 - t5;
+                logger.trace("=====Check Rights=====\nCheck sys info: {}\nGroup selection: {}\nRight from group: {}\nRight for user: {}\nRight from all: {}\nCheck public: {}\n",
+                        checkSysInfo, groupSelect, rightFromGroup, rightSpecificUser, rightFromAll, checkPublic);
+            }
         } catch (Exception ex) {
             logger.error(ex.getMessage());
             ex.printStackTrace();

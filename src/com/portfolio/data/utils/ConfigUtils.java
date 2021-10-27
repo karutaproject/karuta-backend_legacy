@@ -39,6 +39,7 @@ public class ConfigUtils {
     private String filePath;
     private String configPath;
     private String karutaHome;
+    private String servletName;
 
     private ConfigUtils(final ServletContext context) throws Exception {
         if (hasLoaded) return;
@@ -81,13 +82,13 @@ public class ConfigUtils {
         final String configPropDir = System.getProperty(KARUTA_PROP_HOME);
         // The jvm property override the environment property if set
         final String configDir = (configPropDir != null && !configPropDir.trim().isEmpty()) ? configPropDir : configEnvDir;
-        final String servName = context.getContextPath();
+        servletName = context.getContextPath();
         if (configDir != null && !configDir.trim().isEmpty()) {
             final File base = new File(configDir.trim());
             if (base.exists() && base.isDirectory() && base.canWrite()) {
                 try {
                     karutaHome = base.getCanonicalPath();
-                    configPath = karutaHome + servName + "_config" + File.separatorChar;
+                    configPath = karutaHome + servletName + "_config" + File.separatorChar;
                     logger.info("Karuta-backend Servlet configpath @ " + configPath);
                 } catch (IOException e) {
                     logger.error("The Configuration directory '" + configDir + "' wasn't defined", e);
@@ -130,5 +131,9 @@ public class ConfigUtils {
 
     public String getKarutaHome() {
         return karutaHome;
+    }
+
+    public String getServletName() {
+        return servletName;
     }
 }

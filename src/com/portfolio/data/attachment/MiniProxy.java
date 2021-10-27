@@ -20,7 +20,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 
 import javax.servlet.ServletConfig;
@@ -78,7 +77,7 @@ public class MiniProxy extends HttpServlet {
                 query = "";
 
             String queryURL = String.format("%s%s%s", baseURL, pathinfo, query);
-            System.out.println("Query to: " + queryURL);
+            logger.info("Query to: {}", queryURL);
 
             URL urlConn = new URL(queryURL);
             HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();

@@ -319,7 +319,7 @@ public class XSLService extends HttpServlet {
                     "]>" + // For the pesky special characters
                     "<root>" + input + "</root>";
 
-//			System.out.println("INPUT WITH PROXY:"+ input);
+			logger.trace("INPUT WITH PROXY: {}", input);
 
             /// Résolution des proxys
             DocumentBuilder documentBuilder;
@@ -376,7 +376,7 @@ public class XSLService extends HttpServlet {
             writer.flush();
             input = writer.toString();
 
-//			System.out.println("INPUT DATA:"+ input);
+			logger.trace("INPUT DATA: {}", input);
 
             // Setup a buffer to obtain the content length
             ByteArrayOutputStream stageout = new ByteArrayOutputStream();
@@ -400,8 +400,7 @@ public class XSLService extends HttpServlet {
 
             // Configure parameter from xml
             String[] table = parameters.split(";");
-            for (int i = 0; i < table.length; ++i) {
-                String line = table[i];
+            for (String line : table) {
                 int var = line.indexOf(":");
                 String par = line.substring(0, var);
                 String val = line.substring(var + 1);
@@ -617,19 +616,6 @@ public class XSLService extends HttpServlet {
             // Setup a buffer to obtain the content length
             ByteArrayOutputStream out = new ByteArrayOutputStream();    // Data to send back
 
-            //// Setup Transformer (1st stage)
-            /// Base path
-			/*
-			String basepath = xslfile.substring(0,xslfile.indexOf(File.separator));
-			String firstStage = baseDir+File.separator+basepath+File.separator+"karuta"+File.separator+"xsl"+File.separator+"html2xml.xsl";
-			System.out.println("FIRST: "+firstStage);
-			Source xsltSrc1 = new StreamSource(new File(firstStage));
-			Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
-			StreamSource stageSource = new StreamSource(new ByteArrayInputStream( input.getBytes() ) );
-			Result stageRes = new StreamResult(stageout);
-			transformer1.transform(stageSource, stageRes);
-			//*/
-
             // Setup Transformer (2nd stage)
             String secondStage = baseDir + File.separator + xslfile;
             Source xsltSrc2 = new StreamSource(new File(secondStage));
@@ -638,8 +624,7 @@ public class XSLService extends HttpServlet {
             // Configure parameter from xml
             if (parameters != null) {
                 String[] table = parameters.split(";");
-                for (int i = 0; i < table.length; ++i) {
-                    String line = table[i];
+                for (String line : table) {
                     int var = line.indexOf(":");
                     String par = line.substring(0, var);
                     String val = line.substring(var + 1);
@@ -719,7 +704,7 @@ public class XSLService extends HttpServlet {
         try {
             in = connection.getInputStream();
         } catch (Exception e) {
-            System.out.println(e.toString());
+            logger.error("Managed error", e);
             in = connection.getErrorStream();
         }
 

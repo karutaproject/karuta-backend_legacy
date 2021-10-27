@@ -32,7 +32,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -127,7 +126,7 @@ public class OAuth2 extends HttpServlet {
                 connection.setRequestMethod("POST");
                 connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-//				System.out.println("Connecting to: "+URLToken+" data: "+authdata);
+				logger.debug("Connecting to: {} data: {}", URLToken, authdata);
 
                 /// Receiving login information
                 ByteArrayInputStream bais = new ByteArrayInputStream(authdata.getBytes());
@@ -159,10 +158,7 @@ public class OAuth2 extends HttpServlet {
                         id_token = pmatcher.group(1);
                     }
                     try {
-//						System.out.println("Processing =====");
-//						System.out.println(id_token);
-//						System.out.println("================");
-
+						logger.debug("Processing =====\n{}\n================", id_token);
                         //// Decoding
                         JwtConsumer firstPassJwtConsumer = new JwtConsumerBuilder()
                                 .setSkipAllValidators()
@@ -212,8 +208,7 @@ public class OAuth2 extends HttpServlet {
                         response.sendRedirect(ConfigUtils.getInstance().getRequiredProperty("ui_redirect_location"));
 
                         request.getReader().close();
-//						System.out.println("data: " + name+" -- "+username);
-//						System.out.println("Code: ("+retcode+") msg: "+msg+" data: " + parsedToken);
+						logger.debug("data: {} -- {}, Code ({}) msg {}", name, username, retcode, msg);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -226,7 +221,7 @@ public class OAuth2 extends HttpServlet {
                 response.getWriter().close();
 
             } else {
-                System.out.println("Invalid OAuth2 query: state doesn't match");
+                logger.warn("Invalid OAuth2 query: state doesn't match");
             }
         } else    /// Authentication start
         {
@@ -241,7 +236,7 @@ public class OAuth2 extends HttpServlet {
             final String urlQuery = String.format("%s?response_type=%s&client_id=%s&redirect_uri=%s&scope=%s&state=%s&nonce=%s",
                     URL, response_type, client_id, redirect_uri, scope, state, nonce);
 
-//			System.out.println("Redirect to: "+urlQuery);
+			logger.debug("Redirect to: {}", urlQuery);
 
             /// Keep it for return call
             session.setAttribute("state", state);

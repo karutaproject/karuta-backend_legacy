@@ -83,63 +83,56 @@ public class HandlerNotificationSakai implements KEventHandler {
             switch (event.requestType) {
                 case POST:
                 case PUT:
-                    switch (event.eventType) {
-                        case NODE:
+                    if (event.eventType == KEvent.EventType.NODE) {/// Récupère la liste des roles à notifier
+                        Set<String[]> notif = dataProvider.getNotificationUserList(connection, userId, groupId, event.uuid);
 
-                            /// Récupère la liste des roles à notifier
-                            Set<String[]> notif = dataProvider.getNotificationUserList(connection, userId, groupId, event.uuid);
+                        if (notif.isEmpty())
+                            return false;
 
-                            if (notif.isEmpty())
-                                return false;
-
-                            String context = dataProvider.getNode(connection, new MimeType("text/xml"), event.uuid, true, this.userId, this.groupId, null, null).toString();
-                            Document docContext = parseString(context);
-                            NodeList res = docContext.getElementsByTagName("asmResource");
-                            String blah = "";
-                            for (int i = 0; i < res.getLength(); ++i) {
-                                Node r = res.item(i);
-                                String type = r.getAttributes().getNamedItem("xsi_type").getNodeValue();
-                                if ("nodeRes".equals(type)) {
-                                    NodeList childs = r.getChildNodes();
-                                    for (int j = 0; j < childs.getLength(); ++j) {
-                                        Node c = childs.item(j);
-                                        String cname = c.getNodeName();
-                                        if ("label".equals(cname)) {
-                                            String lang = c.getAttributes().getNamedItem("lang").getNodeValue();
-                                            if ("fr".equals(lang)) {
-                                                blah = c.getTextContent();
-                                                break;
-                                            }
+                        String context = dataProvider.getNode(connection, new MimeType("text/xml"), event.uuid, true, this.userId, this.groupId, null, null).toString();
+                        Document docContext = parseString(context);
+                        NodeList res = docContext.getElementsByTagName("asmResource");
+                        String blah = "";
+                        for (int i = 0; i < res.getLength(); ++i) {
+                            Node r = res.item(i);
+                            String type = r.getAttributes().getNamedItem("xsi_type").getNodeValue();
+                            if ("nodeRes".equals(type)) {
+                                NodeList childs = r.getChildNodes();
+                                for (int j = 0; j < childs.getLength(); ++j) {
+                                    Node c = childs.item(j);
+                                    String cname = c.getNodeName();
+                                    if ("label".equals(cname)) {
+                                        String lang = c.getAttributes().getNamedItem("lang").getNodeValue();
+                                        if ("fr".equals(lang)) {
+                                            blah = c.getTextContent();
+                                            break;
                                         }
                                     }
-                                    break;
                                 }
+                                break;
                             }
+                        }
 
-                            Iterator<String[]> userIter = notif.iterator();
+                        Iterator<String[]> userIter = notif.iterator();
 
-                            Document doc = parseString(event.inputData);
-                            doc.getElementsByTagName("");
-                            String type = "";
+                        Document doc = parseString(event.inputData);
+                        doc.getElementsByTagName("");
+                        String type = "";
 
-                            String portfolio = dataProvider.getPortfolioUuidByNodeUuid(connection, event.uuid);
+                        String portfolio = dataProvider.getPortfolioUuidByNodeUuid(connection, event.uuid);
 
-                            getSakaiTicket();
+                        getSakaiTicket();
 
-                            StringBuilder log = new StringBuilder("ticket:" + ticket + ";");
-                            while (userIter.hasNext()) {
-                                String[] val = userIter.next();
-                                String user = val[0];
-                                String lastname = val[1];
-                                int status = sendMessage(user, lastname + ", user: " + username + " edited '" + blah + "' @ " + event.uuid + " in portfolio " + portfolio);
-                                log.append(user).append(":").append(status).append(";");
-                            }
+                        StringBuilder log = new StringBuilder("ticket:" + ticket + ";");
+                        while (userIter.hasNext()) {
+                            String[] val = userIter.next();
+                            String user = val[0];
+                            String lastname = val[1];
+                            int status = sendMessage(user, lastname + ", user: " + username + " edited '" + blah + "' @ " + event.uuid + " in portfolio " + portfolio);
+                            log.append(user).append(":").append(status).append(";");
+                        }
 
-                            System.out.println(log);
-                            break;
-
-                        default:
-                            break;
+                        logger.debug("Sakai ticket {}", log);
                     }
                     break;
 
@@ -183,7 +176,7 @@ public class HandlerNotificationSakai implements KEventHandler {
 
             ret = connect.getResponseCode();
 
-            System.out.println("Notification:" + ret);
+            logger.debug("Notification: {}", ret);
         } catch (Exception e) {
             e.printStackTrace();
         }

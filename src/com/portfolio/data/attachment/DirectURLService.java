@@ -152,14 +152,14 @@ public class DirectURLService extends HttpServlet {
             /// Check if link is still valid
             long currtime = date.getTime() / 1000;
             if (currtime > endtime) {
-                accessLog.info("[{}] Old link access by: {}} ({}) for uuid: {} level: {} duration: {} ends at: {}", datestring, email, role, uuid, level, endtime);
+                accessLog.info("[{}] Old link access by: {} ({}) for uuid: {} level: {} duration: {} ends at: {}", datestring, email, role, uuid, level, duration, endtime);
                 response.setStatus(403);
                 response.getWriter().close();
                 request.getInputStream().close();
                 return;
             } else {
                 // Log connection attempt. email, uuid, role access, hour, ip, date
-                accessLog.info("[{}] Direct link access by: {} ({}) for uuid: {} level: {} duration: {} ends at: {}", datestring, email, role, uuid, level, endtime);
+                accessLog.info("[{}] Direct link access by: {} ({}) for uuid: {} level: {} duration: {} ends at: {}", datestring, email, role, uuid, level, duration, endtime);
             }
         }
 
@@ -208,24 +208,7 @@ public class DirectURLService extends HttpServlet {
                         email += add;
                     }
 
-					/*
-					/// Check if user exist by logging in
-					login = dataProvider.logViaEmail(c, email);
-					if( login != null )
-					{
-						uid = Integer.parseInt(login[2]);
-						session.setAttribute("user", login[1]);
-						session.setAttribute("uid", uid);
-						session.setAttribute("source", "public.htm");
 
-						String referer = (String) request.getHeader("referer");	// Can be spoofed
-//						System.out.println("Login from source: "+referer);
-						isLogged = true;
-					}
-
-					else if( !isLogged )
-						//*/
-                {
                     login = new String[]{"0", "0", "0"};
                     try {
                         login[2] = dataProvider.createUser(c, email, email);
@@ -233,7 +216,7 @@ public class DirectURLService extends HttpServlet {
                     } catch (Exception e) {
                         logger.error("Intercepted error:", e);
                     }    //
-                }
+
 
                 case 2:    // Share portfolio
                     if (uid > 0) {
@@ -257,7 +240,7 @@ public class DirectURLService extends HttpServlet {
                         session.setAttribute("source", "public.htm");
 
                         String referer = (String) request.getHeader("referer");    // Can be spoofed
-//						System.out.println("Login from source: "+referer);
+						logger.debug("Login from source: {}", referer);
                     }
                     break;
 
@@ -353,7 +336,7 @@ public class DirectURLService extends HttpServlet {
             }
             nodedata = retdata.toString();
 
-//			System.out.println("DIRECT FETCH NODE: "+nodedata);
+			logger.debug("DIRECT FETCH NODE: {}", nodedata);
             DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
             doc = documentBuilder.parse(new ByteArrayInputStream(nodedata.getBytes(StandardCharsets.UTF_8)));
@@ -408,7 +391,7 @@ public class DirectURLService extends HttpServlet {
             }
 
             values = multiplex[f].split(",");
-//			System.out.println("VALUES: "+shareroleval);
+			logger.debug("VALUES: {}", shareroleval);
         }
 
         // Parameters checking
@@ -424,7 +407,7 @@ public class DirectURLService extends HttpServlet {
 		  6: condition (optionel)
 		 **/
         String checkStatus = "Invalid: ";
-        if ("email".equals(type)) {
+        if (values != null && "email".equals(type)) {
             if ((values[1].contains(role) && values[2].contains(email)) || "?".equals(values[2])) {
                 isok = true;
             } else {
@@ -433,7 +416,7 @@ public class DirectURLService extends HttpServlet {
                 if (!values[2].contains(email))
                     checkStatus += "Email doesn't match.";
             }
-        } else if ("showtorole".equals(type)) {
+        } else if (values != null && "showtorole".equals(type)) {
             if (values[1].contains(role) && values[2].contains(showtorole)) {
                 isok = true;
             } else {
@@ -495,7 +478,7 @@ public class DirectURLService extends HttpServlet {
         writer.write(output);
         writer.close();
         request.getInputStream().close();
-//	System.out.println("DIRECT FETCH NODE: "+output);
+    	logger.debug("DIRECT FETCH NODE: {}", output);
 
     }
 
@@ -503,9 +486,9 @@ public class DirectURLService extends HttpServlet {
 
     public static String hexToString(byte[] bytes) {
         StringBuilder hexchars = new StringBuilder(bytes.length * 2);
-        for (int j = 0; j < bytes.length; j++) {
-            hexchars.append(resolveHex[(bytes[j] & 0xFF) >>> 4]);
-            hexchars.append(resolveHex[(bytes[j] & 0xFF) & 0x0F]);
+        for (byte aByte : bytes) {
+            hexchars.append(resolveHex[(aByte & 0xFF) >>> 4]);
+            hexchars.append(resolveHex[(aByte & 0xFF) & 0x0F]);
         }
         return hexchars.toString();
     }

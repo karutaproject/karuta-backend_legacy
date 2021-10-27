@@ -70,7 +70,7 @@ public class LTIServletImport extends HttpServlet {
         HttpSession session = request.getSession(true);
         String sakai_session = (String) session.getAttribute("sakai_session");
         String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
-        System.out.println("IS IT OK: " + sakai_session);
+        logger.info("IS IT OK: {}", sakai_session);
 
         HttpClient client = new HttpClient();
 
@@ -103,7 +103,7 @@ public class LTIServletImport extends HttpServlet {
         HttpSession session = request.getSession(true);
         String sakai_session = (String) session.getAttribute("sakai_session");
         String sakai_server = (String) session.getAttribute("ext_sakai_server");    // Base server http://localhost:9090
-        System.out.println("IS IT OK: " + sakai_session);
+        logger.info("IS IT OK: {}", sakai_session);
 
         HttpClient client = new HttpClient();
 

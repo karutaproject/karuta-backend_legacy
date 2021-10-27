@@ -214,7 +214,7 @@ public class ReportService extends HttpServlet {
             String urlTarget = "http://127.0.0.1:8081";
             if (pathinfo != null)
                 urlTarget += pathinfo;
-//			System.out.println("Path: "+pathinfo+" -> "+urlTarget);
+            logger.debug("Path: {} -> {}", pathinfo, urlTarget);
 
             /// Create connection
             URL urlConn = new URL(urlTarget);
@@ -246,7 +246,7 @@ public class ReportService extends HttpServlet {
             connection.connect();
 
             /// Send data to report daemon
-//			System.out.println("Sending: "+data);
+            logger.debug("Sending: {}", data);
             ByteArrayInputStream bais = new ByteArrayInputStream(data.getBytes());
             OutputStream outputData = connection.getOutputStream();
             int transferred = IOUtils.copy(bais, outputData);

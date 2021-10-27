@@ -87,29 +87,23 @@ public class HandlerDatabase implements KEventHandler {
                         event.status = 200;
                         event.doc = parseString(resultCredential[2]);
 
-                        System.out.println("LOGIN event");
+                        logger.debug("LOGIN event");
                     } else throw new RestWebApplicationException(Status.FORBIDDEN, "invalid credential or invalid group member");
 
                     break;
 
                 case NODE:
-                    switch (event.requestType) {
-                        case POST:
-                            String returnValue = dataProvider.postNode(connection, new MimeType("text/xml"), event.uuid, event.inputData, this.userId, this.groupId, true).toString();
-                            if ("faux".equals(returnValue)) {
-                                event.message = "Vous n'avez pas les droits d'acces";
-                                event.status = 403;
-                            } else {
-                                event.status = 200;
-                                event.doc = parseString(returnValue);
-                            }
+                    if (event.requestType == KEvent.RequestType.POST) {
+                        String returnValue = dataProvider.postNode(connection, new MimeType("text/xml"), event.uuid, event.inputData, this.userId, this.groupId, true).toString();
+                        if ("faux".equals(returnValue)) {
+                            event.message = "Vous n'avez pas les droits d'acces";
+                            event.status = 403;
+                        } else {
+                            event.status = 200;
+                            event.doc = parseString(returnValue);
+                        }
 
-                            System.out.println("POST NODE event");
-
-                            break;
-
-                        default:
-                            break;
+                        logger.debug("POST NODE event");
                     }
                     break;
 

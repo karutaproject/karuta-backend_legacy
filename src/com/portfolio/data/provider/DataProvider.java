@@ -293,9 +293,6 @@ public interface DataProvider {
 
     public boolean setPublicState(Connection c, int userId, String portfolio, boolean isPublic);
 
-    @Deprecated
-    public int postShareGroup(Connection c, String portfolio, int user, Integer userId, String write);
-
     public int deleteShareGroup(Connection c, String portfolio, Integer userId);
 
     public int deleteSharePerson(Connection c, String portfolio, int user, Integer userId);

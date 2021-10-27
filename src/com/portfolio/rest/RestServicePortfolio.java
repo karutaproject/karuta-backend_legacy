@@ -2439,14 +2439,6 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection(servContext);
             String returnValue = dataProvider.putNode(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
-//			long t_query = System.nanoTime();
-
-//			long d_cred = t_checkCred - t_startRest;
-//			long d_query = t_query - t_checkCred;
-
-//			System.out.println("Check credential: "+d_cred);
-//			System.out.println("Do query: "+d_query);
-
             if (returnValue.equals("faux")) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -4265,7 +4257,7 @@ public class RestServicePortfolio {
                 completeURL = requestURL.replace(0, requestURL.indexOf(":"), proto).toString();
             }
             /// completeURL should be the same provided in the "service" parameter
-//			System.out.println(String.format("Service: %s\n", completeURL));
+			logger.debug("Service: {}", completeURL);
 
             sv.setService(completeURL);
             sv.setServiceTicket(ticket);
@@ -4309,10 +4301,7 @@ public class RestServicePortfolio {
                     if (ldapUrl != null) {
                         ConnexionLdap cldap = new ConnexionLdap();
                         final String[] ldapvalues = cldap.getLdapValue(sv.getUser());
-//						for( int i=0; i<ldapvalues.length; i++ )
-//							System.out.println("LDAP CONNECTION OK: "+ldapvalues[i]);
-//						if( ldapParam == null || ldapvalues[0].startsWith("7") )
-                        if (ldapvalues[1] != null | ldapvalues[2] != null | ldapvalues[3] != null) //si le filtre ldap a renvoy� des valeurs
+                        if (ldapvalues[1] != null | ldapvalues[2] != null | ldapvalues[3] != null) //si le filtre ldap a renvoyé des valeurs
                         {
                             userId = dataProvider.createUser(c, sv.getUser(), null);
                             int uid = Integer.parseInt(userId);

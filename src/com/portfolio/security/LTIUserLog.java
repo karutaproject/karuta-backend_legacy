@@ -22,6 +22,9 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * This class will create a log entry containing the LMS system's user ID, user EID,
  * the WAD system's user ID, along with the LTI consumer key
@@ -29,6 +32,8 @@ import java.util.Date;
  *
  */
 public class LTIUserLog {
+
+	public static final Logger logger = LoggerFactory.getLogger(LTIUserLog.class);
 
 	/**
 	 * Get the id for a log entry with a matching user IDs and consumer_key
@@ -59,7 +64,7 @@ public class LTIUserLog {
 				id = rs.getString("id");
 			}
 		}	catch(Exception e){
-			System.out.println("Error getting lti_user_log id for lms_user_id:" + lms_user_id + " and consumer_key:" + consumer_key);
+			logger.error("Error getting lti_user_log id for lms_user_id: '{}' and consumer_key: '{}'", lms_user_id, consumer_key);
 		}	finally {
 			cleanup(rs, ps);
 		}
@@ -102,7 +107,7 @@ public class LTIUserLog {
 			result.append("\n<lti_user_log id='"+id+"'/>");
 
 		}	catch(Exception e){
-			System.out.println("\n Erreur dans createUserLogEntry:"+e);
+			logger.error("Erreur dans createUserLogEntry:", e);
 		}	finally {
 			cleanup(rs, ps);
 		}
