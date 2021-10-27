@@ -60,7 +60,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
@@ -87,7 +86,6 @@ import com.sun.jersey.multipart.FormDataParam;
 import edu.yale.its.tp.cas.client.ServiceTicketValidator;
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.io.IOUtils;
@@ -1616,7 +1614,7 @@ public class RestServicePortfolio {
 
                     // Retrieve data
                     InputStream retrieve = get.getResponseBodyAsStream();
-                    String sakaiData = IOUtils.toString(retrieve, "UTF-8");
+                    String sakaiData = IOUtils.toString(retrieve, StandardCharsets.UTF_8);
 
                     //// Convert it via XSL
                     /// Path to XSL
@@ -1642,13 +1640,7 @@ public class RestServicePortfolio {
 
                     /// Result as portfolio data to be imported
                     xmlPortfolio = dataTransformed.toString();
-                } catch (HttpException e) {
-                    logger.error("Managed error", e);
-                } catch (IOException e) {
-                    logger.error("Managed error", e);
-                } catch (TransformerConfigurationException e) {
-                    logger.error("Managed error", e);
-                } catch (TransformerException e) {
+                } catch (IOException | TransformerException e) {
                     logger.error("Managed error", e);
                 }
             }
@@ -1656,15 +1648,11 @@ public class RestServicePortfolio {
 
         Connection c = null;
         try {
-            boolean instantiate = false;
-            if ("true".equals(instance))
-                instantiate = true;
+            boolean instantiate = "true".equals(instance);
 
             c = SqlUtils.getConnection(servContext);
-            String returnValue = dataProvider.postPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
 
-
-            return returnValue;
+            return dataProvider.postPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
 
@@ -2257,7 +2245,7 @@ public class RestServicePortfolio {
         try {
             DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-            Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes("UTF-8")));
+            Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes(StandardCharsets.UTF_8)));
 
             XPath xPath = XPathFactory.newInstance().newXPath();
 //			String xpathRole = "//role";
@@ -2743,7 +2731,7 @@ public class RestServicePortfolio {
 
         try {
             /// Branchement pour l'interprétation du contenu, besoin de vérifier les limitations ?
-            //xmlNode = xmlNode.getBytes("UTF-8").toString();
+            //xmlNode = xmlNode.getBytes(StandardCharsets.UTF_8).toString();
             /// putNode(MimeType inMimeType, String nodeUuid, String in,int userId, int groupId)
             //          String returnValue = dataProvider.putNode(new MimeType("text/xml"),nodeUuid,xmlNode,this.userId,this.groupId).toString();
             c = SqlUtils.getConnection(servContext);
@@ -4199,10 +4187,10 @@ public class RestServicePortfolio {
                     }
                 }
             } catch (RestWebApplicationException ex) {
-                logger.error("Managed error",ex);
+                logger.error("Managed error", ex);
                 throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
             } catch (Exception ex) {
-                logger.error("Managed error",ex);
+                logger.error("Managed error", ex);
                 throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
             } finally {
                 try {
@@ -5122,7 +5110,7 @@ public class RestServicePortfolio {
 
             DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-            Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes("UTF-8")));
+            Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes(StandardCharsets.UTF_8)));
 
             XPath xPath = XPathFactory.newInstance().newXPath();
             ArrayList<String> portfolio = new ArrayList<String>();
@@ -5164,9 +5152,8 @@ public class RestServicePortfolio {
 
             c = SqlUtils.getConnection(servContext);
             ArrayList<String> nodes = new ArrayList<String>();
-            for (int i = 0; i < portfolio.size(); ++i)    // For all portfolio
-            {
-                String portfolioUuid = portfolio.get(i);
+            // For all portfolio
+            for (String portfolioUuid : portfolio) {
                 String portfolioStr = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, null, null, ui.subId, null).toString();
                 Document docPort = documentBuilder.parse(new ByteArrayInputStream(portfolioStr.getBytes(StandardCharsets.UTF_8)));
 
@@ -5196,10 +5183,6 @@ public class RestServicePortfolio {
                 String rolename = rolenode.getAttributes().getNamedItem("name").getNodeValue();
                 Node right = rolenode.getFirstChild();
 
-                //
-                if ("user".equals(rolename)) {
-                    /// username as role
-                }
 
                 if ("#text".equals(right.getNodeName()))
                     right = right.getNextSibling();
@@ -5225,28 +5208,19 @@ public class RestServicePortfolio {
 
 
                     /// Apply modification for all nodes
-                    for (int j = 0; j < nodes.size(); ++j) {
-                        String nodeid = nodes.get(j);
-
+                    for (String nodeid : nodes) {
                         // change right
                         dataProvider.postRights(c, ui.userId, nodeid, rolename, noderight);
                     }
                 } else if ("action".equals(right.getNodeName()))    // Using an action on node
                 {
                     /// Apply modification for all nodes
-                    for (int j = 0; j < nodes.size(); ++j) {
-                        String nodeid = nodes.get(j);
-
+                    for (String nodeid : nodes) {
                         // TODO: check for reset keyword
                         // reset right
                         dataProvider.postMacroOnNode(c, ui.userId, nodeid, "reset");
                     }
                 }
-            }
-
-
-            if (returnValue == "faux") {
-                throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
 
             return returnValue;
@@ -5290,14 +5264,14 @@ public class RestServicePortfolio {
             returnValue = dataProvider.getRRGList(c, ui.userId, portfolio, queryuser, role);
 
 
-            if (returnValue == "faux") {
+            if (returnValue.equals("faux")) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
-            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
+            throw ex;
         } catch (Exception ex) {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -5336,7 +5310,7 @@ public class RestServicePortfolio {
                 returnValue = dataProvider.getPortfolioInfo(c, ui.userId, portId);
 
 
-                if (returnValue == "faux") {
+                if (returnValue.equals("faux")) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
 
@@ -5345,7 +5319,7 @@ public class RestServicePortfolio {
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
-            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
+            throw ex;
         } catch (Exception ex) {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -5379,7 +5353,7 @@ public class RestServicePortfolio {
                 returnValue = dataProvider.getRRGInfo(c, ui.userId, rrgId);
 
 
-                if (returnValue == "faux") {
+                if (returnValue.equals("faux")) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
 
@@ -5388,7 +5362,7 @@ public class RestServicePortfolio {
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
-            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
+            throw ex;
         } catch (Exception ex) {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -5422,7 +5396,7 @@ public class RestServicePortfolio {
                 returnValue = dataProvider.putRRGUpdate(c, ui.userId, rrgId, xmlNode);
 
 
-                if (returnValue == "faux") {
+                if (returnValue.equals("faux")) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
 
@@ -5472,7 +5446,7 @@ public class RestServicePortfolio {
             returnValue = dataProvider.postRRGCreate(c, ui.userId, portfolio, xmlNode);
 
 
-            if (returnValue == "faux") {
+            if (returnValue.equals("faux")) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
 

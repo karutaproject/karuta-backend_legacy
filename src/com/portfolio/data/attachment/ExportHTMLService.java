@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -106,7 +107,7 @@ public class ExportHTMLService extends HttpServlet {
         if (uid == 0)
             return;
 
-        request.setCharacterEncoding("UTF-8");
+        request.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 
         String portfolioUuid = request.getParameter("pid");
         String lang = request.getParameter("lang");

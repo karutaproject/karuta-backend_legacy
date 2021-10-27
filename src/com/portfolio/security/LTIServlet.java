@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.util.Calendar;
 import java.util.Enumeration;
@@ -214,7 +215,7 @@ public class LTIServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        request.setCharacterEncoding("UTF-8");
+        request.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 
         StringBuffer outTrace = new StringBuffer();
         String logFName = null;

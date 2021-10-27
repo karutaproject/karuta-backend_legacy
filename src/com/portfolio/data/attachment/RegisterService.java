@@ -95,7 +95,7 @@ public class RegisterService extends HttpServlet {
             e1.printStackTrace();
         }
 
-        response.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
         StringWriter inputdata = new StringWriter();
         IOUtils.copy(request.getInputStream(), inputdata, StandardCharsets.UTF_8);
 

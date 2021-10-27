@@ -278,7 +278,7 @@ return result.getWriter().toString();
 	String result ="";
 	try {
 		FileInputStream fichierSrce =  new FileInputStream(fileName);
-		BufferedReader readerSrce = new BufferedReader(new InputStreamReader(fichierSrce,"UTF-8"));
+		BufferedReader readerSrce = new BufferedReader(new InputStreamReader(fichierSrce, StandardCharsets.UTF_8));
 		String line;
 		while( (line=readerSrce.readLine())!=null){
 			result += line;
@@ -492,8 +492,8 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 	   // data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"+data;
 
 		Tidy tidy = new Tidy();
-	    tidy.setInputEncoding("UTF-8");
-	    tidy.setOutputEncoding("UTF-8");
+	    tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
+	    tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
 	    tidy.setWraplen(Integer.MAX_VALUE);
 	  //  tidy.setPrintBodyOnly(true);
 	    tidy.setXmlOut(true);

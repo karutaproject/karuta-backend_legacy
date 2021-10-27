@@ -29,7 +29,6 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -223,7 +222,7 @@ public class XSLService extends HttpServlet {
 			try
 			{
 				documentBuilder = documentBuilderFactory.newDocumentBuilder();
-				doc = documentBuilder.parse(new ByteArrayInputStream(sb.toString().getBytes("UTF-8")));
+				doc = documentBuilder.parse(new ByteArrayInputStream(sb.toString().getBytes(StandardCharsets.UTF_8)));
 			}
 			catch( Exception e )
 			{
@@ -410,7 +409,7 @@ public class XSLService extends HttpServlet {
             }
 
             // Setup input
-            StreamSource xmlSource = new StreamSource(new ByteArrayInputStream(stageout.toString("UTF-8").getBytes(StandardCharsets.UTF_8)));
+            StreamSource xmlSource = new StreamSource(new ByteArrayInputStream(stageout.toString(StandardCharsets.UTF_8.toString()).getBytes(StandardCharsets.UTF_8)));
 //			StreamSource xmlSource = new StreamSource(new File(baseDir+origin, "projectteam.xml") );
 
 
@@ -565,7 +564,7 @@ public class XSLService extends HttpServlet {
 			for (FileItem item : items) {
 				if ("data".equals(item.getFieldName())) {
 					// Data to process
-					IOUtils.copy(item.getInputStream(), data, "UTF-8");
+					IOUtils.copy(item.getInputStream(), data, StandardCharsets.UTF_8);
 					break;
 				}
 			}

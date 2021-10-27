@@ -63,7 +63,7 @@ public class PostForm {
 				HttpEntity resEntity = response.getEntity();	/// Will be JSON
 				if( resEntity != null )
 				{
-					BufferedReader reader = new BufferedReader(new InputStreamReader(resEntity.getContent(), "UTF-8"));
+					BufferedReader reader = new BufferedReader(new InputStreamReader(resEntity.getContent(), StandardCharsets.UTF_8));
 					StringBuilder builder = new StringBuilder();
 					for( String line = null; (line = reader.readLine()) != null; )
 						builder.append(line).append("\n");
@@ -115,7 +115,7 @@ public class PostForm {
 				HttpEntity resEntity = response.getEntity();	/// Will be JSON
 				if( resEntity != null )
 				{
-					BufferedReader reader = new BufferedReader(new InputStreamReader(resEntity.getContent(), "UTF-8"));
+					BufferedReader reader = new BufferedReader(new InputStreamReader(resEntity.getContent(), StandardCharsets.UTF_8));
 					StringBuilder builder = new StringBuilder();
 					for( String line = null; (line = reader.readLine()) != null; )
 						builder.append(line).append("\n");

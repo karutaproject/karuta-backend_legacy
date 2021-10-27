@@ -76,7 +76,7 @@ public class ConvertCSV extends HttpServlet {
 
         initialize(request);
         response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 
         final String csvsep = ConfigUtils.getInstance().getProperty("csv_separator", ",");
         char csvseparator = csvsep.charAt(0);    // Otherwise just fetch the first character defined

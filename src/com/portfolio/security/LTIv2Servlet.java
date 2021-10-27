@@ -28,6 +28,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
@@ -429,7 +430,7 @@ public class LTIv2Servlet extends HttpServlet {
 				f.createNewFile();
 			}
 			FileInputStream fis = new FileInputStream(filePath);
-			BufferedReader br = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
+			BufferedReader br = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
 			JSONObject tp = (JSONObject)new JSONParser().parse(br);
 			return tp;
 		} catch (FileNotFoundException e) {

@@ -1353,7 +1353,7 @@ public class MysqlDataProvider implements DataProvider {
             t3 = System.currentTimeMillis();
 
             StringWriter stw = new StringWriter();
-            stw.append(headerXML + data + "</portfolio>");
+            stw.append(headerXML).append(data).append("</portfolio>");
 
             t4 = System.currentTimeMillis();
 

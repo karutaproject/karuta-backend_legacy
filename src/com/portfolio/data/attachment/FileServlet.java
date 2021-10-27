@@ -708,7 +708,7 @@ public class FileServlet extends HttpServlet {
             StringBuffer outPrint = new StringBuffer();
             String logFName = null;
 
-            response.setCharacterEncoding("UTF-8");
+            response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 
             System.out.println("FileServlet::doGet: " + url + " from user: " + userId);
             // ====== URI : /resources/file[/{lang}]/{context-id}
