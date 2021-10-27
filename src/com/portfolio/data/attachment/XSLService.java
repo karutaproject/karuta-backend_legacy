@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.activation.MimeType;
-import javax.naming.InitialContext;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -42,7 +41,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
@@ -97,7 +95,6 @@ public class XSLService extends HttpServlet {
     boolean hasNodeWriteRight = false;
     ServletContext sc;
     String context = "";
-    DataSource ds;
 
     private String server;
     String baseDir;
@@ -149,14 +146,6 @@ public class XSLService extends HttpServlet {
         try {
             String dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
             dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
-
-            InitialContext cxt = new InitialContext();
-
-            /// Init this here, might fail depending on server hosting
-            ds = (DataSource) cxt.lookup("java:/comp/env/jdbc/portfolio-backend");
-            if (ds == null) {
-                throw new IllegalStateException("Data  jdbc/portfolio-backend source not found!");
-            }
         } catch (Exception e) {
 			logger.error("Can't init servlet", e);
 			throw new ServletException(e);
@@ -186,7 +175,7 @@ public class XSLService extends HttpServlet {
          */
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(sc);
+            c = SqlUtils.getConnection();
 
             String origin = request.getRequestURL().toString();
             logger.trace("Is connection null {}", c);
@@ -283,11 +272,10 @@ public class XSLService extends HttpServlet {
             StringBuilder aggregate = new StringBuilder();
             int portcount = 0;
             int nodecount = 0;
-            // On aggr�ge les donn�es
+            // On aggrège les données
             if (portfolioid != null) {
                 portcount = portfolioid.length;
-                for (int i = 0; i < portfolioid.length; ++i) {
-                    String p = portfolioid[i];
+                for (String p : portfolioid) {
                     String portfolioxml = dataProvider.getPortfolio(c, new MimeType("text/xml"), p, userId, groupId, "", null, null, 0, null).toString();
                     aggregate.append(portfolioxml);
                 }
@@ -295,8 +283,7 @@ public class XSLService extends HttpServlet {
 
             if (nodeid != null) {
                 nodecount = nodeid.length;
-                for (int i = 0; i < nodeid.length; ++i) {
-                    String n = nodeid[i];
+                for (String n : nodeid) {
                     String nodexml = dataProvider.getNode(c, new MimeType("text/xml"), n, true, userId, groupId, "", null).toString();
                     aggregate.append(nodexml);
                 }

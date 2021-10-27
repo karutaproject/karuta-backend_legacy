@@ -86,7 +86,7 @@ public class LoggingService extends HttpServlet {
         /// Check if user is admin
         Connection c;
         try {
-            c = SqlUtils.getConnection(getServletContext());
+            c = SqlUtils.getConnection();
             if (credential.isAdmin(c, uid)) {
                 /// Logfile name
                 final String loggingLine = request.getParameter("n");
@@ -182,7 +182,7 @@ public class LoggingService extends HttpServlet {
             }
 
             if ("true".equals(showuser)) {
-                c = SqlUtils.getConnection(session.getServletContext());
+                c = SqlUtils.getConnection();
                 String userinfo = dataProvider.getInfUser(c, 1, val);
                 Document doc = DomUtils.xmlString2Document(userinfo, null);
                 NodeList usernameNodes = doc.getElementsByTagName("username");

@@ -168,7 +168,7 @@ public class DirectURLService extends HttpServlet {
         Connection c = null;
         try {
             /// Init DB connection
-            c = SqlUtils.getConnection(getServletContext());
+            c = SqlUtils.getConnection();
             session = request.getSession(true);
             boolean isLogged = false;
             Integer uidcheck = (Integer) session.getAttribute("uid");
@@ -324,7 +324,7 @@ public class DirectURLService extends HttpServlet {
         /// Fetching data to be checked upon
         String nodedata = "";
         try {
-            c = SqlUtils.getConnection(this.getServletContext());
+            c = SqlUtils.getConnection();
             Object retdata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, "", 1);
             if (retdata == null) {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);

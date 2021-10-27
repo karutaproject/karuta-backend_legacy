@@ -19,9 +19,9 @@ import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.Properties;
 
+import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import javax.servlet.ServletContext;
 import javax.sql.DataSource;
 
 import com.portfolio.data.provider.DataProvider;
@@ -36,7 +36,7 @@ public class SqlUtils {
     static final Logger logger = LoggerFactory.getLogger(SqlUtils.class);
 
     static boolean loaded = false;
-    static InitialContext cxt = null;
+    static InitialContext ctx = null;
     static DataSource ds = null;
     static DataProvider dp = null;
 
@@ -62,35 +62,46 @@ public class SqlUtils {
     }
 
     // If servContext is null, only load from pooled connection
-    public static Connection getConnection(ServletContext servContext) throws Exception {
+    public static Connection getConnection() throws Exception {
         if (!loaded) {
-            DriverAdapterCPDS cpds = new DriverAdapterCPDS();
-            cpds.setDriver(ConfigUtils.getInstance().getRequiredProperty("DBDriver"));
-            cpds.setUrl(ConfigUtils.getInstance().getRequiredProperty("DBUrl"));
+            final String resourceDatasourceName = ConfigUtils.getInstance().getProperty("JDBC.external.resourceName");
+            if (resourceDatasourceName != null) {
+                ctx = new InitialContext();
+                Context envCtx = (Context) ctx.lookup("java:comp/env");
+                ds = (DataSource) envCtx.lookup(resourceDatasourceName);
+                logger.info("Using external datasource with name {}: {}", resourceDatasourceName, ds.toString());
 
-            Properties info = new Properties();
-            info.put("user", ConfigUtils.getInstance().getRequiredProperty("DBUser"));
-            info.put("password", ConfigUtils.getInstance().getRequiredProperty("DBPass"));
-            cpds.setConnectionProperties(info);
+            } else {
+                DriverAdapterCPDS cpds = new DriverAdapterCPDS();
+                cpds.setDriver(ConfigUtils.getInstance().getRequiredProperty("DBDriver"));
+                cpds.setUrl(ConfigUtils.getInstance().getRequiredProperty("DBUrl"));
 
-            SharedPoolDataSource tds = new SharedPoolDataSource();
-            tds.setConnectionPoolDataSource(cpds);
+                Properties info = new Properties();
+                info.put("user", ConfigUtils.getInstance().getRequiredProperty("DBUser"));
+                info.put("password", ConfigUtils.getInstance().getRequiredProperty("DBPass"));
+                cpds.setConnectionProperties(info);
 
-            /// TODO: Complete it with other parameters, also, benchmark
-            /// Configuring other stuff
-            tds.setValidationQuery("SELECT 1 FROM DUAL");
-            tds.setDefaultTestOnBorrow(true);
-            tds.setDefaultTestWhileIdle(true);
-            tds.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                SharedPoolDataSource tds = new SharedPoolDataSource();
+                tds.setConnectionPoolDataSource(cpds);
 
-            tds.setDefaultMaxWaitMillis(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxWait", "10000")));
-            tds.setMaxTotal(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxTotal", "1000")));
-            tds.setDefaultMinIdle(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MinIdle", "5")));
-            tds.setDefaultMaxIdle(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxIdle", "1000")));
-            tds.setDefaultTimeBetweenEvictionRunsMillis(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.WaitEviction", "60000")));
-            tds.setDefaultNumTestsPerEvictionRun(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.NumTestEviction", "5")));
+                /// TODO: Complete it with other parameters, also, benchmark
+                /// Configuring other stuff
+                tds.setValidationQuery("SELECT 1 FROM DUAL");
+                tds.setDefaultTestOnBorrow(true);
+                tds.setDefaultTestWhileIdle(true);
+                tds.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 
-            ds = tds;
+                tds.setDefaultMaxWaitMillis(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxWait", "10000")));
+                tds.setMaxTotal(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxTotal", "1000")));
+                tds.setDefaultMinIdle(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MinIdle", "5")));
+                tds.setDefaultMaxIdle(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxIdle", "1000")));
+                tds.setDefaultTimeBetweenEvictionRunsMillis(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.WaitEviction", "60000")));
+                tds.setDefaultNumTestsPerEvictionRun(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.NumTestEviction", "5")));
+                ds = tds;
+                logger.info("Using internal datasource {} !", tds);
+            }
+
+
             loaded = true;
         }
         return ds.getConnection();
@@ -98,9 +109,9 @@ public class SqlUtils {
 
     public static void close() {
         try {
-            if (cxt != null) {
-                cxt.close();
-                cxt = null;
+            if (ctx != null) {
+                ctx.close();
+                ctx = null;
             }
         } catch (NamingException e) {
             logger.error("Intercept error", e);

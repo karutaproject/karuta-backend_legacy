@@ -27,14 +27,13 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 
-import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.servlet.http.Cookie;
-import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import com.portfolio.data.utils.SqlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -181,9 +180,8 @@ public class DBConnect {
 
     DBConnect(String loggedUser) {
         try {
-            InitialContext cxt = new InitialContext();
-            DataSource dataSource = (DataSource) cxt.lookup("java:/comp/env/jdbc/portfolio-backend");
-            con = dataSource.getConnection();
+
+            con = SqlUtils.getConnection();
 
             if (loggedUser == null) {
                 uid = 0;
@@ -205,6 +203,8 @@ public class DBConnect {
 
         } catch (NamingException e) {
             logger.error("Intercepted error", e);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

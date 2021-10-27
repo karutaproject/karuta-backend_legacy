@@ -19,7 +19,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
@@ -190,7 +189,7 @@ public class CompareServlet extends HttpServlet {
         Object ingtSOL = "";
         try {
             provider = SqlUtils.initProvider();
-            c = SqlUtils.getConnection(getServletContext());
+            c = SqlUtils.getConnection();
             ingt = provider.getNode(c, new MimeType("text/xml"), uuidNd, true, 1, groupId, lbl, null); //pour test remplacer uuidNd par strNoeud
             ingtREP = provider.getNode(c, new MimeType("text/xml"), uuidREP, true, 1, groupId, lbl, null);
             ingtSOL = provider.getNode(c, new MimeType("text/xml"), uuidSOL, true, 1, groupId, lbl, null);
@@ -231,7 +230,7 @@ public class CompareServlet extends HttpServlet {
         Element rootSOL = docSOL.getDocumentElement();
 
         try {
-            c = SqlUtils.getConnection(getServletContext());
+            c = SqlUtils.getConnection();
             int aRenvoyer = comparaisonVraiFaux(rootREP, rootSOL, c);
             response.getWriter().print(aRenvoyer);
         } catch (Exception e) {

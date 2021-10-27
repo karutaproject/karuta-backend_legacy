@@ -83,7 +83,7 @@ public class ReportService extends HttpServlet {
         Connection c = null;
         try {
             /// Find user's username
-            c = SqlUtils.getConnection(session.getServletContext());
+            c = SqlUtils.getConnection();
             String userinfo = dataProvider.getInfUser(c, 1, uid);
             Document doc = DomUtils.xmlString2Document(userinfo, null);
             NodeList usernameNodes = doc.getElementsByTagName("username");
@@ -189,7 +189,7 @@ public class ReportService extends HttpServlet {
         Connection c = null;
         try {
             /// Find user's username
-            c = SqlUtils.getConnection(session.getServletContext());
+            c = SqlUtils.getConnection();
             String userinfo = dataProvider.getInfUser(c, 1, uid);
             Document doc = DomUtils.xmlString2Document(userinfo, null);
             NodeList usernameNodes = doc.getElementsByTagName("username");

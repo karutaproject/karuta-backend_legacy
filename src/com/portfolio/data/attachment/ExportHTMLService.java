@@ -120,7 +120,7 @@ public class ExportHTMLService extends HttpServlet {
         Connection c;
         String portfolio = "";
         try {
-            c = SqlUtils.getConnection(getServletContext());
+            c = SqlUtils.getConnection();
             portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, uid, 0, "", "true", "", uid, null).toString();
             c.close();
         } catch (Exception e) {

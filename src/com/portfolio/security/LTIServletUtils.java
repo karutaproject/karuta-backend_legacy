@@ -184,7 +184,7 @@ public class LTIServletUtils {
             String wadRole = LTIServletUtils.roleMapper(application, inputRole, outTrace);
             String siteRoleGroupId = LTIServletUtils.getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
 
-            connection = SqlUtils.getConnection(application);
+            connection = SqlUtils.getConnection();
 
             //See what groups the user is in
             boolean isInSiteGroup = dataProvider.isUserInGroup(connection, userId, siteGroupId);

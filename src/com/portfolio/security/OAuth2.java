@@ -193,7 +193,7 @@ public class OAuth2 extends HttpServlet {
                         String username = (String) claims.getClaimValue("preferred_username");
 
                         //// Now log with username
-                        Connection connexion = SqlUtils.getConnection(session.getServletContext());
+                        Connection connexion = SqlUtils.getConnection();
                         String userId = dataProvider.getUserId(connexion, username, null);
                         int uid = Integer.parseInt(userId);
                         if (uid == 0) {

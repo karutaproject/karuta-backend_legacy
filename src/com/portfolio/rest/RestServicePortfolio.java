@@ -219,7 +219,7 @@ public class RestServicePortfolio {
         }
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             String xmluser = dataProvider.getInfUser(c, ui.userId, ui.userId);
 
@@ -260,7 +260,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             String xmlGroups = (String) dataProvider.getUserGroups(c, ui.userId);
 
@@ -310,7 +310,7 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, "Not logged in");
         }
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             String xmlGroups = "";
             if (credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId))
@@ -358,7 +358,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             String xmluser = dataProvider.getInfUser(c, ui.userId, userid);
 
@@ -417,7 +417,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             String queryuser = "";
             if (credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId)) {
@@ -463,7 +463,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             String userid = dataProvider.getUserID(c, ui.userId, username);
             return userid;
@@ -504,7 +504,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             String xmlgroupsUser = dataProvider.getRoleUser(c, ui.userId, useridCible);
 
@@ -552,7 +552,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             String xmlGroups = (String) dataProvider.getGroupRights(c, ui.userId, groupId);
 
@@ -596,7 +596,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             String xmlGroups = dataProvider.getGroupRightsInfos(c, ui.userId, portfolioId);
 
@@ -653,7 +653,7 @@ public class RestServicePortfolio {
         Connection c = null;
         Response response = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, resource, "", ui.subId, cutoff).toString();
 
             if ("faux".equals(portfolio)) {
@@ -862,7 +862,7 @@ public class RestServicePortfolio {
 
             if (resources == null)
                 resources = "false";
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, ui.userId, groupId, resources, ui.subId).toString();
             if ("faux".equals(returnValue)) {
 
@@ -933,7 +933,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (portfolioUuid != null) {
                 String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, groupId, this.label, null, null, ui.subId, cutoff).toString();
                 if (accept.equals(MediaType.APPLICATION_JSON))
@@ -1049,7 +1049,7 @@ public class RestServicePortfolio {
             else
                 portfolioActive = true;
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             dataProvider.putPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, portfolioUuid, ui.userId, portfolioActive, groupId, null);
 
 
@@ -1081,7 +1081,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (!credential.isAdmin(c, ui.userId))
                 return Response.status(Status.FORBIDDEN).build();
 
@@ -1118,7 +1118,7 @@ public class RestServicePortfolio {
         boolean retval = false;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             // Check if logged user is either admin, or owner of the current portfolio
             if (credential.isAdmin(c, ui.userId) || credential.isOwner(c, ui.userId, portfolioUuid)) {
                 retval = credential.putPortfolioOwner(c, portfolioUuid, newOwner);
@@ -1163,7 +1163,7 @@ public class RestServicePortfolio {
         try {
             String returnValue = "";
             if (portfolioUuid != null && portfolioActive != null) {
-                c = SqlUtils.getConnection(servContext);
+                c = SqlUtils.getConnection();
                 dataProvider.putPortfolioConfiguration(c, portfolioUuid, portfolioActive, ui.userId);
             }
 
@@ -1212,7 +1212,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String xmlUser = dataProvider.postUsers(c, xmluser, ui.userId);
 
 
@@ -1317,7 +1317,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String xmlGroup = (String) dataProvider.postGroup(c, xmlgroup, ui.userId);
 
 
@@ -1356,7 +1356,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (dataProvider.postGroupsUsers(c, ui.userId, userId, groupId)) {
                 return "<ok/>";
             } else throw new RestWebApplicationException(Status.FORBIDDEN, ui.userId + " ne fait pas parti du groupe " + groupId);
@@ -1393,7 +1393,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (dataProvider.postRightGroup(c, groupRightId, groupId, ui.userId)) {
                 logger.trace("ajouté");
             } else throw new RestWebApplicationException(Status.FORBIDDEN, ui.userId + " ne fait pas parti du groupe " + groupId);
@@ -1446,7 +1446,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (!credential.isAdmin(c, ui.userId) && !credential.isCreator(c, ui.userId)) {
                 return Response.status(Status.FORBIDDEN).entity("403").build();
             }
@@ -1519,7 +1519,7 @@ public class RestServicePortfolio {
         //// TODO: IF user is creator and has parameter owner -> change ownership
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (!credential.isAdmin(c, ui.userId) && !credential.isCreator(c, ui.userId)) {
                 return Response.status(Status.FORBIDDEN).entity("403").build();
             }
@@ -1651,7 +1651,7 @@ public class RestServicePortfolio {
         try {
             boolean instantiate = "true".equals(instance);
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             return dataProvider.postPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
         } catch (RestWebApplicationException ex) {
@@ -1685,7 +1685,7 @@ public class RestServicePortfolio {
 
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (credential.isAdmin(c, uinfo.userId)) {
                 String res = dataProvider.getPortfolioShared(c, uinfo.userId, userid);
                 return Response.ok(res).build();
@@ -1751,7 +1751,7 @@ public class RestServicePortfolio {
             String[] list = portfolioList.split(",");
             File[] files = new File[list.length];
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             /// Suppose the first portfolio has the right name to be used
 
@@ -1881,7 +1881,7 @@ public class RestServicePortfolio {
             if ("true".equals(instance))
                 instantiate = true;
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, fileInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
 
 
@@ -1920,7 +1920,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             Integer nbPortfolioDeleted = Integer.parseInt(dataProvider.deletePortfolio(c, portfolioUuid, ui.userId, groupId).toString());
             if (nbPortfolioDeleted == 0) {
 
@@ -1970,7 +1970,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId, this.label, cutoff).toString();
             if (returnValue == null)
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -2027,7 +2027,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId, this.label, cutoff).toString();
             if (returnValue == null)
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -2081,7 +2081,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId, this.label).toString();
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
@@ -2133,7 +2133,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getNodeRights(c, nodeUuid, ui.userId, groupId);
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
@@ -2188,7 +2188,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             // Admin, or if user has a right to read can fetch this information
             if (!credential.isAdmin(c, ui.userId) && !credential.hasNodeRight(c, ui.userId, 0, nodeUuid, Credential.READ)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "No rights");
@@ -2254,7 +2254,7 @@ public class RestServicePortfolio {
             XPathExpression findRole = xPath.compile(xpathRole);
             NodeList roles = (NodeList) findRole.evaluate(doc, XPathConstants.NODESET);
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             /// For all roles we have to change
             for (int i = 0; i < roles.getLength(); ++i) {
@@ -2342,7 +2342,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getNodeBySemanticTag(c, new MimeType("text/xml"), portfolioUuid, semantictag, ui.userId, groupId).toString();
             if (returnValue.length() != 0) {
 
@@ -2388,7 +2388,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getNodesBySemanticTag(c, new MimeType("text/xml"), ui.userId, groupId, portfolioUuid, semantictag).toString();
             if (returnValue.length() != 0) {
 
@@ -2436,7 +2436,7 @@ public class RestServicePortfolio {
 //		long t_checkCred = System.nanoTime();
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNode(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
             if (returnValue.equals("faux")) {
@@ -2493,7 +2493,7 @@ public class RestServicePortfolio {
             logformat = logFormat;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNodeMetadata(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
             if (returnValue.equals("faux")) {
@@ -2551,7 +2551,7 @@ public class RestServicePortfolio {
             logformat = logFormat;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
@@ -2607,7 +2607,7 @@ public class RestServicePortfolio {
             logformat = logFormat;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNodeMetadataEpm(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
@@ -2669,7 +2669,7 @@ public class RestServicePortfolio {
             logformat = logFormat;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNodeNodeContext(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
@@ -2727,7 +2727,7 @@ public class RestServicePortfolio {
             //xmlNode = xmlNode.getBytes(StandardCharsets.UTF_8).toString();
             /// putNode(MimeType inMimeType, String nodeUuid, String in,int userId, int groupId)
             //          String returnValue = dataProvider.putNode(new MimeType("text/xml"),nodeUuid,xmlNode,this.userId,this.groupId).toString();
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNodeNodeResource(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
@@ -2779,7 +2779,7 @@ public class RestServicePortfolio {
             if (ui.userId == 0)
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'etes pas connecte");
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.postImportNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 
 
@@ -2830,7 +2830,7 @@ public class RestServicePortfolio {
             if (ui.userId == 0)
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'etes pas connecte");
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.postCopyNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 
 
@@ -2875,7 +2875,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getNodes(c, new MimeType("text/xml"), portfoliocode, semtag, ui.userId, groupId, semtag_parent, code_parent, cutoff).toString();
 
 
@@ -2927,7 +2927,7 @@ public class RestServicePortfolio {
 
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (ui.userId == 0) {
                 return Response.status(403).entity("Not logged in").build();
             } else // if( dataProvider.isAdmin(c, Integer.toString(ui.userId)) )
@@ -2996,7 +2996,7 @@ public class RestServicePortfolio {
             if (nodeId == null) {
                 response = Response.status(400).entity("Missing uuid").build();
             } else {
-                c = SqlUtils.getConnection(servContext);
+                c = SqlUtils.getConnection();
                 int returnValue = dataProvider.postMoveNodeUp(c, ui.userId, nodeId);
 
 
@@ -3054,7 +3054,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             boolean returnValue = dataProvider.postChangeNodeParent(c, ui.userId, nodeId, parentId);
 
 
@@ -3101,7 +3101,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.postMacroOnNode(c, ui.userId, nodeId, macro);
 
 
@@ -3144,7 +3144,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             int nbDeletedNodes = Integer.parseInt(dataProvider.deleteNode(c, nodeUuid, ui.userId, groupId).toString());
             if (nbDeletedNodes == 0) {
 
@@ -3211,7 +3211,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getResource(c, new MimeType("text/xml"), nodeParentUuid, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
 
@@ -3263,7 +3263,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getResources(c, new MimeType("text/xml"), portfolioUuid, ui.userId, groupId).toString();
             if (accept.equals(MediaType.APPLICATION_JSON))
                 returnValue = XML.toJSONObject(returnValue).toString();
@@ -3318,7 +3318,7 @@ public class RestServicePortfolio {
             logformat = logFormat;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.putResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId).toString();
 
             editLog.info(String.format(logformat, "OK", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
@@ -3376,7 +3376,7 @@ public class RestServicePortfolio {
 
         try {
             //TODO userId
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.postResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
 
@@ -3416,7 +3416,7 @@ public class RestServicePortfolio {
 
         try {
             //TODO userId
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.postResource(c, new MimeType("text/xml"), resource, xmlResource, ui.userId, groupId).toString();
             if (returnValue.equals("faux")) {
 
@@ -3456,7 +3456,7 @@ public class RestServicePortfolio {
 
         try {
             //TODO userId
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.postRoleUser(c, ui.userId, grid, userid).toString();
             if (returnValue.equals("faux")) {
 
@@ -3497,7 +3497,7 @@ public class RestServicePortfolio {
 
         try {
             //TODO userId
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.putRole(c, xmlRole, ui.userId, roleId).toString();
             if (returnValue.equals("faux")) {
 
@@ -3542,7 +3542,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getRolePortfolio(c, new MimeType("text/xml"), role, portfolioId, ui.userId).toString();
             //			if(accept.equals(MediaType.APPLICATION_JSON))
             //				returnValue = XML.toJSONObject(returnValue).toString();
@@ -3577,7 +3577,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getRole(c, new MimeType("text/xml"), roleId, ui.userId).toString();
             if (returnValue.equals("")) {
 
@@ -3620,7 +3620,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getModels(c, new MimeType("text/xml"), ui.userId).toString();
             if (returnValue.equals("")) {
 
@@ -3663,7 +3663,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getModel(c, new MimeType("text/xml"), modelId, ui.userId).toString();
             if (returnValue.equals("")) {
 
@@ -3705,7 +3705,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.postModels(c, new MimeType("text/xml"), xmlModel, ui.userId).toString();
             if (returnValue.equals("")) {
 
@@ -3750,7 +3750,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             int nbResourceDeleted = Integer.parseInt(dataProvider.deleteResource(c, resourceUuid, ui.userId, groupId).toString());
             if (nbResourceDeleted == 0) {
 
@@ -3791,7 +3791,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             int nbResourceDeleted = Integer.parseInt(dataProvider.deleteGroupRights(c, groupId, groupRightId, ui.userId).toString());
             if (nbResourceDeleted == 0) {
                 logger.info("supprimé");
@@ -3832,7 +3832,7 @@ public class RestServicePortfolio {
         String message = "";
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
 
             // Not (admin or self)
             if (!credential.isAdmin(c, ui.userId) && ui.userId != userId)
@@ -3879,7 +3879,7 @@ public class RestServicePortfolio {
         String message = "";
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             // Not (admin or self)
             if (!credential.isAdmin(c, ui.userId) && ui.userId != userid)
                 throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
@@ -3926,7 +3926,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String xmlGroups = dataProvider.getGroupsPortfolio(c, portfolioUuid, ui.userId);
 
 
@@ -3964,7 +3964,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String xmlGroups = dataProvider.getUserGroupByPortfolio(c, portfolioUuid, ui.userId);
 
 
@@ -4057,7 +4057,7 @@ public class RestServicePortfolio {
 //			cldap.getLdapConnexion();
 
             int dummy = 0;
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String[] resultCredential = dataProvider.postCredentialFromXml(c, dummy, login, password, substit);
             // 0: xml de retour
             // 1,2: username, uid
@@ -4150,7 +4150,7 @@ public class RestServicePortfolio {
                     }
                 }
 
-                c = SqlUtils.getConnection(servContext);
+                c = SqlUtils.getConnection();
                 // Check if we have that email somewhere
                 String email = dataProvider.emailFromLogin(c, username);
                 if (email != null && !"".equals(email)) {
@@ -4279,7 +4279,7 @@ public class RestServicePortfolio {
             //<cas:user>vassoilm</cas:user>
             session.setAttribute("user", sv.getUser());
 //			session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             userId = dataProvider.getUserId(c, sv.getUser(), null);
             if (!"0".equals(userId))    // User exist
             {
@@ -4420,7 +4420,7 @@ public class RestServicePortfolio {
             javax.servlet.http.HttpSession session = httpServletRequest.getSession(true);
             String ppath = session.getServletContext().getRealPath(File.separator);
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             /// webapps...
             ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
             xslFile = ppath + xslFile;
@@ -4474,7 +4474,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String returnValue = dataProvider.postNodeFromModelBySemanticTag(c, new MimeType("text/xml"), nodeUuid, semantictag, ui.userId, groupId).toString();
 
 
@@ -4519,7 +4519,7 @@ public class RestServicePortfolio {
             if ("true".equals(instance))
                 instantiate = true;
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, uploadedInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
         } catch (RestWebApplicationException e) {
             logger.error("Managed error", e);
@@ -4556,7 +4556,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String xmlUsers = dataProvider.getUsersByRole(c, ui.userId, portfolioUuid, role);
 
 
@@ -4593,7 +4593,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             String xmlGroups = dataProvider.getGroupsByRole(c, ui.userId, portfolioUuid, role);
 
 
@@ -4638,7 +4638,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             response = dataProvider.postUserGroup(c, groupname, ui.userId);
 
 
@@ -4675,7 +4675,7 @@ public class RestServicePortfolio {
         UserInfo ui = checkCredential(httpServletRequest, null, null, null);
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             boolean isOK = false;
             if (label != null) {
                 // Rename group
@@ -4730,7 +4730,7 @@ public class RestServicePortfolio {
         Connection c = null;
         String xmlUsers = "";
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (groupLabel != null) {
                 int groupId = dataProvider.getGroupByGroupLabel(c, groupLabel, ui.userId);
                 if (groupId < 0) {
@@ -4777,7 +4777,7 @@ public class RestServicePortfolio {
         Boolean isOK = false;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (user == null)
                 isOK = dataProvider.deleteUsersGroups(c, group, ui.userId);
             else
@@ -4828,7 +4828,7 @@ public class RestServicePortfolio {
 
         // Check type value
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             response = dataProvider.postPortfolioGroup(c, groupname, type, parent, ui.userId);
 
 
@@ -4866,7 +4866,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             int response = -1;
             response = dataProvider.putPortfolioInGroup(c, uuid, group, label, ui.userId);
 
@@ -4914,7 +4914,7 @@ public class RestServicePortfolio {
         String xmlUsers = "";
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (groupLabel != null) {
                 int groupid = dataProvider.getPortfolioGroupIdFromLabel(c, groupLabel, ui.userId);
                 if (groupid == -1) {
@@ -4960,7 +4960,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             if (uuid == null)
                 response = dataProvider.deletePortfolioGroups(c, group, ui.userId);
             else
@@ -5015,7 +5015,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             // On execute l'action sur le noeud uuid
             if (uuid != null && macroName != null) {
                 returnValue = dataProvider.postMacroOnNode(c, ui.userId, uuid, macroName);
@@ -5140,7 +5140,7 @@ public class RestServicePortfolio {
                 }
             }
 
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             ArrayList<String> nodes = new ArrayList<String>();
             // For all portfolio
             for (String portfolioUuid : portfolio) {
@@ -5249,7 +5249,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             // Retourne le contenu du type
             returnValue = dataProvider.getRRGList(c, ui.userId, portfolio, queryuser, role);
 
@@ -5294,7 +5294,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             // Retourne le contenu du type
             if (portId != null) {
                 returnValue = dataProvider.getPortfolioInfo(c, ui.userId, portId);
@@ -5337,7 +5337,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             // Retourne le contenu du type
             if (rrgId != null) {
                 returnValue = dataProvider.getRRGInfo(c, ui.userId, rrgId);
@@ -5380,7 +5380,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             // Retourne le contenu du type
             if (rrgId != null) {
                 returnValue = dataProvider.putRRGUpdate(c, ui.userId, rrgId, xmlNode);
@@ -5432,7 +5432,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             returnValue = dataProvider.postRRGCreate(c, ui.userId, portfolio, xmlNode);
 
 
@@ -5471,7 +5471,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             returnValue = dataProvider.postRRGUsers(c, ui.userId, rrgId, xmlNode);
 
 
@@ -5510,7 +5510,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             returnValue = dataProvider.postRRGUser(c, ui.userId, rrgId, queryuser);
 
 
@@ -5549,7 +5549,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             returnValue = dataProvider.deleteRRG(c, ui.userId, rrgId);
 
 
@@ -5588,7 +5588,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             returnValue = dataProvider.deleteRRGUser(c, ui.userId, rrgId, queryuser);
 
 
@@ -5627,7 +5627,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(servContext);
+            c = SqlUtils.getConnection();
             // Retourne le contenu du type
             if (portId != null) {
                 returnValue = dataProvider.deletePortfolioUser(c, ui.userId, portId);

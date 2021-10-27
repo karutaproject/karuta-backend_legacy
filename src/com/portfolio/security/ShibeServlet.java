@@ -20,7 +20,6 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -66,7 +65,7 @@ public class ShibeServlet extends HttpServlet {
         Connection connexion = null;
         int uid = 0;
         try {
-            connexion = SqlUtils.getConnection(session.getServletContext());
+            connexion = SqlUtils.getConnection();
             String userId = dataProvider.getUserId(connexion, rem, null);
             uid = Integer.parseInt(userId);
 
@@ -117,7 +116,6 @@ public class ShibeServlet extends HttpServlet {
             logger.info("Location: " + location);
             response.sendRedirect(location);
             response.getWriter().close();
-            ;
         } else {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             PrintWriter writer = response.getWriter();

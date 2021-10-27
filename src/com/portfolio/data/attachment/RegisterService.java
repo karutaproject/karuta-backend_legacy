@@ -90,7 +90,7 @@ public class RegisterService extends HttpServlet {
 //		DataProvider dataProvider = initialize(request);
         Connection connection = null;
         try {
-            connection = SqlUtils.getConnection(getServletConfig().getServletContext());
+            connection = SqlUtils.getConnection();
         } catch (Exception e1) {
             e1.printStackTrace();
         }

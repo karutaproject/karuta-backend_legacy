@@ -48,7 +48,7 @@ public class MysqlDataProviderTest {
         try {
             MimeType xmlMimeType = new MimeType("text/xml");
             DataProvider dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
-            Connection connection = SqlUtils.getConnection(null);
+            Connection connection = SqlUtils.getConnection();
             Credential cred = new Credential();
 
             String portfolioUuid = "aaaa-bbbb-cccc";

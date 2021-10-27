@@ -50,7 +50,7 @@ public class HandlerLogging implements KEventHandler {
         httpServletRequest = request;
         dataProvider = provider;
         try {
-            connection = SqlUtils.getConnection(request.getSession().getServletContext());
+            connection = SqlUtils.getConnection();
         } catch (Exception e) {
             e.printStackTrace();
         }

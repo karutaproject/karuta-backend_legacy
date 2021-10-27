@@ -15,7 +15,6 @@
 
 package com.portfolio.security;
 
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -117,41 +116,6 @@ public class LTIServlet extends HttpServlet {
 //	    this.sc = getServletConfig();
         String dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
         dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
-
-        /*
-  			// Try to initialize Datasource
-  			InitialContext cxt = new InitialContext();
-  			if ( cxt == null ) {
-  				throw new Exception("no context found!");
-  			}
-
-  			/// Init this here, might fail depending on server hosting
-  			DataSource ds = (DataSource) cxt.lookup( "java:/comp/env/jdbc/portfolio-backend" );
-  			if ( ds == null ) {
-  				throw new Exception("Data  jdbc/portfolio-backend source not found!");
-  			}
-
-  			if( ds == null )	// Case where we can't deploy context.xml
-  			{
-  				Connection con = SqlUtils.getConnection(application);
-  				dataProvider.setConnection(con);
-  			}
-  			else
-  				dataProvider.setConnection(ds.getConnection());
-//  			dataProvider.setDataSource(ds);
-  			//*/
-        /*
-		String DBuser =  (String)application.getAttribute("DBuser");
-		String DBpwd =  (String)application.getAttribute("DBpwd");
-		String DBserver =  (String)application.getAttribute("DBserver");
-		String DBdatabase =  (String)application.getAttribute("DBdatabase");
-		Class.forName("com.mysql.jdbc.Driver").newInstance();
-		String connectionUrl = "jdbc:mysql://"+DBserver+"/"+DBdatabase+"?user="+DBuser+"&password="+DBpwd;
-		//outTrace.append("\nDB url: " + connectionUrl);
-		connexion = DriverManager.getConnection(connectionUrl);
-		//*/
-
-        return;
     }
 
     /**
@@ -254,7 +218,7 @@ public class LTIServlet extends HttpServlet {
 
 //			loadRoleMapAttributes(application);
 
-            connexion = SqlUtils.getConnection(session.getServletContext());
+            connexion = SqlUtils.getConnection();
             String userId = getOrCreateUser(payload, cookies, connexion, outTrace);
 
             if (!"0".equals(userId)) // FIXME: Need more checking and/or change uid String to int
@@ -369,7 +333,6 @@ public class LTIServlet extends HttpServlet {
                     logstream.println(time + ": POSTlti:" + outTrace.toString());
                     logger.info(outTrace.toString());
                     logfile.close();
-                } catch (FileNotFoundException err) {
                 } catch (IOException err) {
                 }
 //				wadbackend.WadUtilities.appendlogfile(logFName, "POSTlti:" + outTrace.toString());
@@ -497,7 +460,6 @@ public class LTIServlet extends HttpServlet {
      * @param payload
      * @return
      * @throws Exception
-     * @see wadbackend.WadUser#xmlUser(String[])
      */
     private StringBuffer buildUserXml(Map<String, Object> payload) throws Exception {
         String userName = (String) payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);

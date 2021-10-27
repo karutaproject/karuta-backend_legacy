@@ -134,7 +134,7 @@ public class FileServlet extends HttpServlet {
 
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(getServletContext());
+            c = SqlUtils.getConnection();
 
             int userId = 0;
             int groupId = 0;
@@ -399,7 +399,7 @@ public class FileServlet extends HttpServlet {
 
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(getServletContext());
+            c = SqlUtils.getConnection();
 
             int userId = 0;
             int groupId = 0;
@@ -653,7 +653,7 @@ public class FileServlet extends HttpServlet {
 
         Connection c = null;
         try {
-            c = SqlUtils.getConnection(getServletContext());
+            c = SqlUtils.getConnection();
 
             int userId = 0;
             int groupId = 0;
