@@ -77,7 +77,7 @@ public class BlowFish {
 			ecipher.init(Cipher.ENCRYPT_MODE, secretKey);
 
 			// Encode the string into bytes using utf-8
-			byte[] utf8 = str.getBytes("UTF8");
+			byte[] utf8 = str.getBytes(StandardCharsets.UTF_8);
 
 			// Encrypt
 			byte[] enc = ecipher.doFinal(utf8);
@@ -93,8 +93,6 @@ public class BlowFish {
 		} catch (java.security.InvalidKeyException e) {
 			throw new Error(e);
 		} catch (javax.crypto.NoSuchPaddingException e) {
-			throw new Error(e);
-		} catch (java.io.UnsupportedEncodingException e) {
 			throw new Error(e);
 		}
 	}

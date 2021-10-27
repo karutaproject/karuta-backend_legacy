@@ -23,8 +23,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class PortableShaUtil {
-	public static final String UTF8 = "UTF8";
-
 	public static byte[] sha1(final String todigest) {
 		try {
 			byte[] b = todigest.getBytes(StandardCharsets.UTF_8);
