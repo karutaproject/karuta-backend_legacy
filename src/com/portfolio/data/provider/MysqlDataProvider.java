@@ -1421,7 +1421,7 @@ public class MysqlDataProvider implements DataProvider {
         String sql;
         ResultSet res = null;
         String pid = this.getPortfolioUuidByPortfolioCode(c, portfolioCode);
-        Boolean withResources = false;
+        boolean withResources = false;
         String result = "";
 
         try {
@@ -1461,13 +1461,14 @@ public class MysqlDataProvider implements DataProvider {
         PreparedStatement st = null;
         ResultSet res = null;
         Integer count = null;
-        Boolean codeFilterProjectId = false;
-        Boolean codeFilterSearch = false;
-        Boolean portfolioNoProject = false;
+        boolean codeFilterProjectId = false;
+        boolean codeFilterSearch = false;
+        boolean portfolioNoProject = false;
         String sql = "";
         String sql_count = "";
         String sql_suffix = "";
         StringBuilder out = new StringBuilder();
+        final boolean all = projectId != null && !projectId.equalsIgnoreCase("all");
         if (cred.isAdmin(c, userId)) {
             if (!dbserveur.equals("oracle")) {
                 sql = "SELECT bin2uuid(p.root_node_uuid) as root_node_uuid, p.modif_date, bin2uuid(n.node_uuid) as node_uuid, bin2uuid(n.node_parent_uuid) as node_parent_uuid, n.node_children_uuid as node_children_uuid, n.node_order, n.metadata, n.metadata_wad, n.metadata_epm, bin2uuid(n.res_node_uuid) as res_node_uuid,  bin2uuid(n.res_res_node_uuid) as res_res_node_uuid, bin2uuid(n.res_context_node_uuid) as res_context_node_uuid, n.shared_res, n.shared_node, n.shared_node_res, bin2uuid(n.shared_res_uuid) AS shared_res_uuid, bin2uuid(n.shared_node_uuid) AS shared_node_uuid, bin2uuid(n.shared_node_res_uuid) AS shared_node_res_uuid, n.asm_type, n.xsi_type, n.semtag, n.semantictag, n.label, n.code, n.descr, n.format, n.modif_user_id, n.modif_date, bin2uuid(n.portfolio_id) as portfolio_id, r1.content, r1.xsi_type, r2.content, r2.xsi_type, r3.content, r3.xsi_type ";
@@ -1486,8 +1487,7 @@ public class MysqlDataProvider implements DataProvider {
 
             //projects
             if (portfolioProject != null) {
-                if (projectId == null) projectId = "";
-                if (portfolioProject && !projectId.toLowerCase().equals("all")) {
+                if (portfolioProject && !all) {
                     sql += "AND n.semantictag LIKE '%karuta-project%' ";
                     sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
                 } else {
@@ -1498,7 +1498,7 @@ public class MysqlDataProvider implements DataProvider {
                     //sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
                 }
             } else if (projectId != null) {
-                if (projectId.length() > 0 && !projectId.toLowerCase().equals("all")) {
+                if (all) {
                     sql += "AND n.code LIKE ? ";
                     sql_count += "AND n.code LIKE ? ";
                     codeFilterProjectId = true;
@@ -1531,7 +1531,7 @@ public class MysqlDataProvider implements DataProvider {
 
             if (countOnly) {
                 if (outMimeType.getSubType().equals("xml")) {
-                    out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"" + count + "\" />");
+                    out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"").append(count).append("\" />");
                 } else if (outMimeType.getSubType().equals("json")) {
                     String result = "";
                     result = "{ \"portfolios\": \"count\": " + count;
@@ -1568,7 +1568,7 @@ public class MysqlDataProvider implements DataProvider {
             //projects
             if (portfolioProject != null) {
                 if (projectId == null) projectId = "";
-                if (portfolioProject && !projectId.toLowerCase().equals("all")) {
+                if (portfolioProject && !projectId.equalsIgnoreCase("all")) {
                     sql += "AND n.semantictag LIKE '%karuta-project%' ";
                     sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
                 } else {
@@ -1579,7 +1579,7 @@ public class MysqlDataProvider implements DataProvider {
                     //sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
                 }
             } else if (projectId != null) {
-                if (projectId.length() > 0 && !projectId.toLowerCase().equals("all")) {
+                if (all) {
                     sql += "AND n.code LIKE ? ";
                     sql_count += "AND n.code LIKE ? ";
                     codeFilterProjectId = true;
@@ -1796,9 +1796,9 @@ public class MysqlDataProvider implements DataProvider {
         ResultSet res = null;
         Integer count = 0;
         StringBuilder out = new StringBuilder();
-        ArrayList codePortfolios = new ArrayList();
-        ArrayList codePortfoliosProjects = new ArrayList();
-        ArrayList codePortfoliosNonProjects = new ArrayList();
+        ArrayList<String> codePortfolios = new ArrayList<>();
+        ArrayList<String> codePortfoliosProjects = new ArrayList<>();
+        ArrayList<String> codePortfoliosNonProjects = new ArrayList<String>();
 
 //		System.out.println(sql);
 //		System.out.println("------------");
@@ -1840,7 +1840,7 @@ public class MysqlDataProvider implements DataProvider {
 		//*/
         for (int i = 0; i < codePortfolios.size(); i++) {
 //			System.out.println(codePortfolios.get(i));
-            String code = (String) codePortfolios.get(i);
+            String code = codePortfolios.get(i);
             if (code.contains(".")) {
                 String[] tmp = code.split("\\.");
                 String tmpCodeProjet = tmp[0];
@@ -13729,7 +13729,7 @@ public class MysqlDataProvider implements DataProvider {
     public Integer putUserGroup(Connection c, String usergroup, String userPut) {
         PreparedStatement st;
         String sql;
-        Integer retval = 0;
+        int retval = 0;
 
         try {
             int gid = Integer.parseInt(usergroup);
@@ -13871,7 +13871,7 @@ public class MysqlDataProvider implements DataProvider {
         PreparedStatement st = null;
         ResultSet res = null;
 
-        String result = "<groups>";
+        StringBuilder result = new StringBuilder("<groups>");
         try {
             sql = "SELECT * FROM credential_group cg, credential_group_members cgm " +
                     "WHERE cg.cg=cgm.cg AND cgm.userid=?";
@@ -13880,11 +13880,11 @@ public class MysqlDataProvider implements DataProvider {
             res = st.executeQuery();
 
             while (res.next()) {
-                result += "<group ";
-                result += DomUtils.getXmlAttributeOutput("id", "" + res.getInt("cg.cg")) + " ";
-                result += ">";
-                result += "<label>" + res.getString("cg.label") + "</label>";
-                result += "</group>";
+                result.append("<group ");
+                result.append(DomUtils.getXmlAttributeOutput("id", "" + res.getInt("cg.cg"))).append(" ");
+                result.append(">");
+                result.append("<label>").append(res.getString("cg.label")).append("</label>");
+                result.append("</group>");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -13899,9 +13899,9 @@ public class MysqlDataProvider implements DataProvider {
             }
         }
 
-        result += "</groups>";
+        result.append("</groups>");
 
-        return result;
+        return result.toString();
     }
 
     @Override
