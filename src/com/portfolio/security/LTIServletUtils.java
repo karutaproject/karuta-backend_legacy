@@ -15,7 +15,6 @@
 
 package com.portfolio.security;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -40,12 +39,16 @@ import com.portfolio.data.utils.SqlUtils;
 import org.imsglobal.basiclti.BasicLTIConstants;
 import org.imsglobal.basiclti.BasicLTIUtil;
 import org.imsglobal.json.IMSJSONRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 public class LTIServletUtils {
+
+    public final static Logger logger = LoggerFactory.getLogger(LTIServletUtils.class);
 
     protected static final String OAUTH_MESSAGE = "oauth_message";
     protected static final String OAUTH_CONSUMER_KEY = "oauth_consumer_key";
@@ -103,7 +106,7 @@ public class LTIServletUtils {
             try {
                 connexion.close();
             } catch (Exception e) {
-                System.err.println("Erreur dans User-doGet: " + e);
+                logger.error("Erreur dans User-doGet", e);
             }
         }
     }

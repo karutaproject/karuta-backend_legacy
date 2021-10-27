@@ -280,8 +280,8 @@ public class FileServlet extends HttpServlet {
 
                 int status = client.executeMethod(get);
                 if (status != HttpStatus.SC_OK) {
-                    logger.error("Method failed: " + get.getStatusLine());
-                    //TODO something is missing
+                    logger.error("Method failed: {}", get.getStatusLine());
+                    //TODO missing management ?
                 }
 
                 // Retrieve inputData

@@ -164,7 +164,8 @@ public class LTIServlet extends HttpServlet {
             try {
                 connexion.close();
             } catch (Exception e) {
-                System.err.println("Erreur dans User-doGet: " + e);
+                logger.error("Erreur dans User-doGet", e);
+                //TODO missing management ?
             }
         }
     }
@@ -173,8 +174,7 @@ public class LTIServlet extends HttpServlet {
         Map<String, String> processedCookies = new HashMap<String, String>();
         Cookie[] cookies = request.getCookies();
         if (cookies != null)
-            for (int i = 0; i < cookies.length; ++i) {
-                Cookie c = cookies[i];
+            for (Cookie c : cookies) {
                 String name = c.getName();
                 String val = c.getValue();
                 processedCookies.put(name, val);

@@ -83,7 +83,7 @@ public class LTIServletImport extends HttpServlet {
 
         int status = client.executeMethod(get);
         if (status != HttpStatus.SC_OK) {
-            System.err.println("Method failed: " + get.getStatusLine());
+            logger.error("Method failed: {}", get.getStatusLine());
         }
 
         InputStream retrieve = get.getResponseBodyAsStream();
@@ -116,7 +116,7 @@ public class LTIServletImport extends HttpServlet {
 
         int status = client.executeMethod(get);
         if (status != HttpStatus.SC_OK) {
-            System.err.println("Method failed: " + get.getStatusLine());
+            logger.error("Method failed: {}", get.getStatusLine());
         }
 
         InputStream retrieve = get.getResponseBodyAsStream();
