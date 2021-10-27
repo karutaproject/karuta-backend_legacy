@@ -134,6 +134,8 @@ public class RestServicePortfolio {
     String elggApiKey = null;
     String elggDefaultUserPassword = null;
 
+    String archivePath;
+
     ServletContext servContext;
     ServletConfig servConfig;
 
@@ -163,6 +165,8 @@ public class RestServicePortfolio {
             servConfig = sc;
             servContext = context;
             dataProvider = SqlUtils.initProvider();
+
+            archivePath = ConfigUtils.getInstance().getKarutaHome() + ConfigUtils.getInstance().getServletName() + "_archive" + File.separatorChar;
         } catch (Exception e) {
             logger.error("CAN'T INIT REST SERVICE: ", e);
         }
@@ -1626,6 +1630,7 @@ public class RestServicePortfolio {
 
                     String basepath = xsl.substring(0, xsl.indexOf(File.separator));
                     String firstStage = baseDir + File.separator + basepath + File.separator + "karuta" + File.separator + "xsl" + File.separator + "html2xml.xsl";
+                    //TODO should be done on an other way !
                     logger.info("FIRST: {}", firstStage);
 
                     /// Storing transformed data
@@ -1732,16 +1737,8 @@ public class RestServicePortfolio {
             File archiveFolder = null;
             boolean doArchive = false;
             if (archive != null && "y".equals(archive.toLowerCase())) {
-                /// Check if archive folder exist
-                String servName = servContext.getContextPath();
-                String path = servContext.getRealPath("/");
-                File base = new File(path + ".." + File.separatorChar + "..");
-                String tomcatRoot;
-                tomcatRoot = base.getCanonicalPath();
-                path = tomcatRoot + servName + "_archive" + File.separatorChar;
-
                 /// Check if folder exists
-                archiveFolder = new File(path);
+                archiveFolder = new File(archivePath);
                 if (!archiveFolder.exists())
                     archiveFolder.mkdirs();
                 doArchive = true;
