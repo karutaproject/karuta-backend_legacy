@@ -60,8 +60,8 @@ public class EmploiStoreService extends HttpServlet {
             ConfigUtils.init(getServletContext());
         } catch (Exception e) {
             logger.error("Can't init servlet:", e);
+            throw new ServletException(e);
         }
-        System.setProperty("https.protocols", "TLSv1,TLSv1.1,TLSv1.2");
     }
 
     @Override

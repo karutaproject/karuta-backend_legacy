@@ -45,8 +45,6 @@ public class MiniProxy extends HttpServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         baseURL = getServletConfig().getInitParameter("baseURL");
-
-//		System.setProperty("https.protocols", "TLSv1,TLSv1.1,TLSv1.2");
     }
 
     @Override

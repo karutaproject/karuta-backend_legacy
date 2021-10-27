@@ -45,7 +45,6 @@ public class ShibeServlet extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        System.setProperty("https.protocols", "TLSv1.2");
         try {
             ConfigUtils.init(getServletContext());
             dataProvider = SqlUtils.initProvider();
