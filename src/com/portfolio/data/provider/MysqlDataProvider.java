@@ -7703,35 +7703,37 @@ public class MysqlDataProvider implements DataProvider {
         // On parcourt une premiere fois les enfants pour recuperer la liste e ecrire en base
         int j = 0;
         for (int i = 0; i < children.getLength(); i++) {
-            if (!children.item(i).getNodeName().equals("#text")) {
+            final Node currentNode = children.item(i);
+            if (!currentNode.getNodeName().equals("#text")) {
                 // On verifie si l'enfant n'est pas un element de type code, label ou descr
-                if (children.item(i).getNodeName().equals("label")) {
+                if (currentNode.getNodeName().equals("label")) {
                     label = DomUtils.getInnerXml(children.item(i));
-                } else if (children.item(i).getNodeName().equals("code")) {
+                } else if (currentNode.getNodeName().equals("code")) {
                     code = DomUtils.getInnerXml(children.item(i));
-                } else if (children.item(i).getNodeName().equals("description")) {
+                } else if (currentNode.getNodeName().equals("description")) {
                     descr = DomUtils.getInnerXml(children.item(i));
-                } else if (children.item(i).getNodeName().equals("semanticTag")) {
+                } else if (currentNode.getNodeName().equals("semanticTag")) {
                     semtag = DomUtils.getInnerXml(children.item(i));
-                } else if (children.item(i).getNodeName().equals("asmResource")) {
+                } else if (currentNode.getNodeName().equals("asmResource")) {
                     // Si le noeud est de type asmResource, on stocke le innerXML du noeud
-                    updateMysqlResourceByXsiType(c, nodeUuid, children.item(i).getAttributes().getNamedItem("xsi_type").getNodeValue().toString(), DomUtils.getInnerXml(children.item(i)), userId);
-                } else if (children.item(i).getNodeName().equals("metadata-wad")) {
+                    updateMysqlResourceByXsiType(c, nodeUuid, currentNode.getAttributes().getNamedItem("xsi_type").getNodeValue().toString(), DomUtils.getInnerXml(children.item(i)), userId);
+                } else if (currentNode.getNodeName().equals("metadata-wad")) {
                     metadataWad = DomUtils.getNodeAttributesString(children.item(i));// " attr1=\"wad1\" attr2=\"wad2\" ";
-                } else if (children.item(i).getNodeName().equals("metadata-epm")) {
+                } else if (currentNode.getNodeName().equals("metadata-epm")) {
                     metadataEpm = DomUtils.getNodeAttributesString(children.item(i));
-                } else if (children.item(i).getNodeName().equals("metadata")) {
+                } else if (currentNode.getNodeName().equals("metadata")) {
                     String tmpSharedRes = "";
                     String tmpSharedNode = "";
                     String tmpSharedNodeResource = "";
                     try {
-                        tmpSharedRes = children.item(i).getAttributes().getNamedItem("sharedRes").getNodeValue();
+                        if (currentNode.getAttributes().getNamedItem("sharedRes") != null)
+                            tmpSharedRes = currentNode.getAttributes().getNamedItem("sharedRes").getNodeValue();
 
+                        if (currentNode.getAttributes().getNamedItem("sharedNode") != null)
+                            tmpSharedNode = currentNode.getAttributes().getNamedItem("sharedNode").getNodeValue();
 
-                        tmpSharedNode = children.item(i).getAttributes().getNamedItem("sharedNode").getNodeValue();
-
-
-                        tmpSharedNodeResource = children.item(i).getAttributes().getNamedItem("sharedNodeResource").getNodeValue();
+                        if (currentNode.getAttributes().getNamedItem("sharedNodeResource") != null)
+                            tmpSharedNodeResource = currentNode.getAttributes().getNamedItem("sharedNodeResource").getNodeValue();
                     } catch (Exception ex) {
                         logger.error("Managed error", ex);
                     }
@@ -7744,12 +7746,12 @@ public class MysqlDataProvider implements DataProvider {
                         sharedNodeRes = 1;
 
                     metadata = DomUtils.getNodeAttributesString(children.item(i));
-                } else if (children.item(i).getAttributes() != null) {
-                    if (children.item(i).getAttributes().getNamedItem("id") != null) {
+                } else if (currentNode.getAttributes() != null) {
+                    if (currentNode.getAttributes().getNamedItem("id") != null) {
                         if (nodeChildrenUuid == null) nodeChildrenUuid = new StringBuilder();
                         if (j > 0) nodeChildrenUuid.append(",");
-                        nodeChildrenUuid.append(children.item(i).getAttributes().getNamedItem("id").getNodeValue());
-                        updatetMySqlNodeOrder(c, children.item(i).getAttributes().getNamedItem("id").getNodeValue(), j);
+                        nodeChildrenUuid.append(currentNode.getAttributes().getNamedItem("id").getNodeValue());
+                        updatetMySqlNodeOrder(c, currentNode.getAttributes().getNamedItem("id").getNodeValue(), j);
                         logger.error("UPDATE NODE ORDER");
                         j++;
                     }
@@ -8105,19 +8107,18 @@ public class MysqlDataProvider implements DataProvider {
                 if ("#text".equals(child.getNodeName()))
                     continue;
 
-                if (children.item(i).getNodeName().equals("metadata-wad")) {
+                if (child.getNodeName().equals("metadata-wad")) {
                     metadataWad = DomUtils.getNodeAttributesString(children.item(i));
 
                     if (parseRights) {
                         // Gestion de la securite integree
                         //
-                        Node metadataWadNode = children.item(i);
 
-                        metadataWadNode.getAttributes().getNamedItem("access");
+                        child.getAttributes().getNamedItem("access");
 
                         try {
-                            if (metadataWadNode.getAttributes().getNamedItem("seenoderoles") != null) {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("seenoderoles").getNodeValue(), " ");
+                            if (child.getAttributes().getNamedItem("seenoderoles") != null) {
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("seenoderoles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
 
                                     nodeRole = tokens.nextElement().toString();
@@ -8125,8 +8126,8 @@ public class MysqlDataProvider implements DataProvider {
                                 }
                             }
 
-                            if (metadataWadNode.getAttributes().getNamedItem("delnoderoles") != null) {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("delnoderoles").getNodeValue(), " ");
+                            if (child.getAttributes().getNamedItem("delnoderoles") != null) {
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("delnoderoles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
 
                                     nodeRole = tokens.nextElement().toString();
@@ -8134,8 +8135,8 @@ public class MysqlDataProvider implements DataProvider {
                                 }
                             }
 
-                            if (metadataWadNode.getAttributes().getNamedItem("editnoderoles") != null) {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("editnoderoles").getNodeValue(), " ");
+                            if (child.getAttributes().getNamedItem("editnoderoles") != null) {
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("editnoderoles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
 
                                     nodeRole = tokens.nextElement().toString();
@@ -8143,65 +8144,65 @@ public class MysqlDataProvider implements DataProvider {
                                 }
                             }
 
-                            if (metadataWadNode.getAttributes().getNamedItem("submitnoderoles") != null)    // TODO submitnoderoles deprecated fro submitroles
+                            if (child.getAttributes().getNamedItem("submitnoderoles") != null)    // TODO submitnoderoles deprecated fro submitroles
                             {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("submitnoderoles").getNodeValue(), " ");
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("submitnoderoles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
                                     nodeRole = tokens.nextElement().toString();
                                     cred.postGroupRight(c, nodeRole, uuid, Credential.SUBMIT, portfolioUuid, userId);
                                 }
                             }
 
-                            if (metadataWadNode.getAttributes().getNamedItem("seeresroles") != null) {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("seeresroles").getNodeValue(), " ");
+                            if (child.getAttributes().getNamedItem("seeresroles") != null) {
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("seeresroles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
                                     nodeRole = tokens.nextElement().toString();
                                     cred.postGroupRight(c, nodeRole, uuid, Credential.READ, portfolioUuid, userId);
                                 }
                             }
 
-                            if (metadataWadNode.getAttributes().getNamedItem("delresroles") != null) {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("delresroles").getNodeValue(), " ");
+                            if (child.getAttributes().getNamedItem("delresroles") != null) {
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("delresroles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
                                     nodeRole = tokens.nextElement().toString();
                                     cred.postGroupRight(c, nodeRole, uuid, Credential.DELETE, portfolioUuid, userId);
                                 }
                             }
 
-                            if (metadataWadNode.getAttributes().getNamedItem("editresroles") != null) {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("editresroles").getNodeValue(), " ");
+                            if (child.getAttributes().getNamedItem("editresroles") != null) {
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("editresroles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
                                     nodeRole = tokens.nextElement().toString();
                                     cred.postGroupRight(c, nodeRole, uuid, Credential.WRITE, portfolioUuid, userId);
                                 }
                             }
 
-                            if (metadataWadNode.getAttributes().getNamedItem("submitresroles") != null)    // TODO submitresroles deprecated fro submitroles
+                            if (child.getAttributes().getNamedItem("submitresroles") != null)    // TODO submitresroles deprecated fro submitroles
                             {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("submitresroles").getNodeValue(), " ");
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("submitresroles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
                                     nodeRole = tokens.nextElement().toString();
                                     cred.postGroupRight(c, nodeRole, uuid, Credential.SUBMIT, portfolioUuid, userId);
                                 }
                             }
 
-                            if (metadataWadNode.getAttributes().getNamedItem("submitroles") != null) {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("submitroles").getNodeValue(), " ");
+                            if (child.getAttributes().getNamedItem("submitroles") != null) {
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("submitroles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
                                     nodeRole = tokens.nextElement().toString();
                                     cred.postGroupRight(c, nodeRole, uuid, Credential.SUBMIT, portfolioUuid, userId);
                                 }
                             }
 
-                            if (metadataWadNode.getAttributes().getNamedItem("showtoroles") != null) {
-                                StringTokenizer tokens = new StringTokenizer(metadataWadNode.getAttributes().getNamedItem("showtoroles").getNodeValue(), " ");
+                            if (child.getAttributes().getNamedItem("showtoroles") != null) {
+                                StringTokenizer tokens = new StringTokenizer(child.getAttributes().getNamedItem("showtoroles").getNodeValue(), " ");
                                 while (tokens.hasMoreElements()) {
                                     nodeRole = tokens.nextElement().toString();
                                     cred.postGroupRight(c, nodeRole, uuid, Credential.NONE, portfolioUuid, userId);
                                 }
                             }
 
-                            Node actionroles = metadataWadNode.getAttributes().getNamedItem("actionroles");
+                            Node actionroles = child.getAttributes().getNamedItem("actionroles");
                             if (actionroles != null) {
                                 /// Format pour l'instant: actionroles="sender:1,2;responsable:4"
                                 StringTokenizer tokens = new StringTokenizer(actionroles.getNodeValue(), ";");
@@ -8215,7 +8216,7 @@ public class MysqlDataProvider implements DataProvider {
                             }
 
                             /// TODO: e l'integration avec sakai/LTI
-                            Node notifyroles = metadataWadNode.getAttributes().getNamedItem("notifyroles");
+                            Node notifyroles = child.getAttributes().getNamedItem("notifyroles");
                             if (notifyroles != null) {
                                 /// Format pour l'instant: actionroles="sender:1,2;responsable:4"
                                 StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
@@ -8233,28 +8234,35 @@ public class MysqlDataProvider implements DataProvider {
 
                     }
 
-                } else if (children.item(i).getNodeName().equals("metadata-epm")) {
+                } else if (child.getNodeName().equals("metadata-epm")) {
                     metadataEpm = DomUtils.getNodeAttributesString(children.item(i));
-                } else if (children.item(i).getNodeName().equals("metadata")) {
+                } else if (child.getNodeName().equals("metadata")) {
                     String tmpSharedRes = "";
                     String tmpSharedNode = "";
                     String tmpSharedNodeRes = "";
                     try {
-                        String publicatt = children.item(i).getAttributes().getNamedItem("public").getNodeValue();
-                        if ("Y".equals(publicatt)) {
-                            setPublicState(c, userId, portfolioUuid, true);
+                        if (child.getAttributes().getNamedItem("public") != null) {
+                            final String publicatt = child.getAttributes().getNamedItem("public").getNodeValue();
+                            // TODO don't know if other value is available but could be simplified by
+                            // setPublicState(c, userId, portfolioUuid, "Y".equals(publicatt));
+                            if ("Y".equals(publicatt)) {
+                                setPublicState(c, userId, portfolioUuid, true);
+                            } else if ("N".equals(publicatt)) {
+                                setPublicState(c, userId, portfolioUuid, false);
+                            }
                         }
-                        else if ("N".equals(publicatt)) {
-                            setPublicState(c, userId, portfolioUuid, false);
-                        }
 
-                        tmpSharedRes = children.item(i).getAttributes().getNamedItem("sharedResource").getNodeValue();
+                        if (child.getAttributes().getNamedItem("sharedResource") != null)
+                            tmpSharedRes = child.getAttributes().getNamedItem("sharedResource").getNodeValue();
 
-                        tmpSharedNode = children.item(i).getAttributes().getNamedItem("sharedNode").getNodeValue();
+                        if (child.getAttributes().getNamedItem("sharedNode") != null)
+                            tmpSharedNode = child.getAttributes().getNamedItem("sharedNode").getNodeValue();
 
-                        tmpSharedNodeRes = children.item(i).getAttributes().getNamedItem("sharedNodeResource").getNodeValue();
+                        if (child.getAttributes().getNamedItem("sharedNodeResource") != null)
+                            tmpSharedNodeRes = child.getAttributes().getNamedItem("sharedNodeResource").getNodeValue();
 
-                        semanticTag = children.item(i).getAttributes().getNamedItem("semantictag").getNodeValue();
+                        if (child.getAttributes().getNamedItem("semantictag") != null)
+                            semanticTag = child.getAttributes().getNamedItem("semantictag").getNodeValue();
                     } catch (Exception ex) {
                         logger.error("Managed error", ex);
                     }
@@ -8269,19 +8277,19 @@ public class MysqlDataProvider implements DataProvider {
                     metadata = DomUtils.getNodeAttributesString(children.item(i));
                 }
                 // On verifie si l'enfant n'est pas un element de type code, label ou descr
-                else if (children.item(i).getNodeName().equals("label")) {
-                    label = DomUtils.getInnerXml(children.item(i));
-                } else if (children.item(i).getNodeName().equals("code")) {
-                    code = DomUtils.getInnerXml(children.item(i));
-                } else if (children.item(i).getNodeName().equals("description")) {
-                    descr = DomUtils.getInnerXml(children.item(i));
+                else if (child.getNodeName().equals("label")) {
+                    label = DomUtils.getInnerXml(child);
+                } else if (child.getNodeName().equals("code")) {
+                    code = DomUtils.getInnerXml(child);
+                } else if (child.getNodeName().equals("description")) {
+                    descr = DomUtils.getInnerXml(child);
                 } else {
-                    children.item(i).getAttributes();
+                    child.getAttributes();
                 }
             }
         } catch (Exception ex) {
             // Pas d'enfants
-            ex.printStackTrace();
+            logger.error("Managed error", ex);
         }
 
         // Si on est au debut de l'arbre, on stocke la definition du portfolio
@@ -8362,7 +8370,7 @@ public class MysqlDataProvider implements DataProvider {
                             "asmUnitStructure".equals(nodeName) ||
                             "asmUnitContent".equals(nodeName) ||
                             "asmContext".equals(nodeName)) {
-                        logger.trace("uid={}, enfant_uuid={}, ordre={}", uuid, children.item(i).getAttributes().getNamedItem("id"), k);
+                        logger.trace("uid={}, enfant_uuid={}, ordre={}", uuid, child.getAttributes().getNamedItem("id"), k);
                         writeNode(c, child, portfolioUuid, portfolioModelId, userId, k, childId, uuid, sharedRes, sharedNodeRes, rewriteId, resolve, parseRights);
                         k++;
                     } else if ("asmResource".equals(nodeName)) // Les asmResource pose probleme dans l'ordre des noeuds
@@ -8957,9 +8965,7 @@ public class MysqlDataProvider implements DataProvider {
         if (!cred.isAdmin(c, userId))
             throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
-        int res = deleteMysqlGroupRights(c, groupId, groupRightId);
-
-        return res;
+        return deleteMysqlGroupRights(c, groupId, groupRightId);
     }
 
     private Integer deleteMysqlGroupRights(Connection c, Integer groupId, Integer groupRightId) {
@@ -9371,7 +9377,8 @@ public class MysqlDataProvider implements DataProvider {
         }
 
         //On ajoute l'utilisateur dans la base de donnees
-        if (etu.getAttributes().getNamedItem("firstname") != null && etu.getAttributes().getNamedItem("lastname") != null && etu.getAttributes().getNamedItem("label") == null) {
+        if (etu.getAttributes().getNamedItem("firstname") != null && etu.getAttributes().getNamedItem("lastname") != null
+                && etu.getAttributes().getNamedItem("label") == null) {
 
             sqlInsert = "REPLACE INTO credential(userid, login, display_firstname, display_lastname, email, password, active) VALUES (?, ?, ?, ?, ?, UNHEX(SHA1(?)),?)";
             stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
@@ -11010,27 +11017,42 @@ public class MysqlDataProvider implements DataProvider {
             String tmpSharedNode = "";
             String tmpSharedNodeResource = "";
             try {
-                String publicatt = attr.getNamedItem("public").getNodeValue();
-                if ("Y".equals(publicatt))
-                    setPublicState(c, userId, portfolioUid, true);
-                else if ("N".equals(publicatt))
-                    setPublicState(c, userId, portfolioUid, false);
+                Node currentNode = attr.getNamedItem("public");
+                if (currentNode != null) {
+                    String publicatt = currentNode.getNodeValue();
+                    if ("Y".equals(publicatt))
+                        setPublicState(c, userId, portfolioUid, true);
+                    else if ("N".equals(publicatt))
+                        setPublicState(c, userId, portfolioUid, false);
 
-                tag = attr.getNamedItem("semantictag").getNodeValue();
+                }
 
-                tmpSharedRes = attr.getNamedItem("sharedResource").getNodeValue();
-                if (tmpSharedRes.equalsIgnoreCase("y"))
-                    sharedRes = 1;
+                currentNode = attr.getNamedItem("semantictag");
+                if (currentNode != null) {
+                    tag = currentNode.getNodeValue();
+                }
 
-                tmpSharedNode = attr.getNamedItem("sharedNode").getNodeValue();
-                if (tmpSharedNode.equalsIgnoreCase("y"))
-                    sharedNode = 1;
+                currentNode = attr.getNamedItem("sharedResource");
+                if (currentNode != null) {
+                    tmpSharedRes = currentNode.getNodeValue();
+                    if (tmpSharedRes.equalsIgnoreCase("y"))
+                        sharedRes = 1;
+                }
+                currentNode = attr.getNamedItem("sharedNode");
+                if (currentNode != null) {
+                    tmpSharedNode = currentNode.getNodeValue();
+                    if (tmpSharedNode.equalsIgnoreCase("y"))
+                        sharedNode = 1;
+                }
 
-                tmpSharedNodeResource = attr.getNamedItem("sharedNodeResource").getNodeValue();
-                if (tmpSharedNodeResource.equalsIgnoreCase("y"))
-                    sharedNodeRes = 1;
+                currentNode = attr.getNamedItem("sharedNodeResource");
+                if (currentNode != null) {
+                    tmpSharedNodeResource = currentNode.getNodeValue();
+                    if (tmpSharedNodeResource.equalsIgnoreCase("y"))
+                        sharedNodeRes = 1;
+                }
 
-            metadata = DomUtils.getNodeAttributesString(node);
+                metadata = DomUtils.getNodeAttributesString(node);
 
 
 
