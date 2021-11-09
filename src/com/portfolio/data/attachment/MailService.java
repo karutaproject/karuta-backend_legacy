@@ -102,9 +102,7 @@ public class MailService extends HttpServlet {
             return;
         }
 
-        boolean keepcc = false;
-        if ("true".equals(request.getParameter("ccsender")))
-            keepcc = true;
+        final boolean keepcc = "true".equals(request.getParameter("ccsender"));
 
         logger.trace("Sending mail for user '{}'", uid);
 
@@ -153,8 +151,7 @@ public class MailService extends HttpServlet {
             if (messageNode.getLength() > 0)
                 message = messageNode.item(0).getFirstChild().getNodeValue();
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.error(e.getMessage());
+            logger.error("Erreur d'envoie de mail", e);
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return;
         }
