@@ -9030,7 +9030,7 @@ public class MysqlDataProvider implements DataProvider {
         javax.servlet.http.HttpSession session = httpServletRequest.getSession(true);
         final String baseDirString = ConfigUtils.getInstance().getServletName() + "_files" + File.separator;
         File baseDir = new File(repository, baseDirString);
-        logger.info("Zip file will be saved on {}", baseDirString);
+        logger.info("Zip file will be saved on {}", baseDir.getCanonicalPath());
         // if the directory does not exist, create it
         if (!baseDir.exists()) {
             baseDir.mkdirs();

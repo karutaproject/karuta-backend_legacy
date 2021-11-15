@@ -130,7 +130,7 @@ public class FileServlet extends HttpServlet {
         initialize(request);
 
         String useragent = request.getHeader("User-Agent");
-        logger.error("Agent: " + useragent);
+        logger.info("Agent: " + useragent);
 
         Connection c = null;
         try {
@@ -162,6 +162,7 @@ public class FileServlet extends HttpServlet {
                     groupId = val;
                 user = (String) session.getAttribute("user");
             } else {
+                logger.error("User is not authenticated");
                 response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
@@ -187,6 +188,7 @@ public class FileServlet extends HttpServlet {
 
             /// Vérification des droits d'accés
             if (!credential.hasNodeRight(c, userId, groupId, uuid, Credential.WRITE)) {
+                logger.error("User is not authorized - userId: {}, groupId: {}, uuid: {}, WRITE", userId, groupId, uuid);
                 response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 //throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit WRITE sur le noeud "+nodeUuid);
             }

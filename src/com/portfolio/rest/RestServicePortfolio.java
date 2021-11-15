@@ -702,7 +702,6 @@ public class RestServicePortfolio {
                     tempZip.delete();
                 } else {
                     if (portfolio.equals("faux")) {
-
                         throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
                     }
 
@@ -959,7 +958,7 @@ public class RestServicePortfolio {
                 } catch (Exception ex) {
                     portfolioActive = true;
                 }
-                ;
+
 
                 try {
                     if (project.equals("false") || project.equals("0")) portfolioProject = false;
@@ -968,14 +967,14 @@ public class RestServicePortfolio {
                 } catch (Exception ex) {
                     portfolioProject = null;
                 }
-                ;
+
 
                 try {
                     countOnly = count.equals("true") || count.equals("1");
                 } catch (Exception ex) {
                     countOnly = false;
                 }
-                ;
+
 
                 try {
                     portfolioCode = code;
@@ -4254,7 +4253,7 @@ public class RestServicePortfolio {
                 completeURL = requestURL.replace(0, requestURL.indexOf(":"), proto).toString();
             }
             /// completeURL should be the same provided in the "service" parameter
-			logger.debug("Service: {}", completeURL);
+            logger.debug("Service: {}", completeURL);
 
             sv.setService(completeURL);
             sv.setServiceTicket(ticket);
