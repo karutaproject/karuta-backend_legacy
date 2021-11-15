@@ -118,6 +118,8 @@ public class MysqlDataProvider implements DataProvider {
     final private Credential cred = new Credential();
     private String dbserveur = null;
 
+    private boolean createAsDesigner = false;
+
     @Override
     public void dataProvider() {
     }
@@ -126,6 +128,7 @@ public class MysqlDataProvider implements DataProvider {
 
     public MysqlDataProvider() throws Exception {
         dbserveur = ConfigUtils.getInstance().getRequiredProperty("serverType");
+        createAsDesigner = Boolean.parseBoolean(ConfigUtils.getInstance().getProperty("createAsDesigner"));
     }
 
     public Integer getMysqlNodeNextOrderChildren(Connection c, String nodeUuid) throws Exception {
@@ -9948,10 +9951,9 @@ public class MysqlDataProvider implements DataProvider {
 
     @Override
     public String putInfUserInternal(Connection c, int userId, int userid2, String fname, String lname, String email) throws SQLException {
-        final String asDesigner = ConfigUtils.getInstance().getProperty("createAsDesigner");
         int isDesigner = 0;
         String other = "";
-        if (asDesigner != null && "y".equals(asDesigner.toLowerCase())) {
+        if (createAsDesigner) {
             isDesigner = 1;
             other = "xlimited";
         }
@@ -14408,10 +14410,9 @@ public class MysqlDataProvider implements DataProvider {
 
         try {
             Date date = new Date();
-            String asDesigner = ConfigUtils.getInstance().getProperty("createAsDesigner");
             int isDesigner = 0;
             String other = "";
-            if (asDesigner != null && "y".equals(asDesigner.toLowerCase())) {
+            if (createAsDesigner) {
                 isDesigner = 1;
                 other = "xlimited";
             }
