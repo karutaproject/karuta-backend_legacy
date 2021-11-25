@@ -15,8 +15,8 @@
 
 package com.portfolio.security;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -33,167 +33,173 @@ import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.ConfigUtils;
+import com.portfolio.data.utils.SqlUtils;
 import org.imsglobal.basiclti.BasicLTIConstants;
 import org.imsglobal.basiclti.BasicLTIUtil;
 import org.imsglobal.json.IMSJSONRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.portfolio.data.provider.DataProvider;
-import com.portfolio.data.utils.SqlUtils;
-
 public class LTIServletUtils {
 
-	protected static final String OAUTH_MESSAGE = "oauth_message";
-	protected static final String OAUTH_CONSUMER_KEY = "oauth_consumer_key";
-	protected static final String EXT_SAKAI_ROLE = "ext_sakai_role";
+    public final static Logger logger = LoggerFactory.getLogger(LTIServletUtils.class);
 
-	static DataProvider dataProvider;
+    protected static final String OAUTH_MESSAGE = "oauth_message";
+    protected static final String OAUTH_CONSUMER_KEY = "oauth_consumer_key";
+    protected static final String EXT_SAKAI_ROLE = "ext_sakai_role";
 
-	/**
-	 * Initialize the DB connection
-	 * @param application
-	 * @return
-	 * @throws Exception
-	 */
-	protected static Connection initDB(ServletContext application, StringBuffer outTrace) throws Exception
-	{
-		String dataProviderName = "com.portfolio.data.provider.MysqlDataProvider";
-		dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+    static DataProvider dataProvider;
 
-		// Open META-INF/context.xml
-		DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
-		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		Document doc = documentBuilder.parse(application.getRealPath("/")+"/META-INF/context.xml");
-		NodeList res = doc.getElementsByTagName("Resource");
-		Node dbres = res.item(0);
+    /**
+     * Initialize the DB connection
+     *
+     * @param application
+     * @return
+     * @throws Exception
+     */
+    protected static Connection initDB(ServletContext application, StringBuffer outTrace) throws Exception {
+        String dataProviderName = "com.portfolio.data.provider.MysqlDataProvider";
+        dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
 
-		Properties info = new Properties();
-		NamedNodeMap attr = dbres.getAttributes();
-		String url = "";
-		for( int i=0; i<attr.getLength(); ++i )
-		{
-			Node att = attr.item(i);
-			String name = att.getNodeName();
-			String val = att.getNodeValue();
-			if( "url".equals(name) )
-				url = val;
-			else if( "username".equals(name) )	// username (context.xml) -> user (properties)
-				info.put("user", val);
-			else if( "driverClassName".equals(name) )
-				Class.forName(val);
-			else
-				info.put(name, val);
-		}
+        // Open META-INF/context.xml
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        Document doc = documentBuilder.parse(application.getRealPath("/") + "/META-INF/context.xml");
+        NodeList res = doc.getElementsByTagName("Resource");
+        Node dbres = res.item(0);
 
-		Connection connection = DriverManager.getConnection(url, info);
+        Properties info = new Properties();
+        NamedNodeMap attr = dbres.getAttributes();
+        String url = "";
+        for (int i = 0; i < attr.getLength(); ++i) {
+            Node att = attr.item(i);
+            String name = att.getNodeName();
+            String val = att.getNodeValue();
+            if ("url".equals(name))
+                url = val;
+            else if ("username".equals(name))    // username (context.xml) -> user (properties)
+                info.put("user", val);
+            else if ("driverClassName".equals(name))
+                Class.forName(val);
+            else
+                info.put(name, val);
+        }
 
-		return connection;
-	}
+        Connection connection = DriverManager.getConnection(url, info);
 
-	/**
-	 * Clean up the DB connection
-	 * @param connexion
-	 */
-	protected static void destroyDB(Connection connexion) {
-		if(connexion != null) {
-			try{
-				connexion.close();
-				}
-			catch(Exception e){
-				System.err.println("Erreur dans User-doGet: " +e);
-			}
-		}
-	}
+        return connection;
+    }
 
-	/**
-	 * See if we want to have tracing enabled based off a config value.
-	 * To enable trace output, set the following: <pre>LTIServlet.trace=true</pre>
-	 * Anything else is false.
-	 * @param application
-	 * @return
-	 */
-	protected static boolean isTrace(ServletContext application) {
-		String traceStr =  (String)application.getAttribute("LTIServlet.trace");
-		return "true".equalsIgnoreCase(traceStr);
+    /**
+     * Clean up the DB connection
+     *
+     * @param connexion
+     */
+    protected static void destroyDB(Connection connexion) {
+        if (connexion != null) {
+            try {
+                connexion.close();
+            } catch (Exception e) {
+                logger.error("Erreur dans User-doGet", e);
+            }
+        }
+    }
 
-	}
+    /**
+     * See if we want to have tracing enabled based off a config value.
+     * To enable trace output, set the following: <pre>LTIServlet.trace=true</pre>
+     * Anything else is false.
+     *
+     * @param application
+     * @return
+     */
+    protected static boolean isTrace(ServletContext application) {
+        String traceStr = (String) application.getAttribute("LTIServlet.trace");
+        return "true".equalsIgnoreCase(traceStr);
 
-	/**
-	 * Process the request parameters into a map
-	 * @param request
-	 * @param outTrace
-	 * @return
-	 * @throws IOException
-	 */
-	protected static Map<String, Object> processRequest(HttpServletRequest request, StringBuffer outTrace) throws IOException {
-		Map<String, Object> payload = new HashMap<String, Object>();
-		for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements(); ) {
+    }
+
+    /**
+     * Process the request parameters into a map
+     *
+     * @param request
+     * @param outTrace
+     * @return
+     * @throws IOException
+     */
+    protected static Map<String, Object> processRequest(HttpServletRequest request, StringBuffer outTrace) throws IOException {
+        Map<String, Object> payload = new HashMap<String, Object>();
+        for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements(); ) {
             String key = e.nextElement();
             String value = request.getParameter(key);
             payload.put(key, value);
             outTrace.append("\nkey: " + key + "(" + value + ")");
         }
-		return payload;
-	}
+        return payload;
+    }
 
-	/**
-	 * Handle the launch action from either the v1 or v2 servlet
-	 * @param payload
-	 * @param application
-	 * @param response
-	 * @param session
-	 * @param outTrace
-	 * @throws ServletException
-	 * @throws IOException
-	 */
-	protected static void handleLaunch(Map<String, Object> payload, ServletContext application, HttpServletResponse response,
-			HttpSession session, StringBuffer outTrace) throws ServletException, IOException {
-		Connection connexion = null;
-		Connection connection = null;
+    /**
+     * Handle the launch action from either the v1 or v2 servlet
+     *
+     * @param payload
+     * @param application
+     * @param response
+     * @param session
+     * @param outTrace
+     * @throws ServletException
+     * @throws IOException
+     */
+    protected static void handleLaunch(Map<String, Object> payload, ServletContext application, HttpServletResponse response,
+                                       HttpSession session, StringBuffer outTrace) throws ServletException, IOException {
+        Connection connexion = null;
+        Connection connection = null;
 
-		try {
-			LTIServletUtils.loadRoleMapAttributes(application, session);
+        try {
+            LTIServletUtils.loadRoleMapAttributes(application, session);
 
-			connexion = LTIServletUtils.initDB(application, outTrace);
+            connexion = LTIServletUtils.initDB(application, outTrace);
 
-			String userId = LTIServletUtils.getOrCreateUser(payload, connexion, outTrace);
+            String userId = LTIServletUtils.getOrCreateUser(payload, connexion, outTrace);
 
-			//============Group Processing======================
-			String contextLabel = (String)payload.get(BasicLTIConstants.CONTEXT_LABEL);
-			String ltiRole = (String)payload.get(BasicLTIConstants.ROLES);
-			String contextRole = (String)payload.get(LTIServletUtils.EXT_SAKAI_ROLE);
-			String inputRole = contextRole == null ? ltiRole : contextRole;
-			outTrace.append("\nLTI Role: " + ltiRole);
-			outTrace.append("\nContext Role: " + contextRole);
-			outTrace.append("\nInput Role: " + inputRole);
-			String siteGroupId = LTIServletUtils.getOrCreateGroup(connexion, contextLabel, "topUser", outTrace);
+            //============Group Processing======================
+            String contextLabel = (String) payload.get(BasicLTIConstants.CONTEXT_LABEL);
+            String ltiRole = (String) payload.get(BasicLTIConstants.ROLES);
+            String contextRole = (String) payload.get(LTIServletUtils.EXT_SAKAI_ROLE);
+            String inputRole = contextRole == null ? ltiRole : contextRole;
+            outTrace.append("\nLTI Role: " + ltiRole);
+            outTrace.append("\nContext Role: " + contextRole);
+            outTrace.append("\nInput Role: " + inputRole);
+            String siteGroupId = LTIServletUtils.getOrCreateGroup(connexion, contextLabel, "topUser", outTrace);
 
-			StringBuffer siteGroup = new StringBuffer();
-			siteGroup.append(contextLabel);
-			siteGroup.append("-");
-			siteGroup.append(inputRole);
-			String wadRole = LTIServletUtils.roleMapper(application, inputRole, outTrace);
-			String siteRoleGroupId = LTIServletUtils.getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
+            StringBuffer siteGroup = new StringBuffer();
+            siteGroup.append(contextLabel);
+            siteGroup.append("-");
+            siteGroup.append(inputRole);
+            String wadRole = LTIServletUtils.roleMapper(application, inputRole, outTrace);
+            String siteRoleGroupId = LTIServletUtils.getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
 
-			connection = SqlUtils.getConnection(application);
-			
-			//See what groups the user is in
-			boolean isInSiteGroup = dataProvider.isUserInGroup(connection, userId, siteGroupId);
-			boolean isInSiteRoleGroup = dataProvider.isUserInGroup(connection, userId, siteRoleGroupId);
+            connection = SqlUtils.getConnection();
 
-			if (!isInSiteGroup) {
-				dataProvider.putUserGroup(connection, siteGroupId, userId);
-			}
+            //See what groups the user is in
+            boolean isInSiteGroup = dataProvider.isUserInGroup(connection, userId, siteGroupId);
+            boolean isInSiteRoleGroup = dataProvider.isUserInGroup(connection, userId, siteRoleGroupId);
 
-			if (!isInSiteRoleGroup) {
-				dataProvider.putUserGroup(connection, siteRoleGroupId, userId);
-			}
+            if (!isInSiteGroup) {
+                dataProvider.putUserGroup(connection, siteGroupId, userId);
+            }
 
-			//Check for nested groups
-			// Do we have this?
+            if (!isInSiteRoleGroup) {
+                dataProvider.putUserGroup(connection, siteRoleGroupId, userId);
+            }
+
+            //Check for nested groups
+            // Do we have this?
 			/*
 			String topGroup = wadbackend.WadGroup.getGroupByName(connexion, "Top", outTrace);
 	//		String topGroupId = wadbackend.WadUtilities.getAttribute(topGroup, "id");
@@ -209,52 +215,50 @@ public class LTIServletUtils {
 			}
 			//*/
 
-			String userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
-			if( userName == null )	/// Normally, lis_person_sourcedid is sent, otherwise, use email
-				userName = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
+            String userName = (String) payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+            if (userName == null)    /// Normally, lis_person_sourcedid is sent, otherwise, use email
+                userName = (String) payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
 
-			session.setAttribute("userid", userId);
-			session.setAttribute("username", userName);
-			session.setAttribute("userRole", wadRole);
-			session.setAttribute("groupid", siteRoleGroupId);
-			session.setAttribute("useridentifier", userName);
+            session.setAttribute("userid", userId);
+            session.setAttribute("username", userName);
+            session.setAttribute("userRole", wadRole);
+            session.setAttribute("groupid", siteRoleGroupId);
+            session.setAttribute("useridentifier", userName);
 
-			//Send along to WAD now
-			String redirectURL = (String)application.getAttribute("lti_redirect_location");
-			response.sendRedirect(redirectURL);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		} finally {
-			try
-			{
-				connection.close();
-			}
-			catch( SQLException e )
-			{
-				e.printStackTrace();
-			}
-			LTIServletUtils.destroyDB(connexion);
-		}
-	}
+            //Send along to WAD now
+            String redirectURL = (String) application.getAttribute("lti_redirect_location");
+            response.sendRedirect(redirectURL);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            LTIServletUtils.destroyDB(connexion);
+        }
+    }
 
-	protected static void oauthValidate(HttpServletRequest request, Map<String, Object> payload, ServletContext application) {
-		final String oauth_consumer_key = (String) payload.get(LTIServletUtils.OAUTH_CONSUMER_KEY);
-		final String configPrefix = "basiclti.provider." + oauth_consumer_key + ".";
-        final String oauth_secret = (String)application.getAttribute(configPrefix+ "secret");
+    protected static void oauthValidate(HttpServletRequest request, Map<String, Object> payload, ServletContext application) {
+        final String oauth_consumer_key = (String) payload.get(LTIServletUtils.OAUTH_CONSUMER_KEY);
+        final String configPrefix = "basiclti.provider." + oauth_consumer_key + ".";
+        final String oauth_secret = (String) application.getAttribute(configPrefix + "secret");
 
 
-		IMSJSONRequest ijr = new IMSJSONRequest(request);
-		ijr.validateRequest(oauth_consumer_key, oauth_secret, request);
-	}
+        IMSJSONRequest ijr = new IMSJSONRequest(request);
+        ijr.validateRequest(oauth_consumer_key, oauth_secret, request);
+    }
 
-	/**
-	 * Ensure that this is a proper lti request and it is authorized
-	 * @param payload Map of the request parameters
-	 * @param application
-	 * @param outTrace
-	 * @throws LTIException
-	 */
-	protected static void validateParams(Map<String, Object> payload, ServletContext application, StringBuffer outTrace) throws LTIException {
+    /**
+     * Ensure that this is a proper lti request and it is authorized
+     *
+     * @param payload     Map of the request parameters
+     * @param application
+     * @param outTrace
+     * @throws LTIException
+     */
+    protected static void validateParams(Map<String, Object> payload, ServletContext application, StringBuffer outTrace) throws LTIException {
 
 
         //check parameters
@@ -265,227 +269,215 @@ public class LTIServletUtils {
 //        String context_id = (String) payload.get(BasicLTIConstants.CONTEXT_ID);
 
         outTrace.append("\nHere I am!");
-        if(!BasicLTIUtil.equals(lti_message_type, "basic-lti-launch-request")) {
-            throw new LTIException("launch.invalid", "lti_message_type="+lti_message_type, null);
+        if (!BasicLTIUtil.equals(lti_message_type, "basic-lti-launch-request")) {
+            throw new LTIException("launch.invalid", "lti_message_type=" + lti_message_type, null);
         }
 
 //        if(!BasicLTIUtil.equals(lti_version, "LTI-1p0")) {
 //            throw new LTIException( "launch.invalid", "lti_version="+lti_version, null);
 //        }
 
-        if(BasicLTIUtil.isBlank(oauth_consumer_key)) {
-            throw new LTIException( "launch.missing", "oauth_consumer_key", null);
+        if (BasicLTIUtil.isBlank(oauth_consumer_key)) {
+            throw new LTIException("launch.missing", "oauth_consumer_key", null);
         }
 
-        if(BasicLTIUtil.isBlank(user_id)) {
-            throw new LTIException( "launch.missing", "user_id", null);
+        if (BasicLTIUtil.isBlank(user_id)) {
+            throw new LTIException("launch.missing", "user_id", null);
         }
         outTrace.append("user_id=" + user_id);
 
         // Lookup the secret
         //TODO: Maybe put this in a db table for scalability?
         final String configPrefix = "basiclti.provider." + oauth_consumer_key + ".";
-        final String oauth_secret = (String)application.getAttribute(configPrefix+ "secret");
+        final String oauth_secret = (String) application.getAttribute(configPrefix + "secret");
         //final String oauth_secret = ServerConfigurationService.getString(configPrefix+ "secret", null);
         if (oauth_secret == null) {
-            throw new LTIException( "launch.key.notfound",oauth_consumer_key, null);
+            throw new LTIException("launch.key.notfound", oauth_consumer_key, null);
         }
     }
 
 
-	/**
-	 * Lookup or create a user based on the data in the valueMap
-	 * If a new user gets created, also create a record in an lti log table for tracking purposes.
-	 * @see wadbackend.WadUser#getUserId(Connection, String)
-	 * @see wadbackend.WadUser#createUser(Connection, String, StringBuffer)
-	 * @param payload Key/Value pairs containing the post request parameters
-	 * @param connexion DB Connection
-	 * @param outTrace
-	 * @return The found or created user's id
-	 * @throws Exception
-	 */
-	protected static String getOrCreateUser(Map<String, Object> payload, Connection connexion, StringBuffer outTrace) throws Exception {
-		String userId = "0";
-		StringBuffer userXml = buildUserXml(payload);
-		outTrace.append("\nUserXML: "+userXml);
+    /**
+     * Lookup or create a user based on the data in the valueMap
+     * If a new user gets created, also create a record in an lti log table for tracking purposes.
+     *
+     * @param payload   Key/Value pairs containing the post request parameters
+     * @param connexion DB Connection
+     * @param outTrace
+     * @return The found or created user's id
+     * @throws Exception
+     */
+    protected static String getOrCreateUser(Map<String, Object> payload, Connection connexion, StringBuffer outTrace) throws Exception {
+        String userId = "0";
+        StringBuffer userXml = buildUserXml(payload);
+        outTrace.append("\nUserXML: " + userXml);
 
-		//Does the user already exist?
-		userId = dataProvider.getUserId(connexion, buildUsername(payload), null);
-		if ("0".equals(userId)) {
-			//create it
-			userId = dataProvider.createUser(connexion, buildUsername(payload), null);
-			outTrace.append("\nCreate User (self) results: " + userId);
-		}
-		else {
-			outTrace.append("\nUser found: " + userId);
-		}
+        //Does the user already exist?
+        userId = dataProvider.getUserId(connexion, buildUsername(payload), null);
+        if ("0".equals(userId)) {
+            //create it
+            userId = dataProvider.createUser(connexion, buildUsername(payload), null);
+            outTrace.append("\nCreate User (self) results: " + userId);
+        } else {
+            outTrace.append("\nUser found: " + userId);
+        }
 
-		//Check for log entry
-		String lms_user_eid = (String) payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
-		String lms_user_id = (String) payload.get(BasicLTIConstants.USER_ID);
-		String consumer_key = (String) payload.get(OAUTH_CONSUMER_KEY);
+        //Check for log entry
+        String lms_user_eid = (String) payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
+        String lms_user_id = (String) payload.get(BasicLTIConstants.USER_ID);
+        String consumer_key = (String) payload.get(OAUTH_CONSUMER_KEY);
 
-		String logId = LTIUserLog.getLogEntryId(connexion, lms_user_id, lms_user_eid, userId, consumer_key, outTrace);
-		if ("0".equals(logId)) {
-			// Create log entry
-			StringBuffer logResult = LTIUserLog.createUserLogEntry(connexion, lms_user_id, lms_user_eid, userId, consumer_key, outTrace);
-			outTrace.append("\nCreate User - Create LTI User Log results: " + logResult);
-		}
-		return userId;
-	}
+        String logId = LTIUserLog.getLogEntryId(connexion, lms_user_id, lms_user_eid, userId, consumer_key, outTrace);
+        if ("0".equals(logId)) {
+            // Create log entry
+            StringBuffer logResult = LTIUserLog.createUserLogEntry(connexion, lms_user_id, lms_user_eid, userId, consumer_key, outTrace);
+            outTrace.append("\nCreate User - Create LTI User Log results: " + logResult);
+        }
+        return userId;
+    }
 
-	/**
-	 * Lookup or create a group based on the passed title and role
-	 * @see wadbackend.WadGroup#getGroupByName(Connection, String, StringBuffer)
-	 * @see wadbackend.WadGroup#createGroup(Connection, String, StringBuffer)
-	 * @param connexion DB Connection
-	 * @param groupTitle Title of the group we want to create/lookup
-	 * @param role Role of the group
-	 * @param outTrace
-	 * @return
-	 * @throws Exception
-	 */
-	protected static String getOrCreateGroup(Connection connexion, String groupTitle, String role, StringBuffer outTrace) throws Exception {
-		//Does the site group already exist?
-		String group = dataProvider.getGroupByName(connexion, role);
+    /**
+     * Lookup or create a group based on the passed title and role
+     *
+     * @param connexion  DB Connection
+     * @param groupTitle Title of the group we want to create/lookup
+     * @param role       Role of the group
+     * @param outTrace
+     * @return
+     * @throws Exception
+     */
+    protected static String getOrCreateGroup(Connection connexion, String groupTitle, String role, StringBuffer outTrace) throws Exception {
+        //Does the site group already exist?
+        String group = dataProvider.getGroupByName(connexion, role);
 //		String groupId = "";
-		if ("0".equals(group)) {
-			//create it
-			StringBuffer groupXml = buildGroupXml(groupTitle, role);
-			group = dataProvider.createGroup(connexion, role);
+        if ("0".equals(group)) {
+            //create it
+            StringBuffer groupXml = buildGroupXml(groupTitle, role);
+            group = dataProvider.createGroup(connexion, role);
 //			group = dataProvider.createGroup(groupXml.toString()).toString();
 //			groupId = wadbackend.WadUtilities.getAttribute(group,  "id");
-			outTrace.append("\nCreate Group (self) results: " + group);
-		}
-		else {
-			outTrace.append("\nGroup found: " + group);
-		}
-		return group;
-	}
+            outTrace.append("\nCreate Group (self) results: " + group);
+        } else {
+            outTrace.append("\nGroup found: " + group);
+        }
+        return group;
+    }
 
-	/**
-	 * Combine the consumer key and the lms user id, hoping to make a unique username across multiple lti clients
-	 * @param payload
-	 * @return
-	 */
-	protected static String buildUsername(Map<String, Object> payload) {
-		String consumer_key = (String)payload.get(OAUTH_CONSUMER_KEY);
-		String lms_user_id = (String)payload.get(BasicLTIConstants.USER_ID);
-		return consumer_key + "_" + lms_user_id;
-	}
+    /**
+     * Combine the consumer key and the lms user id, hoping to make a unique username across multiple lti clients
+     *
+     * @param payload
+     * @return
+     */
+    protected static String buildUsername(Map<String, Object> payload) {
+        String consumer_key = (String) payload.get(OAUTH_CONSUMER_KEY);
+        String lms_user_id = (String) payload.get(BasicLTIConstants.USER_ID);
+        return consumer_key + "_" + lms_user_id;
+    }
 
 
-	/**
-	 * Build the xml structure needed for creating a user
-	 * @see wadbackend.WadUser#xmlUser(String[])
-	 * @param payload
-	 * @return
-	 * @throws Exception
-	 */
-	protected static StringBuffer buildUserXml(Map<String, Object> payload) throws Exception {
-		String userName = buildUsername(payload);
-		String fname = (String)payload.get(BasicLTIConstants.LIS_PERSON_NAME_GIVEN);
-		String lname = (String)payload.get(BasicLTIConstants.LIS_PERSON_NAME_FAMILY);
-		String email = (String)payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
-		String active = "1";
-		String[] userInfo = {"-1", userName, fname, lname, email, active};
+    /**
+     * Build the xml structure needed for creating a user
+     *
+     * @param payload
+     * @return
+     * @throws Exception
+     */
+    protected static StringBuffer buildUserXml(Map<String, Object> payload) throws Exception {
+        String userName = buildUsername(payload);
+        String fname = (String) payload.get(BasicLTIConstants.LIS_PERSON_NAME_GIVEN);
+        String lname = (String) payload.get(BasicLTIConstants.LIS_PERSON_NAME_FAMILY);
+        String email = (String) payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
+        String active = "1";
+        String[] userInfo = {"-1", userName, fname, lname, email, active};
 
-	  StringBuffer xml = new StringBuffer();
-	  xml.append(
-	      "<user id='-1'>" +
-	          "<username>"+userName+"</username>" +
-	          "<firstname>"+fname+"</firstname>" +
-	          "<lastname>"+lname+"</lastname>" +
-	          "<email>"+email+"</email>" +
-	          "<active>"+active+"</active>" +
-	      "</user>");
+        StringBuffer xml = new StringBuffer();
+        xml.append(
+                "<user id='-1'>" +
+                        "<username>" + userName + "</username>" +
+                        "<firstname>" + fname + "</firstname>" +
+                        "<lastname>" + lname + "</lastname>" +
+                        "<email>" + email + "</email>" +
+                        "<active>" + active + "</active>" +
+                        "</user>");
 
-		return xml;
-	}
+        return xml;
+    }
 
-	/**
-	 * Create a group, always passing in a -1 for the id (so it creates a new one) and active as 1
-	 * @see wadbackend.WadGroup#xmlGroup(String[])
-	 * @param title Title to be used for the new group
-	 * @param role Role to be used for the new group
-	 * @return
-	 * @throws Exception
-	 */
-	protected static StringBuffer buildGroupXml(String title, String role) throws Exception
-	{
-	  StringBuffer xml = new StringBuffer();
-	  xml.append(
-	      "<group id='-1'>" +
-	          "<label>"+title+"</label>" +
-	          "<role>"+role+"</role>" +
-	          "<active>1</active>" +
-	      "</group>");
+    /**
+     * Create a group, always passing in a -1 for the id (so it creates a new one) and active as 1
+     *
+     * @param title Title to be used for the new group
+     * @param role  Role to be used for the new group
+     * @return
+     * @throws Exception
+     */
+    protected static StringBuffer buildGroupXml(String title, String role) throws Exception {
+        StringBuffer xml = new StringBuffer();
+        xml.append(
+                "<group id='-1'>" +
+                        "<label>" + title + "</label>" +
+                        "<role>" + role + "</role>" +
+                        "<active>1</active>" +
+                        "</group>");
 
-		return xml;
-	}
+        return xml;
+    }
 
-	/**
-	 * Map from a passed in Role (Sakai role) to a WAD role
-	 * @param inputRole
-	 * @return
-	 */
-	protected static String roleMapper(ServletContext application, String inputRole, StringBuffer outTrace) throws Exception {
-		//Replace any spaces in the role name
-		String adjustedInput = inputRole.replaceAll(" ", "_");
-		String wadRole = (String)application.getAttribute(adjustedInput);
-		//return roleMap.get(inputRole);
-		if (wadRole == null) {
-			throw new LTIException("roleMap.error", inputRole, null);
-		}
-		outTrace.append("\nRole map: " + adjustedInput + "=>" + wadRole);
-		return wadRole;
-	}
+    /**
+     * Map from a passed in Role (Sakai role) to a WAD role
+     *
+     * @param inputRole
+     * @return
+     */
+    protected static String roleMapper(ServletContext application, String inputRole, StringBuffer outTrace) throws Exception {
+        //Replace any spaces in the role name
+        String adjustedInput = inputRole.replaceAll(" ", "_");
+        String wadRole = (String) application.getAttribute(adjustedInput);
+        //return roleMap.get(inputRole);
+        if (wadRole == null) {
+            throw new LTIException("roleMap.error", inputRole, null);
+        }
+        outTrace.append("\nRole map: " + adjustedInput + "=>" + wadRole);
+        return wadRole;
+    }
 
-	/**
-	 * Load in the roleMap.properties file that contains the lti_role=WAD_role definitions
-	 * @param application
-	 * @param session
-	 * @throws Exception
-	 */
-	protected static void loadRoleMapAttributes(ServletContext application, HttpSession session) throws Exception {
-		String appli = session.getServletContext().getRealPath("");
-		if (appli.indexOf("/")>-1)
-			appli = appli.substring(appli.lastIndexOf("/")+1);
-		else
-			appli = appli.substring(appli.lastIndexOf("\\")+1);	 // pour windows
+    /**
+     * Load in the roleMap.properties file that contains the lti_role=WAD_role definitions
+     *
+     * @param application
+     * @param session
+     * @throws Exception
+     */
+    protected static void loadRoleMapAttributes(ServletContext application, HttpSession session) throws Exception {
+        java.io.FileInputStream fichierSrce = new java.io.FileInputStream(ConfigUtils.getInstance().getConfigPath() + "roleMap.properties");
+        java.io.BufferedReader readerSrce = new java.io.BufferedReader(new java.io.InputStreamReader(fichierSrce, StandardCharsets.UTF_8));
+        String line = null;
+        String variable = null;
+        String value = null;
+        while ((line = readerSrce.readLine()) != null) {
+            if (!line.startsWith("#") && line.length() > 2) { // ce n'est pas un commentaire et longueur>=3 ex: x=b est le minumum
+                variable = line.substring(0, line.indexOf("="));
+                value = line.substring(line.indexOf("=") + 1);
+                application.setAttribute(variable, value);
+            }
+        }
+        fichierSrce.close();
 
-		String path = application.getRealPath("/");
-		path = path.replaceFirst(File.separator+"$", "_config"+File.separator);
+    }
 
-		String Filename = path+"roleMap.properties";
-		java.io.FileInputStream fichierSrce =  new java.io.FileInputStream(Filename);
-		java.io.BufferedReader readerSrce = new java.io.BufferedReader(new java.io.InputStreamReader(fichierSrce,"UTF-8"));
-		String line = null;
-		String variable = null;
-		String value = null;
-		while ((line = readerSrce.readLine())!=null){
-			if (!line.startsWith("#") && line.length()>2) { // ce n'est pas un commentaire et longueur>=3 ex: x=b est le minumum
-				variable = line.substring(0, line.indexOf("="));
-				value = line.substring(line.indexOf("=")+1);
-				application.setAttribute(variable,value);
-			}
-		}
-		fichierSrce.close();
+    /**
+     * Exception class for tracking certain types of errors
+     *
+     * @author chmaurer
+     */
+    protected static class LTIException extends RuntimeException {
 
-	}
+        private static final long serialVersionUID = -2890251603390152099L;
 
-	/**
-	 * Exception class for tracking certain types of errors
-	 * @author chmaurer
-	 *
-	 */
-	protected static class LTIException extends RuntimeException {
-
-		private static final long serialVersionUID = -2890251603390152099L;
-
-		public LTIException(String msg, String detail, Throwable t) {
-			//String msg = foo + bar;
-			super(msg + ": " + detail, t);
-		}
-	}
+        public LTIException(String msg, String detail, Throwable t) {
+            //String msg = foo + bar;
+            super(msg + ": " + detail, t);
+        }
+    }
 }

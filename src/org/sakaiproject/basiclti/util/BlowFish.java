@@ -18,6 +18,8 @@
 
 package org.sakaiproject.basiclti.util;
 
+import java.nio.charset.StandardCharsets;
+
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -42,7 +44,7 @@ public class BlowFish {
 	 *        String
 	 * @param salt
 	 *        String
-	 * @throws Exception.
+	 * @throws Exception
 	 */
 	public static String strengthenKey(String secret, String salt )
 	{
@@ -75,7 +77,7 @@ public class BlowFish {
 			ecipher.init(Cipher.ENCRYPT_MODE, secretKey);
 
 			// Encode the string into bytes using utf-8
-			byte[] utf8 = str.getBytes("UTF8");
+			byte[] utf8 = str.getBytes(StandardCharsets.UTF_8);
 
 			// Encrypt
 			byte[] enc = ecipher.doFinal(utf8);
@@ -91,8 +93,6 @@ public class BlowFish {
 		} catch (java.security.InvalidKeyException e) {
 			throw new Error(e);
 		} catch (javax.crypto.NoSuchPaddingException e) {
-			throw new Error(e);
-		} catch (java.io.UnsupportedEncodingException e) {
 			throw new Error(e);
 		}
 	}
@@ -119,11 +119,10 @@ public class BlowFish {
 			// Decrypt
 			byte[] utf8 = dcipher.doFinal(dec);
 			// Decode using utf-8
-			return new String(utf8, "UTF8");
+			return new String(utf8, StandardCharsets.UTF_8);
 		} catch (Exception e) {
 			throw new Error(e);
 		}
 	}
 
 }
-

@@ -23,7 +23,7 @@ import javax.servlet.http.HttpSession;
 public class PingService extends HttpServlet
 {
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 4969750715693599979L;
 
@@ -38,7 +38,5 @@ public class PingService extends HttpServlet
 		}
 
 		response.setStatus(HttpServletResponse.SC_OK);
-		return;
 	}
 }
-

@@ -15,7 +15,6 @@
 
 package com.portfolio.socialnetwork;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import com.ning.api.client.NingClient;
@@ -28,10 +27,14 @@ import com.ning.api.client.item.ActivityField;
 import com.ning.api.client.item.Author;
 import com.ning.api.client.item.Image;
 import com.ning.api.client.item.Token;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Ning {
 
-	public final static String DEFAULT_XAPI_HOST = "external.ningapis.com";
+    public final static Logger logger = LoggerFactory.getLogger(Ning.class);
+
+    public final static String DEFAULT_XAPI_HOST = "external.ningapis.com";
 
     // 'www' is used for bootstrapping (listing Networks that user owns)
     public final static String DEFAULT_NETWORK = "iut2grenoble";
@@ -47,31 +50,22 @@ public class Ning {
     private Token token;
     private NingConnection ningConnection = null;
 
-	public Ning()
-	{
+    public Ning() {
 
-		ConsumerKey consumerAuth = new ConsumerKey(CONSUMER_KEY, CONSUMER_SECRET);
-		NingClient ningClient = new NingClient(DEFAULT_NETWORK, consumerAuth,DEFAULT_XAPI_HOST,DEFAULT_HTTP_PORT,DEFAULT_HTTPS_PORT);
-		try {
+        ConsumerKey consumerAuth = new ConsumerKey(CONSUMER_KEY, CONSUMER_SECRET);
+        NingClient ningClient = new NingClient(DEFAULT_NETWORK, consumerAuth, DEFAULT_XAPI_HOST, DEFAULT_HTTP_PORT, DEFAULT_HTTPS_PORT);
+        try {
 
-			token = ningClient.createToken("marc.vassoille@iut2.upmf-grenoble.fr", "marguerite38");
-			ningConnection =  ningClient.connect(token);
-		}
-		catch(Exception ex)
-		{
-			System.out.println(ex.getMessage());
-		}
+            token = ningClient.createToken("marc.vassoille@iut2.upmf-grenoble.fr", "marguerite38");
+            ningConnection = ningClient.connect(token);
+        } catch (Exception ex) {
+            logger.error("Managed error", ex);
+        }
 
-	}
+    }
 
-	public PagedList<Activity> getActivites()
-	{
-		Activities a = ningConnection.activities();
-
-
-
-
-
+    public PagedList<Activity> getActivites() {
+        Activities a = ningConnection.activities();
 
         Activities.Lister lister = a.listerForRecent(ActivityField.title, ActivityField.type,
                 ActivityField.author,
@@ -81,73 +75,49 @@ public class Ning {
                 ActivityField.image_url,
                 ActivityField.description
 
-                );
+        );
 
-        	return lister.list();
-	}
+        return lister.list();
+    }
 
-	public String getXhtmlActivites()
-	{
-		String xHtml = "";
-		int entry = 0;
+    public String getXhtmlActivites() {
+        StringBuilder xHtml = new StringBuilder();
+        int entry = 0;
 
-		 	List<Activity> acts = null;
-	        PagedList<Activity> list = getActivites();
-	        String s = "---";
-	       // System.out.println("First, iterate over list in chunks of 3");
-	        int i = 0;
-	        ArrayList ningActivities = new ArrayList();
-	        do {
-	           // System.out.println("Request #"+(entry/3)+" (anchor="+list.position()+"):");
-	            s += "Request #"+(entry/3)+" (anchor="+list.position()+"):<br/>";
-	            acts = list.next(3);
-	            i++;
+        List<Activity> acts = null;
+        PagedList<Activity> list = getActivites();
 
-	            for (Activity act : acts) {
-	                ++entry;
+        do {
+            acts = list.next(3);
+            for (Activity act : acts) {
+                ++entry;
 
-	                //System.out.println(" activity #"+entry+" -> "+toString(act));
-	                xHtml += " activity #"+entry+" -> "+toString(act)+"<br>";
+                xHtml.append(" activity #").append(entry).append(" -> ").append(toString(act)).append("<br>");
+
+            }
+        } while (!acts.isEmpty());
 
 
-	               /* Author auth = act.getAttachedToAuthorResource();
-	                if(act.getAuthor()!=null && auth!=null) ningActivity.setAuthor(auth.getFullName());
-	                if(act.getCreatedDate()!=null) ningActivity.setCreatedDate(act.getCreatedDate().toString());
-	                ningActivity.setDescription(act.getDescription());
-	                if(act.getContentId()!=null) ningActivity.setId(act.getContentId().toString());
-	                if(act.getTitle()!=null) ningActivity.setTitle(act.toString());
-
-	                ningActivities.add(ningActivity);*/
-	            }
-	        } while (!acts.isEmpty());
-	       // } while (i<2);
+        return xHtml.toString();
+    }
 
 
-	        return xHtml;
-		}
-
-
-
-
-	static String toString(Activity act)
-	{
-		    String base = "activity of type "+act.getType()+", title '"+act.getTitle()+"', author: "+act.getAuthor();
-		    Author auth = act.getAttachedToAuthorResource();
-		    if (auth == null) {
-		        base += ", author info UNKNOWN";
-		    } else {
-		        base += ", author name: "+auth.getFullName();
-		    }
-		    Image image = act.getImageResource();
-		    if (image == null) {
-		        base += ", NO image";
-		    } else {
-		        base += ", image url: "+image.getUrl();
-		    }
-		    return base;
-	}
-
-
+    static String toString(Activity act) {
+        String base = "activity of type " + act.getType() + ", title '" + act.getTitle() + "', author: " + act.getAuthor();
+        Author auth = act.getAttachedToAuthorResource();
+        if (auth == null) {
+            base += ", author info UNKNOWN";
+        } else {
+            base += ", author name: " + auth.getFullName();
+        }
+        Image image = act.getImageResource();
+        if (image == null) {
+            base += ", NO image";
+        } else {
+            base += ", image url: " + image.getUrl();
+        }
+        return base;
+    }
 
 
 }

@@ -18,7 +18,8 @@ Some informations are provided by the institution tech service, kindly ask them 
 entityID= Application name  
 sessionHook = Interface for shibboleth communication  
 REMOTE_USER= variable that will be considered as username
->\<SSO entityID="https://{REMOTE SERVER}/idp/shibboleth">  
+
+>\<SSO entityID="https://{REMOTE SERVER}/idp/shibboleth">  
 >SAML2 SAML1  
 >\</SSO>
 
@@ -44,6 +45,12 @@ List of attributes needed sent by the identity provider server.
 Attribute matching is done inside `configKaruta.properties`  
 
 >\# ==== Shibboleth attrib =====  
+>\## Set it to true if you want to activate the Shibboleth Auth, default is false  
+>\#shib_auth=true  
+>\## Uncomment to set it to false, default is true  
+>\#shib_create_user = false  
+>\## To override the default REMOTE_USER header/attribute to get the principal attribute, default is REMOTE_USER  
+>\#shib_remote_user=eppn  
 >\## If shib_firstname or shib_lastname is set, shib_fullname is ignored  
 >\#shib_firstname=firstname  
 >\#shib_lastname=lastname  
@@ -61,8 +68,14 @@ Start the shibboleth server and check if it's active:
 Connection redirection
 -
 Edit apache for redirection
->\<Location />  >AuthType shibboleth  >ShibRequestSetting requireSession true  >require valid-user  >\</Location>
-
+```apache
+<Location "/">  
+    AuthType shibboleth  
+    ShibRequestSetting requireSession 1  
+    Require shib-session  
+    ShibUseHeaders On  
+</Location>
+```
 Other
 -
 If needed, add Institution specific webpages

@@ -24,131 +24,97 @@ import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.security.Credential;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class MysqlDataProviderTest {
 
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+    private static final Logger logger = LoggerFactory.getLogger(MysqlDataProviderTest.class);
 
-		String dataProviderName  = "com.portfolio.data.provider.MysqlDataProvider";
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
+        // TODO Auto-generated method stub
+
+        String dataProviderName = "com.portfolio.data.provider.MysqlDataProvider";
         Properties connectionProperties = new Properties();
         connectionProperties.setProperty("url", "jdbc:mysql://localhost/portfolio");
         connectionProperties.setProperty("login", "root");
         connectionProperties.setProperty("password", "");
 
 
+        try {
+            MimeType xmlMimeType = new MimeType("text/xml");
+            DataProvider dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+            Connection connection = SqlUtils.getConnection();
+            Credential cred = new Credential();
+
+            String portfolioUuid = "aaaa-bbbb-cccc";
+            Integer userId = 2;
+            int groupId = 26;
 
 
-		try
-		{
-			MimeType xmlMimeType = new MimeType("text/xml");
-			DataProvider dataProvider = (DataProvider)Class.forName(dataProviderName).newInstance();
-			Connection connection = SqlUtils.getConnection(null);
-			Credential cred = new Credential();
-//			dataProvider.connect(connectionProperties);
-			//System.out.println(dataProvider.getNode(new MimeType("text/xml"),"1"));
-			//System.out.println(dataProvider.getNode(new MimeType("text/xml"),"2"));
-			//System.out.println(dataProvider.getNode(new MimeType("text/xml"),"3"));
-			//System.out.println("----------------------");
-			//System.out.println(dataProvider.getNodeWithChildren(new MimeType("text/xml"),"1"));
+            // putPortfolio
+            String xml = DomUtils.file2String("c:\\temp\\iut2.xml", new StringBuffer());
+            logger.debug("--- putPortfolio() ------");
+            dataProvider.putPortfolio(connection, xmlMimeType, xmlMimeType, xml, portfolioUuid, userId, true, groupId, null);
 
 
+            // getNode
+            String uuid = "43020565-b650-4655-b466-af2c69b0c714";
+            logger.debug("--- getNode(" + uuid + ") ------");
+            logger.debug("Node {}", dataProvider.getNode(connection, xmlMimeType, uuid, false, userId, groupId, null, null));
+            // getNode with children
+            logger.debug("--- getNode(" + uuid + ") with children ------");
+            logger.debug("Node {}", dataProvider.getNode(connection, xmlMimeType, uuid, true, userId, groupId, null, null));
 
-			/*
-			String xml = "";
-			xml += "<eportfolio xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" schemaVersion=\"1.0\">";
-			xml += "<asmRoot id=\"uuid-1\"  semantictag=\"\" xsi_type=\"Root\" modified=\"date-1\">";
-			xml += "<label>LABEL</label>";
-			xml += "<code>CODE</code>";
-			xml += "<descr>DESCR</descr>";
-			xml += "<asmStructure id=\"uuid-2\" semantictag=\"referentiels\" xsi_type=\"ReferentielStruct\" modified=\"date-2\">";
-			xml += "<asmUnit  id=\"uuid-3\" semantictag=\"\" xsi_type=\"ReferentielUnit\" modified=\"date-3\">";
-			xml += "<asmUnitStructure id=\"uuid-4\" semantictag=\"\" xsi_type=\"NewUnitStructure\" modified=\"date-4\">";
-			xml += "<asmContext id=\"uuid-5\" semantictag=\"\" xsi_type=\"ReferenceContext\" modified='date-5'>";
-			xml += "<asmResource id=\"uuid-6\" modified=\"date-6\"  xsi_type=\"Referentiel\"  format=\"xml\"/>";
-			xml += "</asmContext>";
-			xml += "</asmUnitStructure>";
-			xml += "</asmUnit>";
-			xml += "<asmUnit  id=\"uuid-7\" xsi_type=\"Proxy\" modified=\"date-7\">";
-			xml += "<asmUnitStructure id=\"uuid-8\" semantictag=\"\" xsi_type=\"NewUnitStructure\" modified=\"date-8\"/>";
-			xml += "</asmUnit>";
-			xml += "</asmStructure>";
-			xml += "</asmRoot>";
-			xml += "</eportfolio>";
-				*/
-
-			String portfolioUuid = "aaaa-bbbb-cccc";
-			Integer userId = 2;
-			Integer groupId = 26;
+            // putNode
+            String parent_uuid_putnode = "82af4eae-0119-4055-b422-e37cece57e0f";
+            logger.debug("--- putNode(" + parent_uuid_putnode + ") ------");
+            String xml_putnode = DomUtils.file2String("c:\\temp\\putnode.xml", new StringBuffer());
+            logger.debug("Node {}", dataProvider.putNode(connection, xmlMimeType, parent_uuid_putnode, xml_putnode, userId, groupId));
 
 
-			// putPortfolio
-			String xml = DomUtils.file2String("c:\\temp\\iut2.xml", new StringBuffer());
-			System.out.println("--- putPortfolio() ------");
-			dataProvider.putPortfolio(connection, xmlMimeType,xmlMimeType,xml,portfolioUuid,userId,true, groupId,null);
+            String uuid_deletenode = "b6b20bf7-3732-4256-ae16-171f42030207";
+            logger.debug("--- deleteNode(" + uuid_deletenode + ") ------");
+            logger.debug("Result {}", dataProvider.deleteNode(connection, uuid_deletenode, userId, groupId));
 
 
-			  // getNode
-			String uuid = "43020565-b650-4655-b466-af2c69b0c714";
-			System.out.println("--- getNode("+uuid+") ------");
-			System.out.println(dataProvider.getNode(connection, xmlMimeType, uuid, false,userId, groupId, null, null));
-			// getNode with children
-			System.out.println("--- getNode("+uuid+") with children ------");
-			System.out.println(dataProvider.getNode(connection, xmlMimeType, uuid, true,userId, groupId, null, null));
+            // getPortfolio
+            logger.debug("--- getPortfolio() ------");
+            String xml_out = dataProvider.getPortfolio(connection, xmlMimeType, portfolioUuid, userId, groupId, null, null, null, 0, null).toString();
+            DomUtils.saveString(xml_out, "c:\\temp\\out2.xml");
 
-			// putNode
-			String parent_uuid_putnode = "82af4eae-0119-4055-b422-e37cece57e0f";
-			System.out.println("--- putNode("+parent_uuid_putnode+") ------");
-			String xml_putnode = DomUtils.file2String("c:\\temp\\putnode.xml", new StringBuffer());
-			System.out.println(dataProvider.putNode(connection, xmlMimeType, parent_uuid_putnode, xml_putnode,userId, groupId));
+            //getPortfolios
+            userId = null;
+            logger.debug("--- getPortfolios(" + userId + ") ------");
+            logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, true, 0, null, null, false, null));
 
-
-
-			String uuid_deletenode = "b6b20bf7-3732-4256-ae16-171f42030207";
-			System.out.println("--- deleteNode("+uuid_deletenode+") ------");
-			System.out.println(dataProvider.deleteNode(connection, uuid_deletenode,userId, groupId));
+            //getNodes
+            String uuid_getnodes = "43020565-b650-4655-b466-af2c69b0c714";
+            logger.debug("--- getNodes(" + uuid_getnodes + ") ------");
+            logger.debug("Result {}", dataProvider.getNodes(connection, xmlMimeType, null,
+                    userId, groupId, null, uuid_getnodes, null,
+                    null, null, null)
+            );
 
 
-			// getPortfolio
-			System.out.println("--- getPortfolio() ------");
-			String xml_out = dataProvider.getPortfolio(connection, xmlMimeType,portfolioUuid,userId, groupId, null, null, null, 0, null).toString();
-			DomUtils.saveString(xml_out, "c:\\temp\\out2.xml");
-
-			//getPortfolios
-			userId = null;
-			System.out.println("--- getPortfolios("+userId+") ------");
-			System.out.println(dataProvider.getPortfolios(connection, xmlMimeType, userId,groupId, true, 0,null,null,false, null));
-
-			//getNodes
-			String uuid_getnodes = "43020565-b650-4655-b466-af2c69b0c714";
-			System.out.println("--- getNodes("+uuid_getnodes+") ------");
-			System.out.println(dataProvider.getNodes(connection, xmlMimeType, null,
-					userId, groupId, null,uuid_getnodes, null,
-					null,null, null)
-			);
+            //deletePortfolio
+            //logger.debug("--- deletePortfolio("+portfolioUuid+") ------");
+            //logger.debug(dataProvider.deletePortfolio(portfolioUuid));
+            //getPortfolios
+            userId = null;
+            logger.debug("--- getPortfolios(" + userId + ") ------");
+            logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, true, 0, null, null, false, null));
 
 
-			//deletePortfolio
-			//System.out.println("--- deletePortfolio("+portfolioUuid+") ------");
-			//System.out.println(dataProvider.deletePortfolio(portfolioUuid));
-			//getPortfolios
-			userId = null;
-			System.out.println("--- getPortfolios("+userId+") ------");
-			System.out.println(dataProvider.getPortfolios(connection, xmlMimeType, userId,groupId, true, 0,null,null,false,null));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
 
 
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-		}
-
-
-	}
+    }
 
 }

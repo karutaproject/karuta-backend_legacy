@@ -18,21 +18,16 @@
  */
 package org.sakaiproject.basiclti.util;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import org.imsglobal.basiclti.Base64;
 
 public class PortableShaUtil {
-	public static final String UTF8 = "UTF8";
-
 	public static byte[] sha1(final String todigest) {
 		try {
-			byte[] b = todigest.getBytes("UTF-8");
+			byte[] b = todigest.getBytes(StandardCharsets.UTF_8);
 			MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
 			return sha1.digest(b);
-		} catch (UnsupportedEncodingException e) {
-			throw new Error(e);
 		} catch (NoSuchAlgorithmException e) {
 			throw new Error(e);
 		}
@@ -41,11 +36,9 @@ public class PortableShaUtil {
 	public static String sha1Hash(final String tohash) {
 		byte[] b = null;
 		try {
-			b = tohash.getBytes("UTF-8");
+			b = tohash.getBytes(StandardCharsets.UTF_8);
 			MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
 			b = sha1.digest(b);
-		} catch (UnsupportedEncodingException e) {
-			throw new Error(e);
 		} catch (NoSuchAlgorithmException e) {
 			throw new Error(e);
 		}
@@ -55,11 +48,9 @@ public class PortableShaUtil {
 	public static String sha256Hash(final String tohash) {
 		byte[] b = null;
 		try {
-			b = tohash.getBytes("UTF-8");
+			b = tohash.getBytes(StandardCharsets.UTF_8);
 			MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
 			b = sha256.digest(b);
-		} catch (UnsupportedEncodingException e) {
-			throw new Error(e);
 		} catch (NoSuchAlgorithmException e) {
 			throw new Error(e);
 		}
@@ -69,11 +60,9 @@ public class PortableShaUtil {
 	public static String sha512Hash(final String tohash) {
 		byte[] b = null;
 		try {
-			b = tohash.getBytes("UTF-8");
+			b = tohash.getBytes(StandardCharsets.UTF_8);
 			MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
 			b = sha512.digest(b);
-		} catch (UnsupportedEncodingException e) {
-			throw new Error(e);
 		} catch (NoSuchAlgorithmException e) {
 			throw new Error(e);
 		}
@@ -95,7 +84,7 @@ public class PortableShaUtil {
 		return true;
 	}
 
-	// Support bin2hex as per 
+	// Support bin2hex as per
 	// http://csrc.nist.gov/groups/ST/toolkit/documents/Examples/SHA256.pdf
 	// Using lower case as convention
 	public static String bin2hex(final byte[] base) {
@@ -121,12 +110,8 @@ public class PortableShaUtil {
          */
 	public static String str2hex(String str) {
 		byte[] b = null;
-		try {
-			b = str.getBytes("UTF-8");
-			return bin2hex(b);
-		} catch (UnsupportedEncodingException e) {
-			throw new Error(e);
-		}
+		b = str.getBytes(StandardCharsets.UTF_8);
+		return bin2hex(b);
 	}
 
 	public static byte[] hex2bin(String hex) {
@@ -136,7 +121,7 @@ public class PortableShaUtil {
 		byte[] base = new byte[hex.length() / 2];
 		int i = 0;
 		for (int j = 0; j < base.length; j++) {
-			int digit = 0; 
+			int digit = 0;
 
 			int ch = Character.digit(hex.charAt(i++), 16);
 			if ( ch < 0 ) {

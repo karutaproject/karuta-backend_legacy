@@ -9,17 +9,100 @@
 		</encoder>
 	</appender>
 
-	<appender name="LOGFILE" class="ch.qos.logback.core.FileAppender">
+	<appender name="LOGFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<file>${catalina.base}/logs/backend.log</file>
 		<encoder>
 			<charset>UTF-8</charset>
 			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
 		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${catalina.base}/logs/backend.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>90</maxHistory>
+		</rollingPolicy>
 	</appender>
 
+	<appender name="SECUREFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${catalina.base}/logs/security.log</file>
+		<encoder>
+			<charset>UTF-8</charset>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${catalina.base}/logs/security.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>366</maxHistory>
+		</rollingPolicy>
+	</appender>
+
+	<appender name="AUTHFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${catalina.base}/logs/auth.log</file>
+		<encoder>
+			<charset>UTF-8</charset>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${catalina.base}/logs/auth.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>366</maxHistory>
+		</rollingPolicy>
+	</appender>
+
+	<appender name="EDITFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${catalina.base}/logs/edit.log</file>
+		<encoder>
+			<charset>UTF-8</charset>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${catalina.base}/logs/edit.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>366</maxHistory>
+		</rollingPolicy>
+	</appender>
+
+	<appender name="ERRORFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${catalina.base}/logs/error.log</file>
+		<encoder>
+			<charset>UTF-8</charset>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${catalina.base}/logs/error.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>90</maxHistory>
+		</rollingPolicy>
+	</appender>
+
+	<appender name="DIRECTACCESSFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${catalina.base}/logs/directAccess.log</file>
+		<encoder>
+			<charset>UTF-8</charset>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${catalina.base}/logs/directAccess.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>366</maxHistory>
+		</rollingPolicy>
+	</appender>
+
+
 	<logger name="org.apache" level="WARN" />
-	<logger name="httpclient" level="WARN" /> 
-	<logger name="o.j.c.c.v" level="WARN" /> 
+	<logger name="httpclient" level="WARN" />
+	<logger name="o.j.c.c.v" level="WARN" />
+
+
+	<!-- theses one should not be modified expect to disable" -->
+	<logger name="authLogger" level="INFO" additivity="false">
+		<appender-ref ref="AUTHFILE" />
+	</logger>
+	<logger name="directAccess" level="INFO" additivity="false">
+		<appender-ref ref="DIRECTACCESSFILE" />
+	</logger>
+	<logger name="editLogger" level="INFO" additivity="false">
+		<appender-ref ref="EDITFILE" />
+	</logger>
+	<logger name="errorLogger" level="INFO" additivity="false">
+		<appender-ref ref="ERRORFILE" />
+	</logger>
+	<logger name="securityLogger" level="INFO" additivity="false">
+		<appender-ref ref="SECUREFILE" />
+	</logger>
 
 	<root level="INFO">	<!-- TRACE/DEBUG/INFO/WARN/ERROR -->
 		<appender-ref ref="STDOUT" />
