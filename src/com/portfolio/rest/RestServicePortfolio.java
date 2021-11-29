@@ -85,6 +85,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.json.XML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +109,6 @@ import com.portfolio.security.Credential;
 import com.portfolio.security.NodeRight;
 import com.portfolio.socialnetwork.Elgg;
 import com.portfolio.socialnetwork.Ning;
-import com.sun.jersey.multipart.FormDataParam;
 
 import edu.yale.its.tp.cas.client.ServiceTicketValidator;
 
