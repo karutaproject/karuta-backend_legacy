@@ -46,17 +46,20 @@ public class ShibeServlet extends HttpServlet {
 
 	ServletConfig sc;
 	DataProvider dataProvider;
+	String shibe_create_account = "n";
 
 	@Override
   public void init()
 	{
-		System.setProperty("https.protocols", "TLSv1.2");
+//		System.setProperty("https.protocols", "TLSv1.2");
 		sc = getServletConfig();
 	  ServletContext application = getServletConfig().getServletContext();
 	  try
 	  {
 	  	ConfigUtils.loadConfigFile(sc.getServletContext());
 			dataProvider = SqlUtils.initProvider(application, null);
+			
+			shibe_create_account = ConfigUtils.get("shibe_create_account");
 	  }
 	  catch( Exception e ){ e.printStackTrace(); }
 	}
@@ -76,7 +79,7 @@ public class ShibeServlet extends HttpServlet {
 			String userId = dataProvider.getUserId( connexion, rem, null );
 			uid = Integer.parseInt(userId);
 			
-			if(uid == 0 )
+			if(uid == 0 && "y".equals(shibe_create_account) )
 			{
 				System.out.println("[SHIBESERV] Creating account for "+rem);
 				userId = dataProvider.createUser(connexion, rem, null);
@@ -109,9 +112,12 @@ public class ShibeServlet extends HttpServlet {
 					}
 				}
 			}
-			session.setAttribute("uid", uid);
-			session.setAttribute("user", rem);
-			session.setAttribute("fromshibe", 1);
+			else if( uid != 0 )
+			{
+				session.setAttribute("uid", uid);
+				session.setAttribute("user", rem);
+				session.setAttribute("fromshibe", 1);
+			}
 		}
 		catch( Exception e )
 		{
