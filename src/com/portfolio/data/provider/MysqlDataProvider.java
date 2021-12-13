@@ -2093,7 +2093,7 @@ public class MysqlDataProvider implements DataProvider {
 		{
 //			System.out.println(codePortfolios.get(i));
 			String code = (String) codePortfolios.get(i);
-			if(code.contains("."))
+			if(code.contains(".") && code.length() > 1)	// Does not contain only a "."
 			{
 				String[] tmp = code.split("\\.");
 				String tmpCodeProjet = tmp[0];
