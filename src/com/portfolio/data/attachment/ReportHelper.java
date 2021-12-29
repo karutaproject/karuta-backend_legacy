@@ -111,7 +111,17 @@ public class ReportHelper  extends HttpServlet
 		try
 		{
 			HashMap<String, String> map = new HashMap<>();
-			// Process input
+			
+			//// Process input
+			// If there's a userid
+			String requested_uid_str = request.getParameter("userid");
+			if( requested_uid_str != null)
+			{
+				int requested_uid = Integer.parseInt(requested_uid_str);
+				if( requested_uid > 0 )
+					map.put("userid", requested_uid_str);
+			}
+			// Column parameters
 			for( int i=1; i<=10; i++ )
 			{
 				String key = "a"+i;
@@ -199,6 +209,7 @@ public class ReportHelper  extends HttpServlet
 			Document doc = DomUtils.xmlString2Document(data, new StringBuffer());
 			NodeList vectorNode = doc.getElementsByTagName("vector");
 			HashMap<String, String> map = new HashMap<>();
+			map.put("userid", Integer.toString(uid));
 			if( vectorNode.getLength() == 1 )
 			{
 				String nodename = "a1?\\d";
@@ -219,10 +230,16 @@ public class ReportHelper  extends HttpServlet
 			/// Send query
 			c = SqlUtils.getConnection(session.getServletContext());
 			int retValue = dataProvider.writeVector(c, uid, map);
-
+			
 			// Send result
 			OutputStream output = response.getOutputStream();
-			output.write(retValue);
+			String text = "OK";
+			if( retValue < 0 )
+			{
+				response.setStatus(304);
+				text = "Not modified";
+			}
+			output.write(text.getBytes());
 			output.close();
 
 		}

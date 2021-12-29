@@ -39,6 +39,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -150,7 +151,7 @@ public class ReportHelperProvider {
 			vals.add(entry.getValue());
 		}
 		
-		String col = String.join(",", cols);
+		String col = String.join(" AND ", cols);
 		sql = String.format("SELECT * FROM vector_table WHERE %s;", col);
 		System.out.println("SQL: "+sql);
 		st = c.prepareStatement(sql);
@@ -166,18 +167,24 @@ public class ReportHelperProvider {
 		if( rs != null)
 			while( rs.next() )
 			{
-				output.append("<vector>");
+				int userid = rs.getInt("userid");
+				Date date = rs.getDate("date");
+				output.append(MessageFormat.format("<vector uid={0,number,integer} date=''{1,date,short} {1,time,medium}''>", userid, date));
 				
 				for(int i=1; i<=10; i++)
 				{
 					String a_n = "a"+i;
 					String a_val = rs.getString(a_n);
-					output.append(String.format("<%s>%s</%s>", a_n, a_val, a_n));
+					if( !"".equals(a_val) )
+						output.append(String.format("<%s>%s</%s>", a_n, a_val, a_n));
 				}
 				
 				output.append("</vector>");
 			}
 		output.append("</vectors>");
+		
+		rs.close();
+		st.close();
 
 		return output.toString();
 	}
@@ -188,30 +195,36 @@ public class ReportHelperProvider {
 		String sql;
 
 		Set<Entry<String, String>> values = map.entrySet();
-		String col = "";
-		String holder = "";
+		ArrayList<String> holder = new ArrayList<String>();
+		ArrayList<String> cols = new ArrayList<String>();
 		ArrayList<String> vals = new ArrayList<String>();
 		Iterator<Entry<String, String>> iterval = values.iterator();
 		while( iterval.hasNext() )
 		{
 			Entry<String, String> entry = iterval.next();
-			col += ", " + entry.getKey();
-			holder += ", ?";;
+			holder.add("?");
+			cols.add(entry.getKey());
 			vals.add(entry.getValue());
 		}
 		
-		sql = String.format("INSERT INTO vector_table(userid%s ) VALUES(?%s );", col, holder);
+		// Check if previous vector exist
+		int count = checkVector(c, cols, vals);
+		if( count > 0 ) return -1;
+		
+		String colsjoin = String.join(",", cols);
+		String holderjoin = String.join(",", holder);
+		sql = String.format("INSERT INTO vector_table(%s) VALUES(%s);", colsjoin, holderjoin);
 		st = c.prepareStatement(sql);
 		
 		System.out.println("SQL: "+sql);
 		
-		st.setInt(1, userId);
 		for( int i=0; i<vals.size(); i++ )
 		{
-			st.setString(i+2, vals.get(i));
-			System.out.println("PARAMS "+(i+2)+" VAL: "+vals.get(i));
+			st.setString(i+1, vals.get(i));
+			System.out.println("PARAMS "+(i+1)+" VAL: "+vals.get(i));
 		}
 		st.executeUpdate();
+		st.close();
 		
 		return 0;
 	}
@@ -222,5 +235,31 @@ public class ReportHelperProvider {
 		return 0;
 	}
 	
+	/// Because can't make UNIQUE key on all column. Size is too big
+	public int checkVector( Connection c, ArrayList<String> cols, ArrayList<String> vals ) throws SQLException
+	{
+		String col = String.join("=? AND ", cols);
+		col += "=?";
+		String sql = String.format("SELECT COUNT(*) FROM vector_table WHERE %s;", col);
+		System.out.println("SQL: "+sql);
+		PreparedStatement st = c.prepareStatement(sql);
+		
+		for( int i=0; i<vals.size(); i++ )
+		{
+			st.setString(i+1, vals.get(i));
+		}
+		ResultSet rs = st.executeQuery();
+		
+		int count = 0;
+		if (rs != null && ( rs.next() ) )
+			count = rs.getInt(1);
+		
+		rs.close();
+		st.close();
+		
+		System.out.println(String.format("VECTOR CHECK FOUND (%d) VALUES", count));
+		
+		return count;
+	}
 	
 }
