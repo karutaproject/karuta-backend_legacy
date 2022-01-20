@@ -58,7 +58,7 @@ public class SqlUtils
 	//============= init servers ===============================
 		String dataProviderName = ConfigUtils.get("dataProviderClass");
 		if( dp == null )
-			dp = (DataProvider)Class.forName(dataProviderName).newInstance();
+			dp = (DataProvider)Class.forName(dataProviderName).getConstructor().newInstance();
 
 //		Connection connection = getConnection(application);
 //		dataProvider.setConnection(connection);
