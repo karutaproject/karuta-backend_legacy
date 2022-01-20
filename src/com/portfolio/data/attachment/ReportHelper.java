@@ -29,7 +29,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.regex.Matcher;
@@ -67,6 +70,7 @@ public class ReportHelper  extends HttpServlet
 	private static final long serialVersionUID = 7885746223793374448L;
 
 	static final Logger logger = LoggerFactory.getLogger(ReportHelper.class);
+	final private Credential cred = new Credential();
 
 	ReportHelperProvider dataProvider = null;
 
@@ -266,6 +270,77 @@ public class ReportHelper  extends HttpServlet
 	@Override
 	protected void doDelete(HttpServletRequest request, HttpServletResponse response)
 	{
+		/// Check if user is logged in
+		HttpSession session = request.getSession(false);
+		if( session == null || session.getAttribute("uid") == null )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
+
+		int uid = (Integer) session.getAttribute("uid");
+		if( uid == 0 )
+		{
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
+		
+		Connection c = null;
+		try
+		{
+			HashMap<String, String> map = new HashMap<>();
+			
+			//// Process input
+			// If there's a userid
+			String date = request.getParameter("date");
+			if( date != null)
+			{
+				DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+				java.util.Date d = dateFormat.parse(date);
+				map.put("date", dateFormat.format(d));
+			}
+			// Column parameters
+			for( int i=1; i<=10; i++ )
+			{
+				String key = "a"+i;
+				String value = request.getParameter(key);
+				if(value != null)
+					map.put(key, value);
+			}
+			
+			/// Query
+			c = SqlUtils.getConnection(session.getServletContext());
+			if( !cred.isAdmin(c, uid) )
+				map.put("userid", Integer.toString(uid));
+			
+			int value = dataProvider.deleteVector(c, map);
+
+			// Send result
+			OutputStream output = response.getOutputStream();
+			output.write(Integer.toString(value).getBytes());
+			output.close();
+
+		}
+		catch( Exception e )
+		{
+			e.printStackTrace();
+			response.setStatus(500);
+		}
+		finally
+		{
+			/// Close connections
+			try
+			{
+				if( c != null )
+					c.close();
+//				request.getReader().close();
+//				response.getWriter().close();
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+
 	}
 }
-

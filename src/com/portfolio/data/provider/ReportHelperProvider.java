@@ -229,10 +229,36 @@ public class ReportHelperProvider {
 		return 0;
 	}
 	
-	public int deleteVector( Connection c, int userId, HashMap<String, String> map, Date date )
+	public int deleteVector( Connection c, HashMap<String, String> map ) throws SQLException
 	{
+		ArrayList<String> cols = new ArrayList<String>();
+		ArrayList<String> vals = new ArrayList<String>();
+		Iterator<Entry<String, String>> iterval = map.entrySet().iterator();
+		while( iterval.hasNext() )
+		{
+			Entry<String, String> entry = iterval.next();
+			if( "date".equals(entry.getKey()) )
+				cols.add(entry.getKey()+"<?");
+			else
+				cols.add(entry.getKey()+"=?");
+			vals.add(entry.getValue());
+		}
 		
-		return 0;
+		String col = String.join(" AND ", cols);
+		String sql = String.format("DELETE FROM vector_table WHERE %s;", col);
+		System.out.println("SQL: "+sql);
+		PreparedStatement st = c.prepareStatement(sql);
+		
+		for( int i=0; i<vals.size(); i++ )
+		{
+			st.setString(i+1, vals.get(i));
+			System.out.println("PARAMS "+(i+1)+" VAL: "+vals.get(i));
+		}
+		int count = st.executeUpdate();
+		
+		st.close();
+
+		return count;
 	}
 	
 	/// Because can't make UNIQUE key on all column. Size is too big
