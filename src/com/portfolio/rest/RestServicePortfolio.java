@@ -5254,7 +5254,7 @@ public class RestServicePortfolio
 //						for( int i=0; i<ldapvalues.length; i++ )
 //							System.out.println("LDAP CONNECTION OK: "+ldapvalues[i]);
 //						if( ldapParam == null || ldapvalues[0].startsWith("7") )
-						if (ldapvalues[1] != null | ldapvalues[2] != null | ldapvalues[3] != null) //si le filtre ldap a renvoyé des valeurs
+						if (ldapvalues[1] != null || ldapvalues[2] != null || ldapvalues[3] != null) //si le filtre ldap a renvoyé des valeurs
 						{
 							userId = dataProvider.createUser(c, sv.getUser(), null );
 							int uid = Integer.parseInt(userId);
