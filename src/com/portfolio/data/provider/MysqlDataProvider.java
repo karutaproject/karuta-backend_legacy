@@ -5797,11 +5797,22 @@ public class MysqlDataProvider implements DataProvider {
 						while( menuline.hasMoreTokens() )
 						{
 							String line = menuline.nextToken();
-							/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
-							String[] tokens = line.split(",");
+							
+							/// New format is an xml
+							String roleReg = "<roles>([^<]*)</roles>";
+							Pattern rolePat = Pattern.compile(roleReg);
+							Matcher roleMatcher = rolePat.matcher(line);
 							String menurolename = null;
-							for( int t=0; t<4; ++t )
-								menurolename = tokens[3];
+							if (roleMatcher.find()) menurolename = roleMatcher.group(1);
+
+							/// Keeping old format for compatibility
+							if( menurolename == null )
+							{
+								/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+								String[] tokens = line.split(",");
+								if( tokens.length == 4 )
+									menurolename = tokens[3];
+							}
 
 							if( menurolename != null )
 							{
@@ -14004,11 +14015,22 @@ public String getNodeUuidBySemtag(Connection c, String semtag, String uuid_paren
 						while( menuline.hasMoreTokens() )
 						{
 							String line = menuline.nextToken();
-							/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
-							String[] tokens = line.split(",");
+							
+							/// New format is an xml
+							String roleReg = "<roles>([^<]*)</roles>";
+							Pattern rolePat = Pattern.compile(roleReg);
+							Matcher roleMatcher = rolePat.matcher(line);
 							String menurolename = null;
-							for( int t=0; t<4; ++t )
-								menurolename = tokens[3];
+							if (roleMatcher.find()) menurolename = roleMatcher.group(1);
+
+							/// Keeping old format for compatibility
+							if( menurolename == null )
+							{
+								/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+								String[] tokens = line.split(",");
+								if( tokens.length == 4 )
+									menurolename = tokens[3];
+							}
 
 							if( menurolename != null )
 							{
