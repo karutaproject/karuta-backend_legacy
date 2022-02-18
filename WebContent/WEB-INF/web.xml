@@ -240,6 +240,17 @@
 	</servlet-mapping>
 
 	<servlet>
+		<description></description>
+		<display-name>Report helper</display-name>
+		<servlet-name>ReportHelper</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.ReportHelper</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ReportHelper</servlet-name>
+		<url-pattern>/vector/*</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<servlet-name>LTI</servlet-name>
 		<servlet-class>com.portfolio.security.LTIServlet</servlet-class>
 	</servlet>

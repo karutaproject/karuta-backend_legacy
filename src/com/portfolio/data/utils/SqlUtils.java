@@ -29,6 +29,7 @@ import org.apache.commons.dbcp2.datasources.SharedPoolDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.portfolio.data.provider.ReportHelperProvider;
 import com.portfolio.data.provider.DataProvider;
 
 public class SqlUtils
@@ -40,6 +41,7 @@ public class SqlUtils
 	static InitialContext cxt = null;
 	static DataSource ds = null;
 	static DataProvider dp = null;
+	static ReportHelperProvider rh = null;
 
 	public static  String getCurrentTimeStamp()
 	{
@@ -56,7 +58,7 @@ public class SqlUtils
 	//============= init servers ===============================
 		String dataProviderName = ConfigUtils.get("dataProviderClass");
 		if( dp == null )
-			dp = (DataProvider)Class.forName(dataProviderName).newInstance();
+			dp = (DataProvider)Class.forName(dataProviderName).getConstructor().newInstance();
 
 //		Connection connection = getConnection(application);
 //		dataProvider.setConnection(connection);
@@ -64,6 +66,19 @@ public class SqlUtils
 		return dp;
 	}
 
+	public static ReportHelperProvider initProviderHelper(ServletContext application, Logger logger) throws Exception
+	{
+	//============= init servers ===============================
+		String dataProviderName = "com.portfolio.data.provider.ReportHelperProvider";
+		if( rh == null )
+			rh = (ReportHelperProvider)Class.forName(dataProviderName).getConstructor().newInstance();
+
+//		Connection connection = getConnection(application);
+//		dataProvider.setConnection(connection);
+		
+		return rh;
+	}
+	
 	// If servContext is null, only load from pooled connection
 	public static Connection getConnection( ServletContext servContext ) throws Exception
 	{
