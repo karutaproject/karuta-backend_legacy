@@ -438,7 +438,7 @@ public class LTIServlet extends HttpServlet {
     private String getOrCreateGroup(Connection connexion, String groupTitle, String role, StringBuffer outTrace) throws Exception {
         //Does the site group already exist?
         String group = dataProvider.getGroupByName(connexion, role);
-        ;
+
 //		String groupId = "";
         if ("0".equals(group)) {
             //create it

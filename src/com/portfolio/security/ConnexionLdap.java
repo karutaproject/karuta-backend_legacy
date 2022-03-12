@@ -76,6 +76,7 @@ public class ConnexionLdap {
         final String attribFirstN = ConfigUtils.getInstance().getRequiredProperty("ldap.user.firstname");
         final String attribLastN = ConfigUtils.getInstance().getRequiredProperty("ldap.user.lastname");
         final String attribMail = ConfigUtils.getInstance().getRequiredProperty("ldap.user.mail");
+        final String attribAffiliation = ConfigUtils.getInstance().getRequiredProperty("ldap.user.affiliation");
         final String[] returnAttrib = {attribFirstN, attribLastN, attribMail};
 
         SearchControls controle = new SearchControls();
@@ -93,6 +94,7 @@ public class ConnexionLdap {
         String fname = null;
         String lname = null;
         String mail = null;
+        String affiliation = null;
         if (e.hasMore()) {
             SearchResult r = e.next();
 
@@ -108,10 +110,14 @@ public class ConnexionLdap {
             Attribute mobj = attribs.get(attribMail);
             if (mobj != null) mail = mobj.get().toString();
             else mail = "";
+            
+            Attribute affiobj = attribs.get(attribAffiliation);
+            if( affiobj != null ) affiliation = affiobj.get().toString();
+            else affiliation = "";
         }
         ictx.close();// fermeture de la connexion au ldap
 
-        return new String[]{retval, fname, lname, mail};
+        return new String[]{retval, fname, lname, mail, affiliation};
     }
 
     public void listerAttributs(Attributes atts)
@@ -134,3 +140,4 @@ public class ConnexionLdap {
 
     }
 }
+

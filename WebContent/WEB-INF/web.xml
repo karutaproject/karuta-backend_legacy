@@ -14,12 +14,22 @@
 
 	<servlet>
 		<servlet-name>Jersey REST Service</servlet-name>
+		<servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
+		<!-- 
 		<servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
+		-->
 		<init-param>
+			<param-name>jersey.config.server.provider.packages</param-name>
+			<!--
 			<param-name>com.sun.jersey.config.property.packages</param-name>
+			-->
 			<param-value>com.portfolio.rest;</param-value>
 		</init-param>
 		<init-param>
+    <param-name>jersey.config.server.provider.classnames</param-name>
+    <param-value>org.glassfish.jersey.media.multipart.MultiPartFeature</param-value>
+		</init-param>
+    <init-param>
 			<param-name>logRestRequests</param-name>
 			<param-value>0</param-value>
 		</init-param>
@@ -221,6 +231,17 @@
 	<servlet-mapping>
 		<servlet-name>ReportService</servlet-name>
 		<url-pattern>/report/*</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<description></description>
+		<display-name>Report helper</display-name>
+		<servlet-name>ReportHelper</servlet-name>
+		<servlet-class>com.portfolio.data.attachment.ReportHelper</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ReportHelper</servlet-name>
+		<url-pattern>/vector/*</url-pattern>
 	</servlet-mapping>
 
 	<servlet>

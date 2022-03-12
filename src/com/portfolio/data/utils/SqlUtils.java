@@ -25,6 +25,8 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.provider.ReportHelperProvider;
+
 import org.apache.commons.dbcp2.cpdsadapter.DriverAdapterCPDS;
 import org.apache.commons.dbcp2.datasources.SharedPoolDataSource;
 import org.slf4j.Logger;
@@ -39,6 +41,7 @@ public class SqlUtils {
     static InitialContext ctx = null;
     static DataSource ds = null;
     static DataProvider dp = null;
+    static ReportHelperProvider rh = null;
 
     public static String getCurrentTimeStamp() {
         java.util.Date date = new java.util.Date();
@@ -53,7 +56,7 @@ public class SqlUtils {
         //============= init servers ===============================
         final String dataProviderName = ConfigUtils.getInstance().getRequiredProperty(PROP_DATA_PROVIDER_CLASS);
         if (dp == null)
-            dp = (DataProvider) Class.forName(dataProviderName).newInstance();
+            dp = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
 
 //		Connection connection = getConnection(application);
 //		dataProvider.setConnection(connection);
@@ -61,6 +64,18 @@ public class SqlUtils {
         return dp;
     }
 
+    public static ReportHelperProvider initProviderHelper() throws Exception
+  	{
+  	//============= init servers ===============================
+  		String dataProviderName = "com.portfolio.data.provider.ReportHelperProvider";
+  		if( rh == null )
+  			rh = (ReportHelperProvider)Class.forName(dataProviderName).getConstructor().newInstance();
+
+//  		Connection connection = getConnection(application);
+//  		dataProvider.setConnection(connection);
+  		
+  		return rh;
+  	}
     // If servContext is null, only load from pooled connection
     public static Connection getConnection() throws Exception {
         if (!loaded) {
@@ -118,3 +133,4 @@ public class SqlUtils {
         }
     }
 }
+

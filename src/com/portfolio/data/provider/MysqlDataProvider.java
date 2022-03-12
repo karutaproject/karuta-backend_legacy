@@ -2450,11 +2450,22 @@ public class MysqlDataProvider implements DataProvider {
 
                         while (menuline.hasMoreTokens()) {
                             String line = menuline.nextToken();
-                            /// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
-                            String[] tokens = line.split(",");
-                            String menurolename = null;
-                            for (int t = 0; t < 4; ++t)
+
+              							/// New format is an xml
+              							String roleReg = "<roles>([^<]*)</roles>";
+              							Pattern rolePat = Pattern.compile(roleReg);
+              							Matcher roleMatcher = rolePat.matcher(line);
+              							String menurolename = null;
+              							if (roleMatcher.find()) menurolename = roleMatcher.group(1);
+
+              							/// Keeping old format for compatibility
+              							if( menurolename == null )
+              							{
+              								/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+              								String[] tokens = line.split(",");
+              								if( tokens.length == 4 )
                                 menurolename = tokens[3];
+              							}
 
                             if (menurolename != null) {
                                 // Break down list of roles
@@ -3614,7 +3625,7 @@ public class MysqlDataProvider implements DataProvider {
                         "semtag varchar(100) DEFAULT NULL, " +
                         "semantictag varchar(100) DEFAULT NULL, " +
                         "label varchar(100)  DEFAULT NULL, " +
-                        "code varchar(100)  DEFAULT NULL, " +
+                        "code varchar(255)  DEFAULT NULL, " +
                         "descr varchar(100)  DEFAULT NULL, " +
                         "format varchar(30) DEFAULT NULL, " +
                         "modif_user_id int(12) NOT NULL, " +
@@ -3674,7 +3685,7 @@ public class MysqlDataProvider implements DataProvider {
                         "semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
                         "semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
                         "label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
-                        "code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+                        "code VARCHAR2(255 CHAR)  DEFAULT NULL, " +
                         "descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
                         "format VARCHAR2(30 CHAR) DEFAULT NULL, " +
                         "modif_user_id NUMBER(12) DEFAULT NULL, " +
@@ -5116,11 +5127,22 @@ public class MysqlDataProvider implements DataProvider {
 
                         while (menuline.hasMoreTokens()) {
                             String line = menuline.nextToken();
-                            /// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
-                            String[] tokens = line.split(",");
-                            String menurolename = null;
-                            for (int t = 0; t < 4; ++t)
-                                menurolename = tokens[3];
+              							
+              							/// New format is an xml
+              							String roleReg = "<roles>([^<]*)</roles>";
+              							Pattern rolePat = Pattern.compile(roleReg);
+              							Matcher roleMatcher = rolePat.matcher(line);
+              							String menurolename = null;
+              							if (roleMatcher.find()) menurolename = roleMatcher.group(1);
+
+              							/// Keeping old format for compatibility
+              							if( menurolename == null )
+              							{
+              								/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+              								String[] tokens = line.split(",");
+              								if( tokens.length == 4 )
+              									menurolename = tokens[3];
+              							}
 
                             if (menurolename != null) {
                                 // Break down list of roles
@@ -5355,7 +5377,7 @@ public class MysqlDataProvider implements DataProvider {
                         "semtag varchar(100) DEFAULT NULL, " +
                         "semantictag varchar(100) DEFAULT NULL, " +
                         "label varchar(100)  DEFAULT NULL, " +
-                        "code varchar(100)  DEFAULT NULL, " +
+                        "code varchar(255)  DEFAULT NULL, " +
                         "descr varchar(100)  DEFAULT NULL, " +
                         "format varchar(30) DEFAULT NULL, " +
                         "modif_user_id int(12) NOT NULL, " +
@@ -5388,7 +5410,7 @@ public class MysqlDataProvider implements DataProvider {
                         "semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
                         "semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
                         "label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
-                        "code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+                        "code VARCHAR2(255 CHAR)  DEFAULT NULL, " +
                         "descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
                         "format VARCHAR2(30 CHAR) DEFAULT NULL, " +
                         "modif_user_id NUMBER(12) NOT NULL, " +
@@ -5720,7 +5742,7 @@ public class MysqlDataProvider implements DataProvider {
                     "semtag varchar(100) DEFAULT NULL, " +
                     "semantictag varchar(100) DEFAULT NULL, " +
                     "label varchar(100)  DEFAULT NULL, " +
-                    "code varchar(100)  DEFAULT NULL, " +
+                    "code varchar(255)  DEFAULT NULL, " +
                     "descr varchar(100)  DEFAULT NULL, " +
                     "format varchar(30) DEFAULT NULL, " +
                     "modif_user_id int(12) NOT NULL, " +
@@ -5750,7 +5772,7 @@ public class MysqlDataProvider implements DataProvider {
                     "semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
                     "semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
                     "label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
-                    "code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+                    "code VARCHAR2(255 CHAR)  DEFAULT NULL, " +
                     "descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
                     "format VARCHAR2(30 CHAR) DEFAULT NULL, " +
                     "modif_user_id NUMBER(12) NOT NULL, " +
@@ -6653,11 +6675,22 @@ public class MysqlDataProvider implements DataProvider {
 
                             while (menuline.hasMoreTokens()) {
                                 String line = menuline.nextToken();
-                                /// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
-                                String[] tokens = line.split(",");
-                                String menurolename = null;
-                                for (int t = 0; t < 4; ++t)
+
+                  							/// New format is an xml
+                  							String roleReg = "<roles>([^<]*)</roles>";
+                  							Pattern rolePat = Pattern.compile(roleReg);
+                  							Matcher roleMatcher = rolePat.matcher(line);
+                  							String menurolename = null;
+                  							if (roleMatcher.find()) menurolename = roleMatcher.group(1);
+
+                  							/// Keeping old format for compatibility
+                  							if( menurolename == null )
+                  							{
+                  								/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+                  								String[] tokens = line.split(",");
+                  								if( tokens.length == 4 )
                                     menurolename = tokens[3];
+                  							}
 
                                 if (menurolename != null) {
                                     // Break down list of roles
@@ -6702,6 +6735,7 @@ public class MysqlDataProvider implements DataProvider {
 						doc = documentBuilder.parse(is);
 						attribNode = doc.getDocumentElement();
 						attribMap = attribNode.getAttributes();
+
 
 						try
 						{
@@ -6928,7 +6962,7 @@ public class MysqlDataProvider implements DataProvider {
                         "semtag varchar(100) DEFAULT NULL, " +
                         "semantictag varchar(100) DEFAULT NULL, " +
                         "label varchar(100)  DEFAULT NULL, " +
-                        "code varchar(100)  DEFAULT NULL, " +
+                        "code varchar(255)  DEFAULT NULL, " +
                         "descr varchar(100)  DEFAULT NULL, " +
                         "format varchar(30) DEFAULT NULL, " +
                         "modif_user_id int(12) NOT NULL, " +
@@ -6958,7 +6992,7 @@ public class MysqlDataProvider implements DataProvider {
                         "semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
                         "semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
                         "label VARCHAR2(100 CHAR)  DEFAULT NULL, " +
-                        "code VARCHAR2(100 CHAR)  DEFAULT NULL, " +
+                        "code VARCHAR2(255 CHAR)  DEFAULT NULL, " +
                         "descr VARCHAR2(100 CHAR)  DEFAULT NULL, " +
                         "format VARCHAR2(30 CHAR) DEFAULT NULL, " +
                         "modif_user_id NUMBER(12) NOT NULL, " +
@@ -12366,11 +12400,22 @@ public class MysqlDataProvider implements DataProvider {
 
                         while (menuline.hasMoreTokens()) {
                             String line = menuline.nextToken();
-                            /// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
-                            String[] tokens = line.split(",");
-                            String menurolename = null;
-                            for (int t = 0; t < 4; ++t)
+                            
+              							/// New format is an xml
+              							String roleReg = "<roles>([^<]*)</roles>";
+              							Pattern rolePat = Pattern.compile(roleReg);
+              							Matcher roleMatcher = rolePat.matcher(line);
+              							String menurolename = null;
+              							if (roleMatcher.find()) menurolename = roleMatcher.group(1);
+
+              							/// Keeping old format for compatibility
+              							if( menurolename == null )
+              							{
+              								/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+              								String[] tokens = line.split(",");
+              								if( tokens.length == 4 )
                                 menurolename = tokens[3];
+              							}
 
                             if (menurolename != null) {
                                 // Break down list of roles
@@ -14063,7 +14108,7 @@ public class MysqlDataProvider implements DataProvider {
                             "asm_type varchar(50) DEFAULT NULL, " +
                             "semtag varchar(100) DEFAULT NULL, " +
                             "semantictag varchar(100) DEFAULT NULL, " +
-                            "code varchar(100)  DEFAULT NULL," +
+                            "code varchar(255)  DEFAULT NULL," +
                             "node_order int(12) NOT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
                     st = c.prepareStatement(sql);
                     st.execute();
@@ -14091,7 +14136,7 @@ public class MysqlDataProvider implements DataProvider {
                             "asm_type VARCHAR2(50 CHAR) DEFAULT NULL, " +
                             "semtag VARCHAR2(100 CHAR) DEFAULT NULL, " +
                             "semantictag VARCHAR2(100 CHAR) DEFAULT NULL, " +
-                            "code VARCHAR2(100 CHAR)  DEFAULT NULL," +
+                            "code VARCHAR2(255 CHAR)  DEFAULT NULL," +
                             "node_order NUMBER(10,0) NOT NULL) ON COMMIT PRESERVE ROWS";
                     sql = "{call create_or_empty_table('t_s_node_2','" + v_sql + "')}";
                     CallableStatement ocs = c.prepareCall(sql);
@@ -14807,3 +14852,4 @@ public class MysqlDataProvider implements DataProvider {
     }
 
 }
+

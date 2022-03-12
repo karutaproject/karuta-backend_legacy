@@ -354,3 +354,4 @@ public interface DataProvider {
 
     public boolean registerUser(Connection c, String username, String password);
 }
+
