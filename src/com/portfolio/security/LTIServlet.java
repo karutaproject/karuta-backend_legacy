@@ -257,10 +257,12 @@ public class LTIServlet extends HttpServlet {
 //			outTrace.append("\nInput Role: " + inputRole);
 //			String siteGroupId = getOrCreateGroup(connexion, contextLabel, "topUser", outTrace);
 
-            StringBuffer siteGroup = new StringBuffer();
+            /* Not used code
+            StringBuilder siteGroup = new StringBuilder();
             siteGroup.append(contextLabel);
             siteGroup.append("-");
             siteGroup.append(inputRole);
+            */
 //			String wadRole = roleMapper(application, inputRole, outTrace);
 //			String siteRoleGroupId = getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
 
@@ -316,7 +318,7 @@ public class LTIServlet extends HttpServlet {
                 response.getWriter().write(link);
             }
         } catch (Exception e) {
-            outTrace.append("\nSOMETHING BAD JUST HAPPENED!!!: " + e);
+            outTrace.append("\nSOMETHING BAD JUST HAPPENED!!!: ").append(e);
             response.sendError(500, e.getLocalizedMessage());
         } finally {
             destroyDB(connexion);
@@ -334,6 +336,7 @@ public class LTIServlet extends HttpServlet {
                     logger.info(outTrace.toString());
                     logfile.close();
                 } catch (IOException err) {
+                    logger.error("Can't write into " + logFName, err );
                 }
 //				wadbackend.WadUtilities.appendlogfile(logFName, "POSTlti:" + outTrace.toString());
             }
@@ -384,7 +387,7 @@ public class LTIServlet extends HttpServlet {
     private String getOrCreateUser(Map<String, Object> payload, Map<String, String> cookies, Connection connexion, StringBuffer outTrace) throws Exception {
         String userId = "0";
         StringBuffer userXml = buildUserXml(payload);
-        outTrace.append("\nUserXML: " + userXml);
+        outTrace.append("\nUserXML: ").append(userXml);
 
         //// FIXME: Complete this with other info from LTI
         //Does the user already exist?
@@ -415,12 +418,12 @@ public class LTIServlet extends HttpServlet {
                 String famName = (String) payload.get(BasicLTIConstants.LIS_PERSON_NAME_FAMILY);
                 String gibName = (String) payload.get(BasicLTIConstants.LIS_PERSON_NAME_GIVEN);
                 dataProvider.putInfUserInternal(connexion, uid, uid, gibName, famName, email);
-                outTrace.append("\nCreate User (self) results: " + userId);
+                outTrace.append("\nCreate User (self) results: ").append(userId);
             } else {
-                outTrace.append("\nUser not created: " + username);
+                outTrace.append("\nUser not created: ").append(username);
             }
         } else {
-            outTrace.append("\nUser found: " + userId);
+            outTrace.append("\nUser found: ").append(userId);
         }
         return userId;
     }
@@ -446,9 +449,9 @@ public class LTIServlet extends HttpServlet {
 //			StringBuffer groupXml = buildGroupXml(groupTitle, role);
             group = dataProvider.createGroup(connexion, role);
 //			groupId = wadbackend.WadUtilities.getAttribute(group,  "id");
-            outTrace.append("\nCreate Group (self) results: " + group);
+            outTrace.append("\nCreate Group (self) results: ").append(group);
         } else {
-            outTrace.append("\nGroup found: " + group);
+            outTrace.append("\nGroup found: ").append(group);
         }
         return group;
     }
@@ -469,14 +472,9 @@ public class LTIServlet extends HttpServlet {
         String active = "1";
 
         StringBuffer xml = new StringBuffer();
-        xml.append(
-                "<user id='-1'>" +
-                        "<username>" + userName + "</username>" +
-                        "<firstname>" + fname + "</firstname>" +
-                        "<lastname>" + lname + "</lastname>" +
-                        "<email>" + email + "</email>" +
-                        "<active>" + active + "</active>" +
-                        "</user>");
+        xml.append("<user id='-1'>").append("<username>").append(userName).append("</username>").append("<firstname>")
+                .append(fname).append("</firstname>").append("<lastname>").append(lname).append("</lastname>").append("<email>")
+                .append(email).append("</email>").append("<active>").append(active).append("</active>").append("</user>");
 
         return xml;
     }
@@ -492,12 +490,8 @@ public class LTIServlet extends HttpServlet {
     private StringBuffer buildGroupXml(String title, String role) throws Exception {
         StringBuffer xml = new StringBuffer();
 
-        xml.append(
-                "<group id='-1'>" +
-                        "<label>" + title + "</label>" +
-                        "<role>" + role + "</role>" +
-                        "<active>1</active>" +
-                        "</group>");
+        xml.append("<group id='-1'>").append("<label>").append(title).append("</label>").append("<role>")
+                .append(role).append("</role>").append("<active>1</active>").append("</group>");
 
         return xml;
     }
@@ -536,7 +530,7 @@ public class LTIServlet extends HttpServlet {
         if (BasicLTIUtil.isBlank(user_id)) {
             throw new LTIException("launch.missing", "user_id", null);
         }
-        outTrace.append("user_id=" + user_id);
+        outTrace.append("user_id=").append(user_id);
 
         // Lookup the secret
         //TODO: Maybe put this in a db table for scalability?
@@ -556,10 +550,9 @@ public class LTIServlet extends HttpServlet {
         try {
             base_string = OAuthSignatureMethod.getBaseString(oam);
         } catch (Exception e) {
-            outTrace.append("\nERROR: " + e.getLocalizedMessage() + e);
-            base_string = null;
+            outTrace.append("\nERROR: ").append(e.getLocalizedMessage()).append(e);
         }
-        outTrace.append("\nBaseString: " + base_string);
+        outTrace.append("\nBaseString: ").append(base_string);
 
         try {
             oav.validateMessage(oam, acc);
@@ -573,13 +566,8 @@ public class LTIServlet extends HttpServlet {
         } */ catch (OAuthException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-            //e.g
             throw new LTIException("launch.no.validate", e.getLocalizedMessage(), e.getCause());
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            throw new LTIException("launch.no.validate", context_id, e);
-        } catch (URISyntaxException e) {
+        } catch (IOException | URISyntaxException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
             throw new LTIException("launch.no.validate", context_id, e);

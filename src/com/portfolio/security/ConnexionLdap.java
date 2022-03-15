@@ -110,7 +110,7 @@ public class ConnexionLdap {
             Attribute mobj = attribs.get(attribMail);
             if (mobj != null) mail = mobj.get().toString();
             else mail = "";
-            
+
             Attribute affiobj = attribs.get(attribAffiliation);
             if( affiobj != null ) affiliation = affiobj.get().toString();
             else affiliation = "";
@@ -140,4 +140,3 @@ public class ConnexionLdap {
 
     }
 }
-
