@@ -150,7 +150,7 @@ public class ShibeServlet extends HttpServlet {
                         }
                     }
                 } else {
-                    logger.warn("User '{}' tryied to connect but wasn't found into database.", remoteUser);
+                    logger.warn("User '{}' tried to connect but wasn't found into database.", remoteUser);
                 }
                 session.setAttribute("uid", uid);
                 session.setAttribute("user", remoteUser);
