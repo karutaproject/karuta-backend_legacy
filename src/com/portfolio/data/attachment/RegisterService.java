@@ -145,7 +145,7 @@ public class RegisterService extends HttpServlet {
                         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
                         StringWriter writer = new StringWriter();
                         transformer.transform(new DOMSource(doc), new StreamResult(writer));
-                        converted = writer.getBuffer().toString().replaceAll("\n|\r", "");
+                        converted = writer.getBuffer().toString().replaceAll("((\n)|(\r))", "");
 
                         break;
                     }

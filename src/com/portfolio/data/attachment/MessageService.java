@@ -115,7 +115,7 @@ public class MessageService extends HttpServlet {
         }
     }
 
-    int sendMessage(String auth[], String user, String message) {
+    int sendMessage(String[] auth, String user, String message) {
         int ret = 500;
 
         try {
@@ -184,7 +184,7 @@ public class MessageService extends HttpServlet {
 
             StringBuilder readTicket = new StringBuilder();
             BufferedReader rd = new BufferedReader(new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
-            char buffer[] = new char[1024];
+            char[] buffer = new char[1024];
             int offset = 0;
             int read = 0;
             do {

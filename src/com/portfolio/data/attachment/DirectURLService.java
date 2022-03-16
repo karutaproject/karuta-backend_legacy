@@ -368,7 +368,7 @@ public class DirectURLService extends HttpServlet {
             }
 
             String shareroleval = nodeshareroles.getTextContent();
-            String multiplex[] = shareroleval.split(";");
+            String[] multiplex = shareroleval.split(";");
             /// Find matching line
             String find_pattern = "";
             if ("email".equals(type))
