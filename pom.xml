@@ -435,6 +435,11 @@
           <source>1.8</source>
           <target>1.8</target>
           <encoding>UTF-8</encoding>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+            <arg>-Xmaxwarns</arg>
+            <arg>50000</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
       <plugin>

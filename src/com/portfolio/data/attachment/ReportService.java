@@ -23,6 +23,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Enumeration;
@@ -205,7 +206,7 @@ public class ReportService extends HttpServlet {
 
             /// Prepare to transfer username to report daemon
             StringWriter writer = new StringWriter();
-            IOUtils.copy(request.getInputStream(), writer);
+            IOUtils.copy(request.getInputStream(), writer, Charset.defaultCharset());
             String data = writer.toString();
 
             data += "&user=" + username;

@@ -23,6 +23,7 @@ import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.util.HashMap;
@@ -78,13 +79,13 @@ public class OAuth2 extends HttpServlet {
         }
     }
 
-    Map<String, String> ParseParameter(String queryParam) {
+    private Map<String, String> ParseParameter(String queryParam) {
         if (queryParam == null) return null;
 
-        String[] param = queryParam.split("&");
-        Map<String, String> parameters = new HashMap<String, String>();
+        final String[] param = queryParam.split("&");
+        Map<String, String> parameters = new HashMap<>();
         for (String s : param) {
-            String[] values = s.split("=");
+            final String[] values = s.split("=");
             if (values.length > 1)
                 parameters.put(values[0], values[1]);
             else
@@ -98,7 +99,7 @@ public class OAuth2 extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession(true);
         /// Check if code and state is in the parameter
-        String query = request.getQueryString();
+        final String query = request.getQueryString();
         Map<String, String> param = ParseParameter(query);
         if (param != null && param.containsKey("code"))    // Might be a return, check state
         {
@@ -148,7 +149,7 @@ public class OAuth2 extends HttpServlet {
                     /// Fetching data
                     StringWriter swriter = new StringWriter();
                     InputStream inputData = connection.getInputStream();
-                    IOUtils.copy(inputData, swriter);
+                    IOUtils.copy(inputData, swriter, Charset.defaultCharset());
                     inputData.close();
                     /// Can't be bothered to parse json
                     Matcher pmatcher = PATTERN_TOKEN.matcher(swriter.toString());

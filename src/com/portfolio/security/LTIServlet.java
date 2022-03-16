@@ -332,7 +332,7 @@ public class LTIServlet extends HttpServlet {
                     String time = sdf.format(cal.getTime());
 
                     PrintStream logstream = new PrintStream(logfile);
-                    logstream.println(time + ": POSTlti:" + outTrace.toString());
+                    logstream.println(time + ": POSTlti:" + outTrace);
                     logger.info(outTrace.toString());
                     logfile.close();
                 } catch (IOException err) {
@@ -355,7 +355,7 @@ public class LTIServlet extends HttpServlet {
         ServletContext application = getServletConfig().getServletContext();
         String oauth_consumer_key = (String) payload.get("oauth_consumer_key");
         final String configPrefix = "basiclti.provider." + oauth_consumer_key + ".";
-        final String oauth_secret = (String) ConfigUtils.getInstance().getRequiredProperty(configPrefix + "secret");
+        final String oauth_secret = ConfigUtils.getInstance().getRequiredProperty(configPrefix + "secret");
 
         /// Fetch and decode session
         String sha1Secret = DigestUtils.sha1Hex(oauth_secret);
@@ -412,7 +412,7 @@ public class LTIServlet extends HttpServlet {
         if ("0".equals(userId)) {
             //create it
             final String lticreate = ConfigUtils.getInstance().getProperty("lti_create_user");
-            if (lticreate != null && "y".equals(lticreate.toLowerCase())) {
+            if ("y".equalsIgnoreCase(lticreate)) {
                 userId = dataProvider.createUser(connexion, username, email);
                 int uid = Integer.parseInt(userId);
                 String famName = (String) payload.get(BasicLTIConstants.LIS_PERSON_NAME_FAMILY);
