@@ -23,7 +23,6 @@ import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -64,16 +63,13 @@ import org.w3c.dom.NodeList;
 
 public class ExportHTMLService extends HttpServlet {
 
-    /**
-     *
-     */
+    public static final Pattern IMG_URL_PATTERN = Pattern.compile("img[^>]*src=\"(?!files)([^\"]*)");
     private static final Logger logger = LoggerFactory.getLogger(ExportHTMLService.class);
     private static final long serialVersionUID = 9188067506635747901L;
 
-    DataProvider dataProvider;
-    boolean hasNodeReadRight = false;
-    boolean hasNodeWriteRight = false;
-    ArrayList<String> ourIPs = new ArrayList<String>();
+    public static final Pattern STYLESHEET_URL_PATTERN = Pattern.compile("stylesheet.*?href=\"([^\"]*)");
+
+    private DataProvider dataProvider;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -137,13 +133,13 @@ public class ExportHTMLService extends HttpServlet {
         FileOutputStream fos = new FileOutputStream(tempZip);
         ZipOutputStream zos = new ZipOutputStream(fos);
 
-        String ref = (String) request.getHeaders(HttpHeaders.REFERER).nextElement();
+        String ref = request.getHeaders(HttpHeaders.REFERER).nextElement();
         String appliname = ref.replaceFirst("(http[s]?://[^/]*/[^/]*/).*", "$1");
 
         //////// Check where the CSS are in the webpage
         // http://localhost:8079/karuta/other/bootstrap/css/bootstrap.min.css
-        Pattern pat = Pattern.compile("stylesheet.*?href=\"([^\"]*)");
-        Matcher m = pat.matcher(data);
+
+        Matcher m = STYLESHEET_URL_PATTERN.matcher(data);
         //// Find all css links
         while (m.find()) {
             String link = m.group(1);
@@ -268,8 +264,7 @@ public class ExportHTMLService extends HttpServlet {
         }
 
         /// Resolve remaining resources (logo, icons, etc) that have not been replaced
-        pat = Pattern.compile("img[^>]*src=\"(?!files)([^\"]*)");
-        m = pat.matcher(data);
+        m = IMG_URL_PATTERN.matcher(data);
         // Find all resource links
         while (m.find()) {
             String baselink = m.group(1);

@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
  */
 public class OAuth2 extends HttpServlet {
 
+    public static final Pattern PATTERN_TOKEN = Pattern.compile("id_token\":\"([^\"]*)");
     private static final long serialVersionUID = -5793392467087229614L;
 
     private static final Logger logger = LoggerFactory.getLogger(OAuth2.class);
@@ -150,9 +151,7 @@ public class OAuth2 extends HttpServlet {
                     IOUtils.copy(inputData, swriter);
                     inputData.close();
                     /// Can't be bothered to parse json
-                    String tokenregexp = "id_token\":\"([^\"]*)";
-                    Pattern ptoken = Pattern.compile(tokenregexp);
-                    Matcher pmatcher = ptoken.matcher(swriter.toString());
+                    Matcher pmatcher = PATTERN_TOKEN.matcher(swriter.toString());
                     String id_token = "";
                     if (pmatcher.find()) {
                         id_token = pmatcher.group(1);

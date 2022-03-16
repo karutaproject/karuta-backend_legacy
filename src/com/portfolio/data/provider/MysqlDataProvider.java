@@ -114,6 +114,9 @@ public class MysqlDataProvider implements DataProvider {
     public static final Pattern SEEEND_PAT = Pattern.compile("seeend=\"([^\"]*)");
     public static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm");
     public static final SimpleDateFormat DATETIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    public static final String ONLYUSER = "(?<![-=+])(user)(?![-=+])";
+    public static final Pattern PATTERN_ONLYUSER = Pattern.compile(ONLYUSER);
+
     private static final Logger logger = LoggerFactory.getLogger(MysqlDataProvider.class);
     private static final Logger securityLog = LoggerFactory.getLogger("securityLogger");
 
@@ -6443,17 +6446,15 @@ public class MysqlDataProvider implements DataProvider {
                 t18 = System.currentTimeMillis();
 
                 /// Loop through metadata and assemble rights
-                String onlyuser = "(?<![-=+])(user)(?![-=+])";
-                Pattern pattern = Pattern.compile(onlyuser);
                 while (res.next()) {
                     String uuid = res.getString("uuid");
                     String portfolioUuid = res.getString("puuid");
                     // Process et remplacement de 'user' par la personne en cours
                     String meta = res.getString("metadata_wad");
 
-                    Matcher matcher = pattern.matcher(meta);
+                    Matcher matcher = PATTERN_ONLYUSER.matcher(meta);
                     if (matcher.find()) {
-                        meta = meta.replaceAll(onlyuser, login);
+                        meta = meta.replaceAll(ONLYUSER, login);
 
                         /// Replace metadata with actual username
                         sql = "UPDATE t_meta t SET t.metadata_wad=? WHERE t.new_uuid=uuid2bin(?)";

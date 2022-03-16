@@ -44,6 +44,8 @@ public class EmploiStoreService extends HttpServlet {
     private static final long serialVersionUID = -5389232495090560087L;
 
     private static final Logger logger = LoggerFactory.getLogger(EmploiStoreService.class);
+
+    public static final Pattern PATTERN_TOKEN = Pattern.compile("access_token\":\"([^\"]*)");
     public static final String ROME_SERVICE_URL = "ROMEServiceURL";
     public static final String ROME_CLIENT_ID = "ROMEclientid";
     public static final String ROME_CLIENT_SECRET = "ROMEclientsecret";
@@ -129,9 +131,7 @@ public class EmploiStoreService extends HttpServlet {
             connection.disconnect();
 
             /// Can't be bothered to parse json
-            String tokenregexp = "access_token\":\"([^\"]*)";
-            Pattern ptoken = Pattern.compile(tokenregexp);
-            Matcher pmatcher = ptoken.matcher(logininfo.toString());
+            Matcher pmatcher = PATTERN_TOKEN.matcher(logininfo.toString());
             String access_token = "";
             if (pmatcher.find()) {
                 access_token = pmatcher.group(1);
