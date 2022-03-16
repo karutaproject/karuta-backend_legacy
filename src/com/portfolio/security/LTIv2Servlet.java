@@ -60,7 +60,7 @@ public class LTIv2Servlet extends HttpServlet {
 
     private static final long serialVersionUID = -2442074091303775050L;
 
-    private static Log M_log = LogFactory.getLog(LTIv2Servlet.class);
+    private static final Log M_log = LogFactory.getLog(LTIv2Servlet.class);
 
     @SuppressWarnings("unused")
     private static final String EMPTY_JSON_OBJECT = "{\n}\n";
@@ -72,7 +72,7 @@ public class LTIv2Servlet extends HttpServlet {
     }
 
     private void outTraceFormattedMessage(StringBuffer outTrace, String msg) {
-        outTrace.append("\n" + new Date() + " DEBUG " + msg);
+        outTrace.append("\n").append(new Date()).append(" DEBUG ").append(msg);
     }
 
     @Override
