@@ -42,15 +42,6 @@ public interface DataProvider {
      */
     public void dataProvider();
 
-    /**
-     * @param porfolioId       Id du portfolio
-     * @param semtag           Filtre sur le tag semantique
-     * @param parentUuid       Filtre sur l'Uuid parent
-     * @param filterId         Id du filtre personnalis�
-     * @param filterParameters Si filtre personnalis�, param�tres du filtre personnalis�
-     * @param sortId           Id du tri personnalis�
-     * @return une chaine XML
-     */
     public void writeLog(Connection c, String url, String method, String headers, String inBody, String outBody, int code);
 
     /// Relatif à l'authentification
@@ -114,6 +105,15 @@ public interface DataProvider {
 
     public String getNodePortfolioId(Connection c, String nodeUuid) throws Exception;
 
+    /**
+     * @param portfolioUuid       Id du portfolio
+     * @param semtag           Filtre sur le tag semantique
+     * @param parentUuid       Filtre sur l'Uuid parent
+     * @param filterId         Id du filtre personnalisé
+     * @param filterParameters Si filtre personnalisé, paramètres du filtre personnalisé
+     * @param sortId           Id du tri personnalisé
+     * @return une chaine XML
+     */
     public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String semtag, String parentUuid, String filterId, String filterParameters, String sortId, Integer cutoff) throws Exception;
 
     public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent, Integer cutoff) throws SQLException;
@@ -354,4 +354,3 @@ public interface DataProvider {
 
     public boolean registerUser(Connection c, String username, String password);
 }
-
