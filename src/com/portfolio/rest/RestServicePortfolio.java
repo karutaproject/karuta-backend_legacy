@@ -30,7 +30,10 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -73,6 +76,7 @@ import javax.xml.xpath.XPathFactory;
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
+import com.portfolio.data.utils.HttpClientUtils;
 import com.portfolio.data.utils.MailUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.eventbus.KEvent;
@@ -82,19 +86,20 @@ import com.portfolio.security.Credential;
 import com.portfolio.security.NodeRight;
 import com.portfolio.socialnetwork.Elgg;
 import com.portfolio.socialnetwork.Ning;
-import edu.yale.its.tp.cas.client.ServiceTicketValidator;
-import org.apache.commons.httpclient.Header;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.jasig.cas.client.validation.Assertion;
+import org.jasig.cas.client.validation.Cas20ServiceTicketValidator;
+import org.jasig.cas.client.validation.TicketValidationException;
 import org.json.XML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1597,56 +1602,48 @@ public class RestServicePortfolio {
             /// Session Sakai
             HttpSession session = httpServletRequest.getSession(false);
             if (session != null) {
-                String sakai_session = (String) session.getAttribute("sakai_session");
-                String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
+                final String sakai_session = (String) session.getAttribute("sakai_session");
+                final String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
+                final String url = sakai_server + "/" + srceUrl;
+                final Header header = new BasicHeader("JSESSIONID", sakai_session);
+                final Set<Header> headers = new HashSet<>();
+                headers.add(header);
 
-                HttpClient client = new HttpClient();
-
-                /// Fetch page
-                GetMethod get = new GetMethod(sakai_server + "/" + srceUrl);
-                Header header = new Header();
-                header.setName("JSESSIONID");
-                header.setValue(sakai_session);
-                get.setRequestHeader(header);
-
-                try {
-                    int status = client.executeMethod(get);
-                    if (status != HttpStatus.SC_OK) {
-                        logger.error("Method failed: {}", get.getStatusLine());
-                        // missing management ?
-                    }
-
+                HttpResponse response= HttpClientUtils.goGet(headers, url);
+                if (response != null) {
                     // Retrieve data
-                    InputStream retrieve = get.getResponseBodyAsStream();
-                    String sakaiData = IOUtils.toString(retrieve, StandardCharsets.UTF_8);
+                    try {
+                        InputStream retrieve = response.getEntity().getContent();
+                        String sakaiData = IOUtils.toString(retrieve, StandardCharsets.UTF_8);
 
-                    //// Convert it via XSL
-                    /// Path to XSL
-                    String servletDir = sc.getServletContext().getRealPath("/");
-                    int last = servletDir.lastIndexOf(File.separator);
-                    last = servletDir.lastIndexOf(File.separator, last - 1);
-                    String baseDir = servletDir.substring(0, last);
+                        //// Convert it via XSL
+                        /// Path to XSL
+                        String servletDir = sc.getServletContext().getRealPath("/");
+                        int last = servletDir.lastIndexOf(File.separator);
+                        last = servletDir.lastIndexOf(File.separator, last - 1);
+                        String baseDir = servletDir.substring(0, last);
 
-                    String basepath = xsl.substring(0, xsl.indexOf(File.separator));
-                    String firstStage = baseDir + File.separator + basepath + File.separator + "karuta" + File.separator + "xsl" + File.separator + "html2xml.xsl";
-                    //TODO should be done on an other way !
-                    logger.info("FIRST: {}", firstStage);
+                        String basepath = xsl.substring(0, xsl.indexOf(File.separator));
+                        String firstStage = baseDir + File.separator + basepath + File.separator + "karuta" + File.separator + "xsl" + File.separator + "html2xml.xsl";
+                        //TODO should be done on an other way !
+                        logger.info("FIRST: {}", firstStage);
 
-                    /// Storing transformed data
-                    StringWriter dataTransformed = new StringWriter();
+                        /// Storing transformed data
+                        StringWriter dataTransformed = new StringWriter();
 
-                    /// Apply change
-                    Source xsltSrc1 = new StreamSource(new File(firstStage));
-                    TransformerFactory transFactory = TransformerFactory.newInstance();
-                    Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
-                    StreamSource stageSource = new StreamSource(new ByteArrayInputStream(sakaiData.getBytes()));
-                    Result stageRes = new StreamResult(dataTransformed);
-                    transformer1.transform(stageSource, stageRes);
+                        /// Apply change
+                        Source xsltSrc1 = new StreamSource(new File(firstStage));
+                        TransformerFactory transFactory = TransformerFactory.newInstance();
+                        Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
+                        StreamSource stageSource = new StreamSource(new ByteArrayInputStream(sakaiData.getBytes()));
+                        Result stageRes = new StreamResult(dataTransformed);
+                        transformer1.transform(stageSource, stageRes);
 
-                    /// Result as portfolio data to be imported
-                    xmlPortfolio = dataTransformed.toString();
-                } catch (IOException | TransformerException e) {
-                    logger.error("Managed error", e);
+                        /// Result as portfolio data to be imported
+                        xmlPortfolio = dataTransformed.toString();
+                    } catch (IOException | TransformerException e) {
+                        logger.error("Managed error", e);
+                    }
                 }
             }
         }
@@ -4220,7 +4217,6 @@ public class RestServicePortfolio {
 
         Connection c = null;
         try {
-            ServiceTicketValidator sv = new ServiceTicketValidator();
 
             if (casUrlValidation == null) {
                 Response response = null;
@@ -4234,7 +4230,7 @@ public class RestServicePortfolio {
                 return response;
             }
 
-            sv.setCasValidateUrl(casUrlValidation);
+            Cas20ServiceTicketValidator sv = new Cas20ServiceTicketValidator(casUrlValidation);
 
             /// X-Forwarded-Proto is for certain setup, check config file
             /// for some more details
@@ -4254,71 +4250,69 @@ public class RestServicePortfolio {
             }
             /// completeURL should be the same provided in the "service" parameter
             logger.debug("Service: {}", completeURL);
-
-            sv.setService(completeURL);
-            sv.setServiceTicket(ticket);
+            logger.debug("Ticket: {}", ticket);
             //sv.setProxyCallbackUrl(urlOfProxyCallbackServlet);
-            sv.validate();
+            Assertion assertion = sv.validate(ticket, completeURL);
 
-            xmlResponse = sv.getResponse();
-            if (xmlResponse.contains("cas:authenticationFailure")) {
+            if (!assertion.isValid()) {
                 logger.info("CAS response: {}", xmlResponse);
                 return Response.status(Status.FORBIDDEN).entity("CAS error").build();
             }
 //			/*
             else {
-                logger.info("SHOULD BE FINE: {}", xmlResponse);
+                logger.info("CAS AUTH SHOULD BE FINE: {}", assertion.getPrincipal());
             }
             //*/
 
 
             //<cas:user>vassoilm</cas:user>
-            session.setAttribute("user", sv.getUser());
+            final String casUserId = assertion.getPrincipal().getName();
+            session.setAttribute("user", casUserId);
 //			session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
             c = SqlUtils.getConnection();
-            userId = dataProvider.getUserId(c, sv.getUser(), null);
+            userId = dataProvider.getUserId(c, casUserId, null);
             if (!"0".equals(userId))    // User exist
             {
-                session.setAttribute("user", sv.getUser());
+                session.setAttribute("user", casUserId);
                 session.setAttribute("uid", Integer.parseInt(userId));
 
                 final String ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
                 if (ldapUrl != null) {
                     ConnexionLdap cldap = new ConnexionLdap();
                     if (logger.isDebugEnabled()) {
-                        final String[] ldapvalues = cldap.getLdapValue(sv.getUser());
-                        logger.debug("LDAP CONNECTION OK: {}", ldapvalues.toString());
+                        final String[] ldapvalues = cldap.getLdapValue(casUserId);
+                        logger.debug("LDAP CONNECTION OK: {}", Arrays.toString(ldapvalues));
                     }
                 }
             } else {
                 final String casCreate = ConfigUtils.getInstance().getProperty("casCreateAccount");
-                if (casCreate != null && "y".equals(casCreate.toLowerCase())) {
+                if ("y".equalsIgnoreCase(casCreate)) {
                     final String ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
                     if (ldapUrl != null) {
                         ConnexionLdap cldap = new ConnexionLdap();
-                        final String[] ldapvalues = cldap.getLdapValue(sv.getUser());
+                        final String[] ldapvalues = cldap.getLdapValue(casUserId);
                         if (ldapvalues[1] != null | ldapvalues[2] != null | ldapvalues[3] != null) //si le filtre ldap a renvoyé des valeurs
                         {
-                            userId = dataProvider.createUser(c, sv.getUser(), null);
+                            userId = dataProvider.createUser(c, casUserId, null);
                             int uid = Integer.parseInt(userId);
                             dataProvider.putInfUserInternal(c, uid, uid, ldapvalues[1], ldapvalues[2], ldapvalues[3]);
-                            logger.info("USERID: " + sv.getUser() + " " + userId);
-                            session.setAttribute("user", sv.getUser());
+                            logger.info("USERID: " + casUserId + " " + userId);
+                            session.setAttribute("user", casUserId);
                             session.setAttribute("uid", Integer.parseInt(userId));
                         } else {
-                            return Response.status(400).entity("Login " + sv.getUser() + " don't have access to Karuta").build();
+                            return Response.status(400).entity("Login " + casUserId + " don't have access to Karuta").build();
                         }
                     } else {
-                        userId = dataProvider.createUser(c, sv.getUser(), null);
-                        logger.info("USERID: " + sv.getUser() + " " + userId);
-                        session.setAttribute("user", sv.getUser());
+                        userId = dataProvider.createUser(c, casUserId, null);
+                        logger.info("USERID: " + casUserId + " " + userId);
+                        session.setAttribute("user", casUserId);
                         session.setAttribute("uid", Integer.parseInt(userId));
                     }
                 } else
-                    return Response.status(403).entity("Login " + sv.getUser() + " not found or bad CAS auth (bad ticket or bad url service : " + completeURL + ") : " + sv.getErrorMessage()).build();
+                    return Response.status(403).entity("Login " + casUserId + " not found").build();
             }
 
-            Response response = null;
+            Response response;
             try {
                 // formulate the response
                 response = Response.status(201)
@@ -4332,9 +4326,12 @@ public class RestServicePortfolio {
             }
 
             return response;
+        } catch (TicketValidationException ex) {
+            logger.error("CAS Validation Error", ex);
+            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :" + casUrlValidation);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :" + casUrlValidation);
+            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires :" + ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();

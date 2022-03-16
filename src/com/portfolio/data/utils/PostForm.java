@@ -33,9 +33,8 @@ import org.json.simple.JSONValue;
 
 public class PostForm {
     public static boolean sendFile(String sessionid, String backend, String user, String uuid, String lang, File file) throws Exception {
-        CloseableHttpClient httpclient = HttpClients.createDefault();
 
-        try {
+        try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
             // Server + "/resources/resource/file/" + uuid +"?lang="+ lang
             // "http://"+backend+"/user/"+user+"/file/"+uuid+"/"+lang+"ptype/fs";
             String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
@@ -77,17 +76,14 @@ public class PostForm {
 				response.close();
 			}
 			//*/
-        } finally {
-            httpclient.close();
         }
 
         return true;
     }
 
     public static boolean rewriteFile(String sessionid, String backend, String user, String uuid, String lang, File file) throws Exception {
-        CloseableHttpClient httpclient = HttpClients.createDefault();
 
-        try {
+        try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
             // Server + "/resources/resource/file/" + uuid +"?lang="+ lang
             // "http://"+backend+"/user/"+user+"/file/"+uuid+"/"+lang+"ptype/fs";
             String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
@@ -129,8 +125,6 @@ public class PostForm {
 				response.close();
 			}
 			//*/
-        } finally {
-            httpclient.close();
         }
 
         return true;
@@ -158,8 +152,7 @@ public class PostForm {
 
         /// Send data to resource
         /// Server + "/resources/resource/file/" + uuid +"?lang="+ lang
-        CloseableHttpClient httpclient = HttpClients.createDefault();
-        try {
+        try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
             HttpPut put = new HttpPut("http://" + backend + "/rest/api/resources/resource/" + uuid);
             put.setHeader("Cookie", "JSESSIONID=" + sessionid);    // So that the receiving servlet allow us
 
@@ -174,8 +167,6 @@ public class PostForm {
             } finally {
                 response.close();
             }
-        } finally {
-            httpclient.close();
         }
 
         return false;

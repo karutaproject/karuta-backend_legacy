@@ -33,9 +33,11 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -55,17 +57,17 @@ import javax.xml.xpath.XPathFactory;
 import com.google.gson.stream.JsonWriter;
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
+import com.portfolio.data.utils.HttpClientUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.rest.RestWebApplicationException;
 import com.portfolio.security.Credential;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.httpclient.Header;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -256,40 +258,31 @@ public class FileServlet extends HttpServlet {
             String contentType = "";
 
             if (fromSakai) {
-                String sakai_session = (String) session.getAttribute("sakai_session");
-                String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
-                String srceUrl = request.getParameter("srceurl");
+                final String sakai_session = (String) session.getAttribute("sakai_session");
+                final String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
+                final String srceUrl = request.getParameter("srceurl");
+                final Header header = new BasicHeader("JSESSIONID", sakai_session);
+                final Set<Header> headers = new HashSet<>();
+                headers.add(header);
 
-                HttpClient client = new HttpClient();
+                HttpResponse get = HttpClientUtils.goGet(headers, sakai_server + "/" + srceUrl);
+                if (get != null) {
+                    // Retrieve data
+                    inputData = get.getEntity().getContent();
+                    // File detail
+                    Header nameHeader = get.getHeaders("Content-Disposition")[0];
+                    Header sizeHeader = get.getHeaders("Content-Length")[0];
+                    Header typeHeader = get.getHeaders("Content-Type")[0];
 
-                // Create connection to url
-                GetMethod get = new GetMethod(sakai_server + "/" + srceUrl);
-                // Set headers
-                Header header = new Header();
-                header.setName("JSESSIONID");
-                header.setValue(sakai_session);
-                get.setRequestHeader(header);
-
-                int status = client.executeMethod(get);
-                if (status != HttpStatus.SC_OK) {
-                    logger.error("Method failed: {}", get.getStatusLine());
-                    //TODO missing management ?
+                    filesize = Integer.parseInt(sizeHeader.getValue());
+                    contentType = typeHeader.getValue();
+                    fileName = nameHeader.getValue().split("=")[1];
+                    if (fileName.startsWith("\""))
+                        fileName = fileName.substring(1, fileName.length() - 1);
                 }
-
-                // Retrieve inputData
-                inputData = get.getResponseBodyAsStream();
-                // File detail
-                Header nameHeader = get.getResponseHeader("Content-Disposition");
-                Header sizeHeader = get.getResponseHeader("Content-Length");
-                Header typeHeader = get.getResponseHeader("Content-Type");
-
-                filesize = Integer.parseInt(sizeHeader.getValue());
-                contentType = typeHeader.getValue();
-                fileName = nameHeader.getValue().split("=")[1];
-                if (fileName.startsWith("\""))
-                    fileName = fileName.substring(1, fileName.length() - 1);
             } else {
 //				if( ServletFileUpload.isMultipartContent(request) )
+                // TODO review this part, something should be removed or modified
                 if (true) {
                     List<FileItem> items = upload.parseRequest(request);
                     // Process the uploaded items
@@ -505,39 +498,28 @@ public class FileServlet extends HttpServlet {
             String contentType = "";
 
             if (fromSakai) {
-                String sakai_session = (String) session.getAttribute("sakai_session");
-                String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
-                String srceUrl = request.getParameter("srceurl");
+                final String sakai_session = (String) session.getAttribute("sakai_session");
+                final String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
+                final String srceUrl = request.getParameter("srceurl");
+                final Header header = new BasicHeader("JSESSIONID", sakai_session);
+                final Set<Header> headers = new HashSet<>();
+                headers.add(header);
 
-                HttpClient client = new HttpClient();
+                HttpResponse get = HttpClientUtils.goGet(headers, sakai_server + "/" + srceUrl);
+                if (get != null) {
+                    // Retrieve data
+                    inputData = get.getEntity().getContent();
+                    // File detail
+                    Header nameHeader = get.getHeaders("Content-Disposition")[0];
+                    Header sizeHeader = get.getHeaders("Content-Length")[0];
+                    Header typeHeader = get.getHeaders("Content-Type")[0];
 
-                // Create connection to url
-                GetMethod get = new GetMethod(sakai_server + "/" + srceUrl);
-                // Set headers
-                Header header = new Header();
-                header.setName("JSESSIONID");
-                header.setValue(sakai_session);
-                get.setRequestHeader(header);
-
-                int status = client.executeMethod(get);
-                if (status != HttpStatus.SC_OK) {
-                    logger.error("Method failed: " + get.getStatusLine());
-                    response.sendError(status);
-                    return;
+                    filesize = Integer.parseInt(sizeHeader.getValue());
+                    contentType = typeHeader.getValue();
+                    fileName = nameHeader.getValue().split("=")[1];
+                    if (fileName.startsWith("\""))
+                        fileName = fileName.substring(1, fileName.length() - 1);
                 }
-
-                // Retrieve inputData
-                inputData = get.getResponseBodyAsStream();
-                // File detail
-                Header nameHeader = get.getResponseHeader("Content-Disposition");
-                Header sizeHeader = get.getResponseHeader("Content-Length");
-                Header typeHeader = get.getResponseHeader("Content-Type");
-
-                filesize = Integer.parseInt(sizeHeader.getValue());
-                contentType = typeHeader.getValue();
-                fileName = nameHeader.getValue().split("=")[1];
-                if (fileName.startsWith("\""))
-                    fileName = fileName.substring(1, fileName.length() - 1);
             } else {
 //				if( ServletFileUpload.isMultipartContent(request) )
                 if (true) {
@@ -858,14 +840,11 @@ public class FileServlet extends HttpServlet {
             output.close();
             input.close();
             connection.disconnect();
-        } catch (RestWebApplicationException e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
         } catch (Exception e) {
             logger.error("Intercepted error", e);
             //TODO something is missing
-            //wadbackend.WadUtilities.appendlogfile(logFName, "GETfile: error"+e);
-        } finally {
+        }//wadbackend.WadUtilities.appendlogfile(logFName, "GETfile: error"+e);
+        finally {
             try {
                 if (c != null) c.close();
             } catch (Exception e) {
@@ -980,8 +959,7 @@ public class FileServlet extends HttpServlet {
         String[] ret = {login};
         if (cookies == null) return ret;
 
-        for (int i = 0; i < cookies.length; ++i) {
-            Cookie cookie = cookies[i];
+        for (Cookie cookie : cookies) {
             String name = cookie.getName();
             if ("user".equals(name) || "useridentifier".equals(name))
                 login = cookie.getValue();

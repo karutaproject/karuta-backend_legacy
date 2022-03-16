@@ -9,7 +9,7 @@
   <properties>
     <JACKSON_VER>1.9.13</JACKSON_VER>
     <JERSEY_VER>2.34</JERSEY_VER>
-    <CAS_VER>3.3.3</CAS_VER>
+    <CAS_VER>3.6.4</CAS_VER>
   </properties>
   <dependencies>
     <dependency>
@@ -132,11 +132,11 @@
       <version>${CAS_VER}</version>
     </dependency>
     -->
-    <dependency>
-      <groupId>org.jasig.cas.client</groupId>
-      <artifactId>cas-client-integration-tomcat-v6</artifactId>
-      <version>${CAS_VER}</version>
-    </dependency>
+<!--    <dependency>-->
+<!--      <groupId>org.jasig.cas.client</groupId>-->
+<!--      <artifactId>cas-client-integration-tomcat-common</artifactId>-->
+<!--      <version>${CAS_VER}</version>-->
+<!--    </dependency>-->
     <dependency>
       <groupId>org.jasig.cas.client</groupId>
       <artifactId>cas-client-support-distributed-ehcache</artifactId>
@@ -147,21 +147,21 @@
       <artifactId>cas-client-support-distributed-memcached</artifactId>
       <version>${CAS_VER}</version>
     </dependency>
-    <dependency>
-      <groupId>cas</groupId>
-      <artifactId>casclient</artifactId>
-      <version>2.0.11</version>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>servlet-api</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
+<!--    <dependency>-->
+<!--      <groupId>cas</groupId>-->
+<!--      <artifactId>casclient</artifactId>-->
+<!--      <version>2.0.11</version>-->
+<!--      <exclusions>-->
+<!--        <exclusion>-->
+<!--          <groupId>javax.servlet</groupId>-->
+<!--          <artifactId>servlet-api</artifactId>-->
+<!--        </exclusion>-->
+<!--      </exclusions>-->
+<!--    </dependency>-->
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
-      <version>1.10</version>
+      <version>1.15</version>
     </dependency>
     <dependency>
       <groupId>commons-fileupload</groupId>
@@ -171,17 +171,17 @@
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
-      <version>2.7</version>
+      <version>2.11.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>3.3.2</version>
+      <artifactId>commons-text</artifactId>
+      <version>1.9</version>
     </dependency>
     <dependency>
       <groupId>commons-logging</groupId>
       <artifactId>commons-logging</artifactId>
-      <version>1.0.4</version>
+      <version>1.2</version>
     </dependency>
     <!--
     <dependency>
@@ -226,7 +226,7 @@
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpmime</artifactId>
-      <version>4.3.4</version>
+      <version>4.5.13</version>
     </dependency>
     <dependency>
       <groupId>org.imgscalr</groupId>

@@ -78,6 +78,7 @@ import javax.xml.xpath.XPathFactory;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.FileUtils;
+import com.portfolio.data.utils.HttpClientUtils;
 import com.portfolio.data.utils.PostForm;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.rest.RestWebApplicationException;
@@ -85,9 +86,8 @@ import com.portfolio.security.Credential;
 import com.portfolio.security.NodeRight;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpMethod;
-import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.http.HttpResponse;
+import org.apache.http.util.EntityUtils;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11995,14 +11995,15 @@ public class MysqlDataProvider implements DataProvider {
                 String uuidSOL = ContentUuid2.substring(6, 42);
                 st.close();
 
-                String uuids = uuidREP + uuidSOL + nodeUuid;
+                final String uuids = uuidREP + uuidSOL + nodeUuid;
 
-                HttpClient client = new HttpClient();
-                String backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
-                HttpMethod method = new GetMethod(backend + "/compare/" + uuids);
-                int obj = client.executeMethod(method);
-                String rep = method.getResponseBodyAsString();
-                int prctElv = Integer.parseInt(rep);
+                // FIXEME why doing that here ! never do an http request when doing database processing !
+                final String backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
+                int prctElv = 0;
+                final HttpResponse response = HttpClientUtils.goGet(new HashSet<>(), backend + "/compare/" + uuids);
+                if (response != null) {
+                    prctElv = Integer.parseInt(EntityUtils.toString(response.getEntity()));
+                }
 
                 //Recherche noeud pourcentage mini
                 String nodePrct = getNodeUuidBySemtag(c, "level", nodeUuid);    //recuperation noeud avec semantictag "mini"
