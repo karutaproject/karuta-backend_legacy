@@ -41,8 +41,8 @@ public class ReportHelperProvider {
 		final String sql;
 
 		final Set<Entry<String, String>> values = map.entrySet();
-		ArrayList<String> cols = new ArrayList<String>();
-		ArrayList<String> vals = new ArrayList<String>();
+		ArrayList<String> cols = new ArrayList<>();
+		ArrayList<String> vals = new ArrayList<>();
 		for (Entry<String, String> entry : values) {
 			cols.add(entry.getKey() + "=?");
 			vals.add(entry.getValue());
@@ -86,9 +86,9 @@ public class ReportHelperProvider {
 		final String sql;
 
 		final Set<Entry<String, String>> values = map.entrySet();
-		ArrayList<String> holder = new ArrayList<String>();
-		ArrayList<String> cols = new ArrayList<String>();
-		ArrayList<String> vals = new ArrayList<String>();
+		ArrayList<String> holder = new ArrayList<>();
+		ArrayList<String> cols = new ArrayList<>();
+		ArrayList<String> vals = new ArrayList<>();
 		for (Entry<String, String> entry : values) {
 			holder.add("?");
 			cols.add(entry.getKey());
@@ -117,8 +117,8 @@ public class ReportHelperProvider {
 	}
 
 	public int deleteVector( Connection c, HashMap<String, String> map ) throws SQLException {
-		ArrayList<String> cols = new ArrayList<String>();
-		ArrayList<String> vals = new ArrayList<String>();
+		ArrayList<String> cols = new ArrayList<>();
+		ArrayList<String> vals = new ArrayList<>();
 		for (Entry<String, String> entry : map.entrySet()) {
 			if ("date".equals(entry.getKey()))
 				cols.add(entry.getKey() + "<?");
