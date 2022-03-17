@@ -64,6 +64,7 @@ import org.w3c.dom.NodeList;
 public class ExportHTMLService extends HttpServlet {
 
     public static final Pattern IMG_URL_PATTERN = Pattern.compile("img[^>]*src=\"(?!files)([^\"]*)");
+    public static final SimpleDateFormat DATE_PATTERN_FILENAME = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
     private static final Logger logger = LoggerFactory.getLogger(ExportHTMLService.class);
     private static final long serialVersionUID = 9188067506635747901L;
 
@@ -310,9 +311,8 @@ public class ExportHTMLService extends HttpServlet {
         f.read(b);
         f.close();
 
-        Date time = new Date();
-        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
+
+        final String timeFormat = DATE_PATTERN_FILENAME.format(new Date());
 
         response.addHeader("Content-Type", "application/zip");
         response.addHeader("Content-Length", Integer.toString(b.length));
