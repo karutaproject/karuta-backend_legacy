@@ -57,8 +57,8 @@ public class CompareServlet extends HttpServlet {
     public static int comparaisonParCodes(String code1, String code2, Element racine, Connection c) throws TransformerFactoryConfigurationError, MimeTypeParseException, Exception {
         int pourcentage = 0;
         NodeList liste1 = racine.getElementsByTagName("code");
-        List<Node> listeCode1 = new ArrayList<Node>();
-        List<Node> listeCode2 = new ArrayList<Node>();
+        List<Node> listeCode1 = new ArrayList<>();
+        List<Node> listeCode2 = new ArrayList<>();
         for (int i = 0; i < liste1.getLength(); i++) {
             Node nd = liste1.item(i).getFirstChild();
             if (nd != null) {

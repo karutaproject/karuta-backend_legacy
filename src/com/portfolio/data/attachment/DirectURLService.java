@@ -68,7 +68,7 @@ public class DirectURLService extends HttpServlet {
     boolean hasNodeReadRight = false;
     boolean hasNodeWriteRight = false;
     HttpSession session;
-    ArrayList<String> ourIPs = new ArrayList<String>();
+    ArrayList<String> ourIPs = new ArrayList<>();
 
     @Override
     public void init(final ServletConfig config) throws ServletException {

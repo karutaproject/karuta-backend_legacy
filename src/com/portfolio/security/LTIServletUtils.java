@@ -65,7 +65,7 @@ public class LTIServletUtils {
      */
     protected static Connection initDB(ServletContext application, StringBuffer outTrace) throws Exception {
         String dataProviderName = "com.portfolio.data.provider.MysqlDataProvider";
-        dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+        dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
 
         // Open META-INF/context.xml
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -134,7 +134,7 @@ public class LTIServletUtils {
      * @throws IOException
      */
     protected static Map<String, Object> processRequest(HttpServletRequest request, StringBuffer outTrace) throws IOException {
-        Map<String, Object> payload = new HashMap<String, Object>();
+        Map<String, Object> payload = new HashMap<>();
         for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements(); ) {
             String key = e.nextElement();
             String value = request.getParameter(key);

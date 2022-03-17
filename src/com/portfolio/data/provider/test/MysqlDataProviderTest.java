@@ -47,7 +47,7 @@ public class MysqlDataProviderTest {
 
         try {
             MimeType xmlMimeType = new MimeType("text/xml");
-            DataProvider dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+            DataProvider dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
             Connection connection = SqlUtils.getConnection();
             Credential cred = new Credential();
 

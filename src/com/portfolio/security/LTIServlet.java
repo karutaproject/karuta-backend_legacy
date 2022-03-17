@@ -115,7 +115,7 @@ public class LTIServlet extends HttpServlet {
         //============= init servers ===============================
 //	    this.sc = getServletConfig();
         String dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
-        dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+        dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
     }
 
     /**
