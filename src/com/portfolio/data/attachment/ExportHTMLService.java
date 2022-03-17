@@ -254,7 +254,7 @@ public class ExportHTMLService extends HttpServlet {
                 logger.info("Replacing: {}?lang={}", contextid, lang);
                 if (datastr.contains(contextid + "?lang=" + lang))
                     logger.debug("ISIN");
-                datastr = datastr.replaceFirst("[\'\"][^\'\"]*" + contextid + "\\?lang=" + lang + "[^\'\"]*[\'\"]", filepath);
+                datastr = datastr.replaceFirst("['\"][^'\"]*" + contextid + "\\?lang=" + lang + "[^'\"]*['\"]", filepath);
                 if (logger.isDebugEnabled()) {
                     if (datastr.contains(contextid + "?lang=" + lang))
                         logger.debug("ISSTILLIN");
