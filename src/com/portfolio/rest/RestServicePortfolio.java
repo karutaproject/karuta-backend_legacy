@@ -873,10 +873,11 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, ui.userId, groupId, resources, ui.subId).toString();
             if ("faux".equals(returnValue)) {
-
+                logger.error("Code {} not found or user without rights", code);
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
             if ("".equals(returnValue)) {
+                logger.error("Code {} not found", code);
                 return Response.status(Status.NOT_FOUND).entity("").build();
             }
             if (MediaType.APPLICATION_JSON.equals(accept))    // Not really used
@@ -885,21 +886,19 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
-            logger.error("Managed error", ex);
+            logger.error("getPortfolioByCode error, will return FORBIDDEN", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logger.error("Managed error", ex);
-
+            logger.error("getPortfolioByCode error, will return NOT_FOUND for code {}", code, ex);
             throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio code = " + code + " not found");
         } catch (Exception ex) {
-            logger.error("Managed error", ex);
-
+            logger.error("getPortfolioByCode error, will return error 500", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                logger.error("Managed error", e);
+                logger.error("getPortfolioByCode SQLException error", e);
             }
         }
     }
@@ -952,9 +951,9 @@ public class RestServicePortfolio {
 
             } else {
                 String portfolioCode = null;
-                String returnValue = "";
-                Boolean countOnly = false;
-                Boolean portfolioActive;
+                String returnValue;
+                boolean countOnly;
+                boolean portfolioActive;
                 Boolean portfolioProject = null;
                 String portfolioProjectId = null;
 
@@ -4633,10 +4632,12 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             response = dataProvider.postUserGroup(c, groupname, ui.userId);
+            logger.debug("Add user '{}' in group '{}' provided group id {}", ui.userId, groupname, response);
 
-
-            if (response == -1)
+            if (response == -1) {
+                logger.warn("Add user '{}' in group '{}' NOT DONE !", ui.userId, groupname);
                 throw new RestWebApplicationException(Status.NOT_MODIFIED, "Error in creation");
+            }
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 

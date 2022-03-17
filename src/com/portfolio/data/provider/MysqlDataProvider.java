@@ -1418,14 +1418,8 @@ public class MysqlDataProvider implements DataProvider {
         String sql;
         ResultSet res = null;
         String pid = this.getPortfolioUuidByPortfolioCode(c, portfolioCode);
-        boolean withResources = false;
+        boolean withResources = Boolean.parseBoolean(resources);;
         String result = "";
-
-        try {
-            withResources = Boolean.parseBoolean(resources);
-        } catch (Exception ex) {
-            logger.error("Exception", ex);
-        }
 
         if (withResources) {
             return this.getPortfolio(c, new MimeType("text/xml"), pid, userId, groupId, null, null, null, substid, null).toString();
@@ -1438,7 +1432,7 @@ public class MysqlDataProvider implements DataProvider {
                 st.setString(1, pid);
                 res = st.executeQuery();
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error("getPortfolioByCode error", e);
             }
 
             if (res.next()) {
