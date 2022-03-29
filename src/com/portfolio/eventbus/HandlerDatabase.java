@@ -30,6 +30,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.provider.MysqlDataProvider;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.rest.RestWebApplicationException;
 import org.slf4j.Logger;
@@ -95,7 +96,7 @@ public class HandlerDatabase implements KEventHandler {
                 case NODE:
                     if (event.requestType == KEvent.RequestType.POST) {
                         String returnValue = dataProvider.postNode(connection, new MimeType("text/xml"), event.uuid, event.inputData, this.userId, this.groupId, true).toString();
-                        if ("faux".equals(returnValue)) {
+                        if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                             event.message = "Vous n'avez pas les droits d'acces";
                             event.status = 403;
                         } else {

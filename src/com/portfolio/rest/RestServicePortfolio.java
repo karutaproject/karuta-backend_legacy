@@ -74,6 +74,7 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.provider.MysqlDataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.HttpClientUtils;
@@ -664,7 +665,7 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, resource, "", ui.subId, cutoff).toString();
 
-            if ("faux".equals(portfolio)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(portfolio)) {
                 response = Response.status(403).build();
             }
 
@@ -705,7 +706,7 @@ public class RestServicePortfolio {
                     // Temp file cleanup
                     tempZip.delete();
                 } else {
-                    if (portfolio.equals("faux")) {
+                    if (portfolio.equals(MysqlDataProvider.DATABASE_FALSE)) {
                         throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
                     }
 
@@ -873,7 +874,7 @@ public class RestServicePortfolio {
                 resources = "false";
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, ui.userId, groupId, resources, ui.subId).toString();
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 logger.error("Code {} not found or user without rights", code);
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -2438,7 +2439,7 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNode(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
-            if (returnValue.equals("faux")) {
+            if (returnValue.equals(MysqlDataProvider.DATABASE_FALSE)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
 
@@ -2490,7 +2491,7 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             final String returnValue = dataProvider.putNodeMetadata(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2543,7 +2544,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             final String returnValue = dataProvider.putNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2596,7 +2597,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             final String returnValue = dataProvider.putNodeMetadataEpm(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2657,7 +2658,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNodeNodeContext(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2714,7 +2715,7 @@ public class RestServicePortfolio {
             //          String returnValue = dataProvider.putNode(new MimeType("text/xml"),nodeUuid,xmlNode,this.userId,this.groupId).toString();
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNodeNodeResource(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2770,7 +2771,7 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.postImportNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 
 
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
 
@@ -2823,7 +2824,7 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.postCopyNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 
 
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             } else if ("Selection non existante.".equals(returnValue)) {
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Selection non existante.");
@@ -2871,7 +2872,7 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.getNodes(c, new MimeType("text/xml"), portfoliocode, semtag, ui.userId, groupId, semtag_parent, code_parent, cutoff).toString();
 
 
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             } else if ("".equals(returnValue)) {
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio inexistant");
@@ -2930,7 +2931,7 @@ public class RestServicePortfolio {
 
 
                 Response response;
-                if ("faux".equals(returnValue)) {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     response = Response.status(event.status).entity(event.message).type(event.mediaType).build();
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
@@ -3211,7 +3212,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.getResource(c, new MimeType("text/xml"), nodeParentUuid, ui.userId, groupId).toString();
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -3378,7 +3379,7 @@ public class RestServicePortfolio {
             //TODO userId
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.postResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId).toString();
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -3420,7 +3421,7 @@ public class RestServicePortfolio {
             //TODO userId
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.postResource(c, new MimeType("text/xml"), resource, xmlResource, ui.userId, groupId).toString();
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -3461,7 +3462,7 @@ public class RestServicePortfolio {
             //TODO userId
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.postRoleUser(c, ui.userId, grid, userid);
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -3503,7 +3504,7 @@ public class RestServicePortfolio {
             //TODO userId
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.putRole(c, xmlRole, ui.userId, roleId).toString();
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -4478,7 +4479,7 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.postNodeFromModelBySemanticTag(c, new MimeType("text/xml"), nodeUuid, semantictag, ui.userId, groupId).toString();
 
 
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
 
@@ -5001,7 +5002,7 @@ public class RestServicePortfolio {
             // On execute l'action sur le noeud uuid
             if (uuid != null && macroName != null) {
                 returnValue = dataProvider.postMacroOnNode(c, ui.userId, uuid, macroName);
-                if ("faux".equals(returnValue)) {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
             }
@@ -5233,7 +5234,7 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             // Retourne le contenu du type
             returnValue = dataProvider.getRRGList(c, ui.userId, portfolio, queryuser, role);
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
             return returnValue;
@@ -5278,7 +5279,7 @@ public class RestServicePortfolio {
                 returnValue = dataProvider.getPortfolioInfo(c, ui.userId, portId);
 
 
-                if ("faux".equals(returnValue)) {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
 
@@ -5320,7 +5321,7 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (rrgId != null) {
                 returnValue = dataProvider.getRRGInfo(c, ui.userId, rrgId);
-                if ("faux".equals(returnValue)) {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
             }
@@ -5360,7 +5361,7 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (rrgId != null) {
                 returnValue = dataProvider.putRRGUpdate(c, ui.userId, rrgId, xmlNode);
-                if ("faux".equals(returnValue)) {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
             }
@@ -5406,7 +5407,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.postRRGCreate(c, ui.userId, portfolio, xmlNode);
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
             return returnValue;
@@ -5442,7 +5443,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.postRRGUsers(c, ui.userId, rrgId, xmlNode);
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
             return returnValue;
@@ -5480,7 +5481,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.postRRGUser(c, ui.userId, rrgId, queryuser);
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
             return returnValue;
@@ -5517,7 +5518,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.deleteRRG(c, ui.userId, rrgId);
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
             return returnValue;
@@ -5555,7 +5556,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.deleteRRGUser(c, ui.userId, rrgId, queryuser);
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
             return returnValue;
@@ -5594,7 +5595,7 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (portId != null) {
                 returnValue = dataProvider.deletePortfolioUser(c, ui.userId, portId);
-                if ("faux".equals(returnValue)) {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
 

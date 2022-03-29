@@ -119,6 +119,7 @@ public class MysqlDataProvider implements DataProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(MysqlDataProvider.class);
     private static final Logger securityLog = LoggerFactory.getLogger("securityLogger");
+    public static final String DATABASE_FALSE = "faux";
 
     final private Credential cred = new Credential();
     private final String dbserveur;
@@ -1333,7 +1334,7 @@ public class MysqlDataProvider implements DataProvider {
             /// Verifie les droits avec le compte publique (derniere chance)
             nodeRight = cred.getPublicRight(c, userId, 123, rootNodeUuid, "dummy");
             if (!nodeRight.read)
-                return "faux";
+                return DATABASE_FALSE;
         }
 
         t1 = System.currentTimeMillis();
@@ -11199,7 +11200,7 @@ public class MysqlDataProvider implements DataProvider {
     public Object putNodeNodeResource(Connection c, MimeType mimeType, String nodeUuid, String xmlNode, int userId, int groupId) throws Exception {
         if (!cred.hasNodeRight(c, userId, groupId, nodeUuid, Credential.WRITE))
             throw new RestWebApplicationException(Status.FORBIDDEN, " No WRITE credential ");
-        //return "faux";
+        //return DATABASE_FALSE;
 
         xmlNode = DomUtils.cleanXMLData(xmlNode);
         Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
