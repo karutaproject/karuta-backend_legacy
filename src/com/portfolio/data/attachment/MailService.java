@@ -58,7 +58,13 @@ public class MailService extends HttpServlet {
     int userId;
     int groupId = -1;
     HttpSession session;
-    ArrayList<String> ourIPs = new ArrayList<String>();
+    ArrayList<String> ourIPs = new ArrayList<>();
+
+    private String notification;
+    private String sakaiInterfaceURL;
+    private String sakaiUsername;
+    private String sakaiPassword;
+    private String sakaiDirectSessionURL;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -78,6 +84,11 @@ public class MailService extends HttpServlet {
                         ourIPs.add(current_addr.getHostAddress());
                 }
             }
+            notification = ConfigUtils.getInstance().getProperty("notification");
+            sakaiInterfaceURL = ConfigUtils.getInstance().getRequiredProperty("sakaiInterface");
+            sakaiUsername = ConfigUtils.getInstance().getRequiredProperty("sakaiUsername");
+            sakaiPassword = ConfigUtils.getInstance().getRequiredProperty("sakaiPassword");
+            sakaiDirectSessionURL = ConfigUtils.getInstance().getRequiredProperty("sakaiDirectSessionUrl");
         } catch (Exception e) {
             logger.error("Can't init servlet", e);
             throw new ServletException(e);
@@ -157,7 +168,6 @@ public class MailService extends HttpServlet {
         }
 
         ServletConfig config = getServletConfig();
-        String notification = ConfigUtils.getInstance().getProperty("notification");
         logger.trace("Message via '{}'", notification);
 
         int retval = 0;
@@ -199,15 +209,14 @@ public class MailService extends HttpServlet {
         }
     }
 
-    int sendMessage(String auth[], String user, String message) {
+    int sendMessage(String[] auth, String user, String message) {
         int ret = 500;
 
         try {
             String urlParameters = "notification=\"" + message + "\"&_sessionId=" + auth[0];
 
             /// Send for this user
-            final String url = ConfigUtils.getInstance().getRequiredProperty("sakaiInterface");
-            URL urlTicker = new URL(url + user);
+            URL urlTicker = new URL(sakaiInterfaceURL + user);
 
             HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
             connect.setDoOutput(true);
@@ -216,7 +225,7 @@ public class MailService extends HttpServlet {
             connect.setRequestMethod("POST");
             connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             connect.setRequestProperty("charset", "utf-8");
-            connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
+            connect.setRequestProperty("Content-Length", String.valueOf(urlParameters.getBytes().length));
             connect.setUseCaches(false);
             connect.setRequestProperty("Cookie", auth[1]);
             connect.connect();
@@ -241,14 +250,12 @@ public class MailService extends HttpServlet {
         String[] ret = {"", ""};
         try {
             /// Configurable?
-            final String username = ConfigUtils.getInstance().getRequiredProperty("sakaiUsername");
-            final String password = ConfigUtils.getInstance().getRequiredProperty("sakaiPassword");
-            final String urlDirectSession = ConfigUtils.getInstance().getRequiredProperty("sakaiDirectSessionUrl");
 
-            final String urlParameters = "_username=" + username + "&_password=" + password;
+
+            final String urlParameters = "_username=" + sakaiUsername + "&_password=" + sakaiPassword;
 
             /// Will have to use some context config
-            URL urlTicker = new URL(urlDirectSession);
+            URL urlTicker = new URL(sakaiDirectSessionURL);
 
             HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
             connect.setDoOutput(true);
@@ -257,7 +264,7 @@ public class MailService extends HttpServlet {
             connect.setRequestMethod("POST");
             connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             connect.setRequestProperty("charset", "utf-8");
-            connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
+            connect.setRequestProperty("Content-Length", String.valueOf(urlParameters.getBytes().length));
             connect.setUseCaches(false);
             connect.connect();
 
@@ -268,9 +275,9 @@ public class MailService extends HttpServlet {
 
             StringBuilder readTicket = new StringBuilder();
             BufferedReader rd = new BufferedReader(new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
-            char buffer[] = new char[1024];
+            char[] buffer = new char[1024];
             int offset = 0;
-            int read = 0;
+            int read;
             do {
                 read = rd.read(buffer, offset, 1024);
                 offset += read;

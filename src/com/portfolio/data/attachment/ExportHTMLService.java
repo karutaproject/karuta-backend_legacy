@@ -71,6 +71,8 @@ public class ExportHTMLService extends HttpServlet {
     public static final Pattern STYLESHEET_URL_PATTERN = Pattern.compile("stylesheet.*?href=\"([^\"]*)");
 
     private DataProvider dataProvider;
+    private String tempdir;
+    private String backend;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -78,6 +80,8 @@ public class ExportHTMLService extends HttpServlet {
         try {
             ConfigUtils.init(getServletContext());
             dataProvider = SqlUtils.initProvider();
+            tempdir = System.getProperty("java.io.tmpdir", null);
+            backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
         } catch (Exception e) {
             logger.error("Can't init servlet", e);
             throw new ServletException(e);
@@ -126,7 +130,7 @@ public class ExportHTMLService extends HttpServlet {
         }
 
         /// Temp file in temp directory
-        File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+        File tempDir = new File(tempdir);
         if (!tempDir.isDirectory())
             tempDir.mkdirs();
         File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
@@ -241,7 +245,6 @@ public class ExportHTMLService extends HttpServlet {
                 int extindex = filenameext.lastIndexOf(".") + 1;
                 filenameext = uuid + "_" + lang + "." + filenameext.substring(extindex);
 
-                final String backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
                 final String url = backend + "/resources/resource/file/" + contextid + "?lang=" + lang;
 
                 final String filepath = "files" + File.separator + lang + File.separator + filename;

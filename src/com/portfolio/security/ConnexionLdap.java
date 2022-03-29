@@ -17,6 +17,7 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
 import com.portfolio.data.utils.ConfigUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +29,32 @@ public class ConnexionLdap {
     private Hashtable<String, String> env;
     private ArrayList<Attribute> attr;
     private String site;
+
+    private String providerUrl;
+    private String principal;
+    private String credential;
+    private String contextName;
+    private String userFilter;
+    private boolean checkSSL;
+    private String attribFirstName;
+    private String attribLastName;
+    private String attribMail;
+    private String attribAffiliation;
+
+    public ConnexionLdap() {
+        providerUrl = ConfigUtils.getInstance().getRequiredProperty("ldap.provider.url");
+        checkSSL = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("ldap.provider.useSSL"));
+        principal = ConfigUtils.getInstance().getRequiredProperty("ldap.context.name");
+        credential = ConfigUtils.getInstance().getRequiredProperty("ldap.context.credential");
+
+        userFilter = ConfigUtils.getInstance().getProperty("ldap.parameter");
+        contextName = ConfigUtils.getInstance().getRequiredProperty("ldap.baseDn");
+
+        attribFirstName = ConfigUtils.getInstance().getRequiredProperty("ldap.user.firstname");
+        attribLastName = ConfigUtils.getInstance().getRequiredProperty("ldap.user.lastname");
+        attribMail = ConfigUtils.getInstance().getRequiredProperty("ldap.user.mail");
+        attribAffiliation = ConfigUtils.getInstance().getRequiredProperty("ldap.user.affiliation");
+    }
 
     public String getSite() {
         return site;
@@ -59,36 +86,29 @@ public class ConnexionLdap {
         Attributes matchAttrs = new BasicAttributes(true);
 
         // recuperation des propriétés
-        Hashtable<String, Object> env = new Hashtable<String, Object>();
+        Hashtable<String, Object> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-        env.put(Context.PROVIDER_URL, ConfigUtils.getInstance().getRequiredProperty("ldap.provider.url"));
+        env.put(Context.PROVIDER_URL, providerUrl);
 
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
-        env.put(Context.SECURITY_PRINCIPAL, ConfigUtils.getInstance().getRequiredProperty("ldap.context.name"));
-        env.put(Context.SECURITY_CREDENTIALS, ConfigUtils.getInstance().getRequiredProperty("ldap.context.credential"));
+        env.put(Context.SECURITY_PRINCIPAL, principal);
+        env.put(Context.SECURITY_CREDENTIALS, credential);
 
-        final String checkSSL = ConfigUtils.getInstance().getProperty("ldap.provider.useSSL");
-        if (checkSSL != null && "Y".equals(checkSSL.toUpperCase()))
+        if (checkSSL)
             env.put(Context.SECURITY_PROTOCOL, "ssl");
 //		env.put("java.naming.ldap.factory.socket", "javax.net.ssl.SSLSocketFactory");
 
         /// Limit return values
-        final String attribFirstN = ConfigUtils.getInstance().getRequiredProperty("ldap.user.firstname");
-        final String attribLastN = ConfigUtils.getInstance().getRequiredProperty("ldap.user.lastname");
-        final String attribMail = ConfigUtils.getInstance().getRequiredProperty("ldap.user.mail");
-        final String attribAffiliation = ConfigUtils.getInstance().getRequiredProperty("ldap.user.affiliation");
-        final String[] returnAttrib = {attribFirstN, attribLastN, attribMail};
+        final String[] returnAttrib = {attribFirstName, attribLastName, attribMail};
 
         SearchControls controle = new SearchControls();
         controle.setReturningAttributes(returnAttrib);
         controle.setSearchScope(SearchControls.SUBTREE_SCOPE);
 
-        final String checkParam = ConfigUtils.getInstance().getProperty("ldap.parameter");
-        String critere = checkParam.replace("%u", usern); //filtre LDAP avec %u = userid (cas)
+        String critere = userFilter.replace("%u", usern); //filtre LDAP avec %u = userid (cas)
         //String critere = String.format("(%s=%s)", checkParam, usern);
 
         DirContext ictx = new InitialDirContext(env);
-        String contextName = ConfigUtils.getInstance().getRequiredProperty("ldap.baseDn");
         NamingEnumeration<SearchResult> e = ictx.search(contextName, critere, controle);
         String retval = null;
         String fname = null;
@@ -99,11 +119,11 @@ public class ConnexionLdap {
             SearchResult r = e.next();
 
             Attributes attribs = r.getAttributes();
-            Attribute fobj = attribs.get(attribFirstN);
+            Attribute fobj = attribs.get(attribFirstName);
             if (fobj != null) fname = fobj.get().toString();
             else fname = "";
 
-            Attribute lobj = attribs.get(attribLastN);
+            Attribute lobj = attribs.get(attribLastName);
             if (lobj != null) lname = lobj.get().toString();
             else lname = "";
 

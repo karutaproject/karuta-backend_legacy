@@ -40,7 +40,6 @@ import java.util.zip.ZipOutputStream;
 
 import javax.activation.MimeType;
 import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.ws.rs.Consumes;
@@ -123,6 +122,11 @@ public class RestServicePortfolio {
     private static final Logger errorLog = LoggerFactory.getLogger("errorLogger");
     private static final Logger editLog = LoggerFactory.getLogger("editLogger");
 
+    private static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
+    private static final String logFormatShort = "%7$s\n";
+
+    private String tempdir;
+
     class UserInfo {
         String subUser = "";
         int subId = 0;
@@ -132,35 +136,52 @@ public class RestServicePortfolio {
     }
 
     //	DataSource ds;
-    DataProvider dataProvider;
-    final Credential credential = new Credential();
-    String label = null;
-    String casUrlValidation = null;
-    String elggDefaultApiUrl = null;
-    String elggDefaultSiteUrl = null;
-    String elggApiKey = null;
-    String elggDefaultUserPassword = null;
+    private DataProvider dataProvider;
+    private final Credential credential = new Credential();
 
-    String archivePath;
+    // Options
+    private boolean activelogin;
+    private String backend;
+    private boolean resetPWEnable;
+    private String ccEmail;
+    private String basicLogoutRedirectionURL;
+    private boolean casCreateAccount;
+    private String casUrlValidation;
+    private String elggDefaultApiUrl;
+    private String elggDefaultSiteUrl;
+    private String elggApiKey;
+    private String elggDefaultUserPassword;
+    private String shibbolethLogoutRedirectionURL;
 
-    ServletContext servContext;
-    ServletConfig servConfig;
+    private String ldapUrl;
 
-    KEventbus eventbus = new KEventbus();
+    private String label;
+    private String archivePath;
 
-    static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
-    static final String logFormatShort = "%7$s\n";
+    private KEventbus eventbus = new KEventbus();
 
     /**
      * Initialize service objects
      **/
-    public RestServicePortfolio(@Context ServletConfig sc, @Context ServletContext context) {
+    public RestServicePortfolio(@Context ServletConfig sc) {
         try {
             // Loading configKaruta.properties
             ConfigUtils.init(sc.getServletContext());
 
-            // Initialize data provider and cas
+            tempdir = System.getProperty("java.io.tmpdir", null);
+
+            // Initialize
+            activelogin = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("activate_login"));
+            resetPWEnable = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("enable_password_reset"));
+            ccEmail = ConfigUtils.getInstance().getProperty("sys_email");
+            basicLogoutRedirectionURL = ConfigUtils.getInstance().getProperty("baseui_redirect_location");
+            backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
+            // CAS
             casUrlValidation = ConfigUtils.getInstance().getProperty("casUrlValidation");
+            casCreateAccount = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("casCreateAccount"));
+
+            // LDAP
+            ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
 
             // Elgg variables
             elggDefaultApiUrl = ConfigUtils.getInstance().getProperty("elggDefaultApiUrl");
@@ -169,8 +190,10 @@ public class RestServicePortfolio {
             elggApiKey = ConfigUtils.getInstance().getProperty("elggApiKey");
             elggDefaultUserPassword = ConfigUtils.getInstance().getProperty("elggDefaultUserPassword");
 
-            servConfig = sc;
-            servContext = context;
+            //shibboleth
+            shibbolethLogoutRedirectionURL = ConfigUtils.getInstance().getProperty("shib_logout");
+
+            // data provider
             dataProvider = SqlUtils.initProvider();
 
             archivePath = ConfigUtils.getInstance().getKarutaHome() + ConfigUtils.getInstance().getServletName() + "_archive" + File.separatorChar;
@@ -748,7 +771,7 @@ public class RestServicePortfolio {
         }
 
         /// Temp file in temp directory
-        File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+        File tempDir = new File(tempdir);
         if (!tempDir.isDirectory())
             tempDir.mkdirs();
         File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
@@ -797,7 +820,6 @@ public class RestServicePortfolio {
                 if ("".equals(lang)) lang = "fr";
             }
 
-            String backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
             String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
             HttpGet get = new HttpGet(url);
 
@@ -976,7 +998,7 @@ public class RestServicePortfolio {
                     else if (project.equals("true") || project.equals("1")) portfolioProject = true;
                     else if (project.length() > 0) portfolioProjectId = project;
                 } catch (Exception ex) {
-                    portfolioProject = null;
+                    //portfolioProject = null;
                 }
 
 
@@ -1798,7 +1820,7 @@ public class RestServicePortfolio {
             // Make a big zip of it
             String timeFormat = DT.format(new Date());
 
-            File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+            File tempDir = new File(tempdir);
             if (!tempDir.isDirectory())
                 tempDir.mkdirs();
             File bigZip = File.createTempFile("project_" + timeFormat, ".zip", tempDir);
@@ -4133,9 +4155,7 @@ public class RestServicePortfolio {
         String retText = "";
         Connection c = null;
 
-        String resetEnable = ConfigUtils.getInstance().getProperty("enable_password_reset");
-        if (resetEnable != null && ("y".equals(resetEnable.toLowerCase()) || "true".equals(resetEnable.toLowerCase()))) {
-
+        if (resetPWEnable) {
             try {
                 Document doc = DomUtils.xmlString2Document(xml, new StringBuffer());
                 Element infUser = doc.getDocumentElement();
@@ -4173,9 +4193,8 @@ public class RestServicePortfolio {
                             String ip = httpServletRequest.getRemoteAddr();
                             securityLog.info("[{}] [{}] asked to reset password", ip, username);
                         }
-                        String cc_email = ConfigUtils.getInstance().getProperty("sys_email");
                         // Send email
-                        MailUtils.postMail(sc, email, cc_email, "Password change for Karuta", content, logger);
+                        MailUtils.postMail(sc, email, ccEmail, "Password change for Karuta", content, logger);
                         retVal = 200;
                         retText = "sent";
                     }
@@ -4284,7 +4303,6 @@ public class RestServicePortfolio {
                 session.setAttribute("user", casUserId);
                 session.setAttribute("uid", Integer.parseInt(userId));
 
-                final String ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
                 if (ldapUrl != null) {
                     ConnexionLdap cldap = new ConnexionLdap();
                     if (logger.isDebugEnabled()) {
@@ -4293,9 +4311,7 @@ public class RestServicePortfolio {
                     }
                 }
             } else {
-                final String casCreate = ConfigUtils.getInstance().getProperty("casCreateAccount");
-                if ("y".equalsIgnoreCase(casCreate)) {
-                    final String ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
+                if (casCreateAccount) {
                     if (ldapUrl != null) {
                         ConnexionLdap cldap = new ConnexionLdap();
                         final String[] ldapvalues = cldap.getLdapValue(casUserId);
@@ -4355,12 +4371,11 @@ public class RestServicePortfolio {
     @GET
     public Response logoutGET(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         HttpSession session = httpServletRequest.getSession(false);
-//	String backend = sc.getServletContext().getContextPath();
-        String logoutredir = ConfigUtils.getInstance().getProperty("shib_logout");
+        //TODO: odd logic between 2 properties and a default location to redirect
         if (session == null) {
             // If value is set, this redirection takes priority
-            if (logoutredir != null && !"".equals(logoutredir)) {
-                return Response.status(301).header("Location", logoutredir).build();
+            if (!StringUtils.isBlank(shibbolethLogoutRedirectionURL)) {
+                return Response.status(301).header("Location", shibbolethLogoutRedirectionURL).build();
             }
         }
         Integer fromshibe = null;
@@ -4371,14 +4386,10 @@ public class RestServicePortfolio {
             //// Redirect to shibe logout
             //String redir = ConfigUtils.get("shib_logout");
             // Default URL
-            logoutredir = "/Shibboleth.sso/Logout";
-            //		return Response.status(302).header("Location", logoutredir).build();
-        } else {
-            // Just redirect to base UI location
-            logoutredir = ConfigUtils.getInstance().getProperty("baseui_redirect_location");
+            return Response.status(301).header("Location", "/Shibboleth.sso/Logout").build();
         }
-
-        return Response.status(301).header("Location", logoutredir).build();
+        // Just redirect to base UI location
+        return Response.status(301).header("Location", basicLogoutRedirectionURL).build();
     }
 
     @Path("/credential/logout")

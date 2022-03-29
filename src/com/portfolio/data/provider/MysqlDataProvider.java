@@ -86,6 +86,7 @@ import com.portfolio.security.Credential;
 import com.portfolio.security.NodeRight;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.json.simple.JSONObject;
@@ -122,7 +123,10 @@ public class MysqlDataProvider implements DataProvider {
     public static final String DATABASE_FALSE = "faux";
 
     final private Credential cred = new Credential();
+
+    private final String userDir;
     private final String dbserveur;
+    private final String backend;
     private final boolean createAsDesigner;
 
     @Override
@@ -131,7 +135,9 @@ public class MysqlDataProvider implements DataProvider {
 
     public MysqlDataProvider() {
         dbserveur = ConfigUtils.getInstance().getRequiredProperty("serverType");
-        createAsDesigner = Boolean.parseBoolean(ConfigUtils.getInstance().getProperty("createAsDesigner"));
+        createAsDesigner = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("createAsDesigner"));
+        userDir = System.getProperty("user.dir");
+        backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
     }
 
     public Integer getMysqlNodeNextOrderChildren(Connection c, String nodeUuid) throws Exception {
@@ -1360,8 +1366,8 @@ public class MysqlDataProvider implements DataProvider {
 
             if (resource != null && files != null) {
                 if (resource.equals("true") && files.equals("true")) {
-                    String adressedufichier = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date() + ".xml";
-                    String adresseduzip = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date() + ".zip";
+                    String adressedufichier = userDir + "/tmp_getPortfolio_" + new Date() + ".xml";
+                    String adresseduzip = userDir + "/tmp_getPortfolio_" + new Date() + ".zip";
 
                     File file = null;
                     PrintWriter ecrire;
@@ -9187,8 +9193,6 @@ public class MysqlDataProvider implements DataProvider {
                     String user = (String) session.getAttribute("user");
                     File file = new File(fullPath);
 
-                    String backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
-
                     if (resolved != null) {
                         /// Have to send it in FORM, compatibility with regular file posting
                         PostForm.rewriteFile(sessionval, backend, user, resolved, lang, file);
@@ -11993,7 +11997,6 @@ public class MysqlDataProvider implements DataProvider {
                 final String uuids = uuidREP + uuidSOL + nodeUuid;
 
                 // FIXEME why doing that here ! never do an http request when doing database processing !
-                final String backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
                 int prctElv = 0;
                 final HttpResponse response = HttpClientUtils.goGet(new HashSet<>(), backend + "/compare/" + uuids);
                 if (response != null) {

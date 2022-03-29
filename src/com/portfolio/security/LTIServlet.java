@@ -48,6 +48,8 @@ import net.oauth.SimpleOAuthValidator;
 import net.oauth.server.OAuthServlet;
 import net.oauth.signature.OAuthSignatureMethod;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.imsglobal.basiclti.BasicLTIConstants;
 import org.imsglobal.basiclti.BasicLTIUtil;
 import org.sakaiproject.basiclti.util.BlowFish;
@@ -74,6 +76,11 @@ public class LTIServlet extends HttpServlet {
     //boolean log = true;
     //boolean trace = true;
 
+    private boolean useEmail;
+    private boolean ltiCreateUser;
+    private String ltiUserName;
+    private String ltiRedirectLocation;
+
     @Override
     public void init() throws ServletException {
         sc = getServletConfig();
@@ -81,6 +88,10 @@ public class LTIServlet extends HttpServlet {
         try {
             ConfigUtils.init(sc.getServletContext());
 //	    loadRoleMapAttributes(application);
+            useEmail = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("lti_email_as_username"));
+            ltiCreateUser = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("lti_create_user"));
+            ltiUserName = ConfigUtils.getInstance().getProperty("lti_userid");
+            ltiRedirectLocation = ConfigUtils.getInstance().getProperty("lti_redirect_location");
         } catch (Exception e) {
             logger.error("Can't init servlet", e);
 			throw new ServletException(e);
@@ -97,7 +108,7 @@ public class LTIServlet extends HttpServlet {
      */
     private boolean isTrace(ServletContext application) {
         String traceStr = (String) application.getAttribute("LTIServlet.trace");
-        return "true".equalsIgnoreCase(traceStr);
+        return Boolean.parseBoolean(traceStr);
 
     }
 
@@ -105,17 +116,17 @@ public class LTIServlet extends HttpServlet {
     /**
      * Initialize the DB connection
      *
-     * @param application
-     * @return
      * @throws Exception
      */
-    private void initDB(ServletContext application, StringBuffer outTrace) throws Exception {
+    private void initDB() throws Exception {
 //		Connection connexion = null;			// hors du try pour fermer dans finally
 
         //============= init servers ===============================
 //	    this.sc = getServletConfig();
-        String dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
-        dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+        if (dataProvider == null) {
+            final String dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
+            dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+        }
     }
 
     /**
@@ -135,7 +146,7 @@ public class LTIServlet extends HttpServlet {
     }
 
     private Map<String, String> processLoginCookie(HttpServletRequest request) {
-        Map<String, String> processedCookies = new HashMap<String, String>();
+        Map<String, String> processedCookies = new HashMap<>();
         Cookie[] cookies = request.getCookies();
         if (cookies != null)
             for (Cookie c : cookies) {
@@ -203,7 +214,7 @@ public class LTIServlet extends HttpServlet {
 
         try {
 //	        LoadProperties(application);
-            initDB(application, outTrace);
+            initDB();
 
 //			wadbackend.WadUtilities.setApplicationAttributes(application, session);
 
@@ -224,14 +235,13 @@ public class LTIServlet extends HttpServlet {
             if (!"0".equals(userId)) // FIXME: Need more checking and/or change uid String to int
             {
                 session.setAttribute("uid", Integer.parseInt(userId));
-                final String useemail = ConfigUtils.getInstance().getProperty("lti_email_as_username");
+
                 String userName = "";
-                if ("y".equals(useemail)) {
+                if (useEmail) {
                     userName = (String) payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
                 } else {
-                    final String ltiuserName = ConfigUtils.getInstance().getProperty("lti_userid");
-                    if (ltiuserName != null && !ltiuserName.isEmpty())
-                        userName = (String) payload.get(ltiuserName);
+                    if (ltiUserName != null && !ltiUserName.isEmpty())
+                        userName = (String) payload.get(ltiUserName);
                     else
                         userName = (String) payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
                 }
@@ -312,7 +322,7 @@ public class LTIServlet extends HttpServlet {
 
             if ("".equals(link)) // Regular old behavior (which need to be changed some time donw the road)
                 //Send along to WAD now
-                response.sendRedirect(ConfigUtils.getInstance().getProperty("lti_redirect_location"));
+                response.sendRedirect(ltiRedirectLocation);
             else    // Otherwise, show different service
             {
                 response.getWriter().write(link);
@@ -396,13 +406,11 @@ public class LTIServlet extends HttpServlet {
 //		if( username == null )	/// If all fail, at least we get the context_id
 //			username = (String)payload.get(BasicLTIConstants.CONTEXT_ID);
 
-        final String useemail = ConfigUtils.getInstance().getProperty("lti_email_as_username");
-        if ("y".equals(useemail)) {
+        if (useEmail) {
             username = (String) payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
         } else {
-            final String ltiuserName = ConfigUtils.getInstance().getProperty("lti_userid");
-            if (ltiuserName != null && !ltiuserName.isEmpty()) {
-                username = (String) payload.get(ltiuserName);
+            if (!StringUtils.isBlank(ltiUserName)) {
+                username = (String) payload.get(ltiUserName);
             } else {
                 username = (String) payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
             }
@@ -411,8 +419,8 @@ public class LTIServlet extends HttpServlet {
         userId = dataProvider.getUserId(connexion, username, email);
         if ("0".equals(userId)) {
             //create it
-            final String lticreate = ConfigUtils.getInstance().getProperty("lti_create_user");
-            if ("y".equalsIgnoreCase(lticreate)) {
+
+            if (ltiCreateUser) {
                 userId = dataProvider.createUser(connexion, username, email);
                 int uid = Integer.parseInt(userId);
                 String famName = (String) payload.get(BasicLTIConstants.LIS_PERSON_NAME_FAMILY);

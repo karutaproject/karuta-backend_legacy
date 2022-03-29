@@ -55,6 +55,7 @@ public class ShibeServlet extends HttpServlet {
     private static String emailRequestHeader;
     private static boolean createUserNotExisting = true;
     private static boolean useFullName = false;
+    private static String defaultRedirectLocation;
 
     DataProvider dataProvider;
 
@@ -87,11 +88,11 @@ public class ShibeServlet extends HttpServlet {
 
                     if (!fnAndLnAreSet && (fullNameRequestHeader == null || fullNameRequestHeader.trim().isEmpty())) {
                         throw new IllegalArgumentException("The username can't be retrieved, no shibboleth attribute initialized !");
-                    } else if (!fnAndLnAreSet){
+                    } else if (!fnAndLnAreSet) {
                         useFullName = true;
                     }
                 }
-
+                defaultRedirectLocation = ConfigUtils.getInstance().getRequiredProperty("ui_redirect_location");
             }
         } catch (Exception e) {
             logger.error("Can't init servlet", e);
@@ -171,9 +172,8 @@ public class ShibeServlet extends HttpServlet {
         }
 
         if (uid > 0) {
-            String location = ConfigUtils.getInstance().getRequiredProperty("ui_redirect_location");
-            logger.info("Location: " + location);
-            response.sendRedirect(location);
+            logger.info("Location: " + defaultRedirectLocation);
+            response.sendRedirect(defaultRedirectLocation);
             response.getWriter().close();
         } else {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
