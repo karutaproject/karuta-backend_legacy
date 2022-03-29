@@ -12527,20 +12527,20 @@ public class MysqlDataProvider implements DataProvider {
             if (bypass)  // WAD6 demande un format specifique pour ce type de requete (...)
             {
                 if (res.next()) {
-                    Integer id = res.getInt("grid");
-                    if (id == null || id == 0)
+                    int id = res.getInt("grid");
+                    if (id == 0)
                         return "";
                     else
-                        return id.toString();
+                        return Integer.toString(id);
                 }
             } else
                 while (res.next()) {
-                    Integer id = res.getInt("grid");
-                    if (id == null || id == 0)    // Bonne chances que ce soit vide
+                    int id = res.getInt("grid");
+                    if (id == 0)    // Bonne chances que ce soit vide
                         continue;
 
                     Element rrg = document.createElement("rolerightsgroup");
-                    rrg.setAttribute("id", id.toString());
+                    rrg.setAttribute("id", Integer.toString(id));
                     root.appendChild(rrg);
 
                     String label = res.getString("label");
@@ -12599,8 +12599,7 @@ public class MysqlDataProvider implements DataProvider {
             document.appendChild(root);
 
             Element usersNode;
-            if (res.next())  //
-            {
+            if (res.next()) {
                 String label = res.getString("label");
                 String portfolioid = res.getString("portfolio");
 
@@ -12618,12 +12617,9 @@ public class MysqlDataProvider implements DataProvider {
                 return "";
 
             do {
-                Integer id = res.getInt("userid");
-                if (id == null)    // Bonne chances que ce soit vide
-                    continue;
-
+                int id = res.getInt("userid");
                 Element userNode = document.createElement("user");
-                userNode.setAttribute("id", id.toString());
+                userNode.setAttribute("id", String.valueOf(id));
                 usersNode.appendChild(userNode);
 
                 String login = res.getString("login");
@@ -13098,9 +13094,7 @@ public class MysqlDataProvider implements DataProvider {
     public String deleteRRG(Connection c, int userId, Integer rrgId) {
         if (!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgId))
             throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
-
         String value = "";
-
         try {
             c.setAutoCommit(false);
 
@@ -13388,9 +13382,7 @@ public class MysqlDataProvider implements DataProvider {
                 e.printStackTrace();
             }
         }
-
         result.append("</groups>");
-
         return result.toString();
     }
 
