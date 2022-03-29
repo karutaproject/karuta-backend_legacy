@@ -260,7 +260,7 @@
 		<servlet-name>LTIv2</servlet-name>
 		<url-pattern>/lti2/*</url-pattern>
 	</servlet-mapping>
-
+<!-- CAS auth is managed programmatically
 	<filter>
 		<filter-name>CAS Authentication Filter</filter-name>
 		<filter-class>org.jasig.cas.client.authentication.AuthenticationFilter</filter-class>
@@ -293,7 +293,7 @@
 		<filter-name>CAS Thread Filter</filter-name>
 		<filter-class>org.jasig.cas.client.util.AssertionThreadLocalFilter</filter-class>
 	</filter>
-
+-->
 	<!--
 	<filter-mapping>
 		<filter-name>CAS Authentication Filter</filter-name>
