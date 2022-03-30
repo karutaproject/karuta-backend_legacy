@@ -40,6 +40,7 @@ import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.MailUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -113,7 +114,7 @@ public class MailService extends HttpServlet {
             return;
         }
 
-        final boolean keepcc = "true".equals(request.getParameter("ccsender"));
+        final boolean keepcc = BooleanUtils.toBoolean(request.getParameter("ccsender"));
 
         logger.trace("Sending mail for user '{}'", uid);
 

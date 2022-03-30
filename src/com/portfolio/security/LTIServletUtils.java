@@ -121,7 +121,7 @@ public class LTIServletUtils {
      */
     protected static boolean isTrace(ServletContext application) {
         String traceStr = (String) application.getAttribute("LTIServlet.trace");
-        return "true".equalsIgnoreCase(traceStr);
+        return Boolean.parseBoolean(traceStr);
 
     }
 

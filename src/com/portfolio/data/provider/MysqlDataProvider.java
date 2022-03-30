@@ -121,6 +121,9 @@ public class MysqlDataProvider implements DataProvider {
     private static final Logger logger = LoggerFactory.getLogger(MysqlDataProvider.class);
     private static final Logger securityLog = LoggerFactory.getLogger("securityLogger");
     public static final String DATABASE_FALSE = "faux";
+    public static final String DB_YES = "Y";
+    public static final String DB_NO = "N";
+    public static final String XML_YES = "y";
 
     final private Credential cred = new Credential();
 
@@ -1347,9 +1350,9 @@ public class MysqlDataProvider implements DataProvider {
 
         if (outMimeType.getSubType().equals("xml")) {
             int owner = cred.getOwner(c, userId, portfolioUuid);
-            String isOwner = "N";
+            String isOwner = DB_NO;
             if (owner == userId)
-                isOwner = "Y";
+                isOwner = DB_YES;
 
             String headerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolio code=\"0\" id=\"" + portfolioUuid + "\" owner=\"" + isOwner + "\"><version>4</version>";
 
@@ -1365,7 +1368,7 @@ public class MysqlDataProvider implements DataProvider {
             t4 = System.currentTimeMillis();
 
             if (resource != null && files != null) {
-                if (resource.equals("true") && files.equals("true")) {
+                if (Boolean.parseBoolean(resource) && Boolean.parseBoolean(files)) {
                     String adressedufichier = userDir + "/tmp_getPortfolio_" + new Date() + ".xml";
                     String adresseduzip = userDir + "/tmp_getPortfolio_" + new Date() + ".zip";
 
@@ -1632,10 +1635,10 @@ public class MysqlDataProvider implements DataProvider {
             if (outMimeType.getSubType().equals("xml")) {
                 out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"").append(count).append("\" >");
                 while (res.next()) {
-                    String isOwner = "N";
+                    String isOwner = DB_NO;
                     String ownerId = res.getString("modif_user_id");
                     if (Integer.parseInt(ownerId) == userId)
-                        isOwner = "Y";
+                        isOwner = DB_YES;
 
                     out.append("<portfolio id=\"").append(res.getString("portfolio_id"));
                     out.append("\" root_node_id=\"").append(res.getString("root_node_uuid"));
@@ -1852,10 +1855,10 @@ public class MysqlDataProvider implements DataProvider {
                 out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"").append(count).append("\" >");
                 while (res.next()) {
                     if (codePortfoliosNonProjects.contains(res.getString("code"))) {
-                        String isOwner = "N";
+                        String isOwner = DB_NO;
                         String ownerId = res.getString("modif_user_id");
                         if (Integer.parseInt(ownerId) == userId)
-                            isOwner = "Y";
+                            isOwner = DB_YES;
 
                         out.append("<portfolio id=\"").append(res.getString("portfolio_id"));
                         out.append("\" root_node_id=\"").append(res.getString("root_node_uuid"));
@@ -2477,7 +2480,7 @@ public class MysqlDataProvider implements DataProvider {
                     attribNode = doc.getDocumentElement();
                     attribMap = attribNode.getAttributes();
                     Node publicatt = attribMap.getNamedItem("public");
-                    if (publicatt != null && "Y".equals(publicatt.getNodeValue()))
+                    if (publicatt != null && DB_YES.equals(publicatt.getNodeValue()))
                         setPublic = true;
                     //*/
                 } catch (Exception e) {
@@ -2972,10 +2975,10 @@ public class MysqlDataProvider implements DataProvider {
                 if (null == xsi_type)
                     xsi_type = "";
 
-                String readRight = result.getInt("RD") == 1 ? "Y" : "N";
-                String writeRight = result.getInt("WR") == 1 ? "Y" : "N";
-                String submitRight = result.getInt("SB") == 1 ? "Y" : "N";
-                String deleteRight = result.getInt("DL") == 1 ? "Y" : "N";
+                String readRight = result.getInt("RD") == 1 ? DB_YES : DB_NO;
+                String writeRight = result.getInt("WR") == 1 ? DB_YES : DB_NO;
+                String submitRight = result.getInt("SB") == 1 ? DB_YES : DB_NO;
+                String deleteRight = result.getInt("DL") == 1 ? DB_YES : DB_NO;
                 String macro = result.getString("rules_id");
                 String nodeDate = result.getString("modif_date");
 
@@ -5131,7 +5134,7 @@ public class MysqlDataProvider implements DataProvider {
                     attribNode = doc.getDocumentElement();
                     attribMap = attribNode.getAttributes();
                     Node publicatt = attribMap.getNamedItem("public");
-                    if (publicatt != null && "Y".equals(publicatt.getNodeValue()))
+                    if (publicatt != null && DB_YES.equals(publicatt.getNodeValue()))
                         setPublic = true;
                     //*/
                 } catch (Exception e) {
@@ -6684,9 +6687,9 @@ public class MysqlDataProvider implements DataProvider {
 						try
 						{
 							Node publicatt = attribMap.getNamedItem("public");
-							if( publicatt != null && "Y".equals(publicatt.getNodeValue()) )
+							if( publicatt != null && DB_YES.equals(publicatt.getNodeValue()) )
 								setPublicState(c, userId, portfolioUuid, true);
-							else if ( "N".equals(publicatt) )
+							else if ( DN_NO.equals(publicatt) )
 								setPublicState(c, userId, portfolioUuid, false);
 						}
 						catch(Exception ex)
@@ -7717,11 +7720,11 @@ public class MysqlDataProvider implements DataProvider {
                         logger.error("Managed error", ex);
                     }
 
-                    if (tmpSharedRes.equalsIgnoreCase("y"))
+                    if (tmpSharedRes.equalsIgnoreCase(XML_YES))
                         sharedRes = 1;
-                    if (tmpSharedNode.equalsIgnoreCase("y"))
+                    if (tmpSharedNode.equalsIgnoreCase(XML_YES))
                         sharedNode = 1;
-                    if (tmpSharedNodeResource.equalsIgnoreCase("y"))
+                    if (tmpSharedNodeResource.equalsIgnoreCase(XML_YES))
                         sharedNodeRes = 1;
 
                     metadata = DomUtils.getNodeAttributesString(children.item(i));
@@ -8236,10 +8239,10 @@ public class MysqlDataProvider implements DataProvider {
                             if (child.getAttributes().getNamedItem("public") != null) {
                                 final String publicatt = child.getAttributes().getNamedItem("public").getNodeValue();
                                 // TODO don't know if other value is available but could be simplified by
-                                // setPublicState(c, userId, portfolioUuid, "Y".equals(publicatt));
-                                if ("Y".equals(publicatt)) {
+                                // setPublicState(c, userId, portfolioUuid, DB_YES.equals(publicatt));
+                                if (DB_YES.equals(publicatt)) {
                                     setPublicState(c, userId, portfolioUuid, true);
-                                } else if ("N".equals(publicatt)) {
+                                } else if (DB_NO.equals(publicatt)) {
                                     setPublicState(c, userId, portfolioUuid, false);
                                 }
                             }
@@ -8259,11 +8262,11 @@ public class MysqlDataProvider implements DataProvider {
                             logger.error("Managed error", ex);
                         }
 
-                        if (tmpSharedRes.equalsIgnoreCase("y"))
+                        if (tmpSharedRes.equalsIgnoreCase(XML_YES))
                             sharedRes = 1;
-                        if (tmpSharedNode.equalsIgnoreCase("y"))
+                        if (tmpSharedNode.equalsIgnoreCase(XML_YES))
                             sharedNode = 1;
-                        if (tmpSharedNodeRes.equalsIgnoreCase("y"))
+                        if (tmpSharedNodeRes.equalsIgnoreCase(XML_YES))
                             sharedNodeRes = 1;
 
                         metadata = DomUtils.getNodeAttributesString(children.item(i));
@@ -10915,10 +10918,10 @@ public class MysqlDataProvider implements DataProvider {
             while (res.next()) {
                 int grid = res.getInt("grid");
                 String rolename = res.getString("label");
-                String readRight = res.getInt("RD") == 1 ? "Y" : "N";
-                String writeRight = res.getInt("WR") == 1 ? "Y" : "N";
-                String deleteRight = res.getInt("DL") == 1 ? "Y" : "N";
-                String submitRight = res.getInt("SB") == 1 ? "Y" : "N";
+                String readRight = res.getInt("RD") == 1 ? DB_YES : DB_NO;
+                String writeRight = res.getInt("WR") == 1 ? DB_YES : DB_NO;
+                String deleteRight = res.getInt("DL") == 1 ? DB_YES : DB_NO;
+                String submitRight = res.getInt("SB") == 1 ? DB_YES : DB_NO;
 
                 Element role = doc.createElement("role");
                 root.appendChild(role);
@@ -11011,9 +11014,9 @@ public class MysqlDataProvider implements DataProvider {
                 Node currentNode = attr.getNamedItem("public");
                 if (currentNode != null) {
                     String publicatt = currentNode.getNodeValue();
-                    if ("Y".equals(publicatt))
+                    if (DB_YES.equals(publicatt))
                         setPublicState(c, userId, portfolioUid, true);
-                    else if ("N".equals(publicatt))
+                    else if (DB_NO.equals(publicatt))
                         setPublicState(c, userId, portfolioUid, false);
 
                 }
@@ -11026,20 +11029,20 @@ public class MysqlDataProvider implements DataProvider {
                 currentNode = attr.getNamedItem("sharedResource");
                 if (currentNode != null) {
                     tmpSharedRes = currentNode.getNodeValue();
-                    if (tmpSharedRes.equalsIgnoreCase("y"))
+                    if (tmpSharedRes.equalsIgnoreCase(XML_YES))
                         sharedRes = 1;
                 }
                 currentNode = attr.getNamedItem("sharedNode");
                 if (currentNode != null) {
                     tmpSharedNode = currentNode.getNodeValue();
-                    if (tmpSharedNode.equalsIgnoreCase("y"))
+                    if (tmpSharedNode.equalsIgnoreCase(XML_YES))
                         sharedNode = 1;
                 }
 
                 currentNode = attr.getNamedItem("sharedNodeResource");
                 if (currentNode != null) {
                     tmpSharedNodeResource = currentNode.getNodeValue();
-                    if (tmpSharedNodeResource.equalsIgnoreCase("y"))
+                    if (tmpSharedNodeResource.equalsIgnoreCase(XML_YES))
                         sharedNodeRes = 1;
                 }
 
@@ -11826,9 +11829,9 @@ public class MysqlDataProvider implements DataProvider {
                         }
                         // Update local string
                         if ("hide".equals(macroName))
-                            isPriv.setNodeValue("Y");
+                            isPriv.setNodeValue(DB_YES);
                         else if ("show".equals(macroName))
-                            isPriv.setNodeValue("N");
+                            isPriv.setNodeValue(DB_NO);
                     }
                 }
 
@@ -11905,7 +11908,7 @@ public class MysqlDataProvider implements DataProvider {
                 }
 
                 /// We then update the metadata notifying it was submitted
-                rootMeta.setAttribute("submitted", "Y");
+                rootMeta.setAttribute("submitted", DB_YES);
                 /// Submitted date
                 Date time = new Date();
                 String timeFormat = DATETIME_FORMAT.format(time);
@@ -11951,7 +11954,7 @@ public class MysqlDataProvider implements DataProvider {
                     return "unchanged";
 
                 /// We then update the metadata notifying it was submitted
-                rootMeta.setAttribute("submitted", "Y");
+                rootMeta.setAttribute("submitted", DB_YES);
                 /// Submitted date
                 Date time = new Date();
                 String timeFormat = DATETIME_FORMAT.format(time);
@@ -13014,7 +13017,7 @@ public class MysqlDataProvider implements DataProvider {
             do {
                 arg = args.get(i - 1);
                 int val = 0;
-                if ("true".equals(arg[1])) val = 1;
+                if (Boolean.parseBoolean(arg[1])) val = 1;
                 st.setInt(i, val);
                 ++i;
             } while (i <= args.size());

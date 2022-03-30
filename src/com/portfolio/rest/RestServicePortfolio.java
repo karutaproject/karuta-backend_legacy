@@ -87,6 +87,8 @@ import com.portfolio.security.NodeRight;
 import com.portfolio.socialnetwork.Elgg;
 import com.portfolio.socialnetwork.Ning;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -987,15 +989,15 @@ public class RestServicePortfolio {
                 String portfolioProjectId = null;
 
                 try {
-                    portfolioActive = !active.equals("false") && !active.equals("0");
+                    portfolioActive = BooleanUtils.isNotFalse(BooleanUtils.toBooleanObject(active));
                 } catch (Exception ex) {
                     portfolioActive = true;
                 }
 
 
                 try {
-                    if (project.equals("false") || project.equals("0")) portfolioProject = false;
-                    else if (project.equals("true") || project.equals("1")) portfolioProject = true;
+                    if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(project))) portfolioProject = false;
+                    else if (BooleanUtils.toBooleanObject(project)) portfolioProject = true;
                     else if (project.length() > 0) portfolioProjectId = project;
                 } catch (Exception ex) {
                     //portfolioProject = null;
@@ -1003,7 +1005,7 @@ public class RestServicePortfolio {
 
 
                 try {
-                    countOnly = count.equals("true") || count.equals("1");
+                    countOnly = BooleanUtils.toBoolean(count);
                 } catch (Exception ex) {
                     countOnly = false;
                 }
@@ -1084,21 +1086,15 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            Boolean portfolioActive;
-            if ("false".equals(active) || "0".equals(active))
-                portfolioActive = false;
-            else
-                portfolioActive = true;
+            boolean portfolioActive = BooleanUtils.isNotFalse(BooleanUtils.toBooleanObject(active));
 
             c = SqlUtils.getConnection();
             dataProvider.putPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, portfolioUuid, ui.userId, portfolioActive, groupId, null);
-
 
             return "";
 
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -1489,12 +1485,8 @@ public class RestServicePortfolio {
                 return Response.status(Status.FORBIDDEN).entity("403").build();
             }
 
-            boolean setOwner = false;
-            if ("true".equals(setowner))
-                setOwner = true;
-            boolean copyshared = false;
-            if ("y".equalsIgnoreCase(copy))
-                copyshared = true;
+            boolean setOwner = BooleanUtils.toBoolean(setowner);
+            boolean copyshared = BooleanUtils.toBoolean(copy);
 
             /// Check if code exist, find a suitable one otherwise. Eh.
             String newcode = tgtcode;
@@ -1570,9 +1562,7 @@ public class RestServicePortfolio {
                 return Response.status(Status.CONFLICT).entity("code exist").build();
             }
 
-            boolean setOwner = false;
-            if ("true".equals(setowner))
-                setOwner = true;
+            boolean setOwner = Boolean.parseBoolean(setowner);
             tgtcode = newcode;
 
             String returnValue = dataProvider.postCopyPortfolio(c, new MimeType("text/xml"), portfolioId, srccode, tgtcode, ui.userId, setOwner).toString();
@@ -1688,7 +1678,7 @@ public class RestServicePortfolio {
 
         Connection c = null;
         try {
-            boolean instantiate = "true".equals(instance);
+            boolean instantiate = BooleanUtils.toBoolean(instance);
 
             c = SqlUtils.getConnection();
 
@@ -1775,7 +1765,7 @@ public class RestServicePortfolio {
         try {
             File archiveFolder = null;
             boolean doArchive = false;
-            if (archive != null && "y".equals(archive.toLowerCase())) {
+            if (BooleanUtils.toBoolean(archive)) {
                 /// Check if folder exists
                 archiveFolder = new File(archivePath);
                 if (!archiveFolder.exists())
@@ -1907,10 +1897,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            boolean instantiate = false;
-            if ("true".equals(instance))
-                instantiate = true;
-
+            boolean instantiate = Boolean.parseBoolean(instance);
             c = SqlUtils.getConnection();
             return dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, fileInputStream, ui.userId, groupId,
                     modelId, ui.subId, instantiate, projectName).toString();
@@ -2506,7 +2493,7 @@ public class RestServicePortfolio {
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
         String timeFormat = dt.format(time);
         String logformat = logFormat;
-        if ("false".equals(info))
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
 
         try {
@@ -2559,7 +2546,7 @@ public class RestServicePortfolio {
         Connection c = null;
         String timeFormat = DT.format(new Date());
         String logformat = logFormat;
-        if ("false".equals(info))
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
 
 
@@ -2613,7 +2600,7 @@ public class RestServicePortfolio {
         Connection c = null;
         String timeFormat = DT.format(new Date());
         String logformat = logFormat;
-        if ("false".equals(info))
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
 
         try {
@@ -2674,7 +2661,7 @@ public class RestServicePortfolio {
         Connection c = null;
         String timeFormat = DT.format(new Date());
         String logformat = logFormat;
-        if ("false".equals(info))
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
 
         try {
@@ -2727,7 +2714,7 @@ public class RestServicePortfolio {
         Connection c = null;
         String timeFormat = DT.format(new Date());
         String logformat = logFormat;
-        if ("false".equals(info))
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
 
         try {
@@ -3336,7 +3323,7 @@ public class RestServicePortfolio {
         Connection c = null;
         String timeFormat = DT.format(new Date());
         String logformat = logFormat;
-        if ("false".equals(info))
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
         try {
             c = SqlUtils.getConnection();
@@ -4530,9 +4517,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            boolean instantiate = false;
-            if ("true".equals(instance))
-                instantiate = true;
+            boolean instantiate = Boolean.parseBoolean(instance);
 
             c = SqlUtils.getConnection();
             returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, uploadedInputStream,
