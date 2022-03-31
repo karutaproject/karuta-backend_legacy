@@ -4356,7 +4356,7 @@ public class RestServicePortfolio {
      **/
     @Path("/credential/logout")
     @GET
-    public Response logoutGET(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public Response logoutGET(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("redir") String redir) {
         HttpSession session = httpServletRequest.getSession(false);
         //TODO: odd logic between 2 properties and a default location to redirect
         if (session == null) {
@@ -4374,6 +4374,9 @@ public class RestServicePortfolio {
             //String redir = ConfigUtils.get("shib_logout");
             // Default URL
             return Response.status(301).header("Location", "/Shibboleth.sso/Logout").build();
+        }
+        if (!StringUtils.isBlank(redir)) {
+            return Response.status(301).header("Location", redir).build();
         }
         // Just redirect to base UI location
         return Response.status(301).header("Location", basicLogoutRedirectionURL).build();
