@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
@@ -72,6 +73,7 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import com.google.gson.Gson;
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.provider.MysqlDataProvider;
 import com.portfolio.data.utils.ConfigUtils;
@@ -149,11 +151,13 @@ public class RestServicePortfolio {
     private String basicLogoutRedirectionURL;
     private boolean casCreateAccount;
     private String casUrlValidation;
+    private String casUrlsJsonString;
     private String elggDefaultApiUrl;
     private String elggDefaultSiteUrl;
     private String elggApiKey;
     private String elggDefaultUserPassword;
     private String shibbolethLogoutRedirectionURL;
+    private Map<String, String> casUrlsValidation;
 
     private String ldapUrl;
 
@@ -181,6 +185,9 @@ public class RestServicePortfolio {
             // CAS
             casUrlValidation = ConfigUtils.getInstance().getProperty("casUrlValidation");
             casCreateAccount = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("casCreateAccount"));
+            casUrlsJsonString = ConfigUtils.getInstance().getProperty("casUrlValidationMapping");
+            Gson gson = new Gson();
+            casUrlsValidation = gson.fromJson(casUrlsJsonString, Map.class);
 
             // LDAP
             ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
@@ -4213,7 +4220,7 @@ public class RestServicePortfolio {
     @POST
     @Path("/credential/login/cas")
     public Response postCredentialFromCas(String content, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
-                                          @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+                                          @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) throws IllegalAccessException {
         logger.debug("RECEIVED POST CAS: tok: " + token + " tix: " + ticket + " red: " + redir);
         return getCredentialFromCas(user, token, groupId, ticket, redir, sc, httpServletRequest);
     }
@@ -4221,8 +4228,19 @@ public class RestServicePortfolio {
     @Path("/credential/login/cas")
     @GET
     public Response getCredentialFromCas(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
-                                         @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+                                         @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) throws IllegalAccessException {
         HttpSession session = httpServletRequest.getSession(true);
+
+        String casUrlVal = casUrlValidation;
+        if (!casUrlsValidation.isEmpty()) {
+            if (casUrlsValidation.containsKey(redir)) {
+                casUrlVal = casUrlsValidation.get(redir);
+            } else {
+                final String error = String.format("Unauthorized or not configured redirection '%s' with conf '%s'", redir, casUrlsJsonString);
+                logger.error(error);
+                throw new IllegalAccessException(error);
+            }
+        }
 
         String xmlResponse = null;
         String userId;
@@ -4232,7 +4250,7 @@ public class RestServicePortfolio {
         Connection c = null;
         try {
 
-            if (casUrlValidation == null) {
+            if (casUrlVal == null) {
                 Response response;
                 try {
                     // formulate the response
@@ -4244,7 +4262,7 @@ public class RestServicePortfolio {
                 return response;
             }
 
-            Cas20ServiceTicketValidator sv = new Cas20ServiceTicketValidator(casUrlValidation);
+            Cas20ServiceTicketValidator sv = new Cas20ServiceTicketValidator(casUrlVal);
 
             /// X-Forwarded-Proto is for certain setup, check config file
             /// for some more details
@@ -4335,7 +4353,7 @@ public class RestServicePortfolio {
             return response;
         } catch (TicketValidationException ex) {
             logger.error("CAS Validation Error", ex);
-            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :" + casUrlValidation);
+            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :" + casUrlVal);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires :" + ex.getMessage());
