@@ -49,9 +49,6 @@ public interface DataProvider {
 
     public String getMysqlUserUid(Connection c, String login) throws Exception;
 
-    @Deprecated
-    public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception;
-
     public int deleteCredential(Connection c, int userId);
 
     public boolean isAdmin(Connection c, String uid);

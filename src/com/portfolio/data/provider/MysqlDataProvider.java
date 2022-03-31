@@ -8435,12 +8435,6 @@ public class MysqlDataProvider implements DataProvider {
         return ret;
     }
 
-    @Deprecated
-    @Override
-    public String getUserUidByTokenAndLogin(Connection c, String login, String token) throws Exception {
-        return null;
-    }
-
     @Override
     public boolean postNodeRight(int userId, String nodeUuid) throws Exception {
         // TODO Auto-generated method stub
