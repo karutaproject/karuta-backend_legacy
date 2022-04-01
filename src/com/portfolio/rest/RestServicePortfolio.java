@@ -1004,7 +1004,7 @@ public class RestServicePortfolio {
 
                 try {
                     if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(project))) portfolioProject = false;
-                    else if (BooleanUtils.toBooleanObject(project)) portfolioProject = true;
+                    else if (BooleanUtils.toBoolean(project)) portfolioProject = true;
                     else if (project.length() > 0) portfolioProjectId = project;
                 } catch (Exception ex) {
                     //portfolioProject = null;
