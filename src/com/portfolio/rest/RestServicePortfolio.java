@@ -137,6 +137,16 @@ public class RestServicePortfolio {
         String User = "";
         int userId = 0;
 //		int groupId = -1;
+
+        @Override
+        public String toString() {
+            return "UserInfo{" +
+                    "subUser='" + subUser + '\'' +
+                    ", subId=" + subId +
+                    ", User='" + User + '\'' +
+                    ", userId=" + userId +
+                    '}';
+        }
     }
 
     //	DataSource ds;
@@ -4442,6 +4452,7 @@ public class RestServicePortfolio {
             /// webapps...
             ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
             xslFile = ppath + xslFile;
+
             String returnValue = dataProvider.getNodeWithXSL(c, new MimeType("text/xml"), nodeUuid, xslFile, parameters, ui.userId, groupId).toString();
             if (returnValue.length() != 0) {
                 if (MediaType.APPLICATION_JSON.equals(accept))
