@@ -9576,7 +9576,7 @@ public class MysqlDataProvider implements DataProvider {
             else
                 throw new RestWebApplicationException(Status.NOT_FOUND, "User " + username + " not found");
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("getUserID {} not found", username);
             throw new RestWebApplicationException(Status.NOT_FOUND, "User " + username + " not found");
         }
 
