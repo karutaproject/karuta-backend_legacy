@@ -63,7 +63,7 @@ public class ReportHelperProvider {
 			while (rs.next()) {
 				final int userid = rs.getInt("userid");
 				final Date date = rs.getDate("date");
-				output.append(MessageFormat.format("<vector uid={0,number,integer} date=''{1,date,short} {1,time,medium}''>", userid, date));
+				output.append(MessageFormat.format("<vector uid=''{0,number,integer}'' date=''{1,date,short} {1,time,medium}''>", userid, date));
 
 				for (int i = 1; i <= 10; i++) {
 					final String a_n = "a" + i;
