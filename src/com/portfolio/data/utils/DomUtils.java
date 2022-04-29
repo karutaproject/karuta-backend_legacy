@@ -39,7 +39,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMResult;
@@ -47,7 +46,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
-import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Attr;
@@ -178,19 +177,15 @@ public class DomUtils
 //  =======================================
 	public static void processXSLT (Source xml, String xsltName, Result result, StringBuffer outTrace, boolean trace) throws Exception {
 //  =======================================
-		outTrace.append("<br>processXSLT... "+xsltName);
+		outTrace.append("<br>processXSLT... ").append(xsltName);
 		TransformerFactory tFactory = TransformerFactory.newInstance();
 		StreamSource stylesource = new StreamSource(xsltName);
 		Transformer transformer = tFactory.newTransformer(stylesource);
 
 		try {
 			transformer.transform(xml, result);
-		}
-		catch (TransformerConfigurationException tce) {
+		} catch (TransformerException tce) {
 			throw new TransformerException(tce.getMessageAndLocation());
-		}
-		catch (TransformerException te) {
-			throw new TransformerException(te.getMessageAndLocation());
 		}
 		if (trace) outTrace.append(" ... ok");
 	}
@@ -217,7 +212,7 @@ public class DomUtils
 public static String processXSLTfile2String (Document xml, String xslFile, String param[], String paramVal[], StringBuffer outTrace) throws Exception {
 //  =======================================
 	logger.debug("<br>-->processXSLTfile2String-"+xslFile);
-	outTrace.append("<br>-->processXSLTfile2String-"+xslFile);
+	outTrace.append("<br>-->processXSLTfile2String-").append(xslFile);
 	Transformer transformer = TransformerFactory.newInstance().newTransformer(new StreamSource(new File(xslFile)));
 	outTrace.append(".1");
 	StreamResult result = new StreamResult(new StringWriter());
@@ -225,7 +220,7 @@ public static String processXSLTfile2String (Document xml, String xslFile, Strin
 	DOMSource source = new DOMSource(xml);
 	outTrace.append(".3");
 	for (int i = 0; i < param.length; i++) {
-		outTrace.append("<br>setParemater - "+param[i]+":"+paramVal[i]+"...");
+		outTrace.append("<br>setParemater - ").append(param[i]).append(":").append(paramVal[i]).append("...");
 		logger.debug("<br>setParemater - "+param[i]+":"+paramVal[i]+"...");
 		transformer.setParameter(param[i], paramVal[i]);
 		outTrace.append("ok");
@@ -233,7 +228,7 @@ public static String processXSLTfile2String (Document xml, String xslFile, Strin
 	}
 	outTrace.append(".4");
 	transformer.transform(source, result);
-	outTrace.append("<br><--processXSLTfile2String-"+xslFile);
+	outTrace.append("<br><--processXSLTfile2String-").append(xslFile);
 	logger.debug("<br><--processXSLTfile2String-"+xslFile);
 	return result.getWriter().toString();
 }
@@ -270,29 +265,29 @@ return result.getWriter().toString();
 		DocumentBuilder builder = factory.newDocumentBuilder();
 		xmldoc = builder.parse(new InputSource(new StringReader(xmlString)));
 		return xmldoc;
-}
+	}
 
 //  =======================================
 	public static String file2String (String fileName, StringBuffer outTrace) throws Exception {
 //  =======================================
-	String result ="";
-	try {
-		FileInputStream fichierSrce =  new FileInputStream(fileName);
-		BufferedReader readerSrce = new BufferedReader(new InputStreamReader(fichierSrce, StandardCharsets.UTF_8));
-		String line;
-		while( (line=readerSrce.readLine())!=null){
-			result += line;
+		StringBuilder result = new StringBuilder();
+		try {
+			FileInputStream fichierSrce =  new FileInputStream(fileName);
+			BufferedReader readerSrce = new BufferedReader(new InputStreamReader(fichierSrce, StandardCharsets.UTF_8));
+			String line;
+			while( (line=readerSrce.readLine())!=null){
+				result.append(line);
+			}
+			readerSrce.close();
+			fichierSrce.close();
 		}
-		readerSrce.close();
-		fichierSrce.close();
+		catch (IOException ioe) {
+			outTrace.append("<br/>file2String-- Error: "+ioe);
+		}
+
+		return result.toString();
+
 	}
-	catch (IOException ioe) {
-		outTrace.append("<br/>file2String-- Error: "+ioe);
-	}
-	finally {
-		return result;
-	}
-}
 
 
 
@@ -348,9 +343,9 @@ return result.getWriter().toString();
 }
 */
 
-//  ---------------------------------------------------
-public  static String readXmlString(Connection connexion, String id, StringBuffer outTrace) throws Exception {
-//  ---------------------------------------------------
+	//  ---------------------------------------------------
+	public  static String readXmlString(Connection connexion, String id, StringBuffer outTrace) throws Exception {
+	//  ---------------------------------------------------
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		String reqSQL = null;
@@ -363,12 +358,12 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 				xmlString = rs.getString(1);
 			}
 		}	catch(Exception e){
-			outTrace.append("Erreur readXmlString:  (req="+reqSQL+"  error:"+e);
+			outTrace.append("Erreur readXmlString:  (req=").append(reqSQL).append("  error:").append(e);
 		}	finally {
 			rs.close();
 			ps.close();
-			return xmlString;
 		}
+		return xmlString;
 	}
 
 //  ---------------------------------------------------
@@ -396,7 +391,7 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 
 	NodeList liste = xmlPartageable.getDocumentElement().getChildNodes();
 	int nbListe = liste.getLength();
-	if (trace) outTrace.append("<br> nbListe="+nbListe);
+	if (trace) outTrace.append("<br> nbListe=").append(nbListe);
 	for (int i=0;i<nbListe;i++) {
 		aInserer.appendChild(xmlSourceDoc.importNode(liste.item(i),true));
 	}
@@ -475,7 +470,8 @@ public  static String readXmlString(Connection connexion, String id, StringBuffe
 		for(int i=0;i<attributes.getLength();i++)
 		{
 			Attr attribute = (Attr)attributes.item(i);
-			ret.append(attribute.getName().trim()).append("=\"").append(StringEscapeUtils.escapeXml11(attribute.getValue().trim())).append("\" ");
+			ret.append(attribute.getName().trim()).append("=\"").append(
+					StringEscapeUtils.escapeXml11(attribute.getValue().trim())).append("\" ");
 		}
 		return ret.toString();
 	}

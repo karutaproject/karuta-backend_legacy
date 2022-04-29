@@ -39,6 +39,7 @@ import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.LogUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.security.Credential;
+import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -177,11 +178,11 @@ public class LoggingService extends HttpServlet {
             String username = "";
             String showuser = request.getParameter("user");
             String rawparam = request.getParameter("raw");
-            if ("1".equals(rawparam) || "true".equals(rawparam)) {
+            if (BooleanUtils.toBoolean(rawparam)) {
                 raw = true;
             }
 
-            if ("true".equals(showuser)) {
+            if (BooleanUtils.toBoolean(showuser)) {
                 c = SqlUtils.getConnection();
                 String userinfo = dataProvider.getInfUser(c, 1, val);
                 Document doc = DomUtils.xmlString2Document(userinfo, null);

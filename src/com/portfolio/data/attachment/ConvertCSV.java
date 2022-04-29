@@ -56,7 +56,10 @@ public class ConvertCSV extends HttpServlet {
     String context = "";
     HttpSession session;
 
+    private String csvsep;
+
     public void initialize(HttpServletRequest httpServletRequest) {
+        csvsep = ConfigUtils.getInstance().getProperty("csv_separator", ",");
     }
 
     @Override
@@ -78,7 +81,6 @@ public class ConvertCSV extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 
-        final String csvsep = ConfigUtils.getInstance().getProperty("csv_separator", ",");
         char csvseparator = csvsep.charAt(0);    // Otherwise just fetch the first character defined
 
         JSONObject data = null;

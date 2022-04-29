@@ -60,10 +60,7 @@ public class LTIv2Servlet extends HttpServlet {
 
     private static final long serialVersionUID = -2442074091303775050L;
 
-    private static Log M_log = LogFactory.getLog(LTIv2Servlet.class);
-
-    @SuppressWarnings("unused")
-    private static final String EMPTY_JSON_OBJECT = "{\n}\n";
+    private static final Log logger = LogFactory.getLog(LTIv2Servlet.class);
 
 
     @Override
@@ -72,7 +69,7 @@ public class LTIv2Servlet extends HttpServlet {
     }
 
     private void outTraceFormattedMessage(StringBuffer outTrace, String msg) {
-        outTrace.append("\n" + new Date() + " DEBUG " + msg);
+        outTrace.append("\n").append(new Date()).append(" DEBUG ").append(msg);
     }
 
     @Override
@@ -86,10 +83,9 @@ public class LTIv2Servlet extends HttpServlet {
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         StringBuffer outTrace = new StringBuffer();
-        String logFName = null;
+
         HttpSession session = request.getSession(true);
         String ppath = session.getServletContext().getRealPath("/");
         String outsideDir = ppath.substring(0, ppath.lastIndexOf("/")) + "_files/";
@@ -97,7 +93,7 @@ public class LTIv2Servlet extends HttpServlet {
         ServletContext application = getServletConfig().getServletContext();
 
         //super.doPost(request, response);
-        logFName = outsideDir + "logs/logLTI2.txt";
+        final String logFName = outsideDir + "logs/logLTI2.txt";
         outTraceFormattedMessage(outTrace, "doPost() - " + logFName);
 
         String toolProxyPath = outsideDir + "tool_proxy.txt";
@@ -108,7 +104,7 @@ public class LTIv2Servlet extends HttpServlet {
         } catch (Exception e) {
             String ipAddress = request.getRemoteAddr();
             String uri = request.getRequestURI();
-            M_log.warn("General LTI2 Failure URI=" + uri + " IP=" + ipAddress);
+            logger.warn("General LTI2 Failure URI=" + uri + " IP=" + ipAddress);
             e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             doErrorJSON(request, response, null, "General failure", e);
@@ -121,7 +117,6 @@ public class LTIv2Servlet extends HttpServlet {
         }
     }
 
-    @SuppressWarnings("unused")
     protected void doRequest(HttpServletRequest request, HttpServletResponse response, HttpSession session, ServletContext application, String toolProxyPath, StringBuffer outTrace)
             throws ServletException, IOException {
 
@@ -130,9 +125,8 @@ public class LTIv2Servlet extends HttpServlet {
         String ipAddress = request.getRemoteAddr();
         outTraceFormattedMessage(outTrace, "LTI Service request from IP=" + ipAddress);
 
-        String rpi = request.getPathInfo();
-        String uri = request.getRequestURI();
-        String[] parts = uri.split("/");
+        final String uri = request.getRequestURI();
+        final String[] parts = uri.split("/");
         if (parts.length < 4) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             doErrorJSON(request, response, null, "Incorrect url format", null);
@@ -160,12 +154,12 @@ public class LTIv2Servlet extends HttpServlet {
         }
 
         response.setStatus(HttpServletResponse.SC_NOT_IMPLEMENTED);
-        M_log.warn("Unknown request=" + uri);
+        logger.warn("Unknown request=" + uri);
         doErrorJSON(request, response, null, "Unknown request=" + uri, null);
     }
 
     protected void doRegister(HttpServletResponse response, Map<String, Object> payload, ServletContext application, String toolProxyPath, StringBuffer outTrace) {
-        String launch_url = (String) payload.get("launch_url");
+        final String launch_url = (String) payload.get("launch_url");
         response.setContentType("text/html");
 
         outTraceFormattedMessage(outTrace, "doRegister() - launch_url: " + launch_url);
@@ -221,6 +215,7 @@ public class LTIv2Servlet extends HttpServlet {
                 //TODO do some replacement on stock values that need specifics from us here
 
                 // Tweak the stock profile
+                assert toolProxy != null;
                 toolProxy.put("tool_consumer_profile", tcProfileUrl);
 //LTI2Constants.
 //				BasicLTIConstants.
@@ -300,14 +295,14 @@ public class LTIv2Servlet extends HttpServlet {
 
             } catch (IOException | ParseException e) {
                 // TODO Auto-generated catch block
-                e.printStackTrace();
+                logger.error("Exception ", e);
             } finally {
                 try {
                     if (is != null)
                         is.close();
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    logger.error("IOException ", e);
                 }
             }
 
@@ -319,7 +314,7 @@ public class LTIv2Servlet extends HttpServlet {
             PrintWriter out = response.getWriter();
             out.println(output);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Exception ", e);
         }
     }
 
@@ -331,7 +326,7 @@ public class LTIv2Servlet extends HttpServlet {
         connection.setRequestProperty("Content-Type", "application/vnd.ims.lti.v2.toolproxy+json");
         connection.setRequestProperty("Content-Length", String.valueOf(jsonData.length()));
 
-        Map<String, String> postProp = new HashMap<String, String>();
+        Map<String, String> postProp = new HashMap<>();
         try {
             MessageDigest md = MessageDigest.getInstance("SHA1");
 
@@ -340,9 +335,9 @@ public class LTIv2Servlet extends HttpServlet {
             String hash = new String(output);
 
             postProp.put("oauth_body_hash", hash);
-        } catch (NoSuchAlgorithmException e1) {
+        } catch (NoSuchAlgorithmException e) {
             // TODO Auto-generated catch block
-            e1.printStackTrace();
+            logger.error("Exception ", e);
         }
 
         OAuthMessage oam = new OAuthMessage(OAuthMessage.POST, urlStr, postProp.entrySet());
@@ -355,6 +350,7 @@ public class LTIv2Servlet extends HttpServlet {
             connection.setRequestProperty("Authorization", oam.getAuthorizationHeader(null));
             oam.sign(acc);
         } catch (OAuthException | IOException | URISyntaxException e) {
+            logger.error("OAUTH Exception ", e);
             throw new Error(e);
         }
 
@@ -383,12 +379,11 @@ public class LTIv2Servlet extends HttpServlet {
 
         BufferedReader rd = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         StringBuilder sb = new StringBuilder();
-        String line = "";
+        String line;
         while ((line = rd.readLine()) != null)
             sb.append(line);
 
-        JSONObject tp = (JSONObject) new JSONParser().parse(sb.toString());
-        return tp;
+        return (JSONObject) new JSONParser().parse(sb.toString());
     }
 
     @SuppressWarnings("unused")
@@ -410,11 +405,10 @@ public class LTIv2Servlet extends HttpServlet {
             }
             FileInputStream fis = new FileInputStream(filePath);
             BufferedReader br = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
-            JSONObject tp = (JSONObject) new JSONParser().parse(br);
-            return tp;
+            return (JSONObject) new JSONParser().parse(br);
         } catch (IOException | ParseException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            logger.error("Exception ", e);
         }
 		return null;
     }
@@ -434,10 +428,10 @@ public class LTIv2Servlet extends HttpServlet {
                              IMSJSONRequest json, String message, Exception e)
             throws java.io.IOException {
         if (e != null) {
-            M_log.error(e.getLocalizedMessage(), e);
+            logger.error(e.getLocalizedMessage(), e);
         }
-        M_log.info(message);
-		M_log.info(IMSJSONRequest.doErrorJSON(request, response, json, message, e));
+        logger.info(message);
+		logger.info(IMSJSONRequest.doErrorJSON(request, response, json, message, e));
     }
 
     @Override

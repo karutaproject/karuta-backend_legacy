@@ -20,9 +20,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.util.HashMap;
@@ -59,6 +61,7 @@ import org.slf4j.LoggerFactory;
  */
 public class OAuth2 extends HttpServlet {
 
+    public static final Pattern PATTERN_TOKEN = Pattern.compile("id_token\":\"([^\"]*)");
     private static final long serialVersionUID = -5793392467087229614L;
 
     private static final Logger logger = LoggerFactory.getLogger(OAuth2.class);
@@ -66,24 +69,45 @@ public class OAuth2 extends HttpServlet {
     ServletConfig sc;
     DataProvider dataProvider;
 
+    private String defaultRedirectLocation;
+    private String URLToken;
+    private String client_id;
+    private String client_secret;
+    private String scope;
+    private String URLKeys;
+    private String URLAuthorize;
+
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         try {
             ConfigUtils.init(getServletContext());
             dataProvider = SqlUtils.initProvider();
+            defaultRedirectLocation = ConfigUtils.getInstance().getRequiredProperty("ui_redirect_location");
         } catch (Exception e) {
            logger.error("Can't init servlet", e);
            throw new ServletException(e);
         }
     }
 
-    Map<String, String> ParseParameter(String queryParam) {
+    private void lazyInit() throws UnsupportedEncodingException {
+        if (URLToken == null || client_id == null) {
+            URLToken = ConfigUtils.getInstance().getRequiredProperty("URLToken");
+            client_id = ConfigUtils.getInstance().getRequiredProperty("OAUth_client_id");
+            /// Need secret to be url encoded
+            client_secret = URLEncoder.encode(ConfigUtils.getInstance().getRequiredProperty("OAuth_client_secret"), StandardCharsets.UTF_8.toString());
+            scope = ConfigUtils.getInstance().getRequiredProperty("OAuth_scope");
+            URLKeys = ConfigUtils.getInstance().getRequiredProperty("URLKeys");
+            URLAuthorize = ConfigUtils.getInstance().getRequiredProperty("URLAuthorize");
+        }
+    }
+
+    private Map<String, String> ParseParameter(String queryParam) {
         if (queryParam == null) return null;
 
-        String[] param = queryParam.split("&");
-        Map<String, String> parameters = new HashMap<String, String>();
+        final String[] param = queryParam.split("&");
+        Map<String, String> parameters = new HashMap<>();
         for (String s : param) {
-            String[] values = s.split("=");
+            final String[] values = s.split("=");
             if (values.length > 1)
                 parameters.put(values[0], values[1]);
             else
@@ -97,7 +121,7 @@ public class OAuth2 extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession(true);
         /// Check if code and state is in the parameter
-        String query = request.getQueryString();
+        final String query = request.getQueryString();
         Map<String, String> param = ParseParameter(query);
         if (param != null && param.containsKey("code"))    // Might be a return, check state
         {
@@ -106,12 +130,8 @@ public class OAuth2 extends HttpServlet {
             String sesstate = (String) session.getAttribute("state");
             if (retstate.equals(sesstate)) {
                 //// Authentication seems good, ask for token to be used in querying info
-                final String URLToken = ConfigUtils.getInstance().getRequiredProperty("URLToken");
-
-                String grant_type = "authorization_code";
-                final String client_id = ConfigUtils.getInstance().getRequiredProperty("OAUth_client_id");
-                /// Need secret to be url encoded
-                final String client_secret = URLEncoder.encode(ConfigUtils.getInstance().getRequiredProperty("OAuth_client_secret"), StandardCharsets.UTF_8.toString());
+                lazyInit();
+                final String grant_type = "authorization_code";
                 final String redirect_uri = request.getRequestURL().toString();
                 final String code = param.get("code");
                 final String authdata = String.format("grant_type=%s&client_id=%s&client_secret=%s&redirect_uri=%s&code=%s",
@@ -147,12 +167,10 @@ public class OAuth2 extends HttpServlet {
                     /// Fetching data
                     StringWriter swriter = new StringWriter();
                     InputStream inputData = connection.getInputStream();
-                    IOUtils.copy(inputData, swriter);
+                    IOUtils.copy(inputData, swriter, Charset.defaultCharset());
                     inputData.close();
                     /// Can't be bothered to parse json
-                    String tokenregexp = "id_token\":\"([^\"]*)";
-                    Pattern ptoken = Pattern.compile(tokenregexp);
-                    Matcher pmatcher = ptoken.matcher(swriter.toString());
+                    Matcher pmatcher = PATTERN_TOKEN.matcher(swriter.toString());
                     String id_token = "";
                     if (pmatcher.find()) {
                         id_token = pmatcher.group(1);
@@ -169,7 +187,7 @@ public class OAuth2 extends HttpServlet {
                         JwtContext jwtContext = firstPassJwtConsumer.process(id_token);
                         String issuer = jwtContext.getJwtClaims().getIssuer();
                         //// Checking auth server key, use auto-key resolver
-                        HttpsJwks keyUrl = new HttpsJwks(ConfigUtils.getInstance().getRequiredProperty("URLKeys"));
+                        HttpsJwks keyUrl = new HttpsJwks(URLKeys);
                         JwksVerificationKeyResolver verificationKeyResolver = new JwksVerificationKeyResolver(keyUrl.getJsonWebKeys());
 
                         AlgorithmConstraints algorithmConstraints = new AlgorithmConstraints(ConstraintType.WHITELIST,
@@ -205,7 +223,7 @@ public class OAuth2 extends HttpServlet {
                         session.setAttribute("fromoauth", 1);
 
                         /// Redirect to front-end
-                        response.sendRedirect(ConfigUtils.getInstance().getRequiredProperty("ui_redirect_location"));
+                        response.sendRedirect(defaultRedirectLocation);
 
                         request.getReader().close();
 						logger.debug("data: {} -- {}, Code ({}) msg {}", name, username, retcode, msg);
@@ -226,15 +244,13 @@ public class OAuth2 extends HttpServlet {
         } else    /// Authentication start
         {
             /// Get here redirect to authentication website
-            final String URL = ConfigUtils.getInstance().getRequiredProperty("URLAuthorize");
+            lazyInit();
             final String response_type = "code";
-            final String client_id = ConfigUtils.getInstance().getRequiredProperty("OAUth_client_id");
             final String redirect_uri = request.getRequestURL().toString();    // This servlet URL
-            final String scope = ConfigUtils.getInstance().getRequiredProperty("OAuth_scope");
             final String state = UUID.randomUUID().toString().replaceAll("-", "");    // Generated value
             final String nonce = UUID.randomUUID().toString().replaceAll("-", "");    // Generated value for remote server
             final String urlQuery = String.format("%s?response_type=%s&client_id=%s&redirect_uri=%s&scope=%s&state=%s&nonce=%s",
-                    URL, response_type, client_id, redirect_uri, scope, state, nonce);
+                    URLAuthorize, response_type, client_id, redirect_uri, scope, state, nonce);
 
 			logger.debug("Redirect to: {}", urlQuery);
 

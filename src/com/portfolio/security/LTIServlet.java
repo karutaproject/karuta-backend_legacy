@@ -48,6 +48,8 @@ import net.oauth.SimpleOAuthValidator;
 import net.oauth.server.OAuthServlet;
 import net.oauth.signature.OAuthSignatureMethod;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.imsglobal.basiclti.BasicLTIConstants;
 import org.imsglobal.basiclti.BasicLTIUtil;
 import org.sakaiproject.basiclti.util.BlowFish;
@@ -74,6 +76,11 @@ public class LTIServlet extends HttpServlet {
     //boolean log = true;
     //boolean trace = true;
 
+    private boolean useEmail;
+    private boolean ltiCreateUser;
+    private String ltiUserName;
+    private String ltiRedirectLocation;
+
     @Override
     public void init() throws ServletException {
         sc = getServletConfig();
@@ -81,6 +88,10 @@ public class LTIServlet extends HttpServlet {
         try {
             ConfigUtils.init(sc.getServletContext());
 //	    loadRoleMapAttributes(application);
+            useEmail = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("lti_email_as_username"));
+            ltiCreateUser = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("lti_create_user"));
+            ltiUserName = ConfigUtils.getInstance().getProperty("lti_userid");
+            ltiRedirectLocation = ConfigUtils.getInstance().getProperty("lti_redirect_location");
         } catch (Exception e) {
             logger.error("Can't init servlet", e);
 			throw new ServletException(e);
@@ -97,7 +108,7 @@ public class LTIServlet extends HttpServlet {
      */
     private boolean isTrace(ServletContext application) {
         String traceStr = (String) application.getAttribute("LTIServlet.trace");
-        return "true".equalsIgnoreCase(traceStr);
+        return Boolean.parseBoolean(traceStr);
 
     }
 
@@ -105,17 +116,17 @@ public class LTIServlet extends HttpServlet {
     /**
      * Initialize the DB connection
      *
-     * @param application
-     * @return
      * @throws Exception
      */
-    private void initDB(ServletContext application, StringBuffer outTrace) throws Exception {
+    private void initDB() throws Exception {
 //		Connection connexion = null;			// hors du try pour fermer dans finally
 
         //============= init servers ===============================
 //	    this.sc = getServletConfig();
-        String dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
-        dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+        if (dataProvider == null) {
+            final String dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
+            dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+        }
     }
 
     /**
@@ -135,7 +146,7 @@ public class LTIServlet extends HttpServlet {
     }
 
     private Map<String, String> processLoginCookie(HttpServletRequest request) {
-        Map<String, String> processedCookies = new HashMap<String, String>();
+        Map<String, String> processedCookies = new HashMap<>();
         Cookie[] cookies = request.getCookies();
         if (cookies != null)
             for (Cookie c : cookies) {
@@ -203,7 +214,7 @@ public class LTIServlet extends HttpServlet {
 
         try {
 //	        LoadProperties(application);
-            initDB(application, outTrace);
+            initDB();
 
 //			wadbackend.WadUtilities.setApplicationAttributes(application, session);
 
@@ -224,14 +235,13 @@ public class LTIServlet extends HttpServlet {
             if (!"0".equals(userId)) // FIXME: Need more checking and/or change uid String to int
             {
                 session.setAttribute("uid", Integer.parseInt(userId));
-                final String useemail = ConfigUtils.getInstance().getProperty("lti_email_as_username");
+
                 String userName = "";
-                if ("y".equals(useemail)) {
+                if (useEmail) {
                     userName = (String) payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
                 } else {
-                    final String ltiuserName = ConfigUtils.getInstance().getProperty("lti_userid");
-                    if (ltiuserName != null && !ltiuserName.isEmpty())
-                        userName = (String) payload.get(ltiuserName);
+                    if (ltiUserName != null && !ltiUserName.isEmpty())
+                        userName = (String) payload.get(ltiUserName);
                     else
                         userName = (String) payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
                 }
@@ -257,10 +267,12 @@ public class LTIServlet extends HttpServlet {
 //			outTrace.append("\nInput Role: " + inputRole);
 //			String siteGroupId = getOrCreateGroup(connexion, contextLabel, "topUser", outTrace);
 
-            StringBuffer siteGroup = new StringBuffer();
+            /* Not used code
+            StringBuilder siteGroup = new StringBuilder();
             siteGroup.append(contextLabel);
             siteGroup.append("-");
             siteGroup.append(inputRole);
+            */
 //			String wadRole = roleMapper(application, inputRole, outTrace);
 //			String siteRoleGroupId = getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
 
@@ -310,13 +322,13 @@ public class LTIServlet extends HttpServlet {
 
             if ("".equals(link)) // Regular old behavior (which need to be changed some time donw the road)
                 //Send along to WAD now
-                response.sendRedirect(ConfigUtils.getInstance().getProperty("lti_redirect_location"));
+                response.sendRedirect(ltiRedirectLocation);
             else    // Otherwise, show different service
             {
                 response.getWriter().write(link);
             }
         } catch (Exception e) {
-            outTrace.append("\nSOMETHING BAD JUST HAPPENED!!!: " + e);
+            outTrace.append("\nSOMETHING BAD JUST HAPPENED!!!: ").append(e);
             response.sendError(500, e.getLocalizedMessage());
         } finally {
             destroyDB(connexion);
@@ -330,10 +342,11 @@ public class LTIServlet extends HttpServlet {
                     String time = sdf.format(cal.getTime());
 
                     PrintStream logstream = new PrintStream(logfile);
-                    logstream.println(time + ": POSTlti:" + outTrace.toString());
+                    logstream.println(time + ": POSTlti:" + outTrace);
                     logger.info(outTrace.toString());
                     logfile.close();
                 } catch (IOException err) {
+                    logger.error("Can't write into " + logFName, err );
                 }
 //				wadbackend.WadUtilities.appendlogfile(logFName, "POSTlti:" + outTrace.toString());
             }
@@ -352,7 +365,7 @@ public class LTIServlet extends HttpServlet {
         ServletContext application = getServletConfig().getServletContext();
         String oauth_consumer_key = (String) payload.get("oauth_consumer_key");
         final String configPrefix = "basiclti.provider." + oauth_consumer_key + ".";
-        final String oauth_secret = (String) ConfigUtils.getInstance().getRequiredProperty(configPrefix + "secret");
+        final String oauth_secret = ConfigUtils.getInstance().getRequiredProperty(configPrefix + "secret");
 
         /// Fetch and decode session
         String sha1Secret = DigestUtils.sha1Hex(oauth_secret);
@@ -384,7 +397,7 @@ public class LTIServlet extends HttpServlet {
     private String getOrCreateUser(Map<String, Object> payload, Map<String, String> cookies, Connection connexion, StringBuffer outTrace) throws Exception {
         String userId = "0";
         StringBuffer userXml = buildUserXml(payload);
-        outTrace.append("\nUserXML: " + userXml);
+        outTrace.append("\nUserXML: ").append(userXml);
 
         //// FIXME: Complete this with other info from LTI
         //Does the user already exist?
@@ -393,13 +406,11 @@ public class LTIServlet extends HttpServlet {
 //		if( username == null )	/// If all fail, at least we get the context_id
 //			username = (String)payload.get(BasicLTIConstants.CONTEXT_ID);
 
-        final String useemail = ConfigUtils.getInstance().getProperty("lti_email_as_username");
-        if ("y".equals(useemail)) {
+        if (useEmail) {
             username = (String) payload.get(BasicLTIConstants.LIS_PERSON_CONTACT_EMAIL_PRIMARY);
         } else {
-            final String ltiuserName = ConfigUtils.getInstance().getProperty("lti_userid");
-            if (ltiuserName != null && !ltiuserName.isEmpty()) {
-                username = (String) payload.get(ltiuserName);
+            if (!StringUtils.isBlank(ltiUserName)) {
+                username = (String) payload.get(ltiUserName);
             } else {
                 username = (String) payload.get(BasicLTIConstants.LIS_PERSON_SOURCEDID);
             }
@@ -408,19 +419,19 @@ public class LTIServlet extends HttpServlet {
         userId = dataProvider.getUserId(connexion, username, email);
         if ("0".equals(userId)) {
             //create it
-            final String lticreate = ConfigUtils.getInstance().getProperty("lti_create_user");
-            if (lticreate != null && "y".equals(lticreate.toLowerCase())) {
+
+            if (ltiCreateUser) {
                 userId = dataProvider.createUser(connexion, username, email);
                 int uid = Integer.parseInt(userId);
                 String famName = (String) payload.get(BasicLTIConstants.LIS_PERSON_NAME_FAMILY);
                 String gibName = (String) payload.get(BasicLTIConstants.LIS_PERSON_NAME_GIVEN);
                 dataProvider.putInfUserInternal(connexion, uid, uid, gibName, famName, email);
-                outTrace.append("\nCreate User (self) results: " + userId);
+                outTrace.append("\nCreate User (self) results: ").append(userId);
             } else {
-                outTrace.append("\nUser not created: " + username);
+                outTrace.append("\nUser not created: ").append(username);
             }
         } else {
-            outTrace.append("\nUser found: " + userId);
+            outTrace.append("\nUser found: ").append(userId);
         }
         return userId;
     }
@@ -446,9 +457,9 @@ public class LTIServlet extends HttpServlet {
 //			StringBuffer groupXml = buildGroupXml(groupTitle, role);
             group = dataProvider.createGroup(connexion, role);
 //			groupId = wadbackend.WadUtilities.getAttribute(group,  "id");
-            outTrace.append("\nCreate Group (self) results: " + group);
+            outTrace.append("\nCreate Group (self) results: ").append(group);
         } else {
-            outTrace.append("\nGroup found: " + group);
+            outTrace.append("\nGroup found: ").append(group);
         }
         return group;
     }
@@ -469,14 +480,9 @@ public class LTIServlet extends HttpServlet {
         String active = "1";
 
         StringBuffer xml = new StringBuffer();
-        xml.append(
-                "<user id='-1'>" +
-                        "<username>" + userName + "</username>" +
-                        "<firstname>" + fname + "</firstname>" +
-                        "<lastname>" + lname + "</lastname>" +
-                        "<email>" + email + "</email>" +
-                        "<active>" + active + "</active>" +
-                        "</user>");
+        xml.append("<user id='-1'>").append("<username>").append(userName).append("</username>").append("<firstname>")
+                .append(fname).append("</firstname>").append("<lastname>").append(lname).append("</lastname>").append("<email>")
+                .append(email).append("</email>").append("<active>").append(active).append("</active>").append("</user>");
 
         return xml;
     }
@@ -492,12 +498,8 @@ public class LTIServlet extends HttpServlet {
     private StringBuffer buildGroupXml(String title, String role) throws Exception {
         StringBuffer xml = new StringBuffer();
 
-        xml.append(
-                "<group id='-1'>" +
-                        "<label>" + title + "</label>" +
-                        "<role>" + role + "</role>" +
-                        "<active>1</active>" +
-                        "</group>");
+        xml.append("<group id='-1'>").append("<label>").append(title).append("</label>").append("<role>")
+                .append(role).append("</role>").append("<active>1</active>").append("</group>");
 
         return xml;
     }
@@ -536,7 +538,7 @@ public class LTIServlet extends HttpServlet {
         if (BasicLTIUtil.isBlank(user_id)) {
             throw new LTIException("launch.missing", "user_id", null);
         }
-        outTrace.append("user_id=" + user_id);
+        outTrace.append("user_id=").append(user_id);
 
         // Lookup the secret
         //TODO: Maybe put this in a db table for scalability?
@@ -556,10 +558,9 @@ public class LTIServlet extends HttpServlet {
         try {
             base_string = OAuthSignatureMethod.getBaseString(oam);
         } catch (Exception e) {
-            outTrace.append("\nERROR: " + e.getLocalizedMessage() + e);
-            base_string = null;
+            outTrace.append("\nERROR: ").append(e.getLocalizedMessage()).append(e);
         }
-        outTrace.append("\nBaseString: " + base_string);
+        outTrace.append("\nBaseString: ").append(base_string);
 
         try {
             oav.validateMessage(oam, acc);
@@ -573,13 +574,8 @@ public class LTIServlet extends HttpServlet {
         } */ catch (OAuthException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-            //e.g
             throw new LTIException("launch.no.validate", e.getLocalizedMessage(), e.getCause());
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            throw new LTIException("launch.no.validate", context_id, e);
-        } catch (URISyntaxException e) {
+        } catch (IOException | URISyntaxException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
             throw new LTIException("launch.no.validate", context_id, e);

@@ -23,11 +23,11 @@ import org.w3c.dom.Document;
 
 public class KEvent
 {
-	public static enum EventType {LOGIN, LOGOUT, PORTFOLIO, NODE, FILE};
-	public static enum RequestType {GET, POST, PUT, DELETE};
-	public static enum InputType {BINARY, TEXT, PARAMETER};
-	public static enum OutputType {BINARY, XML, JSON};
-	public static enum DataType {COMMENT}
+	public enum EventType {LOGIN, LOGOUT, PORTFOLIO, NODE, FILE};
+	public enum RequestType {GET, POST, PUT, DELETE};
+	public enum InputType {BINARY, TEXT, PARAMETER};
+	public enum OutputType {BINARY, XML, JSON};
+	public enum DataType {COMMENT}
 
 	public EventType eventType;
 	public RequestType requestType;

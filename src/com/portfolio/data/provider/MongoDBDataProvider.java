@@ -276,14 +276,6 @@ public class MongoDBDataProvider implements DataProvider {
         return null;
     }
 
-
-    @Override
-    public String getUserUidByTokenAndLogin(Connection c, String login, String token)
-            throws Exception {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
     @Override
     public boolean postNodeRight(int userId, String nodeUuid) throws Exception {
         // TODO Auto-generated method stub

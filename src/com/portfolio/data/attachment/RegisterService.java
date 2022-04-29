@@ -74,7 +74,7 @@ public class RegisterService extends HttpServlet {
         try {
             ConfigUtils.init(getServletContext());
             dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
-            dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+            dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
         } catch (Exception e) {
 			logger.error("Can't init servlet", e);
 			throw new ServletException(e);
@@ -145,7 +145,7 @@ public class RegisterService extends HttpServlet {
                         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
                         StringWriter writer = new StringWriter();
                         transformer.transform(new DOMSource(doc), new StreamResult(writer));
-                        converted = writer.getBuffer().toString().replaceAll("\n|\r", "");
+                        converted = writer.getBuffer().toString().replaceAll("((\n)|(\r))", "");
 
                         break;
                     }

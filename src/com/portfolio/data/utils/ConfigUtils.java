@@ -95,11 +95,16 @@ public class ConfigUtils {
                     throw e;
                 }
             } else {
+                logger.error("The environment variable '" + KARUTA_ENV_HOME + "' '" + configEnvDir
+                        + "' or the jvm property '" + KARUTA_PROP_HOME + "' '" + configPropDir
+                        + "' doesn't exist or isn't writable. Please provide a writable directory path !");
                 throw new IllegalArgumentException("The environment variable '" + KARUTA_ENV_HOME + "' '" + configEnvDir
                         + "' or the jvm property '" + KARUTA_PROP_HOME + "' '" + configPropDir
                         + "' doesn't exist or isn't writable. Please provide a writable directory path !");
             }
         } else {
+            logger.error("The environment variable '" + KARUTA_ENV_HOME
+                    + "' or the jvm property '" + KARUTA_PROP_HOME + "' wasn't set.");
             throw new IllegalArgumentException("The environment variable '" + KARUTA_ENV_HOME
                     + "' or the jvm property '" + KARUTA_PROP_HOME + "' wasn't set.");
         }
@@ -108,6 +113,7 @@ public class ConfigUtils {
     public String getRequiredProperty(final String key) throws IllegalStateException {
         final String value = properties.getProperty(key);
         if (value == null) {
+            logger.error("Required property key '" + key + "' not found");
             throw new IllegalStateException("Required key '" + key + "' not found");
         }
         return value;
