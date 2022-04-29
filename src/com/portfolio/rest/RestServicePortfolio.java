@@ -4052,9 +4052,6 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
     public Response postCredentialFromXml(String xmlCredential, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
                                           @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
-        if (!activelogin) {
-            return Response.status(Status.NOT_FOUND).build();
-        }
 
         HttpSession session = httpServletRequest.getSession(true);
         KEvent event = new KEvent();
@@ -4077,6 +4074,10 @@ public class RestServicePortfolio {
                 if (templogin.length > 1)
                     substit = templogin[1];
                 login = templogin[0];
+            }
+            // security to avoid to process login expect on public access as this login is required
+            if (!activelogin && !login.equalsIgnoreCase("public")) {
+                return Response.status(Status.NOT_FOUND).build();
             }
 
             /// Test LDAP
@@ -4124,6 +4125,11 @@ public class RestServicePortfolio {
                 retVal = resultCredential[0];
             }
             eventbus.processEvent(event);
+
+            // frontend need to know a 404 when internal login is not available - here because public login
+            if (!activelogin ) {
+                return Response.status(Status.NOT_FOUND).entity(retVal).type(event.mediaType).build();
+            }
 
             return Response.status(event.status).entity(retVal).type(event.mediaType).build();
         } catch (RestWebApplicationException ex) {
