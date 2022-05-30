@@ -907,13 +907,24 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
+        		c = SqlUtils.getConnection();
+            
+            // Try with world public access
+            String userid = dataProvider.getUserId(c, "public", null);
+            int uid = Integer.parseInt(userid);
+            String portfo = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, uid, -1, "true", -1).toString();
+            
+            if( !"faux".equals(portfo) )
+            {
+            	Response.status(Status.NOT_FOUND).entity("").build();
+            }
+            
             if (ui.userId == 0) {
                 return Response.status(Status.FORBIDDEN).build();
             }
 
             if (resources == null)
                 resources = "false";
-            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, ui.userId, groupId, resources, ui.subId).toString();
             if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 logger.error("Code {} not found or user without rights", code);
