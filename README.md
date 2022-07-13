@@ -16,22 +16,24 @@ MySQL 5.5 is recommended.
 
 #### Back-end
 1. Download karuta-backend zip file from karuta-backend repository
-1. Unpack and import as existing project in Eclipse
-1. Edit and import the sql file in the "sql" directory with the desired database name
-1. Edit "WebContent/META-INF/context.xml" with the appropriate values
-1. Add Project Facets : Dynamic Web Module and Java to the project
-1. Run on server
+2. Unpack and import as existing project in Eclipse
+3. Edit and import the sql file in the "sql" directory with the desired database name
+4. Edit "WebContent/META-INF/context.xml" with the appropriate values
+5. Add Project Facets : Dynamic Web Module and Java to the project
+6. Run on server
+7. Optional: set the jvm param `karuta.home` or the environment property `KARUTA_HOME` to customize the path of the config files
+8. Optional: set the jvm param `karuta.report-folder` or the environment property `KARUTA_REPORT_FOLDER` to customize the path of the reporting log files. If not set it will go on ${catalina.home}/logs/${servletName}_logs/
 
 #### Simple file server
 1. Download karuta-fileserver zip file from karuta-fileserver repository
-1. Unpack and import as existing project in Eclipse
-1. Create a *RestFileServer_config* into the webapps working directory of Eclipse
-1. Copy WebContent/persistence_config.properties to the *RestFileServer_config* directory
-2. Run on server
+2. Unpack and import as existing project in Eclipse
+3. Create a *RestFileServer_config* into the webapps working directory of Eclipse
+4. Copy WebContent/persistence_config.properties to the *RestFileServer_config* directory
+5. Run on server
 
 #### Front-end
 1. Download karuta-frontend zip file from karuta-frontend repository
-1. Unpack and import as existing project in Eclipse
-1. Run on server
-1. Open localhost:8080/karuta in a browser
-1. Connect as *root* with password *mati* to start
+2. Unpack and import as existing project in Eclipse
+3. Run on server
+4. Open localhost:8080/karuta in a browser
+5. Connect as *root* with password *mati* to start

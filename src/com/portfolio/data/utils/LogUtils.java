@@ -33,28 +33,41 @@ import org.slf4j.LoggerFactory;
 
 public class LogUtils {
     private static final Logger logger = LoggerFactory.getLogger(LogUtils.class);
+    private static final String KARUTA_ENV_REPORT_FOLDER = "KARUTA_REPORT_FOLDER";
+    private static final String KARUTA_PROP_REPORT_FOLDER = "karuta.report-folder";
     static boolean hasLoaded = false;
     static String filePath = "";
 
     /// The folder we use is {CATALINA.BASE}/logs/{SERVLET-NAME}_logs
-    public static boolean initDirectory(ServletContext context) throws Exception {
-        if (hasLoaded) return true;
+    public static void initDirectory(ServletContext context) throws ServletException {
+        if (hasLoaded) return;
+        /// Preparing logfile for direct access
+        final String servName = context.getContextPath();
+        //Default value
+        String reportFolder = System.getProperty("catalina.base") + "/logs/" + servName + "_logs";
+
+        final String reportEnvDir = System.getenv(KARUTA_ENV_REPORT_FOLDER);
+        final String reportPropDir = System.getProperty(KARUTA_PROP_REPORT_FOLDER);
+
+        final String reportDir = (reportPropDir != null && !reportPropDir.trim().isEmpty()) ? reportPropDir : reportEnvDir;
+
+        if (reportDir != null && !reportDir.trim().isEmpty())
+            reportFolder = reportDir.trim();
+
         try {
-            /// Preparing logfile for direct access
-            final String servName = context.getContextPath();
             /// Check if folder exists
-            File logFolder = new File(System.getProperty("catalina.base") + "/logs/" + servName + "_logs");
+            File logFolder = new File(reportFolder);
             if (logFolder.mkdirs()) {
                 logger.info("Log folder {} was created", logFolder.getCanonicalPath());
             }
 
             filePath = logFolder.getCanonicalPath();
             hasLoaded = true;
+
         } catch (Exception e) {
-            logger.error("Can't create folder: {}", filePath, e);
+            logger.error("Can't create folder: {} from {}:'{}' and {}:'{}'", filePath, KARUTA_ENV_REPORT_FOLDER, reportEnvDir, KARUTA_PROP_REPORT_FOLDER, reportPropDir,  e);
             throw new ServletException(e);
         }
-        return hasLoaded;
     }
 
     public static BufferedWriter getLog(String filename) throws IOException {
