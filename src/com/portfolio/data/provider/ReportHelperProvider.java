@@ -15,107 +15,30 @@
 
 package com.portfolio.data.provider;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.MessageFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map.Entry;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.Set;
-import java.util.StringTokenizer;
-import java.util.UUID;
-import java.util.zip.Deflater;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 
-import javax.activation.MimeType;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
-import javax.ws.rs.core.Response.Status;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.TransformerFactoryConfigurationError;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathFactory;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileItemIterator;
-import org.apache.commons.fileupload.FileItemStream;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpMethod;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.http.HttpResponse;
-import org.apache.http.impl.client.HttpClients;
-import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.DOMException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.ls.DOMImplementationLS;
-import org.w3c.dom.ls.LSSerializer;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 //import com.mysql.jdbc.Statement;
 import com.portfolio.data.utils.ConfigUtils;
-import com.portfolio.data.utils.DomUtils;
-import com.portfolio.data.utils.FileUtils;
 import com.portfolio.data.utils.LogUtils;
-import com.portfolio.data.utils.PostForm;
-import com.portfolio.data.utils.SqlUtils;
-import com.portfolio.rest.RestWebApplicationException;
 import com.portfolio.security.Credential;
-import com.portfolio.security.NodeRight;
 
 public class ReportHelperProvider {
 
@@ -153,13 +76,13 @@ public class ReportHelperProvider {
 		
 		String col = String.join(" AND ", cols);
 		sql = String.format("SELECT * FROM vector_table WHERE %s;", col);
-		System.out.println("SQL: "+sql);
+		logger.debug("SQL: "+sql);
 		st = c.prepareStatement(sql);
 		
 		for( int i=0; i<vals.size(); i++ )
 		{
 			st.setString(i+1, vals.get(i));
-			System.out.println("PARAMS "+(i+1)+" VAL: "+vals.get(i));
+			logger.debug("PARAMS "+(i+1)+" VAL: "+vals.get(i));
 		}
 		ResultSet rs = st.executeQuery();
 		StringBuilder output = new StringBuilder();
@@ -189,7 +112,7 @@ public class ReportHelperProvider {
 		return output.toString();
 	}
 
-	public int writeVector( Connection c, int userId, HashMap<String, String> map ) throws SQLException
+	public int writeVector( Connection c, int userId, HashMap<String, String> map, HashMap<String, HashSet<String>> groups ) throws SQLException
 	{
 		PreparedStatement st;
 		String sql;
@@ -214,17 +137,75 @@ public class ReportHelperProvider {
 		String colsjoin = String.join(",", cols);
 		String holderjoin = String.join(",", holder);
 		sql = String.format("INSERT INTO vector_table(%s) VALUES(%s);", colsjoin, holderjoin);
-		st = c.prepareStatement(sql);
+		st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 		
-		System.out.println("SQL: "+sql);
+		logger.debug("SQL: "+sql);
 		
 		for( int i=0; i<vals.size(); i++ )
 		{
 			st.setString(i+1, vals.get(i));
-			System.out.println("PARAMS "+(i+1)+" VAL: "+vals.get(i));
+			logger.debug("PARAMS "+(i+1)+" VAL: "+vals.get(i));
 		}
 		st.executeUpdate();
+		
+		/// Get lineid
+		int lineid = 0;
+		int userid = Integer.parseInt( map.get("userid") );
+		ResultSet rs = st.getGeneratedKeys();
+		if( rs.next() ){
+			lineid = rs.getInt(1);
+		}
 		st.close();
+
+		// Rights management
+		for( Entry<String, HashSet<String>> gr : groups.entrySet() )
+		{
+			// Create userid/lineid -> groupid entry
+			String sqlgroup = null;
+			if( "all".equals(gr.getKey()) )	// 0 will apply to all users
+			{
+				sqlgroup = "INSERT INTO vector_usergroup(userid, lineid) VALUES(0, ?);";
+			}
+			else
+			{
+				sqlgroup = "INSERT INTO vector_usergroup(userid, lineid) " +
+						"SELECT userid, ? FROM credential WHERE login=?;";
+			}
+			st = c.prepareStatement(sqlgroup, Statement.RETURN_GENERATED_KEYS);
+			
+			if( "all".equals(gr.getKey()) )
+			{
+				st.setInt(1, lineid);
+			}
+			else
+			{
+				st.setInt(1, lineid);
+				st.setString(2, gr.getKey());
+			}
+			st.executeUpdate();
+			rs = st.getGeneratedKeys();
+			int groupid = 0;
+			if( rs.next() )
+				groupid = rs.getInt(1);
+			st.close();
+			
+			// Write rights
+			if( groupid != 0 )
+			{
+				HashSet<String> r = gr.getValue();
+				String sqlrights = "INSERT INTO vector_rights(groupid, RD, WR, DL) VALUES(?, ?, ?, ?);";
+				st = c.prepareStatement(sqlrights);
+				st.setInt(1, groupid);
+				if( r.contains("r") ) st.setBoolean(2, true);
+				else st.setBoolean(2, false);
+				if( r.contains("w") ) st.setBoolean(3, true);
+				else st.setBoolean(3, false);
+				if( r.contains("d") ) st.setBoolean(4, true);
+				else st.setBoolean(4, false);
+				st.executeUpdate();
+				st.close();
+			}
+		}
 		
 		return 0;
 	}
@@ -234,31 +215,58 @@ public class ReportHelperProvider {
 		ArrayList<String> cols = new ArrayList<String>();
 		ArrayList<String> vals = new ArrayList<String>();
 		Iterator<Entry<String, String>> iterval = map.entrySet().iterator();
+		int userid = 0;
 		while( iterval.hasNext() )
 		{
 			Entry<String, String> entry = iterval.next();
 			if( "date".equals(entry.getKey()) )
-				cols.add(entry.getKey()+"<?");
+				cols.add("v."+entry.getKey()+"<?");
+			else if( "userid".equals(entry.getKey()) )
+				userid = Integer.parseInt( entry.getValue() );
 			else
-				cols.add(entry.getKey()+"=?");
+				cols.add("v."+entry.getKey()+"=?");
 			vals.add(entry.getValue());
 		}
-		
+
 		String col = String.join(" AND ", cols);
-		String sql = String.format("DELETE FROM vector_table WHERE %s;", col);
-		System.out.println("SQL: "+sql);
-		PreparedStatement st = c.prepareStatement(sql);
-		
+
+		/// Check entries that have a right to delete
+		String sqlCheck = String.format("SELECT v.lineid " +
+				"FROM vector_table v JOIN vector_usergroup u ON v.lineid=u.lineid " +
+				"JOIN vector_rights r ON u.groupid=r.groupid " +
+				"WHERE %s AND u.userid=? AND r.DL=1;", col);
+		PreparedStatement stCheck = c.prepareStatement(sqlCheck);
 		for( int i=0; i<vals.size(); i++ )
 		{
-			st.setString(i+1, vals.get(i));
-			System.out.println("PARAMS "+(i+1)+" VAL: "+vals.get(i));
+			stCheck.setString(i+1, vals.get(i));
+			logger.debug("PARAMS "+(i+1)+" VAL: "+vals.get(i));
 		}
-		int count = st.executeUpdate();
+		stCheck.setInt(vals.size(), userid);
+		ResultSet rsCheck = stCheck.executeQuery();
+		HashSet<Integer> entries = new HashSet<Integer>();
+		while( rsCheck.next() )
+		{
+			entries.add(rsCheck.getInt(1));
+		}
+		stCheck.close();
 		
-		st.close();
-
-		return count;
+		/// Delete related lines if there is a right on it
+		if( !entries.isEmpty() )
+		{
+			String sql = "DELETE v, u, r " +
+					"FROM vector_table v JOIN vector_usergroup u ON v.lineid=u.lineid " +
+					"JOIN vector_rights r ON u.groupid=r.groupid " +
+					"WHERE v.lineid=?;";
+			PreparedStatement st = c.prepareStatement(sql);
+			for( Integer entry : entries )
+			{
+				st.setInt(1, entry);
+				st.executeUpdate();
+			}
+			st.close();
+		}
+		
+		return entries.size();
 	}
 	
 	/// Because can't make UNIQUE key on all column. Size is too big
@@ -267,7 +275,7 @@ public class ReportHelperProvider {
 		String col = String.join("=? AND ", cols);
 		col += "=?";
 		String sql = String.format("SELECT COUNT(*) FROM vector_table WHERE %s;", col);
-		System.out.println("SQL: "+sql);
+		logger.debug("SQL: "+sql);
 		PreparedStatement st = c.prepareStatement(sql);
 		
 		for( int i=0; i<vals.size(); i++ )
@@ -283,7 +291,7 @@ public class ReportHelperProvider {
 		rs.close();
 		st.close();
 		
-		System.out.println(String.format("VECTOR CHECK FOUND (%d) VALUES", count));
+		logger.debug(String.format("VECTOR CHECK FOUND (%d) VALUES", count));
 		
 		return count;
 	}
