@@ -17,13 +17,14 @@ package com.eportfolium.karuta.data.attachment;
 
 import java.io.BufferedReader;
 import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletConfig;
@@ -32,15 +33,19 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import com.eportfolium.karuta.data.provider.ReportHelperProvider;
 import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.LogUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
 import com.eportfolium.karuta.security.Credential;
+import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -106,8 +111,10 @@ public class ReportHelper extends HttpServlet {
             String vectorValue = dataProvider.getVector(c, uid, map);
 
             // Send result
+            response.setContentType(ContentType.APPLICATION_XML.getMimeType());
+            response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
             OutputStream output = response.getOutputStream();
-            output.write(vectorValue.getBytes());
+            output.write(vectorValue.getBytes(StandardCharsets.UTF_8));
             output.close();
 
         } catch (Exception e) {
@@ -146,24 +153,9 @@ public class ReportHelper extends HttpServlet {
         Connection c = null;
         BufferedReader reader;
         try {
-            StringBuilder sb = new StringBuilder();
-            reader = request.getReader();
-            char[] buffer = new char[128];
-            int read;
-            while ((read = reader.read(buffer)) != -1) {
-                sb.append(buffer, 0, read);
-            }
-            reader.close();
-            String data = sb.toString();
-            logger.debug("RECEIVED: {}", data);
-            if ("".equals(data)) {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                PrintWriter responsewriter = response.getWriter();
-                responsewriter.println("Empty content");
-                responsewriter.close();
-                return;
-            }
-            Document doc = DomUtils.xmlString2Document(data, new StringBuffer());
+            DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+            DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+            Document doc = documentBuilder.parse(request.getInputStream());
             NodeList vectorNode = doc.getElementsByTagName("vector");
             HashMap<String, String> map = new HashMap<>();
             map.put("userid", Integer.toString(uid));
@@ -179,9 +171,34 @@ public class ReportHelper extends HttpServlet {
                 }
             }
 
+            // Inverse rights to create groups
+            NodeList nList = doc.getElementsByTagName("rights");
+            HashMap<String, HashSet<String>> groups = new HashMap<String, HashSet<String>>();
+            String[] attribName = {"w","r","d"};
+            Node nRight = nList.item(0);
+            if (nRight != null) {
+                NamedNodeMap attribs = nRight.getAttributes();
+                for (String att : attribName) {
+                    Node value = attribs.getNamedItem(att);
+                    if (value == null) continue;
+                    String names = value.getTextContent();
+                    String[] split = names.split(",");
+                    for (String s : split) {
+                        s = s.trim();
+                        HashSet<String> right = groups.get(s);
+                        if (right == null) {
+                            right = new HashSet<String>();
+                            groups.put(s, right);
+                        }
+                        right.add(att);
+                    }
+                }
+            }
+
             /// Send query
             c = SqlUtils.getConnection();
-            int retValue = dataProvider.writeVector(c, uid, map);
+            c.setAutoCommit(false);
+            int retValue = dataProvider.writeVector(c, uid, map, groups);
 
             // Send result
             OutputStream output = response.getOutputStream();
@@ -195,10 +212,19 @@ public class ReportHelper extends HttpServlet {
 
         } catch (Exception e) {
             logger.error("Exception", e);
+            try {
+                if (c != null)
+                    c.rollback();
+            } catch( SQLException e1 ) {
+                logger.error("SQLException",e1);
+            }
             response.setStatus(500);
         } finally {
             try {
-                if (c != null) c.close();
+                if (c != null) {
+                    c.commit();
+                    c.close();
+                }
             } catch (SQLException e) {
                 logger.error("SQLException", e);
             }
@@ -243,8 +269,7 @@ public class ReportHelper extends HttpServlet {
 
             /// Query
             c = SqlUtils.getConnection();
-            if (!cred.isAdmin(c, uid))
-                map.put("userid", Integer.toString(uid));
+            map.put("userid", Integer.toString(uid));
 
             int value = dataProvider.deleteVector(c, map);
 
