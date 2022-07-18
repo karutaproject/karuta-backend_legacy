@@ -10,6 +10,7 @@
     <JACKSON_VER>1.9.13</JACKSON_VER>
     <JERSEY_VER>2.34</JERSEY_VER>
     <CAS_VER>3.6.4</CAS_VER>
+    <xmlgraphics.version>2.7</xmlgraphics.version>
   </properties>
   <dependencies>
     <dependency>
@@ -94,11 +95,6 @@
       <version>2.1.0</version>
       <scope>system</scope>
       <systemPath>${basedir}/WebContent/WEB-INF/lib/basiclti-util-11-SNAPSHOT.jar</systemPath>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.xmlgraphics</groupId>
-      <artifactId>batik-util</artifactId>
-      <version>1.14</version>
     </dependency>
     <dependency>
       <groupId>org.jasig.cas.client</groupId>
@@ -193,7 +189,7 @@
     <dependency>
       <groupId>org.apache.xmlgraphics</groupId>
       <artifactId>fop</artifactId>
-      <version>1.1</version>
+      <version>${xmlgraphics.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.avalon.framework</groupId>
@@ -405,7 +401,7 @@
     <dependency>
       <groupId>org.apache.xmlgraphics</groupId>
       <artifactId>xmlgraphics-commons</artifactId>
-      <version>2.6</version>
+      <version>${xmlgraphics.version}</version>
     </dependency>
 		<dependency>
 			<groupId>org.bitbucket.b_c</groupId>
