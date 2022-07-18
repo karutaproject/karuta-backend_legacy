@@ -12766,7 +12766,7 @@ public class MysqlDataProvider implements DataProvider {
         DocumentBuilder documentBuilder;
         Document document = null;
         try {
-            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
             documentBuilder = documentBuilderFactory.newDocumentBuilder();
             InputSource is = new InputSource(new StringReader(data));
             document = documentBuilder.parse(is);
@@ -12827,8 +12827,9 @@ public class MysqlDataProvider implements DataProvider {
         /// Parse data
         DocumentBuilder documentBuilder;
         Document document = null;
+        DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+
         try {
-            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
             documentBuilder = documentBuilderFactory.newDocumentBuilder();
             InputSource is = new InputSource(new StringReader(data));
             document = documentBuilder.parse(is);

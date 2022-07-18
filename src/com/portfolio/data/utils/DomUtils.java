@@ -34,11 +34,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMResult;
@@ -86,10 +88,10 @@ public class DomUtils
 {
 	final static Logger logger = LoggerFactory.getLogger(DomUtils.class);
 
-//  =======================================
+	//  =======================================
 	private static String dom2string(Document dom) throws Exception {  // à supprimer
 //  =======================================
-		Transformer transformer = TransformerFactory.newInstance().newTransformer();
+		Transformer transformer = newSecureTransformerFactory().newTransformer();
 		StreamResult result = new StreamResult(new StringWriter());
 		DOMSource source = new DOMSource(dom);
 		transformer.transform(source, result);
@@ -100,7 +102,7 @@ public class DomUtils
 //  ============================= Manage DOM =============================================
 //  ==================================================================================
 
-//  =======================================
+	//  =======================================
 	private  static Document newDOM () throws Exception {
 //  =======================================
 		DocumentBuilderFactory domFactory = DocumentBuilderFactory.newInstance();
@@ -108,7 +110,7 @@ public class DomUtils
 		return domBuilder.newDocument();
 	}
 
-//  =======================================
+	//  =======================================
 	private static Document buildDOM (String xmlString) throws Exception {
 //  =======================================
 		DocumentBuilderFactory domBuildFact = DocumentBuilderFactory.newInstance();
@@ -116,7 +118,7 @@ public class DomUtils
 		return domBuild.parse(new InputSource(new StringReader(xmlString)));
 	}
 
-//  ===============================
+	//  ===============================
 	private  static Document loadDOM (String XMLfileName) throws Exception {
 //  ===============================
 		DocumentBuilderFactory domBuildFact = DocumentBuilderFactory.newInstance();
@@ -124,39 +126,39 @@ public class DomUtils
 		return domBuild.parse(XMLfileName);
 	}
 
-//  ===============================
+	//  ===============================
 	private static void saveDOM (Document doc, String xmlFileName) throws Exception {
 //  ===============================
-			Transformer trans = TransformerFactory.newInstance().newTransformer();
-			Source srce = new DOMSource(doc);
-			Result dest = new StreamResult(new File(xmlFileName));
-			trans.transform(srce,dest);
+		Transformer transformer = newSecureTransformerFactory().newTransformer();
+		Source srce = new DOMSource(doc);
+		Result dest = new StreamResult(new File(xmlFileName));
+		transformer.transform(srce,dest);
 	}
 
-//  =======================================
+	//  =======================================
 	private static String printDOM(Document doc) throws Exception {
 //  =======================================
-		Transformer transformer = TransformerFactory.newInstance().newTransformer();
+		Transformer transformer = newSecureTransformerFactory().newTransformer();
 		StreamResult result = new StreamResult(new StringWriter());
 		transformer.transform(new DOMSource(doc), result);
 		return result.getWriter().toString();
 	}
 
-//  ---------------------------------------------------
+	//  ---------------------------------------------------
 	public  static void createAndSetAttribute(Node node, String tagAttributeName, String tagAttributeValue) throws Exception {
 //  ---------------------------------------------------
 		((Document)node).createAttribute(tagAttributeName);
 		((Document)node).getDocumentElement().setAttribute(tagAttributeName, tagAttributeValue) ;
 
 	}
-//  ---------------------------------------------------
+	//  ---------------------------------------------------
 	public  static void SetAttribute(Node node, String tagAttributeName, String tagAttributeValue) throws Exception {
 //  ---------------------------------------------------
 		((Document)node).getDocumentElement().setAttribute(tagAttributeName, tagAttributeValue) ;
 
 	}
 
-//  ---------------------------------------------------
+	//  ---------------------------------------------------
 	public static  String getRootuuid(Node node) throws Exception {
 //  ---------------------------------------------------
 		String result =null;
@@ -174,13 +176,12 @@ public class DomUtils
 
 
 
-//  =======================================
+	//  =======================================
 	public static void processXSLT (Source xml, String xsltName, Result result, StringBuffer outTrace, boolean trace) throws Exception {
 //  =======================================
 		outTrace.append("<br>processXSLT... ").append(xsltName);
-		TransformerFactory tFactory = TransformerFactory.newInstance();
 		StreamSource stylesource = new StreamSource(xsltName);
-		Transformer transformer = tFactory.newTransformer(stylesource);
+		Transformer transformer = newSecureTransformerFactory().newTransformer(stylesource);
 
 		try {
 			transformer.transform(xml, result);
@@ -190,48 +191,60 @@ public class DomUtils
 		if (trace) outTrace.append(" ... ok");
 	}
 
+	//  =======================================
+	public  static void processXSLT (Document xml, String xsltName, Document result, StringBuffer outTrace, boolean trace) throws Exception {
 //  =======================================
-    public  static void processXSLT (Document xml, String xsltName, Document result, StringBuffer outTrace, boolean trace) throws Exception {
-//  =======================================
-          outTrace.append("a.");
-          processXSLT(new DOMSource(xml), xsltName, new DOMResult(result), outTrace, trace);
-          outTrace.append("b.");
-}
-
-//  =======================================
-      public  static void processXSLT (Document xml, String xsltName, Writer result, StringBuffer outTrace, boolean trace) throws Exception {
-//  =======================================
-        outTrace.append("c.");
-        processXSLT(new DOMSource(xml), xsltName, new StreamResult(result), outTrace, trace);
-        outTrace.append("d.");
-  }
-
-
-
-//  =======================================
-public static String processXSLTfile2String (Document xml, String xslFile, String param[], String paramVal[], StringBuffer outTrace) throws Exception {
-//  =======================================
-	logger.debug("<br>-->processXSLTfile2String-"+xslFile);
-	outTrace.append("<br>-->processXSLTfile2String-").append(xslFile);
-	Transformer transformer = TransformerFactory.newInstance().newTransformer(new StreamSource(new File(xslFile)));
-	outTrace.append(".1");
-	StreamResult result = new StreamResult(new StringWriter());
-	outTrace.append(".2");
-	DOMSource source = new DOMSource(xml);
-	outTrace.append(".3");
-	for (int i = 0; i < param.length; i++) {
-		outTrace.append("<br>setParemater - ").append(param[i]).append(":").append(paramVal[i]).append("...");
-		logger.debug("<br>setParemater - "+param[i]+":"+paramVal[i]+"...");
-		transformer.setParameter(param[i], paramVal[i]);
-		outTrace.append("ok");
-		logger.debug("ok");
+		outTrace.append("a.");
+		processXSLT(new DOMSource(xml), xsltName, new DOMResult(result), outTrace, trace);
+		outTrace.append("b.");
 	}
-	outTrace.append(".4");
-	transformer.transform(source, result);
-	outTrace.append("<br><--processXSLTfile2String-").append(xslFile);
-	logger.debug("<br><--processXSLTfile2String-"+xslFile);
-	return result.getWriter().toString();
-}
+
+	//  =======================================
+	public  static void processXSLT (Document xml, String xsltName, Writer result, StringBuffer outTrace, boolean trace) throws Exception {
+//  =======================================
+		outTrace.append("c.");
+		processXSLT(new DOMSource(xml), xsltName, new StreamResult(result), outTrace, trace);
+		outTrace.append("d.");
+	}
+
+
+
+	//  =======================================
+	public static String processXSLTfile2String (Document xml, String xslFile, String param[], String paramVal[], StringBuffer outTrace) throws Exception {
+//  =======================================
+		logger.debug("<br>-->processXSLTfile2String-"+xslFile);
+		outTrace.append("<br>-->processXSLTfile2String-").append(xslFile);
+		Transformer transformer = newSecureTransformerFactory().newTransformer(new StreamSource(new File(xslFile)));
+		outTrace.append(".1");
+		StreamResult result = new StreamResult(new StringWriter());
+		outTrace.append(".2");
+		DOMSource source = new DOMSource(xml);
+		outTrace.append(".3");
+		for (int i = 0; i < param.length; i++) {
+			outTrace.append("<br>setParemater - ").append(param[i]).append(":").append(paramVal[i]).append("...");
+			logger.debug("<br>setParemater - "+param[i]+":"+paramVal[i]+"...");
+			transformer.setParameter(param[i], paramVal[i]);
+			outTrace.append("ok");
+			logger.debug("ok");
+		}
+		outTrace.append(".4");
+		transformer.transform(source, result);
+		outTrace.append("<br><--processXSLTfile2String-").append(xslFile);
+		logger.debug("<br><--processXSLTfile2String-"+xslFile);
+		return result.getWriter().toString();
+	}
+
+	private static TransformerFactory newSecureTransformerFactory() throws TransformerConfigurationException {
+		TransformerFactory transformerFactory = TransformerFactory.newInstance();
+		transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		if (transformerFactory.getFeature(XMLConstants.ACCESS_EXTERNAL_DTD)) {
+			transformerFactory.setFeature(XMLConstants.ACCESS_EXTERNAL_DTD, false);
+		}
+		if (transformerFactory.getFeature(XMLConstants.ACCESS_EXTERNAL_STYLESHEET)) {
+			transformerFactory.setFeature(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, false);
+		}
+		return transformerFactory;
+	}
 
 //=======================================
 /*private String processXSLTfile2String2 (ServletContext application, Document xml, String xsl, String param[], String paramVal[], StringBuffer outTrace) throws Exception {
@@ -257,17 +270,49 @@ return result.getWriter().toString();
 //  ================================ Utilitaires  ===========================================
 //  ==================================================================================
 
-//  =======================================
+	//  =======================================
 	public static Document xmlString2Document (String xmlString, StringBuffer outTrace) throws Exception {
 //  =======================================
-		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		DocumentBuilderFactory factory = newSecureDocumentBuilderFactory();
+
 		Document xmldoc =null;
 		DocumentBuilder builder = factory.newDocumentBuilder();
 		xmldoc = builder.parse(new InputSource(new StringReader(xmlString)));
 		return xmldoc;
 	}
 
-//  =======================================
+	public static DocumentBuilderFactory newSecureDocumentBuilderFactory() {
+		DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+		docFactory.setXIncludeAware(false);
+		docFactory.setExpandEntityReferences(false);
+		trySetFeature(docFactory, XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		trySetFeature(docFactory, "http://apache.org/xml/features/disallow-doctype-decl", true);
+		trySetFeature(docFactory, "http://xml.org/sax/features/external-general-entities", false);
+		trySetFeature(docFactory, "http://xml.org/sax/features/external-parameter-entities", false);
+		trySetAttribute(docFactory, "http://javax.xml.XMLConstants/property/accessExternalDTD", "");
+		trySetAttribute(docFactory, "http://javax.xml.XMLConstants/property/accessExternalSchema", "");
+		return docFactory;
+	}
+
+	private static void trySetFeature(DocumentBuilderFactory factory, String feature, boolean value) {
+		try {
+			factory.setFeature(feature, value);
+		} catch (Exception e) {
+			logger.info("The feature '" + feature + "' is probably not supported by your XML processor.");
+			throw new RuntimeException(e);
+		}
+	}
+
+	private static void trySetAttribute(DocumentBuilderFactory factory, String feature, String value) {
+		try {
+			factory.setAttribute(feature, value);
+		} catch (Exception e) {
+			logger.info("The feature '" + feature + "' is probably not supported by your XML processor.");
+			throw new RuntimeException(e);
+		}
+	}
+
+	//  =======================================
 	public static String file2String (String fileName, StringBuffer outTrace) throws Exception {
 //  =======================================
 		StringBuilder result = new StringBuilder();
@@ -345,7 +390,7 @@ return result.getWriter().toString();
 
 	//  ---------------------------------------------------
 	public  static String readXmlString(Connection connexion, String id, StringBuffer outTrace) throws Exception {
-	//  ---------------------------------------------------
+		//  ---------------------------------------------------
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		String reqSQL = null;
@@ -366,7 +411,7 @@ return result.getWriter().toString();
 		return xmlString;
 	}
 
-//  ---------------------------------------------------
+	//  ---------------------------------------------------
 	public  static void saveString (String str, String fileName) throws Exception {
 //  ---------------------------------------------------
 		Writer fwriter = new OutputStreamWriter(new FileOutputStream(fileName), StandardCharsets.UTF_8);
@@ -374,47 +419,47 @@ return result.getWriter().toString();
 		fwriter.close();
 	}
 
+	//  ---------------------------------------------------
+	private static void insererXML(Connection connexion,Document xmlSourceDoc, String partageableId, StringBuffer outTrace, boolean trace) throws Exception {
 //  ---------------------------------------------------
-    private static void insererXML(Connection connexion,Document xmlSourceDoc, String partageableId, StringBuffer outTrace, boolean trace) throws Exception {
-//  ---------------------------------------------------
-	if (trace) {
-		outTrace.append("<br>insererPartageable -- entrée");
-		outTrace.append("<br>partageableId=").append(partageableId);
+		if (trace) {
+			outTrace.append("<br>insererPartageable -- entrée");
+			outTrace.append("<br>partageableId=").append(partageableId);
+		}
+		// ===============chargement du document source ========================================
+
+		if (trace) outTrace.append("<br>lecture du document xml :").append(partageableId).append("...");
+		Document xmlPartageable = buildDOM(readXmlString(connexion, partageableId,outTrace));
+		if (trace) outTrace.append(" ok");
+
+		DocumentFragment aInserer = xmlSourceDoc.createDocumentFragment();
+
+		NodeList liste = xmlPartageable.getDocumentElement().getChildNodes();
+		int nbListe = liste.getLength();
+		if (trace) outTrace.append("<br> nbListe=").append(nbListe);
+		for (int i=0;i<nbListe;i++) {
+			aInserer.appendChild(xmlSourceDoc.importNode(liste.item(i),true));
+		}
+
+		xmlSourceDoc.getFirstChild().insertBefore(aInserer,xmlSourceDoc.getFirstChild().getFirstChild());
+		if (trace) outTrace.append("<br>insererPartageable -- sortie");
 	}
-	// ===============chargement du document source ========================================
 
-	if (trace) outTrace.append("<br>lecture du document xml :").append(partageableId).append("...");
-	Document xmlPartageable = buildDOM(readXmlString(connexion, partageableId,outTrace));
-	if (trace) outTrace.append(" ok");
 
-	DocumentFragment aInserer = xmlSourceDoc.createDocumentFragment();
 
-	NodeList liste = xmlPartageable.getDocumentElement().getChildNodes();
-	int nbListe = liste.getLength();
-	if (trace) outTrace.append("<br> nbListe=").append(nbListe);
-	for (int i=0;i<nbListe;i++) {
-		aInserer.appendChild(xmlSourceDoc.importNode(liste.item(i),true));
+
+	public static String getInnerXml(Node node) {
+		DOMImplementationLS lsImpl = (DOMImplementationLS)node.getOwnerDocument().getImplementation().getFeature("LS", "3.0");
+		LSSerializer lsSerializer = lsImpl.createLSSerializer();
+		NodeList childNodes = node.getChildNodes();
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < childNodes.getLength(); i++) {
+			sb.append(lsSerializer.writeToString(childNodes.item(i)));
+		}
+		// TODO Comprendre pourquoi CDATA est mal fermé
+		if(sb.toString().startsWith("<![CDATA[")) sb.append("]]>");
+		return DomUtils.filtrerInnerXml(sb.toString());
 	}
-
-	xmlSourceDoc.getFirstChild().insertBefore(aInserer,xmlSourceDoc.getFirstChild().getFirstChild());
-	if (trace) outTrace.append("<br>insererPartageable -- sortie");
-    }
-
-
-
-
-    public static String getInnerXml(Node node) {
-        DOMImplementationLS lsImpl = (DOMImplementationLS)node.getOwnerDocument().getImplementation().getFeature("LS", "3.0");
-        LSSerializer lsSerializer = lsImpl.createLSSerializer();
-        NodeList childNodes = node.getChildNodes();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < childNodes.getLength(); i++) {
-           sb.append(lsSerializer.writeToString(childNodes.item(i)));
-        }
-        // TODO Comprendre pourquoi CDATA est mal fermé
-        if(sb.toString().startsWith("<![CDATA[")) sb.append("]]>");
-        return DomUtils.filtrerInnerXml(sb.toString());
-    }
 
 	public static String getXmlAttributeOutput(String attributeName,String attributeValue)
 	{
@@ -452,7 +497,7 @@ return result.getWriter().toString();
 	{
 		if(value==null) return "<"+tagName+"/>";
 		else
-		return "<"+tagName+">"+value+"</"+tagName+">";
+			return "<"+tagName+">"+value+"</"+tagName+">";
 	}
 
 	public static String getJsonElementOutput(String tagName, String value)
@@ -485,27 +530,27 @@ return result.getWriter().toString();
 	}
 
 	public static String cleanXMLData(String data) throws UnsupportedEncodingException {
-	   // data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"+data;
+		// data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"+data;
 
 		Tidy tidy = new Tidy();
-	    tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
-	    tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
-	    tidy.setWraplen(Integer.MAX_VALUE);
-	  //  tidy.setPrintBodyOnly(true);
-	    tidy.setXmlOut(true);
-	    tidy.setXmlTags(true);
-	    tidy.setSmartIndent(true);
-	    tidy.setMakeClean(true);
-	    tidy.setForceOutput(true);
-	    ByteArrayInputStream inputStream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-	    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-	    tidy.parseDOM(inputStream, outputStream);
-	    return outputStream.toString(StandardCharsets.UTF_8.toString());
+		tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
+		tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
+		tidy.setWraplen(Integer.MAX_VALUE);
+		//  tidy.setPrintBodyOnly(true);
+		tidy.setXmlOut(true);
+		tidy.setXmlTags(true);
+		tidy.setSmartIndent(true);
+		tidy.setMakeClean(true);
+		tidy.setForceOutput(true);
+		ByteArrayInputStream inputStream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		tidy.parseDOM(inputStream, outputStream);
+		return outputStream.toString(StandardCharsets.UTF_8.toString());
 	}
 
 	//======================================
 	public static String convertToXMLOLD(String xml){
-	//======================================
+		//======================================
 //	String newXML = xml;
 //	String xml1 = "";
 //	String xml2 = "";
@@ -527,28 +572,28 @@ return result.getWriter().toString();
 //	}
 //	if (html.length()>0) {  // xml is html
 //	html = "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN' 'http://www.w3.org/TR/html4/loose.dtd'><head><title></title></head><body>" +html+"</body>";
-	StringReader in = new StringReader(xml);
-	StringWriter out = new StringWriter();
-	Tidy tidy = new Tidy();
-	tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
-    tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
-    tidy.setWraplen(Integer.MAX_VALUE);
-    tidy.setPrintBodyOnly(true);
-	tidy.setMakeClean(true);
+		StringReader in = new StringReader(xml);
+		StringWriter out = new StringWriter();
+		Tidy tidy = new Tidy();
+		tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
+		tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
+		tidy.setWraplen(Integer.MAX_VALUE);
+		tidy.setPrintBodyOnly(true);
+		tidy.setMakeClean(true);
 //	tidy.setForceOutput(true);
-    tidy.setSmartIndent(true);
-    tidy.setXmlTags(true);
-	tidy.setXmlOut(true);
+		tidy.setSmartIndent(true);
+		tidy.setXmlTags(true);
+		tidy.setXmlOut(true);
 
 //	tidy.setWraplen(0);
-	tidy.parseDOM(in, out);
-	String newXML = out.toString();
+		tidy.parseDOM(in, out);
+		String newXML = out.toString();
 //	newXML = xml1+newHTML.substring(newHTML.indexOf("<body>")+6,newHTML.indexOf("</body>"))+xml2;
 //	} else {
 //	newXML =xml;
 //	}
 //	return newXML;
-	return newXML;
+		return newXML;
 	}
 
 }

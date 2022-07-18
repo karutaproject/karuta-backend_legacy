@@ -12,7 +12,6 @@
 	or implied. See the License for the specific language governing
 	permissions and limitations under the License.
    ======================================================= */
-
 package com.portfolio.rest;
 
 import java.io.ByteArrayInputStream;
@@ -907,7 +906,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-        		c = SqlUtils.getConnection();
+            c = SqlUtils.getConnection();
 
             // Try with world public access
             String userid = dataProvider.getUserId(c, "public", null);
@@ -916,7 +915,7 @@ public class RestServicePortfolio {
 
             if( !"faux".equals(portfo) )
             {
-            	Response.status(Status.NOT_FOUND).entity("").build();
+                Response.status(Status.NOT_FOUND).entity("").build();
             }
 
             if (ui.userId == 0) {
@@ -2286,7 +2285,7 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
             Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes(StandardCharsets.UTF_8)));
 
@@ -4007,7 +4006,7 @@ public class RestServicePortfolio {
             String xmlGroups = dataProvider.getUserGroupByPortfolio(c, portfolioUuid, ui.userId);
 
 
-            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
             DocumentBuilder documentBuilder;
             Document document;
             documentBuilder = documentBuilderFactory.newDocumentBuilder();
@@ -5124,7 +5123,7 @@ public class RestServicePortfolio {
              * </portfoliogroup>
              **/
 
-            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
             Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes(StandardCharsets.UTF_8)));
 
