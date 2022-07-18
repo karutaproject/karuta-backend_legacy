@@ -10399,6 +10399,7 @@ public class MysqlDataProvider implements DataProvider {
             return DomUtils.processXSLTfile2String(DomUtils.xmlString2Document(xml, new StringBuffer()), xslFile, param, paramVal, new StringBuffer());
         } catch (Exception e) {
 //			e.printStackTrace();
+            logger.error("Managed error:", e);
             return null;
         }
     }
@@ -10938,6 +10939,7 @@ public class MysqlDataProvider implements DataProvider {
 
             result = stw.toString();
         } catch (Exception e) {
+            logger.error("Intercepted error", e);
             e.printStackTrace();
             return result;
         }
@@ -12831,6 +12833,7 @@ public class MysqlDataProvider implements DataProvider {
             InputSource is = new InputSource(new StringReader(data));
             document = documentBuilder.parse(is);
         } catch (Exception e) {
+            logger.error("Managed error:", e.getMessage());
             e.printStackTrace();
         }
 
