@@ -10,7 +10,7 @@ To download executable files go to [ePortfolium website](https://www.eportfolium
 
 -------
 #### Installing Karuta Source Code
-Tomcat 7 is recommended.
+Tomcat 9 is recommended.
 
 MySQL 5.5 is recommended.
 
@@ -21,8 +21,8 @@ MySQL 5.5 is recommended.
 4. Edit "WebContent/META-INF/context.xml" with the appropriate values
 5. Add Project Facets : Dynamic Web Module and Java to the project
 6. Run on server
-7. Optional: set the jvm param `karuta.home` or the environment property `KARUTA_HOME` to customize the path of the config files
-8. Optional: set the jvm param `karuta.report-folder` or the environment property `KARUTA_REPORT_FOLDER` to customize the path of the reporting log files. If not set it will go on ${catalina.home}/logs/${servletName}_logs/
+7. Optional: set the jvm param `karuta.home` or the environment property `KARUTA_HOME` to customize the path of the config files. If not set it will use ${catalina.base}/${servletName}_config/
+8. Optional: set the jvm param `karuta.report-folder` or the environment property `KARUTA_REPORT_FOLDER` to customize the path of the reporting log files. If not set it will go on ${catalina.base}/logs/${servletName}_logs/
 
 #### Simple file server
 1. Download karuta-fileserver zip file from karuta-fileserver repository
