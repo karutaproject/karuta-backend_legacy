@@ -191,6 +191,10 @@
                     <groupId>org.apache.avalon.framework</groupId>
                     <artifactId>avalon-framework-impl</artifactId>
                 </exclusion>
+                <exclusion>
+                    <artifactId>xalan</artifactId>
+                    <groupId>xalan</groupId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -411,7 +415,11 @@
         <!--        </exclusion>-->
         <!--      </exclusions>-->
         <!--    </dependency>-->
-
+        <dependency>
+            <groupId>org.apache.servicemix.bundles</groupId>
+            <artifactId>org.apache.servicemix.bundles.xalan</artifactId>
+            <version>2.7.2_3</version><!--$NO-MVN-MAN-VER$-->
+        </dependency>
     </dependencies>
     <build>
         <sourceDirectory>${basedir}/src</sourceDirectory>
