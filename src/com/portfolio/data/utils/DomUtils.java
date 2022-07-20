@@ -222,7 +222,7 @@ public class DomUtils
 		outTrace.append(".3");
 		for (int i = 0; i < param.length; i++) {
 			outTrace.append("<br>setParemater - ").append(param[i]).append(":").append(paramVal[i]).append("...");
-			logger.debug("<br>setParemater - "+param[i]+":"+paramVal[i]+"...");
+			logger.debug("<br>setParameter - "+param[i]+":"+paramVal[i]+"...");
 			transformer.setParameter(param[i], paramVal[i]);
 			outTrace.append("ok");
 			logger.debug("ok");
