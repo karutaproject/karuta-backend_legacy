@@ -127,16 +127,14 @@ public class XSLService extends HttpServlet {
         //Setting up the JAXP TransformerFactory
         this.transFactory = TransformerFactory.newInstance();
 
-        //Setting up the FOP factory
-        this.fopFactory = FopFactory.newInstance();
-
 
         String filename = null;
         try    /// Try to load the configuration file "fopuserconfig.xml", if there isn't any, ignore
         {
             File userconfig = new File(ConfigUtils.getInstance().getConfigPath() + "fopuserconfig.xml");
             filename = userconfig.getCanonicalPath();
-            this.fopFactory.setUserConfig(userconfig);
+            //Setting up the FOP factory
+            this.fopFactory = FopFactory.newInstance(userconfig);
             logger.info("File '{}' loaded", filename);
         } catch (Exception e) {
             logger.error("No configuration file found at '" + filename + "' using default values", e);
@@ -218,7 +216,7 @@ public class XSLService extends HttpServlet {
 				e.printStackTrace();
 			}
 
-			/// On lit les param�tres
+			/// On lit les paramètres
 			NodeList portfolioNode = doc.getElementsByTagName("portfolioid");
 			NodeList nodeNode = doc.getElementsByTagName("nodeid");
 			NodeList documentNode = doc.getElementsByTagName("documentid");

@@ -86,14 +86,7 @@ public class ConfigUtils {
         if (configDir != null && !configDir.trim().isEmpty()) {
             final File base = new File(configDir.trim());
             if (base.exists() && base.isDirectory() && base.canWrite()) {
-                try {
-                    karutaHome = base.getCanonicalPath();
-                    configPath = karutaHome + servletName + "_config" + File.separatorChar;
-                    logger.info("Karuta-backend Servlet configpath @ " + configPath);
-                } catch (IOException e) {
-                    logger.error("The Configuration directory '" + configDir + "' wasn't defined", e);
-                    throw e;
-                }
+                setConfigFolder(base);
             } else {
                 logger.error("The environment variable '" + KARUTA_ENV_HOME + "' '" + configEnvDir
                         + "' or the jvm property '" + KARUTA_PROP_HOME + "' '" + configPropDir
@@ -103,10 +96,32 @@ public class ConfigUtils {
                         + "' doesn't exist or isn't writable. Please provide a writable directory path !");
             }
         } else {
-            logger.error("The environment variable '" + KARUTA_ENV_HOME
-                    + "' or the jvm property '" + KARUTA_PROP_HOME + "' wasn't set.");
-            throw new IllegalArgumentException("The environment variable '" + KARUTA_ENV_HOME
-                    + "' or the jvm property '" + KARUTA_PROP_HOME + "' wasn't set.");
+            final String defaultDir = System.getProperty("catalina.base");
+            logger.warn("The environment variable '" + KARUTA_ENV_HOME
+                    + "' or the jvm property '" + KARUTA_PROP_HOME + "' wasn't set."
+                    + " Use theses variables to set a custom configuration path outside of tomcat installation."
+                    + " Fallback on default folder '" + defaultDir + "'.");
+            final File base = new File(defaultDir);
+            if (base.exists() && base.isDirectory() && base.canWrite()) {
+                setConfigFolder(base);
+            } else {
+                logger.error("The folder '" + defaultDir
+                        + "' provided from 'catalina.base' doesn't exist or isn't writable. It's required for configuration files !");
+                throw new IllegalArgumentException("The folder '" + defaultDir
+                        + "' provided from 'catalina.base' doesn't exist or isn't writable. It's required for configuration files !");
+            }
+
+        }
+    }
+
+    private void setConfigFolder(final File base) throws IOException {
+        try {
+            karutaHome = base.getCanonicalPath();
+            configPath = karutaHome + servletName + "_config" + File.separatorChar;
+            logger.info("Karuta-backend Servlet configpath @ " + configPath);
+        } catch (IOException e) {
+            logger.error("The configuration directory '" + karutaHome + "' wasn't defined", e);
+            throw e;
         }
     }
 

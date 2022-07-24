@@ -217,7 +217,7 @@ public class RestServicePortfolio {
 
             archivePath = ConfigUtils.getInstance().getKarutaHome() + ConfigUtils.getInstance().getServletName() + "_archive" + File.separatorChar;
         } catch (Exception e) {
-            logger.error("CAN'T INIT REST SERVICE: ", e);
+            logger.error("CAN'T INIT REST SERVICE from " + ConfigUtils.getInstance().getConfigPath(), e);
         }
     }
 
@@ -908,17 +908,17 @@ public class RestServicePortfolio {
 
         try {
         		c = SqlUtils.getConnection();
-            
+
             // Try with world public access
             String userid = dataProvider.getUserId(c, "public", null);
             int uid = Integer.parseInt(userid);
             String portfo = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, uid, -1, "true", -1).toString();
-            
+
             if( !"faux".equals(portfo) )
             {
             	Response.status(Status.NOT_FOUND).entity("").build();
             }
-            
+
             if (ui.userId == 0) {
                 return Response.status(Status.FORBIDDEN).build();
             }
@@ -4364,8 +4364,10 @@ public class RestServicePortfolio {
                         session.setAttribute("user", casUserId);
                         session.setAttribute("uid", Integer.parseInt(userId));
                     }
-                } else
+                } else {
+                    logger.warn("Login '{}' not found", casUserId);
                     return Response.status(403).entity("Login " + casUserId + " not found").build();
+                }
             }
 
             Response response;
