@@ -30,6 +30,7 @@ import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.SQLException;
@@ -145,8 +146,10 @@ public class ReportHelper  extends HttpServlet
 			String vectorValue = dataProvider.getVector(c, uid, map);
 
 			// Send result
+			response.setContentType("application/xml");
+			response.setCharacterEncoding("utf-8");
 			OutputStream output = response.getOutputStream();
-			output.write(vectorValue.getBytes());
+			output.write(vectorValue.getBytes(StandardCharsets.UTF_8));
 			output.close();
 
 		}
@@ -198,27 +201,10 @@ public class ReportHelper  extends HttpServlet
 		BufferedReader reader = null;
 		try
 		{
-			StringBuffer sb = new StringBuffer();
-			reader = request.getReader();
-			char[] buffer = new char[128];
-			int read = 0;
-			while( (read = reader.read(buffer)) != -1 )
-			{
-				sb.append(buffer, 0, read);
-			}
-			reader.close();
-			String data = sb.toString();
-			logger.debug("RECEIVED: "+data);
-			if( "".equals(data) )
-			{
-				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-				PrintWriter responsewriter = response.getWriter();
-				responsewriter.println("Empty content");
-				responsewriter.close();
-				return;
-			}
 			/// Parse data
-			Document doc = DomUtils.xmlString2Document(data, new StringBuffer());
+      DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+      DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			Document doc = documentBuilder.parse(request.getInputStream());
 			NodeList vectorNode = doc.getElementsByTagName("vector");
 			HashMap<String, String> map = new HashMap<>();
 			map.put("userid", Integer.toString(uid));

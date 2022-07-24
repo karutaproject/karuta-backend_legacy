@@ -92,7 +92,7 @@ public class ReportHelperProvider {
 			{
 				int userid = rs.getInt("userid");
 				Date date = rs.getDate("date");
-				output.append(MessageFormat.format("<vector uid={0,number,integer} date=''{1,date,short} {1,time,medium}''>", userid, date));
+				output.append(MessageFormat.format("<vector uid=''{0,number,integer}'' date=''{1,date,short} {1,time,medium}''>", userid, date));
 				
 				for(int i=1; i<=10; i++)
 				{
@@ -222,7 +222,10 @@ public class ReportHelperProvider {
 			if( "date".equals(entry.getKey()) )
 				cols.add("v."+entry.getKey()+"<?");
 			else if( "userid".equals(entry.getKey()) )
+			{
 				userid = Integer.parseInt( entry.getValue() );
+				continue;
+			}
 			else
 				cols.add("v."+entry.getKey()+"=?");
 			vals.add(entry.getValue());
@@ -230,19 +233,32 @@ public class ReportHelperProvider {
 
 		String col = String.join(" AND ", cols);
 
+		ResultSet rsCheck;
+		String sqlCheck;
+		String addRight = "AND (v.userid=? OR u.userid=?) AND r.DL=1";
+		
+		if( cred.isAdmin(c, userid) )
+		{
+			addRight = "";
+		}
+		
 		/// Check entries that have a right to delete
-		String sqlCheck = String.format("SELECT v.lineid " +
-				"FROM vector_table v JOIN vector_usergroup u ON v.lineid=u.lineid " +
-				"JOIN vector_rights r ON u.groupid=r.groupid " +
-				"WHERE %s AND u.userid=? AND r.DL=1;", col);
+		sqlCheck = String.format("SELECT v.lineid " +
+				"FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
+				"LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
+				"WHERE %s %s;", col, addRight);
 		PreparedStatement stCheck = c.prepareStatement(sqlCheck);
 		for( int i=0; i<vals.size(); i++ )
 		{
 			stCheck.setString(i+1, vals.get(i));
 			logger.debug("PARAMS "+(i+1)+" VAL: "+vals.get(i));
 		}
-		stCheck.setInt(vals.size(), userid);
-		ResultSet rsCheck = stCheck.executeQuery();
+		if(!"".equals(addRight))
+		{
+			stCheck.setInt(vals.size()+1, userid);
+			stCheck.setInt(vals.size()+2, userid);
+		}
+		rsCheck = stCheck.executeQuery();
 		HashSet<Integer> entries = new HashSet<Integer>();
 		while( rsCheck.next() )
 		{
@@ -254,8 +270,8 @@ public class ReportHelperProvider {
 		if( !entries.isEmpty() )
 		{
 			String sql = "DELETE v, u, r " +
-					"FROM vector_table v JOIN vector_usergroup u ON v.lineid=u.lineid " +
-					"JOIN vector_rights r ON u.groupid=r.groupid " +
+					"FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
+					"LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
 					"WHERE v.lineid=?;";
 			PreparedStatement st = c.prepareStatement(sql);
 			for( Integer entry : entries )
