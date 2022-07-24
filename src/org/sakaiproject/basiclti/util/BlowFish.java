@@ -19,8 +19,13 @@
 package org.sakaiproject.basiclti.util;
 
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 //import org.sakaiproject.component.cover.ServerConfigurationService;
@@ -32,10 +37,6 @@ public class BlowFish {
 
 	// Default JCE only supports 128 bit encryption
 	public static final int MAX_KEY_LENGTH = 128 / 8;
-
-	private static char[] hexChars = {
-		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-	};
 
 	/**
 	 * Strengthen a key which might be too short by extending with a salt text
@@ -84,15 +85,7 @@ public class BlowFish {
 
 			// Encode bytes to base64 to get a string
 			return PortableShaUtil.bin2hex(enc);
-		} catch (javax.crypto.BadPaddingException e) {
-			throw new Error(e);
-		} catch (javax.crypto.IllegalBlockSizeException e) {
-			throw new Error(e);
-		} catch (java.security.NoSuchAlgorithmException e) {
-			throw new Error(e);
-		} catch (java.security.InvalidKeyException e) {
-			throw new Error(e);
-		} catch (javax.crypto.NoSuchPaddingException e) {
+		} catch (BadPaddingException | IllegalBlockSizeException | NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException e) {
 			throw new Error(e);
 		}
 	}

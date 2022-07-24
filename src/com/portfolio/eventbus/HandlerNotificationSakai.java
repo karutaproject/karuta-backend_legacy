@@ -211,7 +211,7 @@ public class HandlerNotificationSakai implements KEventHandler {
 
             StringBuilder readTicket = new StringBuilder();
             BufferedReader rd = new BufferedReader(new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
-            char buffer[] = new char[1024];
+            char[] buffer = new char[1024];
             int offset = 0;
             int read = 0;
             do {

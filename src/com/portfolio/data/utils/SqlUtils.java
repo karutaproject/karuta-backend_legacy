@@ -64,16 +64,11 @@ public class SqlUtils {
         return dp;
     }
 
-    public static ReportHelperProvider initProviderHelper() throws Exception
-  	{
+    public static ReportHelperProvider initProviderHelper() throws Exception {
   	//============= init servers ===============================
-  		String dataProviderName = "com.portfolio.data.provider.ReportHelperProvider";
+  		final String dataProviderName = "com.portfolio.data.provider.ReportHelperProvider";
   		if( rh == null )
   			rh = (ReportHelperProvider)Class.forName(dataProviderName).getConstructor().newInstance();
-
-//  		Connection connection = getConnection(application);
-//  		dataProvider.setConnection(connection);
-  		
   		return rh;
   	}
     // If servContext is null, only load from pooled connection
@@ -133,4 +128,3 @@ public class SqlUtils {
         }
     }
 }
-

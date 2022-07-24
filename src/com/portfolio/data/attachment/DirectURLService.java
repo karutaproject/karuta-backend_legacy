@@ -68,7 +68,9 @@ public class DirectURLService extends HttpServlet {
     boolean hasNodeReadRight = false;
     boolean hasNodeWriteRight = false;
     HttpSession session;
-    ArrayList<String> ourIPs = new ArrayList<String>();
+    ArrayList<String> ourIPs = new ArrayList<>();
+
+    private String secretkey;
 
     @Override
     public void init(final ServletConfig config) throws ServletException {
@@ -88,7 +90,7 @@ public class DirectURLService extends HttpServlet {
                         ourIPs.add(current_addr.getHostAddress());
                 }
             }
-
+            secretkey = ConfigUtils.getInstance().getRequiredProperty("directkey");
         } catch (Exception e) {
             logger.error("Can't init servlet", e);
             throw new ServletException(e);
@@ -116,7 +118,6 @@ public class DirectURLService extends HttpServlet {
         try {
             byte[] data = stringToHex(val.toCharArray());
             rc4 = Cipher.getInstance("RC4");
-            String secretkey = ConfigUtils.getInstance().getProperty("directkey");
             SecretKeySpec key = new SecretKeySpec(secretkey.getBytes(), "RC4");
             rc4.init(Cipher.DECRYPT_MODE, key);
 
@@ -146,8 +147,7 @@ public class DirectURLService extends HttpServlet {
         } else {
             int duration = Integer.parseInt(splitData[4]);    // In hours (minimum 1h)
             long endtime = 0;
-            if (splitData.length >= 5)
-                endtime = Long.parseLong(splitData[5]);
+            endtime = Long.parseLong(splitData[5]);
 
             /// Check if link is still valid
             long currtime = date.getTime() / 1000;
@@ -368,7 +368,7 @@ public class DirectURLService extends HttpServlet {
             }
 
             String shareroleval = nodeshareroles.getTextContent();
-            String multiplex[] = shareroleval.split(";");
+            String[] multiplex = shareroleval.split(";");
             /// Find matching line
             String find_pattern = "";
             if ("email".equals(type))
@@ -463,7 +463,6 @@ public class DirectURLService extends HttpServlet {
         try {
             String data = uuid + " " + email + " " + role + " " + level + " " + duration + " " + endtimeString + " " + showtorole;
             Cipher rc4 = Cipher.getInstance("RC4");
-            String secretkey = ConfigUtils.getInstance().getRequiredProperty("directkey");
             SecretKeySpec key = new SecretKeySpec(secretkey.getBytes(), "RC4");
             rc4.init(Cipher.ENCRYPT_MODE, key);
             byte[] clear = rc4.update(data.getBytes());

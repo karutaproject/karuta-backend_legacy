@@ -23,6 +23,7 @@ import java.sql.Statement;
 
 import javax.servlet.http.HttpServlet;
 
+import com.portfolio.data.provider.MysqlDataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -587,7 +588,7 @@ public class Credential {
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            portfolio_id = "faux";
+            portfolio_id = MysqlDataProvider.DATABASE_FALSE;
         }
 
         return portfolio_id;

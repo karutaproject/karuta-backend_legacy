@@ -44,15 +44,19 @@ public class EmploiStoreService extends HttpServlet {
     private static final long serialVersionUID = -5389232495090560087L;
 
     private static final Logger logger = LoggerFactory.getLogger(EmploiStoreService.class);
+
+    public static final Pattern PATTERN_TOKEN = Pattern.compile("access_token\":\"([^\"]*)");
     public static final String ROME_SERVICE_URL = "ROMEServiceURL";
     public static final String ROME_CLIENT_ID = "ROMEclientid";
     public static final String ROME_CLIENT_SECRET = "ROMEclientsecret";
     public static final String ROME_SCOPE = "ROMEscope";
     public static final String ROME_REPO_URL = "ROMERepoURL";
 
-    /**
-     *
-     */
+    private String serviceURL;
+    private String clientid;
+    private String clientsecret;
+    private String scopestr;
+    private String repoURL;
 
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
@@ -61,6 +65,16 @@ public class EmploiStoreService extends HttpServlet {
         } catch (Exception e) {
             logger.error("Can't init servlet:", e);
             throw new ServletException(e);
+        }
+    }
+
+    private void lazyInitProps() {
+        if (serviceURL == null || clientid == null) {
+            serviceURL = ConfigUtils.getInstance().getRequiredProperty(ROME_SERVICE_URL);
+            clientid = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_ID);
+            clientsecret = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_SECRET);
+            scopestr = ConfigUtils.getInstance().getRequiredProperty(ROME_SCOPE);
+            repoURL = ConfigUtils.getInstance().getRequiredProperty(ROME_REPO_URL);
         }
     }
 
@@ -84,14 +98,10 @@ public class EmploiStoreService extends HttpServlet {
 
         //// Login to service
         try {
-            final String serviceURL = ConfigUtils.getInstance().getRequiredProperty(ROME_SERVICE_URL);
-            final String clientid = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_ID);
-            final String clientsecret = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_SECRET);
-            final String scopestr = ConfigUtils.getInstance().getRequiredProperty(ROME_SCOPE);
-
             final String scope = String.format("application_%s%%20%s", clientid, scopestr);
             final String body = String.format("grant_type=client_credentials&client_id=%s&client_secret=%s&scope=%s", clientid, clientsecret, scope);
 
+            lazyInitProps();
 
             URL urlConn = new URL(serviceURL);
             HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
@@ -120,7 +130,7 @@ public class EmploiStoreService extends HttpServlet {
             }
 
             StringBuilder logininfo = new StringBuilder();
-            String line = "";
+            String line;
             InputStream objReturn = connection.getInputStream();
             BufferedReader breader = new BufferedReader(new InputStreamReader(objReturn, StandardCharsets.UTF_8));
             while ((line = breader.readLine()) != null) {
@@ -129,9 +139,7 @@ public class EmploiStoreService extends HttpServlet {
             connection.disconnect();
 
             /// Can't be bothered to parse json
-            String tokenregexp = "access_token\":\"([^\"]*)";
-            Pattern ptoken = Pattern.compile(tokenregexp);
-            Matcher pmatcher = ptoken.matcher(logininfo.toString());
+            Matcher pmatcher = PATTERN_TOKEN.matcher(logininfo.toString());
             String access_token = "";
             if (pmatcher.find()) {
                 access_token = pmatcher.group(1);
@@ -147,7 +155,6 @@ public class EmploiStoreService extends HttpServlet {
             } else
                 query = "";
 
-            final String repoURL = ConfigUtils.getInstance().getRequiredProperty(ROME_REPO_URL);
             final String queryURL = String.format("%s%s%s", repoURL, pathinfo, query);
             logger.info("Query to: {}", queryURL);
 
@@ -184,6 +191,5 @@ public class EmploiStoreService extends HttpServlet {
         }
 
         response.setStatus(HttpServletResponse.SC_OK);
-        return;
     }
 }

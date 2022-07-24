@@ -17,6 +17,8 @@ package com.portfolio.security;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
@@ -28,11 +30,11 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import com.portfolio.data.provider.DataProvider;
-import org.apache.commons.httpclient.Header;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.GetMethod;
+import com.portfolio.data.utils.HttpClientUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,67 +70,66 @@ public class LTIServletImport extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String url = request.getParameter("url");
         HttpSession session = request.getSession(true);
-        String sakai_session = (String) session.getAttribute("sakai_session");
-        String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
-        logger.info("IS IT OK: {}", sakai_session);
+        if (session != null) {
+            final String sakai_session = (String) session.getAttribute("sakai_session");
+            final String sakai_server = (String) session.getAttribute("sakai_server");
+            logger.info("doGet IS IT OK: {}", sakai_session);
+            // Base server http://localhost:9090
+            final Header header = new BasicHeader("JSESSIONID", sakai_session);
+            final Set<Header> headers = new HashSet<>();
+            headers.add(header);
 
-        HttpClient client = new HttpClient();
+            HttpResponse get = HttpClientUtils.goGet(headers, sakai_server + "/" + url);
+            if (get != null) {
+                // Retrieve data
+                try {
+                    InputStream retrieve = get.getEntity().getContent();
+                    ServletOutputStream output = response.getOutputStream();
 
-        //// Connection to Sakai
-        GetMethod get = new GetMethod(sakai_server + "/" + url);
-        Header header = new Header();
-        header.setName("JSESSIONID");
-        header.setValue(sakai_session);
-        get.setRequestHeader(header);
+                    IOUtils.copy(retrieve, output);
+                    IOUtils.closeQuietly(output, null);
 
-        int status = client.executeMethod(get);
-        if (status != HttpStatus.SC_OK) {
-            logger.error("Method failed: {}", get.getStatusLine());
+                    output.flush();
+                    output.close();
+                    retrieve.close();
+                } catch (IOException e) {
+                    logger.error("IO Exception", e);
+                }
+            }
         }
-
-        InputStream retrieve = get.getResponseBodyAsStream();
-        ServletOutputStream output = response.getOutputStream();
-
-        IOUtils.copy(retrieve, output);
-        IOUtils.closeQuietly(output);
-
-        output.flush();
-        output.close();
-        retrieve.close();
-        get.releaseConnection();
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         HttpSession session = request.getSession(true);
-        String sakai_session = (String) session.getAttribute("sakai_session");
-        String sakai_server = (String) session.getAttribute("ext_sakai_server");    // Base server http://localhost:9090
-        logger.info("IS IT OK: {}", sakai_session);
+        if (session != null) {
+            final String sakai_session = (String) session.getAttribute("sakai_session");
+            final String sakai_server = (String) session.getAttribute("ext_sakai_server");
+            logger.info("doPost IS IT OK: {}", sakai_session);
+            // Base server http://localhost:9090
+            final Header header = new BasicHeader("JSESSIONID", sakai_session);
+            final Set<Header> headers = new HashSet<>();
+            headers.add(header);
 
-        HttpClient client = new HttpClient();
+            // TODO strange behaviour url is not set and doing get from POST
+            HttpResponse get = HttpClientUtils.goGet(headers, "");
+            if (get != null) {
+                // Retrieve data
+                try {
+                    InputStream retrieve = get.getEntity().getContent();
+                    ServletOutputStream output = response.getOutputStream();
 
-        //// Connection to Sakai
-        GetMethod get = new GetMethod("");
-        Header header = new Header();
-        header.setName("JSESSIONID");
-        header.setValue(sakai_session);
-        get.setRequestHeader(header);
+                    IOUtils.copy(retrieve, output);
+                    IOUtils.closeQuietly(output, null);
 
-        int status = client.executeMethod(get);
-        if (status != HttpStatus.SC_OK) {
-            logger.error("Method failed: {}", get.getStatusLine());
+                    output.flush();
+                    output.close();
+                    retrieve.close();
+                } catch (IOException e) {
+                    logger.error("IO Exception", e);
+                }
+            }
         }
-
-        InputStream retrieve = get.getResponseBodyAsStream();
-        ServletOutputStream output = response.getOutputStream();
-
-        IOUtils.copy(retrieve, output);
-        IOUtils.closeQuietly(output, null);
-
-        output.flush();
-        output.close();
-        retrieve.close();
-        get.releaseConnection();
     }
 
 

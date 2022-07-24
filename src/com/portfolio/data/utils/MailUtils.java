@@ -26,6 +26,7 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.servlet.ServletConfig;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
 
 public class MailUtils {
@@ -69,10 +70,10 @@ public class MailUtils {
             //Set the host smtp address
             Properties props = new Properties();
 
-            final String useAuth = ConfigUtils.getInstance().getRequiredProperty("smtp.useauth");
+            final boolean useAuth = BooleanUtils.toBoolean(ConfigUtils.getInstance().getRequiredProperty("smtp.useauth"));
 
             props.put("mail.smtp.host", ConfigUtils.getInstance().getRequiredProperty("smtp.server"));
-            props.put("mail.smtp.auth", useAuth);
+            props.put("mail.smtp.auth", useAuth ? "true" : "false");
             props.put("mail.smtp.port", ConfigUtils.getInstance().getRequiredProperty("smtp.port"));
             props.put("mail.smtp.starttls.enable", ConfigUtils.getInstance().getRequiredProperty("smtp.starttls"));
             props.put("mail.smtp.ssl.protocols", ConfigUtils.getInstance().getRequiredProperty("smtp.tlsver"));
@@ -80,7 +81,7 @@ public class MailUtils {
             logger.debug("SMTP properties used: {}", props);
 
             Session session;
-            if ("true".equals(useAuth)) {
+            if (useAuth) {
                 javax.mail.Authenticator auth = new SMTPAuthenticator(mail_login, mail_password);
                 session = Session.getInstance(props, auth);
             } else {

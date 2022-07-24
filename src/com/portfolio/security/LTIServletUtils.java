@@ -65,7 +65,7 @@ public class LTIServletUtils {
      */
     protected static Connection initDB(ServletContext application, StringBuffer outTrace) throws Exception {
         String dataProviderName = "com.portfolio.data.provider.MysqlDataProvider";
-        dataProvider = (DataProvider) Class.forName(dataProviderName).newInstance();
+        dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
 
         // Open META-INF/context.xml
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -121,7 +121,7 @@ public class LTIServletUtils {
      */
     protected static boolean isTrace(ServletContext application) {
         String traceStr = (String) application.getAttribute("LTIServlet.trace");
-        return "true".equalsIgnoreCase(traceStr);
+        return Boolean.parseBoolean(traceStr);
 
     }
 
@@ -134,12 +134,12 @@ public class LTIServletUtils {
      * @throws IOException
      */
     protected static Map<String, Object> processRequest(HttpServletRequest request, StringBuffer outTrace) throws IOException {
-        Map<String, Object> payload = new HashMap<String, Object>();
+        Map<String, Object> payload = new HashMap<>();
         for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements(); ) {
             String key = e.nextElement();
             String value = request.getParameter(key);
             payload.put(key, value);
-            outTrace.append("\nkey: " + key + "(" + value + ")");
+            outTrace.append("\nkey: ").append(key).append("(").append(value).append(")");
         }
         return payload;
     }
@@ -165,24 +165,21 @@ public class LTIServletUtils {
 
             connexion = LTIServletUtils.initDB(application, outTrace);
 
-            String userId = LTIServletUtils.getOrCreateUser(payload, connexion, outTrace);
+            final String userId = LTIServletUtils.getOrCreateUser(payload, connexion, outTrace);
 
             //============Group Processing======================
-            String contextLabel = (String) payload.get(BasicLTIConstants.CONTEXT_LABEL);
-            String ltiRole = (String) payload.get(BasicLTIConstants.ROLES);
-            String contextRole = (String) payload.get(LTIServletUtils.EXT_SAKAI_ROLE);
-            String inputRole = contextRole == null ? ltiRole : contextRole;
-            outTrace.append("\nLTI Role: " + ltiRole);
-            outTrace.append("\nContext Role: " + contextRole);
-            outTrace.append("\nInput Role: " + inputRole);
-            String siteGroupId = LTIServletUtils.getOrCreateGroup(connexion, contextLabel, "topUser", outTrace);
+            final String contextLabel = (String) payload.get(BasicLTIConstants.CONTEXT_LABEL);
+            final String ltiRole = (String) payload.get(BasicLTIConstants.ROLES);
+            final String contextRole = (String) payload.get(LTIServletUtils.EXT_SAKAI_ROLE);
+            final String inputRole = contextRole == null ? ltiRole : contextRole;
+            outTrace.append("\nLTI Role: ").append(ltiRole);
+            outTrace.append("\nContext Role: ").append(contextRole);
+            outTrace.append("\nInput Role: ").append(inputRole);
+            final String siteGroupId = LTIServletUtils.getOrCreateGroup(connexion, contextLabel, "topUser", outTrace);
 
-            StringBuffer siteGroup = new StringBuffer();
-            siteGroup.append(contextLabel);
-            siteGroup.append("-");
-            siteGroup.append(inputRole);
-            String wadRole = LTIServletUtils.roleMapper(application, inputRole, outTrace);
-            String siteRoleGroupId = LTIServletUtils.getOrCreateGroup(connexion, siteGroup.toString(), wadRole, outTrace);
+            final String siteGroup = contextLabel + "-" + inputRole;
+            final String wadRole = LTIServletUtils.roleMapper(application, inputRole, outTrace);
+            final String siteRoleGroupId = LTIServletUtils.getOrCreateGroup(connexion, siteGroup, wadRole, outTrace);
 
             connection = SqlUtils.getConnection();
 
@@ -310,16 +307,16 @@ public class LTIServletUtils {
     protected static String getOrCreateUser(Map<String, Object> payload, Connection connexion, StringBuffer outTrace) throws Exception {
         String userId = "0";
         StringBuffer userXml = buildUserXml(payload);
-        outTrace.append("\nUserXML: " + userXml);
+        outTrace.append("\nUserXML: ").append(userXml);
 
         //Does the user already exist?
         userId = dataProvider.getUserId(connexion, buildUsername(payload), null);
         if ("0".equals(userId)) {
             //create it
             userId = dataProvider.createUser(connexion, buildUsername(payload), null);
-            outTrace.append("\nCreate User (self) results: " + userId);
+            outTrace.append("\nCreate User (self) results: ").append(userId);
         } else {
-            outTrace.append("\nUser found: " + userId);
+            outTrace.append("\nUser found: ").append(userId);
         }
 
         //Check for log entry
@@ -331,7 +328,7 @@ public class LTIServletUtils {
         if ("0".equals(logId)) {
             // Create log entry
             StringBuffer logResult = LTIUserLog.createUserLogEntry(connexion, lms_user_id, lms_user_eid, userId, consumer_key, outTrace);
-            outTrace.append("\nCreate User - Create LTI User Log results: " + logResult);
+            outTrace.append("\nCreate User - Create LTI User Log results: ").append(logResult);
         }
         return userId;
     }
@@ -356,9 +353,9 @@ public class LTIServletUtils {
             group = dataProvider.createGroup(connexion, role);
 //			group = dataProvider.createGroup(groupXml.toString()).toString();
 //			groupId = wadbackend.WadUtilities.getAttribute(group,  "id");
-            outTrace.append("\nCreate Group (self) results: " + group);
+            outTrace.append("\nCreate Group (self) results: ").append(group);
         } else {
-            outTrace.append("\nGroup found: " + group);
+            outTrace.append("\nGroup found: ").append(group);
         }
         return group;
     }
@@ -392,14 +389,9 @@ public class LTIServletUtils {
         String[] userInfo = {"-1", userName, fname, lname, email, active};
 
         StringBuffer xml = new StringBuffer();
-        xml.append(
-                "<user id='-1'>" +
-                        "<username>" + userName + "</username>" +
-                        "<firstname>" + fname + "</firstname>" +
-                        "<lastname>" + lname + "</lastname>" +
-                        "<email>" + email + "</email>" +
-                        "<active>" + active + "</active>" +
-                        "</user>");
+        xml.append("<user id='-1'>" + "<username>").append(userName).append("</username>").append("<firstname>").append(fname).append("</firstname>")
+                .append("<lastname>").append(lname).append("</lastname>").append("<email>").append(email).append("</email>")
+                .append("<active>").append(active).append("</active>").append("</user>");
 
         return xml;
     }
@@ -414,12 +406,8 @@ public class LTIServletUtils {
      */
     protected static StringBuffer buildGroupXml(String title, String role) throws Exception {
         StringBuffer xml = new StringBuffer();
-        xml.append(
-                "<group id='-1'>" +
-                        "<label>" + title + "</label>" +
-                        "<role>" + role + "</role>" +
-                        "<active>1</active>" +
-                        "</group>");
+        xml.append("<group id='-1'>" + "<label>").append(title).append("</label>").append("<role>").append(role).append("</role>")
+                .append("<active>1</active>").append("</group>");
 
         return xml;
     }
@@ -438,7 +426,7 @@ public class LTIServletUtils {
         if (wadRole == null) {
             throw new LTIException("roleMap.error", inputRole, null);
         }
-        outTrace.append("\nRole map: " + adjustedInput + "=>" + wadRole);
+        outTrace.append("\nRole map: ").append(adjustedInput).append("=>").append(wadRole);
         return wadRole;
     }
 

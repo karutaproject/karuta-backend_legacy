@@ -16,11 +16,11 @@
 package com.portfolio.socialnetwork;
 
 import java.net.URLEncoder;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import java.nio.charset.Charset;
 
 import com.portfolio.data.utils.FileUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 public class Elgg {
@@ -75,7 +75,9 @@ public class Elgg {
 		String status = null;
 		String result = "";
 		try {
-		JSONObject obj = new JSONObject(FileUtils.postHTTPQuery(DEFAULT_API_URL,"method=wire.save_post&api_key="+ELGG_API_AUTH_KEY+"&username="+username+"&auth_token="+token+"&text="+URLEncoder.encode(message)));
+		JSONObject obj = new JSONObject(FileUtils.postHTTPQuery(
+				DEFAULT_API_URL,"method=wire.save_post&api_key="+ELGG_API_AUTH_KEY+"&username="+username
+						+"&auth_token="+token+"&text="+URLEncoder.encode(message, Charset.defaultCharset().displayName())));
 
 		result = "";
 		//	status = obj.getString("status");

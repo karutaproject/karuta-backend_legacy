@@ -30,14 +30,17 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import javax.activation.MimeType;
 import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.ws.rs.Consumes;
@@ -70,9 +73,12 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import com.google.gson.Gson;
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.provider.MysqlDataProvider;
 import com.portfolio.data.utils.ConfigUtils;
 import com.portfolio.data.utils.DomUtils;
+import com.portfolio.data.utils.HttpClientUtils;
 import com.portfolio.data.utils.MailUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.eventbus.KEvent;
@@ -82,19 +88,22 @@ import com.portfolio.security.Credential;
 import com.portfolio.security.NodeRight;
 import com.portfolio.socialnetwork.Elgg;
 import com.portfolio.socialnetwork.Ning;
-import edu.yale.its.tp.cas.client.ServiceTicketValidator;
-import org.apache.commons.httpclient.Header;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.jasig.cas.client.validation.Assertion;
+import org.jasig.cas.client.validation.Cas20ServiceTicketValidator;
+import org.jasig.cas.client.validation.TicketValidationException;
 import org.json.XML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,6 +116,7 @@ import org.w3c.dom.NodeList;
 /// I hate this line, sometime it works with a '/', sometime it doesn't
 @Path("/api")
 public class RestServicePortfolio {
+
     private static final SimpleDateFormat DT = new SimpleDateFormat("yyyy-MM-dd HHmmss");
     private static final SimpleDateFormat DT2 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
     private static final Logger logger = LoggerFactory.getLogger(RestServicePortfolio.class);
@@ -116,44 +126,81 @@ public class RestServicePortfolio {
     private static final Logger errorLog = LoggerFactory.getLogger("errorLogger");
     private static final Logger editLog = LoggerFactory.getLogger("editLogger");
 
+    private static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
+    private static final String logFormatShort = "%7$s\n";
+
+    private String tempdir;
+
     class UserInfo {
         String subUser = "";
         int subId = 0;
         String User = "";
         int userId = 0;
 //		int groupId = -1;
+
+        @Override
+        public String toString() {
+            return "UserInfo{" +
+                    "subUser='" + subUser + '\'' +
+                    ", subId=" + subId +
+                    ", User='" + User + '\'' +
+                    ", userId=" + userId +
+                    '}';
+        }
     }
 
     //	DataSource ds;
-    DataProvider dataProvider;
-    final Credential credential = new Credential();
-    String label = null;
-    String casUrlValidation = null;
-    String elggDefaultApiUrl = null;
-    String elggDefaultSiteUrl = null;
-    String elggApiKey = null;
-    String elggDefaultUserPassword = null;
+    private DataProvider dataProvider;
+    private final Credential credential = new Credential();
 
-    String archivePath;
+    // Options
+    private boolean activelogin;
+    private String backend;
+    private boolean resetPWEnable;
+    private String ccEmail;
+    private String basicLogoutRedirectionURL;
+    private boolean casCreateAccount;
+    private String casUrlValidation;
+    private String casUrlsJsonString;
+    private String elggDefaultApiUrl;
+    private String elggDefaultSiteUrl;
+    private String elggApiKey;
+    private String elggDefaultUserPassword;
+    private String shibbolethLogoutRedirectionURL;
+    private Map<String, String> casUrlsValidation;
 
-    ServletContext servContext;
-    ServletConfig servConfig;
+    private String ldapUrl;
 
-    KEventbus eventbus = new KEventbus();
+    private String label;
+    private String archivePath;
 
-    static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
-    static final String logFormatShort = "%7$s\n";
+    private KEventbus eventbus = new KEventbus();
 
     /**
      * Initialize service objects
      **/
-    public RestServicePortfolio(@Context ServletConfig sc, @Context ServletContext context) {
+    public RestServicePortfolio(@Context ServletConfig sc) {
         try {
             // Loading configKaruta.properties
             ConfigUtils.init(sc.getServletContext());
 
-            // Initialize data provider and cas
+            tempdir = System.getProperty("java.io.tmpdir", null);
+
+            // Initialize
+            activelogin = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("activate_login"));
+            resetPWEnable = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("enable_password_reset"));
+            ccEmail = ConfigUtils.getInstance().getProperty("sys_email");
+            basicLogoutRedirectionURL = ConfigUtils.getInstance().getProperty("baseui_redirect_location");
+            backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
+            // CAS
             casUrlValidation = ConfigUtils.getInstance().getProperty("casUrlValidation");
+            casCreateAccount = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("casCreateAccount"));
+            casUrlsJsonString = ConfigUtils.getInstance().getProperty("casUrlValidationMapping");
+            Gson gson = new Gson();
+            casUrlsValidation = gson.fromJson(casUrlsJsonString, Map.class);
+
+            // LDAP
+            ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
 
             // Elgg variables
             elggDefaultApiUrl = ConfigUtils.getInstance().getProperty("elggDefaultApiUrl");
@@ -162,13 +209,15 @@ public class RestServicePortfolio {
             elggApiKey = ConfigUtils.getInstance().getProperty("elggApiKey");
             elggDefaultUserPassword = ConfigUtils.getInstance().getProperty("elggDefaultUserPassword");
 
-            servConfig = sc;
-            servContext = context;
+            //shibboleth
+            shibbolethLogoutRedirectionURL = ConfigUtils.getInstance().getProperty("shib_logout");
+
+            // data provider
             dataProvider = SqlUtils.initProvider();
 
             archivePath = ConfigUtils.getInstance().getKarutaHome() + ConfigUtils.getInstance().getServletName() + "_archive" + File.separatorChar;
         } catch (Exception e) {
-            logger.error("CAN'T INIT REST SERVICE: ", e);
+            logger.error("CAN'T INIT REST SERVICE from " + ConfigUtils.getInstance().getConfigPath(), e);
         }
     }
 
@@ -213,7 +262,8 @@ public class RestServicePortfolio {
     @Path("/credential")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public Response getCredential(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public Response getCredential(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                  @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -259,16 +309,15 @@ public class RestServicePortfolio {
     @Path("/groups")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getGroups(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getGroups(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                            @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             c = SqlUtils.getConnection();
 
-            String xmlGroups = (String) dataProvider.getUserGroups(c, ui.userId);
-
-            return xmlGroups;
+            return (String) dataProvider.getUserGroups(c, ui.userId);
         } catch (Exception ex) {
             logger.error("getCredential - Managed error", ex);
 
@@ -305,7 +354,9 @@ public class RestServicePortfolio {
     @Path("/users")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("username") String username, @QueryParam("firstname") String firstname, @QueryParam("lastname") String lastname, @QueryParam("group") int groupId, @QueryParam("email") String email, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("username") String username,
+                           @QueryParam("firstname") String firstname, @QueryParam("lastname") String lastname, @QueryParam("group") int groupId,
+                           @QueryParam("email") String email, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -316,7 +367,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
 
-            String xmlGroups = "";
+            String xmlGroups;
             if (credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId))
                 xmlGroups = dataProvider.getListUsers(c, ui.userId, username, firstname, lastname, email);
             else if (ui.userId != 0)
@@ -327,7 +378,6 @@ public class RestServicePortfolio {
             return xmlGroups;
         } catch (Exception ex) {
             logger.error("getUsers - Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -357,16 +407,13 @@ public class RestServicePortfolio {
     @Path("/users/user/{user-id}")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("user-id") int userid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("user-id") int userid,
+                          @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
-
         try {
             c = SqlUtils.getConnection();
-
-            String xmluser = dataProvider.getInfUser(c, ui.userId, userid);
-
-            return xmluser;
+            return dataProvider.getInfUser(c, ui.userId, userid);
         } catch (RestWebApplicationException ex) {
             logger.error("getUser - Managed error", ex);
 
@@ -416,14 +463,15 @@ public class RestServicePortfolio {
     @Path("/users/user/{user-id}")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putUser(String xmlInfUser, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("user-id") int userid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String putUser(String xmlInfUser, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                          @PathParam("user-id") int userid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             c = SqlUtils.getConnection();
 
-            String queryuser = "";
+            String queryuser;
             if (credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId)) {
                 queryuser = dataProvider.putInfUser(c, ui.userId, userid, xmlInfUser);
                 if (queryuser == null)
@@ -462,15 +510,14 @@ public class RestServicePortfolio {
     @Path("/users/user/username/{username}")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getUserId(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("username") String username, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getUserId(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("username") String username,
+                            @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             c = SqlUtils.getConnection();
-
-            String userid = dataProvider.getUserID(c, ui.userId, username);
-            return userid;
+            return dataProvider.getUserID(c, ui.userId, username);
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.NOT_FOUND, ex.getResponse().getEntity().toString());
@@ -503,16 +550,15 @@ public class RestServicePortfolio {
     @Path("/users/user/{user-id}/groups")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getGroupsUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("user-id") int useridCible, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getGroupsUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("user-id") int useridCible,
+                                @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             c = SqlUtils.getConnection();
 
-            String xmlgroupsUser = dataProvider.getRoleUser(c, ui.userId, useridCible);
-
-            return xmlgroupsUser;
+            return dataProvider.getRoleUser(c, ui.userId, useridCible);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -551,16 +597,15 @@ public class RestServicePortfolio {
     @Path("/groupRights")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getGroupRights(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getGroupRights(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                 @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             c = SqlUtils.getConnection();
 
-            String xmlGroups = (String) dataProvider.getGroupRights(c, ui.userId, groupId);
-
-            return xmlGroups;
+            return (String) dataProvider.getGroupRights(c, ui.userId, groupId);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -590,7 +635,8 @@ public class RestServicePortfolio {
     @Path("/groupRightsInfos")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getGroupRightsInfos(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolioId") String portfolioId) {
+    public String getGroupRightsInfos(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                      @Context HttpServletRequest httpServletRequest, @QueryParam("portfolioId") String portfolioId) {
         if (!isUUID(portfolioId)) {
             logger.error("isUUID({}) is false", portfolioId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -602,9 +648,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
 
-            String xmlGroups = dataProvider.getGroupRightsInfos(c, ui.userId, portfolioId);
-
-            return xmlGroups;
+            return dataProvider.getGroupRightsInfos(c, ui.userId, portfolioId);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -646,7 +690,10 @@ public class RestServicePortfolio {
     @Path("/portfolios/portfolio/{portfolio-id}")
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, "application/zip", MediaType.APPLICATION_OCTET_STREAM})
-    public Object getPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resource, @QueryParam("files") String files, @QueryParam("export") String export, @QueryParam("lang") String lang, @QueryParam("level") Integer cutoff) {
+    public Object getPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,
+                               @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept,
+                               @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resource,
+                               @QueryParam("files") String files, @QueryParam("export") String export, @QueryParam("lang") String lang, @QueryParam("level") Integer cutoff) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -660,7 +707,7 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, resource, "", ui.subId, cutoff).toString();
 
-            if ("faux".equals(portfolio)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(portfolio)) {
                 response = Response.status(403).build();
             }
 
@@ -701,7 +748,7 @@ public class RestServicePortfolio {
                     // Temp file cleanup
                     tempZip.delete();
                 } else {
-                    if (portfolio.equals("faux")) {
+                    if (portfolio.equals(MysqlDataProvider.DATABASE_FALSE)) {
                         throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
                     }
 
@@ -743,7 +790,7 @@ public class RestServicePortfolio {
         }
 
         /// Temp file in temp directory
-        File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+        File tempDir = new File(tempdir);
         if (!tempDir.isDirectory())
             tempDir.mkdirs();
         File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
@@ -770,7 +817,7 @@ public class RestServicePortfolio {
             Node res = nodelist.item(i);
             /// Check if fileid has a lang
             Node langAtt = res.getAttributes().getNamedItem("lang");
-            String filterName = "";
+            String filterName;
             if (langAtt != null) {
                 lang = langAtt.getNodeValue();
                 filterName = ".//*[local-name()='filename' and @lang='" + lang + "' and text()]";
@@ -792,7 +839,6 @@ public class RestServicePortfolio {
                 if ("".equals(lang)) lang = "fr";
             }
 
-            String backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
             String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
             HttpGet get = new HttpGet(url);
 
@@ -810,7 +856,7 @@ public class RestServicePortfolio {
             int lastDot = filename.lastIndexOf(".");
             if (lastDot < 0)
                 lastDot = 0;
-            String filenameext = filename.substring(0);    /// find extension
+            String filenameext = filename;    /// find extension
             int extindex = filenameext.lastIndexOf(".") + 1;
             filenameext = uuid + "_" + lang + "." + filenameext.substring(extindex);
 
@@ -854,24 +900,38 @@ public class RestServicePortfolio {
     @Path("/portfolios/portfolio/code/{code : .+}")
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public Object getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources) {
+    public Object getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,
+                                     @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept,
+                                     @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
+        		c = SqlUtils.getConnection();
+
+            // Try with world public access
+            String userid = dataProvider.getUserId(c, "public", null);
+            int uid = Integer.parseInt(userid);
+            String portfo = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, uid, -1, "true", -1).toString();
+
+            if( !"faux".equals(portfo) )
+            {
+            	Response.status(Status.NOT_FOUND).entity("").build();
+            }
+
             if (ui.userId == 0) {
                 return Response.status(Status.FORBIDDEN).build();
             }
 
             if (resources == null)
                 resources = "false";
-            c = SqlUtils.getConnection();
             String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, ui.userId, groupId, resources, ui.subId).toString();
-            if ("faux".equals(returnValue)) {
-
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
+                logger.error("Code {} not found or user without rights", code);
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
             if ("".equals(returnValue)) {
+                logger.error("Code {} not found", code);
                 return Response.status(Status.NOT_FOUND).entity("").build();
             }
             if (MediaType.APPLICATION_JSON.equals(accept))    // Not really used
@@ -880,21 +940,19 @@ public class RestServicePortfolio {
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
-            logger.error("Managed error", ex);
+            logger.error("getPortfolioByCode error, will return FORBIDDEN", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logger.error("Managed error", ex);
-
+            logger.error("getPortfolioByCode error, will return NOT_FOUND for code {}", code, ex);
             throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio code = " + code + " not found");
         } catch (Exception ex) {
-            logger.error("Managed error", ex);
-
+            logger.error("getPortfolioByCode error, will return error 500", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
-                logger.error("Managed error", e);
+                logger.error("getPortfolioByCode SQLException error", e);
             }
         }
     }
@@ -931,14 +989,19 @@ public class RestServicePortfolio {
     @GET
     @Consumes(MediaType.APPLICATION_XML)
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active, @QueryParam("userid") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid, @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") Integer cutoff, @QueryParam("public") String public_var, @QueryParam("project") String project, @QueryParam("count") String count, @QueryParam("search") String search) {
+    public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active,
+                                @QueryParam("userid") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid,
+                                @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") Integer cutoff, @QueryParam("public") String public_var,
+                                @QueryParam("project") String project, @QueryParam("count") String count, @QueryParam("search") String search) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             c = SqlUtils.getConnection();
             if (portfolioUuid != null) {
-                String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, groupId, this.label, null, null, ui.subId, cutoff).toString();
+                String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, groupId, this.label, null,
+                        null, ui.subId, cutoff).toString();
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
 
@@ -947,30 +1010,30 @@ public class RestServicePortfolio {
 
             } else {
                 String portfolioCode = null;
-                String returnValue = "";
-                Boolean countOnly = false;
-                Boolean portfolioActive;
+                String returnValue;
+                boolean countOnly;
+                boolean portfolioActive;
                 Boolean portfolioProject = null;
                 String portfolioProjectId = null;
 
                 try {
-                    portfolioActive = !active.equals("false") && !active.equals("0");
+                    portfolioActive = BooleanUtils.isNotFalse(BooleanUtils.toBooleanObject(active));
                 } catch (Exception ex) {
                     portfolioActive = true;
                 }
 
 
                 try {
-                    if (project.equals("false") || project.equals("0")) portfolioProject = false;
-                    else if (project.equals("true") || project.equals("1")) portfolioProject = true;
+                    if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(project))) portfolioProject = false;
+                    else if (BooleanUtils.toBoolean(project)) portfolioProject = true;
                     else if (project.length() > 0) portfolioProjectId = project;
                 } catch (Exception ex) {
-                    portfolioProject = null;
+                    //portfolioProject = null;
                 }
 
 
                 try {
-                    countOnly = count.equals("true") || count.equals("1");
+                    countOnly = BooleanUtils.toBoolean(count);
                 } catch (Exception ex) {
                     countOnly = false;
                 }
@@ -987,12 +1050,15 @@ public class RestServicePortfolio {
                 } else {
                     if (public_var != null) {
                         int publicid = credential.getMysqlUserUid(c, "public");
-                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, portfolioActive, 0, portfolioProject, portfolioProjectId, countOnly, search).toString();
+                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, portfolioActive, 0, portfolioProject,
+                                portfolioProjectId, countOnly, search).toString();
                     } else if (userId != null && credential.isAdmin(c, ui.userId)) {
-                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search).toString();
+                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId, portfolioProject,
+                                portfolioProjectId, countOnly, search).toString();
                     } else    /// For user logged in
                     {
-                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search).toString();
+                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId, portfolioProject,
+                                portfolioProjectId, countOnly, search).toString();
                     }
 
                     if (accept.equals(MediaType.APPLICATION_JSON))
@@ -1036,7 +1102,9 @@ public class RestServicePortfolio {
     @PUT
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    public String putPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("active") String active, @QueryParam("user") Integer userId) {
+    public String putPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                               @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                               @QueryParam("active") String active, @QueryParam("user") Integer userId) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -1046,21 +1114,15 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            Boolean portfolioActive;
-            if ("false".equals(active) || "0".equals(active))
-                portfolioActive = false;
-            else
-                portfolioActive = true;
+            boolean portfolioActive = BooleanUtils.isNotFalse(BooleanUtils.toBooleanObject(active));
 
             c = SqlUtils.getConnection();
             dataProvider.putPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, portfolioUuid, ui.userId, portfolioActive, groupId, null);
-
 
             return "";
 
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -1115,7 +1177,8 @@ public class RestServicePortfolio {
     @PUT
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    public String putPortfolioOwner(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @PathParam("portfolio-id") String portfolioUuid, @PathParam("newOwnerId") int newOwner, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String putPortfolioOwner(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @PathParam("portfolio-id") String portfolioUuid,
+                                    @PathParam("newOwnerId") int newOwner, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
         boolean retval = false;
@@ -1154,7 +1217,9 @@ public class RestServicePortfolio {
     @PUT
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    public String putPortfolioConfiguration(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portfolioUuid, @QueryParam("active") Boolean portfolioActive) {
+    public String putPortfolioConfiguration(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                            @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portfolioUuid,
+                                            @QueryParam("active") Boolean portfolioActive) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -1164,14 +1229,11 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            String returnValue = "";
             if (portfolioUuid != null && portfolioActive != null) {
                 c = SqlUtils.getConnection();
                 dataProvider.putPortfolioConfiguration(c, portfolioUuid, portfolioActive, ui.userId);
             }
-
-
-            return returnValue;
+            return "";
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -1210,15 +1272,14 @@ public class RestServicePortfolio {
     @POST
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    public Response postUser(String xmluser, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public Response postUser(String xmluser, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                             @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             c = SqlUtils.getConnection();
-            String xmlUser = dataProvider.postUsers(c, xmluser, ui.userId);
-
-
+            final String xmlUser = dataProvider.postUsers(c, xmluser, ui.userId);
             if (xmlUser == null) {
                 return Response.status(Status.CONFLICT).entity("Existing user or invalid input").build();
             }
@@ -1247,11 +1308,11 @@ public class RestServicePortfolio {
     @Path("/label/{label}")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public Response postCredentialGroupLabel(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("label") String label) {
+    public Response postCredentialGroupLabel(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                             @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("label") String label) {
         checkCredential(httpServletRequest, user, token, null);
-
         try {
-            String name = sc.getServletContext().getContextPath();
+            final String name = sc.getServletContext().getContextPath();
 
             return Response.ok().build(); //.cookie(new NewCookie("label", label, name, null, null, 3600 /*maxAge*/, false)).build();
         } catch (RestWebApplicationException ex) {
@@ -1259,10 +1320,7 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-        } finally {
-//			dataProvider.disconnect();
         }
     }
 
@@ -1278,7 +1336,8 @@ public class RestServicePortfolio {
     @Path("/credential/group/{group-id}")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public Response postCredentialGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public Response postCredentialGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                        @Context HttpServletRequest httpServletRequest) {
         HttpSession session = httpServletRequest.getSession(true);
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
@@ -1296,10 +1355,7 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-        } finally {
-//			dataProvider.disconnect();
         }
     }
 
@@ -1315,22 +1371,20 @@ public class RestServicePortfolio {
     @Path("group")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public String postGroup(String xmlgroup, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String postGroup(String xmlgroup, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                            @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             c = SqlUtils.getConnection();
-            String xmlGroup = (String) dataProvider.postGroup(c, xmlgroup, ui.userId);
 
-
-            return xmlGroup;
+            return (String) dataProvider.postGroup(c, xmlgroup, ui.userId);
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.BAD_REQUEST, ex.getMessage());
         } finally {
             try {
@@ -1354,7 +1408,8 @@ public class RestServicePortfolio {
     @Path("/groupsUsers")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public String postGroupsUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("userId") int userId) {
+    public String postGroupsUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                  @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("userId") int userId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -1391,7 +1446,8 @@ public class RestServicePortfolio {
     @Path("RightGroup")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public Response postRightGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("groupRightId") int groupRightId) {
+    public Response postRightGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                   @Context HttpServletRequest httpServletRequest, @QueryParam("groupRightId") int groupRightId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -1432,7 +1488,10 @@ public class RestServicePortfolio {
      **/
     @Path("/portfolios/instanciate/{portfolio-id}")
     @POST
-    public Object postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId, @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname, @QueryParam("owner") String setowner) {
+    public Object postInstanciatePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                           @Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId, @QueryParam("sourcecode") String srccode,
+                                           @QueryParam("targetcode") String tgtcode, @QueryParam("copyshared") String copy, @QueryParam("groupname") String groupname,
+                                           @QueryParam("owner") String setowner) {
 		/*
 		if( !isUUID(portfolioId) )
 		{
@@ -1454,12 +1513,8 @@ public class RestServicePortfolio {
                 return Response.status(Status.FORBIDDEN).entity("403").build();
             }
 
-            boolean setOwner = false;
-            if ("true".equals(setowner))
-                setOwner = true;
-            boolean copyshared = false;
-            if ("y".equalsIgnoreCase(copy))
-                copyshared = true;
+            boolean setOwner = BooleanUtils.toBoolean(setowner);
+            boolean copyshared = BooleanUtils.toBoolean(copy);
 
             /// Check if code exist, find a suitable one otherwise. Eh.
             String newcode = tgtcode;
@@ -1468,8 +1523,8 @@ public class RestServicePortfolio {
                 newcode = tgtcode + " (" + num++ + ")";
             tgtcode = newcode;
 
-            String returnValue = dataProvider.postInstanciatePortfolio(c, new MimeType("text/xml"), portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
-
+            final String returnValue = dataProvider.postInstanciatePortfolio(c, new MimeType("text/xml"), portfolioId, srccode, tgtcode, ui.userId, groupId, copyshared,
+                    groupname, setOwner).toString();
 
             if (returnValue.startsWith("no rights"))
                 throw new RestWebApplicationException(Status.FORBIDDEN, returnValue);
@@ -1506,7 +1561,9 @@ public class RestServicePortfolio {
      **/
     @Path("/portfolios/copy/{portfolio-id}")
     @POST
-    public Response postCopyPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId, @QueryParam("sourcecode") String srccode, @QueryParam("targetcode") String tgtcode, @QueryParam("owner") String setowner) {
+    public Response postCopyPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                      @Context HttpServletRequest httpServletRequest, @PathParam("portfolio-id") String portfolioId, @QueryParam("sourcecode") String srccode,
+                                      @QueryParam("targetcode") String tgtcode, @QueryParam("owner") String setowner) {
 		/*
 		if( !isUUID(portfolioId) )
 		{
@@ -1533,9 +1590,7 @@ public class RestServicePortfolio {
                 return Response.status(Status.CONFLICT).entity("code exist").build();
             }
 
-            boolean setOwner = false;
-            if ("true".equals(setowner))
-                setOwner = true;
+            boolean setOwner = Boolean.parseBoolean(setowner);
             tgtcode = newcode;
 
             String returnValue = dataProvider.postCopyPortfolio(c, new MimeType("text/xml"), portfolioId, srccode, tgtcode, ui.userId, setOwner).toString();
@@ -1544,7 +1599,6 @@ public class RestServicePortfolio {
             return Response.status(Status.OK).entity(returnValue).build();
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -1566,7 +1620,11 @@ public class RestServicePortfolio {
 //	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_XML)
-    public String postFormPortfolio(@FormDataParam("uploadfile") String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @FormDataParam("instance") String instance, @FormDataParam("project") String projectName) {
+    public String postFormPortfolio(@FormDataParam("uploadfile") String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token,
+                                    @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                                    @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType,
+                                    @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @FormDataParam("instance") String instance,
+                                    @FormDataParam("project") String projectName) {
         return postPortfolio(xmlPortfolio, user, token, groupId, sc, httpServletRequest, userId, modelId, srceType, srceUrl, xsl, instance, projectName);
     }
 
@@ -1590,74 +1648,70 @@ public class RestServicePortfolio {
     @Consumes(MediaType.APPLICATION_XML)
 //	@Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_XML)
-    public String postPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl, @QueryParam("instance") String instance, @QueryParam("project") String projectName) {
+    public String postPortfolio(String xmlPortfolio, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId,
+                                @QueryParam("model") String modelId, @QueryParam("srce") String srceType, @QueryParam("srceurl") String srceUrl,
+                                @QueryParam("xsl") String xsl, @QueryParam("instance") String instance, @QueryParam("project") String projectName) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
         if ("sakai".equals(srceType)) {
             /// Session Sakai
             HttpSession session = httpServletRequest.getSession(false);
             if (session != null) {
-                String sakai_session = (String) session.getAttribute("sakai_session");
-                String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
+                final String sakai_session = (String) session.getAttribute("sakai_session");
+                final String sakai_server = (String) session.getAttribute("sakai_server");    // Base server http://localhost:9090
+                final String url = sakai_server + "/" + srceUrl;
+                final Header header = new BasicHeader("JSESSIONID", sakai_session);
+                final Set<Header> headers = new HashSet<>();
+                headers.add(header);
 
-                HttpClient client = new HttpClient();
-
-                /// Fetch page
-                GetMethod get = new GetMethod(sakai_server + "/" + srceUrl);
-                Header header = new Header();
-                header.setName("JSESSIONID");
-                header.setValue(sakai_session);
-                get.setRequestHeader(header);
-
-                try {
-                    int status = client.executeMethod(get);
-                    if (status != HttpStatus.SC_OK) {
-                        logger.error("Method failed: {}", get.getStatusLine());
-                        // missing management ?
-                    }
-
+                HttpResponse response= HttpClientUtils.goGet(headers, url);
+                if (response != null) {
                     // Retrieve data
-                    InputStream retrieve = get.getResponseBodyAsStream();
-                    String sakaiData = IOUtils.toString(retrieve, StandardCharsets.UTF_8);
+                    try {
+                        InputStream retrieve = response.getEntity().getContent();
+                        String sakaiData = IOUtils.toString(retrieve, StandardCharsets.UTF_8);
 
-                    //// Convert it via XSL
-                    /// Path to XSL
-                    String servletDir = sc.getServletContext().getRealPath("/");
-                    int last = servletDir.lastIndexOf(File.separator);
-                    last = servletDir.lastIndexOf(File.separator, last - 1);
-                    String baseDir = servletDir.substring(0, last);
+                        //// Convert it via XSL
+                        /// Path to XSL
+                        String servletDir = sc.getServletContext().getRealPath("/");
+                        int last = servletDir.lastIndexOf(File.separator);
+                        last = servletDir.lastIndexOf(File.separator, last - 1);
+                        String baseDir = servletDir.substring(0, last);
 
-                    String basepath = xsl.substring(0, xsl.indexOf(File.separator));
-                    String firstStage = baseDir + File.separator + basepath + File.separator + "karuta" + File.separator + "xsl" + File.separator + "html2xml.xsl";
-                    //TODO should be done on an other way !
-                    logger.info("FIRST: {}", firstStage);
+                        String basepath = xsl.substring(0, xsl.indexOf(File.separator));
+                        String firstStage = baseDir + File.separator + basepath + File.separator + "karuta" + File.separator + "xsl" + File.separator + "html2xml.xsl";
+                        //TODO should be done on an other way !
+                        logger.info("FIRST: {}", firstStage);
 
-                    /// Storing transformed data
-                    StringWriter dataTransformed = new StringWriter();
+                        /// Storing transformed data
+                        StringWriter dataTransformed = new StringWriter();
 
-                    /// Apply change
-                    Source xsltSrc1 = new StreamSource(new File(firstStage));
-                    TransformerFactory transFactory = TransformerFactory.newInstance();
-                    Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
-                    StreamSource stageSource = new StreamSource(new ByteArrayInputStream(sakaiData.getBytes()));
-                    Result stageRes = new StreamResult(dataTransformed);
-                    transformer1.transform(stageSource, stageRes);
+                        /// Apply change
+                        Source xsltSrc1 = new StreamSource(new File(firstStage));
+                        TransformerFactory transFactory = TransformerFactory.newInstance();
+                        Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
+                        StreamSource stageSource = new StreamSource(new ByteArrayInputStream(sakaiData.getBytes()));
+                        Result stageRes = new StreamResult(dataTransformed);
+                        transformer1.transform(stageSource, stageRes);
 
-                    /// Result as portfolio data to be imported
-                    xmlPortfolio = dataTransformed.toString();
-                } catch (IOException | TransformerException e) {
-                    logger.error("Managed error", e);
+                        /// Result as portfolio data to be imported
+                        xmlPortfolio = dataTransformed.toString();
+                    } catch (IOException | TransformerException e) {
+                        logger.error("Managed error", e);
+                    }
                 }
             }
         }
 
         Connection c = null;
         try {
-            boolean instantiate = "true".equals(instance);
+            boolean instantiate = BooleanUtils.toBoolean(instance);
 
             c = SqlUtils.getConnection();
 
-            return dataProvider.postPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
+            return dataProvider.postPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio, ui.userId, groupId, modelId, ui.subId,
+                    instantiate, projectName).toString();
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
 
@@ -1684,7 +1738,8 @@ public class RestServicePortfolio {
     @Path("/portfolios/shared/{userid}")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public Response getPortfolioShared(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("userid") int userid) {
+    public Response getPortfolioShared(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                       @Context HttpServletRequest httpServletRequest, @PathParam("userid") int userid) {
         UserInfo uinfo = checkCredential(httpServletRequest, user, token, null);
 
         Connection c = null;
@@ -1714,7 +1769,7 @@ public class RestServicePortfolio {
 
 
     // GET /portfolios/zip ? portfolio={}, toujours avec files
-    // zip s�par�s
+    // zip séparés
     // zip des zip
 
     /**
@@ -1728,14 +1783,17 @@ public class RestServicePortfolio {
     @Path("/portfolios/zip")
     @GET
     @Consumes("application/zip")    // Envoie donn�e brut
-    public Object getPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("portfolios") String portfolioList, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @QueryParam("instance") String instance, @QueryParam("lang") String lang, @QueryParam("archive") String archive) {
+    public Object getPortfolioZip(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("portfolios") String portfolioList,
+                                  @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId,
+                                  @QueryParam("model") String modelId, @QueryParam("instance") String instance, @QueryParam("lang") String lang,
+                                  @QueryParam("archive") String archive) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             File archiveFolder = null;
             boolean doArchive = false;
-            if (archive != null && "y".equals(archive.toLowerCase())) {
+            if (BooleanUtils.toBoolean(archive)) {
                 /// Check if folder exists
                 archiveFolder = new File(archivePath);
                 if (!archiveFolder.exists())
@@ -1756,7 +1814,8 @@ public class RestServicePortfolio {
             /// Create all the zip files
             for (int i = 0; i < list.length; ++i) {
                 String portfolioUuid = list[i];
-                String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, "true", "", ui.subId, null).toString();
+                String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, "true", "",
+                        ui.subId, null).toString();
 
                 // No name yet
                 if ("".equals(name)) {
@@ -1779,7 +1838,7 @@ public class RestServicePortfolio {
             // Make a big zip of it
             String timeFormat = DT.format(new Date());
 
-            File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+            File tempDir = new File(tempdir);
             if (!tempDir.isDirectory())
                 tempDir.mkdirs();
             File bigZip = File.createTempFile("project_" + timeFormat, ".zip", tempDir);
@@ -1790,8 +1849,7 @@ public class RestServicePortfolio {
 
             byte[] buffer = new byte[0x1000];
 
-            for (int i = 0; i < files.length; ++i) {
-                File file = files[i];
+            for (File file : files) {
                 FileInputStream fis = new FileInputStream(file);
                 String filename = file.getName();
 
@@ -1808,8 +1866,7 @@ public class RestServicePortfolio {
             zos.close();
 
             // Delete all zipped file
-            for (int i = 0; i < files.length; ++i)
-                files[i].delete();
+            for (File file : files) file.delete();
 
             Response response;
             if (doArchive)    // Keep bigzip inside archive folder
@@ -1837,15 +1894,10 @@ public class RestServicePortfolio {
             }
             // Delete over-arching zip
             bigZip.delete();
-
             return response;
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error("Managed error", e);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, e.getMessage());
-        } catch (Exception ex) {
-            logger.error("Managed error", ex);
-
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
@@ -1873,20 +1925,14 @@ public class RestServicePortfolio {
         Connection c = null;
 
         try {
-            boolean instantiate = false;
-            if ("true".equals(instance))
-                instantiate = true;
-
+            boolean instantiate = Boolean.parseBoolean(instance);
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, fileInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
-
-
-            return returnValue;
+            return dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, fileInputStream, ui.userId, groupId,
+                    modelId, ui.subId, instantiate, projectName).toString();
         } catch (RestWebApplicationException e) {
             throw e;
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -1906,7 +1952,9 @@ public class RestServicePortfolio {
     @Path("/portfolios/portfolio/{portfolio-id}")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deletePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
+    public String deletePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                  @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                                  @QueryParam("user") Integer userId) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({})", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -1917,23 +1965,17 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            Integer nbPortfolioDeleted = Integer.parseInt(dataProvider.deletePortfolio(c, portfolioUuid, ui.userId, groupId).toString());
+            int nbPortfolioDeleted = Integer.parseInt(dataProvider.deletePortfolio(c, portfolioUuid, ui.userId, groupId).toString());
             if (nbPortfolioDeleted == 0) {
-
-
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
             }
-
-
             return "";
 
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -1956,7 +1998,9 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("level") Integer cutoff) {
+    public String getNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,
+                          @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId,
+                          @QueryParam("level") Integer cutoff) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -1984,7 +2028,7 @@ public class RestServicePortfolio {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logger.error("Managed error", ex);
+            logger.error("SQLException error", ex);
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (NullPointerException ex) {
             logger.error("Managed error", ex);
@@ -2013,7 +2057,9 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodeWithChildren(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("level") Integer cutoff) {
+    public String getNodeWithChildren(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                      @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                                      @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("level") Integer cutoff) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2030,8 +2076,6 @@ public class RestServicePortfolio {
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
-
-
                 return returnValue;
             } else {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2041,7 +2085,6 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
@@ -2067,7 +2110,9 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodeMetadataWad(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
+    public String getNodeMetadataWad(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                     @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                                     @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2093,7 +2138,6 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -2119,7 +2163,8 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodeRights(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
+    public String getNodeRights(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,
+                                @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2144,16 +2189,13 @@ public class RestServicePortfolio {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
-            logger.error("Managed error", ex);
-
+            logger.error("SQLException error", ex);
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (NullPointerException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -2174,7 +2216,8 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{node-id}/portfolioid")
     @GET
     @Produces(MediaType.TEXT_PLAIN)
-    public String getNodePortfolioId(@CookieParam("user") String user, @CookieParam("credential") String token, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
+    public String getNodePortfolioId(@CookieParam("user") String user, @CookieParam("credential") String token, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc,
+                                     @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2200,6 +2243,7 @@ public class RestServicePortfolio {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(ex.getStatus(), ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
+            logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
@@ -2230,7 +2274,9 @@ public class RestServicePortfolio {
     @POST
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String postNodeRights(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
+    public String postNodeRights(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                 @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                                 @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2259,9 +2305,7 @@ public class RestServicePortfolio {
                 Node right = rolenode.getFirstChild();
 
                 //
-                if ("user".equals(rolename)) {
-                    /// username as role
-                }
+                /// username as role
 
                 if ("#text".equals(right.getNodeName()))
                     right = right.getNextSibling();
@@ -2274,16 +2318,16 @@ public class RestServicePortfolio {
 
                     String val = rights.getNamedItem("RD").getNodeValue();
                     if (val != null)
-                        noderight.read = "Y".equals(val) ? true : false;
+                        noderight.read = "Y".equals(val);
                     val = rights.getNamedItem("WR").getNodeValue();
                     if (val != null)
-                        noderight.write = "Y".equals(val) ? true : false;
+                        noderight.write = "Y".equals(val);
                     val = rights.getNamedItem("DL").getNodeValue();
                     if (val != null)
-                        noderight.delete = "Y".equals(val) ? true : false;
+                        noderight.delete = "Y".equals(val);
                     val = rights.getNamedItem("SB").getNodeValue();
                     if (val != null)
-                        noderight.submit = "Y".equals(val) ? true : false;
+                        noderight.submit = "Y".equals(val);
 
                     // change right
                     dataProvider.postRights(c, ui.userId, nodeUuid, rolename, noderight);
@@ -2300,7 +2344,6 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (NullPointerException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
@@ -2328,7 +2371,9 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodeBySemanticTag(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-uuid") String portfolioUuid, @PathParam("semantictag") String semantictag, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
+    public String getNodeBySemanticTag(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                       @PathParam("portfolio-uuid") String portfolioUuid, @PathParam("semantictag") String semantictag, @Context ServletConfig sc,
+                                       @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2341,8 +2386,6 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.getNodeBySemanticTag(c, new MimeType("text/xml"), portfolioUuid, semantictag, ui.userId, groupId).toString();
             if (returnValue.length() != 0) {
-
-
                 return returnValue;
             } else {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2352,7 +2395,6 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -2374,7 +2416,9 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodesBySemanticTag(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-uuid") String portfolioUuid, @PathParam("semantictag") String semantictag, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
+    public String getNodesBySemanticTag(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                        @PathParam("portfolio-uuid") String portfolioUuid, @PathParam("semantictag") String semantictag, @Context ServletConfig sc,
+                                        @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({}) is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2387,11 +2431,8 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.getNodesBySemanticTag(c, new MimeType("text/xml"), ui.userId, groupId, portfolioUuid, semantictag).toString();
             if (returnValue.length() != 0) {
-
-
                 return returnValue;
             } else {
-
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
         } catch (RestWebApplicationException ex) {
@@ -2399,7 +2440,6 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -2419,7 +2459,8 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{node-id}")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
+    public String putNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                          @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2435,11 +2476,9 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNode(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
-            if (returnValue.equals("faux")) {
-
+            if (returnValue.equals(MysqlDataProvider.DATABASE_FALSE)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
-
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
@@ -2447,11 +2486,9 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -2471,7 +2508,8 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{nodeid}/metadata")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putNodeMetadata(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String putNodeMetadata(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                  @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2482,36 +2520,30 @@ public class RestServicePortfolio {
         Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
         String timeFormat = dt.format(time);
-        String logformat = "";
-        if ("false".equals(info))
+        String logformat = logFormat;
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
-        else
-            logformat = logFormat;
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.putNodeMetadata(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
+            final String returnValue = dataProvider.putNodeMetadata(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
-            if (returnValue.equals("faux")) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
 
-
             editLog.info(String.format(logformat, "OK", nodeUuid, "metadata", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -2531,7 +2563,8 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{nodeid}/metadatawad")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putNodeMetadataWad(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String putNodeMetadataWad(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                     @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2540,16 +2573,15 @@ public class RestServicePortfolio {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
         String timeFormat = DT.format(new Date());
-        String logformat = "";
-        if ("false".equals(info))
+        String logformat = logFormat;
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
-        else
-            logformat = logFormat;
+
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.putNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
-            if (returnValue.equals("faux")) {
+            final String returnValue = dataProvider.putNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2563,11 +2595,9 @@ public class RestServicePortfolio {
             throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
         } catch (SQLException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -2587,7 +2617,8 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{nodeid}/metadataepm")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putNodeMetadataEpm(String xmlNode, @PathParam("nodeid") String nodeUuid, @QueryParam("group") int groupId, @QueryParam("info") String info, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String putNodeMetadataEpm(String xmlNode, @PathParam("nodeid") String nodeUuid, @QueryParam("group") int groupId, @QueryParam("info") String info,
+                                     @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2596,16 +2627,14 @@ public class RestServicePortfolio {
         UserInfo ui = checkCredential(httpServletRequest, null, null, null);
         Connection c = null;
         String timeFormat = DT.format(new Date());
-        String logformat = "";
-        if ("false".equals(info))
+        String logformat = logFormat;
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
-        else
-            logformat = logFormat;
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.putNodeMetadataEpm(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
-            if (returnValue.equals("faux")) {
+            final String returnValue = dataProvider.putNodeMetadataEpm(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2649,7 +2678,8 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{nodeid}/nodecontext")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                     @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2658,16 +2688,14 @@ public class RestServicePortfolio {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
         String timeFormat = DT.format(new Date());
-        String logformat = "";
-        if ("false".equals(info))
+        String logformat = logFormat;
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
-        else
-            logformat = logFormat;
 
         try {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNodeNodeContext(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
-            if (returnValue.equals("faux")) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2703,7 +2731,8 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{nodeid}/noderesource")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                      @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2712,11 +2741,9 @@ public class RestServicePortfolio {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
         String timeFormat = DT.format(new Date());
-        String logformat = "";
-        if ("false".equals(info))
+        String logformat = logFormat;
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
-        else
-            logformat = logFormat;
 
         try {
             /// Branchement pour l'interprétation du contenu, besoin de vérifier les limitations ?
@@ -2725,7 +2752,7 @@ public class RestServicePortfolio {
             //          String returnValue = dataProvider.putNode(new MimeType("text/xml"),nodeUuid,xmlNode,this.userId,this.groupId).toString();
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.putNodeNodeResource(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
-            if (returnValue.equals("faux")) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 editLog.info(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2759,7 +2786,9 @@ public class RestServicePortfolio {
      **/
     @Path("/nodes/node/import/{dest-id}")
     @POST
-    public String postImportNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid) {
+    public String postImportNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                 @PathParam("dest-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                                 @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid) {
 		/*
 		if( !isUUID(srcuuid) || !isUUID(parentId) )
 		{
@@ -2779,7 +2808,7 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.postImportNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 
 
-            if ("faux".equals(returnValue)) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
 
@@ -2808,7 +2837,9 @@ public class RestServicePortfolio {
      **/
     @Path("/nodes/node/copy/{dest-id}")
     @POST
-    public String postCopyNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid) {
+    public String postCopyNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                               @PathParam("dest-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                               @QueryParam("srcetag") String semtag, @QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid) {
 		/*
 		if( !isUUID(srcuuid) || !isUUID(parentId) )
 		{
@@ -2830,7 +2861,7 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.postCopyNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId).toString();
 
 
-            if (returnValue == "faux") {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             } else if ("Selection non existante.".equals(returnValue)) {
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Selection non existante.");
@@ -2866,7 +2897,10 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodes(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("dest-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfoliocode") String portfoliocode, @QueryParam("semtag") String semtag, @QueryParam("semtag_parent") String semtag_parent, @QueryParam("code_parent") String code_parent, @QueryParam("level") Integer cutoff) {
+    public String getNodes(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                           @PathParam("dest-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                           @QueryParam("portfoliocode") String portfoliocode, @QueryParam("semtag") String semtag, @QueryParam("semtag_parent") String semtag_parent,
+                           @QueryParam("code_parent") String code_parent, @QueryParam("level") Integer cutoff) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -2875,7 +2909,7 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.getNodes(c, new MimeType("text/xml"), portfoliocode, semtag, ui.userId, groupId, semtag_parent, code_parent, cutoff).toString();
 
 
-            if (returnValue == "faux") {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             } else if ("".equals(returnValue)) {
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio inexistant");
@@ -2907,7 +2941,9 @@ public class RestServicePortfolio {
     @POST
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    public Response postNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") Integer group, @PathParam("parent-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("group") int groupId) {
+    public Response postNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") Integer group,
+                             @PathParam("parent-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                             @QueryParam("user") Integer userId, @QueryParam("group") int groupId) {
         if (!isUUID(parentId)) {
             logger.error("isUUID({})  is false", parentId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -2932,7 +2968,7 @@ public class RestServicePortfolio {
 
 
                 Response response;
-                if (returnValue == "faux") {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     response = Response.status(event.status).entity(event.message).type(event.mediaType).build();
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
@@ -3032,7 +3068,8 @@ public class RestServicePortfolio {
     @POST
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    public Response postChangeNodeParent(String xmlNode, @PathParam("node-id") String nodeId, @PathParam("parent-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public Response postChangeNodeParent(String xmlNode, @PathParam("node-id") String nodeId, @PathParam("parent-id") String parentId, @Context ServletConfig sc,
+                                         @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeId) || !isUUID(parentId)) {
             logger.error("isUUID({}) or isUUID({})  is false", nodeId, parentId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3055,7 +3092,7 @@ public class RestServicePortfolio {
 
 
             Response response;
-            if (returnValue == false) {
+            if (!returnValue) {
                 response = Response.status(409).entity("Cannot move").build();
             } else {
                 response = Response.status(200).build();
@@ -3087,7 +3124,9 @@ public class RestServicePortfolio {
     @POST
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    public String postActionNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeId, @PathParam("action-name") String macro, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
+    public String postActionNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                 @PathParam("node-id") String nodeId, @PathParam("action-name") String macro, @Context ServletConfig sc,
+                                 @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeId)) {
             logger.error("isUUID({})  is false", nodeId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3101,7 +3140,7 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.postMacroOnNode(c, ui.userId, nodeId, macro);
 
 
-            if (returnValue == "erreur") {
+            if ("erreur".equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
 
@@ -3130,7 +3169,8 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{node-uuid}")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deleteNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-uuid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
+    public String deleteNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                             @PathParam("node-uuid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({})  is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3170,8 +3210,7 @@ public class RestServicePortfolio {
         }
     }
 
-    /******************************/
-    /**
+    /*
      *  Ressources
      *
      *  ######  #######  #####   #####   #####  ##   ## ######   #####  #######  #####
@@ -3182,7 +3221,6 @@ public class RestServicePortfolio {
      *  ##   ## ##      ##   ## ##   ## ##   ## ##   ## ##   ## ##   ## ##      ##   ##
      *  ##   ## #######  #####   #####   #####   #####  ##   ##  #####  #######  #####
      **/
-    /*****************************/
 
     /**
      * Fetch resource from node uuid
@@ -3197,7 +3235,9 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getResource(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-parent-id") String nodeParentUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
+    public String getResource(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                              @PathParam("node-parent-id") String nodeParentUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                              @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeParentUuid)) {
             logger.error("isUUID({})  is false", nodeParentUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3209,7 +3249,7 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.getResource(c, new MimeType("text/xml"), nodeParentUuid, ui.userId, groupId).toString();
-            if (returnValue.equals("faux")) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -3249,7 +3289,9 @@ public class RestServicePortfolio {
     @Path("/resources/portfolios/{portfolio-id}")
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public String getResources(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
+    public String getResources(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                               @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                               @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3289,7 +3331,9 @@ public class RestServicePortfolio {
     @Path("/resources/resource/{node-parent-uuid}")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("info") String info, @PathParam("node-parent-uuid") String nodeParentUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
+    public String putResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                              @QueryParam("info") String info, @PathParam("node-parent-uuid") String nodeParentUuid, @Context ServletConfig sc,
+                              @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeParentUuid)) {
             logger.error("isUUID({})  is false", nodeParentUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3306,13 +3350,9 @@ public class RestServicePortfolio {
 		//*/
         Connection c = null;
         String timeFormat = DT.format(new Date());
-        String logformat = "";
-        if ("false".equals(info))
+        String logformat = logFormat;
+        if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info)))
             logformat = logFormatShort;
-
-        else
-            logformat = logFormat;
-
         try {
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.putResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId).toString();
@@ -3361,7 +3401,9 @@ public class RestServicePortfolio {
     @Path("/resources/{node-parent-uuid}")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public String postResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-parent-uuid") String nodeParentUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
+    public String postResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                               @PathParam("node-parent-uuid") String nodeParentUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                               @QueryParam("user") Integer userId) {
         if (!isUUID(nodeParentUuid)) {
             logger.error("isUUID({})  is false", nodeParentUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3374,7 +3416,7 @@ public class RestServicePortfolio {
             //TODO userId
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.postResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId).toString();
-            if (returnValue.equals("faux")) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -3406,7 +3448,9 @@ public class RestServicePortfolio {
     @Path("/resources")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public String postResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type, @QueryParam("resource") String resource, @QueryParam("user") Integer userId) {
+    public String postResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                               @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type,
+                               @QueryParam("resource") String resource, @QueryParam("user") Integer userId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -3414,7 +3458,7 @@ public class RestServicePortfolio {
             //TODO userId
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.postResource(c, new MimeType("text/xml"), resource, xmlResource, ui.userId, groupId).toString();
-            if (returnValue.equals("faux")) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -3446,15 +3490,16 @@ public class RestServicePortfolio {
     @Path("/roleUser")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public String postRoleUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("grid") int grid, @QueryParam("user-id") Integer userid) {
+    public String postRoleUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                               @Context HttpServletRequest httpServletRequest, @QueryParam("grid") int grid, @QueryParam("user-id") Integer userid) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
         try {
             //TODO userId
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.postRoleUser(c, ui.userId, grid, userid).toString();
-            if (returnValue.equals("faux")) {
+            String returnValue = dataProvider.postRoleUser(c, ui.userId, grid, userid);
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -3487,7 +3532,8 @@ public class RestServicePortfolio {
     @Path("/roles/role/{role-id}")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putRole(String xmlRole, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("role-id") int roleId) {
+    public String putRole(String xmlRole, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                          @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("role-id") int roleId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -3495,7 +3541,7 @@ public class RestServicePortfolio {
             //TODO userId
             c = SqlUtils.getConnection();
             String returnValue = dataProvider.putRole(c, xmlRole, ui.userId, roleId).toString();
-            if (returnValue.equals("faux")) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
             }
@@ -3528,7 +3574,9 @@ public class RestServicePortfolio {
     @Path("/roles/portfolio/{portfolio-id}")
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public String getRolePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("role") String role, @PathParam("portfolio-id") String portfolioId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
+    public String getRolePortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                   @QueryParam("role") String role, @PathParam("portfolio-id") String portfolioId, @Context ServletConfig sc,
+                                   @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         if (!isUUID(portfolioId)) {
             logger.error("isUUID({})  is false", portfolioId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3539,15 +3587,11 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.getRolePortfolio(c, new MimeType("text/xml"), role, portfolioId, ui.userId).toString();
             //			if(accept.equals(MediaType.APPLICATION_JSON))
             //				returnValue = XML.toJSONObject(returnValue).toString();
-
-
-            return returnValue;
+            return dataProvider.getRolePortfolio(c, new MimeType("text/xml"), role, portfolioId, ui.userId);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -3568,28 +3612,22 @@ public class RestServicePortfolio {
     @Path("/roles/role/{role-id}")
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public String getRole(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("role-id") Integer roleId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
+    public String getRole(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("role-id") Integer roleId,
+                          @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
-
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.getRole(c, new MimeType("text/xml"), roleId, ui.userId).toString();
+            String returnValue = dataProvider.getRole(c, new MimeType("text/xml"), roleId, ui.userId);
             if (returnValue.equals("")) {
-
-
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + roleId + " not found");
             }
-
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + roleId + " not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -3611,7 +3649,8 @@ public class RestServicePortfolio {
     @Path("/models")
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public String getModels(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
+    public String getModels(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                            @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -3654,7 +3693,8 @@ public class RestServicePortfolio {
     @Path("/models/{model-id}")
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public String getModel(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("model-id") Integer modelId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
+    public String getModel(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("model-id") Integer modelId,
+                           @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -3696,7 +3736,8 @@ public class RestServicePortfolio {
     @Path("/models")
     @POST
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public String postModel(String xmlModel, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
+    public String postModel(String xmlModel, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                            @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -3737,7 +3778,9 @@ public class RestServicePortfolio {
     @Path("/resources/{resource-id}")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deleteResource(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("resource-id") String resourceUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
+    public String deleteResource(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                 @PathParam("resource-id") String resourceUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
+                                 @QueryParam("user") Integer userId) {
         if (!isUUID(resourceUuid)) {
             logger.error("isUUID({})  is false", resourceUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3782,7 +3825,8 @@ public class RestServicePortfolio {
     @Path("/groupRights")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deleteGroupRights(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("groupRightId") Integer groupRightId) {
+    public String deleteGroupRights(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                    @Context HttpServletRequest httpServletRequest, @QueryParam("groupRightId") Integer groupRightId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -3822,10 +3866,11 @@ public class RestServicePortfolio {
     @Path("/users")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deleteUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("userId") Integer userId) {
+    public String deleteUsers(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                              @Context HttpServletRequest httpServletRequest, @QueryParam("userId") Integer userId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
-        String message = "";
+        String message;
 
         try {
             c = SqlUtils.getConnection();
@@ -3841,15 +3886,13 @@ public class RestServicePortfolio {
             else
                 message = "user " + userId + " not found";
 
-
+            logger.debug(message);
             return "";
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Resource  not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -3869,10 +3912,11 @@ public class RestServicePortfolio {
     @Path("/users/user/{user-id}")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deleteUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("user-id") Integer userid) {
+    public String deleteUser(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                             @Context HttpServletRequest httpServletRequest, @PathParam("user-id") Integer userid) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
-        String message = "";
+        String message;
 
         try {
             c = SqlUtils.getConnection();
@@ -3888,11 +3932,9 @@ public class RestServicePortfolio {
                 message = "user " + userid + " not found";
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.NOT_FOUND, "Resource  not found");
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -3913,7 +3955,8 @@ public class RestServicePortfolio {
     @Path("/groups/{portfolio-id}")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getGroupsPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getGroupsPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                     @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3923,10 +3966,9 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String xmlGroups = dataProvider.getGroupsPortfolio(c, portfolioUuid, ui.userId);
 
 
-            return xmlGroups;
+            return dataProvider.getGroupsPortfolio(c, portfolioUuid, ui.userId);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -3949,7 +3991,8 @@ public class RestServicePortfolio {
     @Path("/credential/group/{portfolio-id}")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getUserGroupByPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getUserGroupByPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                          @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3965,8 +4008,8 @@ public class RestServicePortfolio {
 
 
             DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder documentBuilder = null;
-            Document document = null;
+            DocumentBuilder documentBuilder;
+            Document document;
             documentBuilder = documentBuilderFactory.newDocumentBuilder();
             document = documentBuilder.newDocument();
             document.setXmlStandalone(true);
@@ -3975,8 +4018,6 @@ public class RestServicePortfolio {
             if (groups.getLength() == 1) {
                 Node groupnode = groups.item(0);
                 String gid = groupnode.getAttributes().getNamedItem("id").getNodeValue();
-                if (gid != null) {
-                }
             } else if (groups.getLength() == 0)    // Pas de groupe, on rend invalide le choix
             {
             }
@@ -4005,7 +4046,8 @@ public class RestServicePortfolio {
     @PUT
     @Produces(MediaType.APPLICATION_XML)
     @Consumes(MediaType.APPLICATION_XML)
-    public Response putCredentialFromXml(String xmlCredential, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public Response putCredentialFromXml(String xmlCredential, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                         @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         return this.postCredentialFromXml(xmlCredential, user, token, 0, sc, httpServletRequest);
     }
 
@@ -4019,18 +4061,15 @@ public class RestServicePortfolio {
     @POST
     @Produces(MediaType.APPLICATION_XML)
     @Consumes(MediaType.APPLICATION_XML)
-    public Response postCredentialFromXml(String xmlCredential, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
-        final String activelogin = ConfigUtils.getInstance().getProperty("activate_login");
-        if ("N".equals(activelogin)) {
-            return Response.status(Status.NOT_FOUND).build();
-        }
+    public Response postCredentialFromXml(String xmlCredential, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                          @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
 
         HttpSession session = httpServletRequest.getSession(true);
         KEvent event = new KEvent();
         event.eventType = KEvent.EventType.LOGIN;
         event.inputData = xmlCredential;
         String retVal = "";
-        int status = 0;
+        int status;
         Connection c = null;
 
         try {
@@ -4046,6 +4085,10 @@ public class RestServicePortfolio {
                 if (templogin.length > 1)
                     substit = templogin[1];
                 login = templogin[0];
+            }
+            // security to avoid to process login expect on public access as this login is required
+            if (!activelogin && !login.equalsIgnoreCase("public")) {
+                return Response.status(Status.NOT_FOUND).build();
             }
 
             /// Test LDAP
@@ -4094,6 +4137,11 @@ public class RestServicePortfolio {
             }
             eventbus.processEvent(event);
 
+            // frontend need to know a 404 when internal login is not available - here because public login
+            if (!activelogin ) {
+                return Response.status(Status.NOT_FOUND).entity(retVal).type(event.mediaType).build();
+            }
+
             return Response.status(event.status).entity(retVal).type(event.mediaType).build();
         } catch (RestWebApplicationException ex) {
             logger.error("Invalid credentials", ex);
@@ -4128,9 +4176,7 @@ public class RestServicePortfolio {
         String retText = "";
         Connection c = null;
 
-        String resetEnable = ConfigUtils.getInstance().getProperty("enable_password_reset");
-        if (resetEnable != null && ("y".equals(resetEnable.toLowerCase()) || "true".equals(resetEnable.toLowerCase()))) {
-
+        if (resetPWEnable) {
             try {
                 Document doc = DomUtils.xmlString2Document(xml, new StringBuffer());
                 Element infUser = doc.getDocumentElement();
@@ -4168,9 +4214,8 @@ public class RestServicePortfolio {
                             String ip = httpServletRequest.getRemoteAddr();
                             securityLog.info("[{}] [{}] asked to reset password", ip, username);
                         }
-                        String cc_email = ConfigUtils.getInstance().getProperty("sys_email");
                         // Send email
-                        MailUtils.postMail(sc, email, cc_email, "Password change for Karuta", content, logger);
+                        MailUtils.postMail(sc, email, ccEmail, "Password change for Karuta", content, logger);
                         retVal = 200;
                         retText = "sent";
                     }
@@ -4201,29 +4246,39 @@ public class RestServicePortfolio {
      **/
     @POST
     @Path("/credential/login/cas")
-    public Response postCredentialFromCas(String content, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public Response postCredentialFromCas(String content, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                          @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) throws IllegalAccessException {
         logger.debug("RECEIVED POST CAS: tok: " + token + " tix: " + ticket + " red: " + redir);
         return getCredentialFromCas(user, token, groupId, ticket, redir, sc, httpServletRequest);
     }
 
     @Path("/credential/login/cas")
     @GET
-    public Response getCredentialFromCas(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public Response getCredentialFromCas(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                         @QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) throws IllegalAccessException {
         HttpSession session = httpServletRequest.getSession(true);
 
-        String errorCode = null;
-        String errorMessage = null;
+        String casUrlVal = casUrlValidation;
+        if (!casUrlsValidation.isEmpty()) {
+            if (casUrlsValidation.containsKey(redir)) {
+                casUrlVal = casUrlsValidation.get(redir);
+            } else {
+                final String error = String.format("Unauthorized or not configured redirection '%s' with conf '%s'", redir, casUrlsJsonString);
+                logger.error(error);
+                throw new IllegalAccessException(error);
+            }
+        }
+
         String xmlResponse = null;
-        String userId = null;
+        String userId;
         String completeURL;
         StringBuffer requestURL;
 
         Connection c = null;
         try {
-            ServiceTicketValidator sv = new ServiceTicketValidator();
 
-            if (casUrlValidation == null) {
-                Response response = null;
+            if (casUrlVal == null) {
+                Response response;
                 try {
                     // formulate the response
                     response = Response.status(Status.PRECONDITION_FAILED)
@@ -4234,7 +4289,7 @@ public class RestServicePortfolio {
                 return response;
             }
 
-            sv.setCasValidateUrl(casUrlValidation);
+            Cas20ServiceTicketValidator sv = new Cas20ServiceTicketValidator(casUrlVal);
 
             /// X-Forwarded-Proto is for certain setup, check config file
             /// for some more details
@@ -4254,94 +4309,89 @@ public class RestServicePortfolio {
             }
             /// completeURL should be the same provided in the "service" parameter
             logger.debug("Service: {}", completeURL);
-
-            sv.setService(completeURL);
-            sv.setServiceTicket(ticket);
+            logger.debug("Ticket: {}", ticket);
             //sv.setProxyCallbackUrl(urlOfProxyCallbackServlet);
-            sv.validate();
+            Assertion assertion = sv.validate(ticket, completeURL);
 
-            xmlResponse = sv.getResponse();
-            if (xmlResponse.contains("cas:authenticationFailure")) {
+            if (!assertion.isValid()) {
                 logger.info("CAS response: {}", xmlResponse);
                 return Response.status(Status.FORBIDDEN).entity("CAS error").build();
             }
 //			/*
             else {
-                logger.info("SHOULD BE FINE: {}", xmlResponse);
+                logger.info("CAS AUTH SHOULD BE FINE: {}", assertion.getPrincipal());
             }
             //*/
 
 
             //<cas:user>vassoilm</cas:user>
-            session.setAttribute("user", sv.getUser());
+            final String casUserId = assertion.getPrincipal().getName();
+            session.setAttribute("user", casUserId);
 //			session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
             c = SqlUtils.getConnection();
-            userId = dataProvider.getUserId(c, sv.getUser(), null);
+            userId = dataProvider.getUserId(c, casUserId, null);
             if (!"0".equals(userId))    // User exist
             {
-                session.setAttribute("user", sv.getUser());
+                session.setAttribute("user", casUserId);
                 session.setAttribute("uid", Integer.parseInt(userId));
 
-                final String ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
                 if (ldapUrl != null) {
                     ConnexionLdap cldap = new ConnexionLdap();
                     if (logger.isDebugEnabled()) {
-                        final String[] ldapvalues = cldap.getLdapValue(sv.getUser());
-                        logger.debug("LDAP CONNECTION OK: {}", ldapvalues.toString());
+                        final String[] ldapvalues = cldap.getLdapValue(casUserId);
+                        logger.debug("LDAP CONNECTION OK: {}", Arrays.toString(ldapvalues));
                     }
                 }
             } else {
-                final String casCreate = ConfigUtils.getInstance().getProperty("casCreateAccount");
-                if (casCreate != null && "y".equals(casCreate.toLowerCase())) {
-                    final String ldapUrl = ConfigUtils.getInstance().getProperty("ldap.provider.url");
+                if (casCreateAccount) {
                     if (ldapUrl != null) {
                         ConnexionLdap cldap = new ConnexionLdap();
-                        final String[] ldapvalues = cldap.getLdapValue(sv.getUser());
+                        final String[] ldapvalues = cldap.getLdapValue(casUserId);
                         if (ldapvalues[1] != null | ldapvalues[2] != null | ldapvalues[3] != null) //si le filtre ldap a renvoyé des valeurs
                         {
-                            userId = dataProvider.createUser(c, sv.getUser(), null);
+                            userId = dataProvider.createUser(c, casUserId, null);
                             int uid = Integer.parseInt(userId);
                             dataProvider.putInfUserInternal(c, uid, uid, ldapvalues[1], ldapvalues[2], ldapvalues[3]);
-                            logger.info("USERID: " + sv.getUser() + " " + userId);
-                            session.setAttribute("user", sv.getUser());
+                            logger.info("USERID: " + casUserId + " " + userId);
+                            session.setAttribute("user", casUserId);
                             session.setAttribute("uid", Integer.parseInt(userId));
                         } else {
-                            return Response.status(400).entity("Login " + sv.getUser() + " don't have access to Karuta").build();
+                            return Response.status(400).entity("Login " + casUserId + " don't have access to Karuta").build();
                         }
                     } else {
-                        userId = dataProvider.createUser(c, sv.getUser(), null);
-                        logger.info("USERID: " + sv.getUser() + " " + userId);
-                        session.setAttribute("user", sv.getUser());
+                        userId = dataProvider.createUser(c, casUserId, null);
+                        logger.info("USERID: " + casUserId + " " + userId);
+                        session.setAttribute("user", casUserId);
                         session.setAttribute("uid", Integer.parseInt(userId));
                     }
-                } else
-                    return Response.status(403).entity("Login " + sv.getUser() + " not found or bad CAS auth (bad ticket or bad url service : " + completeURL + ") : " + sv.getErrorMessage()).build();
+                } else {
+                    logger.warn("Login '{}' not found", casUserId);
+                    return Response.status(403).entity("Login " + casUserId + " not found").build();
+                }
             }
 
-            Response response = null;
+            Response response;
             try {
                 // formulate the response
                 response = Response.status(201)
-                        .header(
-                                "Location",
-                                redir
-                        )
+                        .header("Location", redir)
                         .entity("<script>document.location.replace('" + redir + "')</script>").build();
             } catch (Exception e) {
                 response = Response.status(500).build();
             }
-
             return response;
+        } catch (TicketValidationException ex) {
+            logger.error("CAS Validation Error", ex);
+            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :" + casUrlVal);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :" + casUrlValidation);
+            throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires :" + ex.getMessage());
         } finally {
             try {
                 if (c != null) c.close();
             } catch (SQLException e) {
                 logger.error("Managed error", e);
             }
-
         }
     }
 
@@ -4353,14 +4403,13 @@ public class RestServicePortfolio {
      **/
     @Path("/credential/logout")
     @GET
-    public Response logoutGET(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public Response logoutGET(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("redir") String redir) {
         HttpSession session = httpServletRequest.getSession(false);
-//	String backend = sc.getServletContext().getContextPath();
-        String logoutredir = ConfigUtils.getInstance().getProperty("shib_logout");
+        //TODO: odd logic between 2 properties and a default location to redirect
         if (session == null) {
             // If value is set, this redirection takes priority
-            if (logoutredir != null && !"".equals(logoutredir)) {
-                return Response.status(301).header("Location", logoutredir).build();
+            if (!StringUtils.isBlank(shibbolethLogoutRedirectionURL)) {
+                return Response.status(301).header("Location", shibbolethLogoutRedirectionURL).build();
             }
         }
         Integer fromshibe = null;
@@ -4371,14 +4420,13 @@ public class RestServicePortfolio {
             //// Redirect to shibe logout
             //String redir = ConfigUtils.get("shib_logout");
             // Default URL
-            logoutredir = "/Shibboleth.sso/Logout";
-            //		return Response.status(302).header("Location", logoutredir).build();
-        } else {
-            // Just redirect to base UI location
-            logoutredir = ConfigUtils.getInstance().getProperty("baseui_redirect_location");
+            return Response.status(301).header("Location", "/Shibboleth.sso/Logout").build();
         }
-
-        return Response.status(301).header("Location", logoutredir).build();
+        if (!StringUtils.isBlank(redir)) {
+            return Response.status(301).header("Location", redir).build();
+        }
+        // Just redirect to base UI location
+        return Response.status(301).header("Location", basicLogoutRedirectionURL).build();
     }
 
     @Path("/credential/logout")
@@ -4400,7 +4448,10 @@ public class RestServicePortfolio {
     @Path("/nodes/{node-id}")
     @GET
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodeWithXSL(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @QueryParam("xsl-file") String xslFile, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("lang") String lang, @QueryParam("p1") String p1, @QueryParam("p2") String p2, @QueryParam("p3") String p3) {
+    public String getNodeWithXSL(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                 @PathParam("node-id") String nodeUuid, @QueryParam("xsl-file") String xslFile, @Context ServletConfig sc,
+                                 @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId,
+                                 @QueryParam("lang") String lang, @QueryParam("p1") String p1, @QueryParam("p2") String p2, @QueryParam("p3") String p3) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({})  is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -4420,6 +4471,7 @@ public class RestServicePortfolio {
             /// webapps...
             ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
             xslFile = ppath + xslFile;
+
             String returnValue = dataProvider.getNodeWithXSL(c, new MimeType("text/xml"), nodeUuid, xslFile, parameters, ui.userId, groupId).toString();
             if (returnValue.length() != 0) {
                 if (MediaType.APPLICATION_JSON.equals(accept))
@@ -4460,7 +4512,9 @@ public class RestServicePortfolio {
     @POST
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    public String postNodeFromModelBySemanticTag(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid, @PathParam("semantic-tag") String semantictag, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
+    public String postNodeFromModelBySemanticTag(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+                                                 @PathParam("node-id") String nodeUuid, @PathParam("semantic-tag") String semantictag, @Context ServletConfig sc,
+                                                 @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({})  is false", nodeUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -4474,7 +4528,7 @@ public class RestServicePortfolio {
             String returnValue = dataProvider.postNodeFromModelBySemanticTag(c, new MimeType("text/xml"), nodeUuid, semantictag, ui.userId, groupId).toString();
 
 
-            if (returnValue == "faux") {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
 
@@ -4505,18 +4559,20 @@ public class RestServicePortfolio {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.TEXT_PLAIN)
-    public String postPortfolioByForm(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId, @FormDataParam("uploadfile") InputStream uploadedInputStream, @FormDataParam("instance") String instance, @FormDataParam("project") String projectName) {
+    public String postPortfolioByForm(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+                                      @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("model") String modelId,
+                                      @FormDataParam("uploadfile") InputStream uploadedInputStream, @FormDataParam("instance") String instance,
+                                      @FormDataParam("project") String projectName) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         String returnValue = "";
         Connection c = null;
 
         try {
-            boolean instantiate = false;
-            if ("true".equals(instance))
-                instantiate = true;
+            boolean instantiate = Boolean.parseBoolean(instance);
 
             c = SqlUtils.getConnection();
-            returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, uploadedInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
+            returnValue = dataProvider.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest, uploadedInputStream,
+                    ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
         } catch (RestWebApplicationException e) {
             logger.error("Managed error", e);
             throw e;
@@ -4542,7 +4598,8 @@ public class RestServicePortfolio {
     @Path("/users/Portfolio/{portfolio-id}/Role/{role}/users")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getUsersByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getUsersByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                                 @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -4553,13 +4610,9 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String xmlUsers = dataProvider.getUsersByRole(c, ui.userId, portfolioUuid, role);
-
-
-            return xmlUsers;
+            return dataProvider.getUsersByRole(c, ui.userId, portfolioUuid, role);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -4579,7 +4632,8 @@ public class RestServicePortfolio {
     @Path("/users/Portfolio/{portfolio-id}/Role/{role}/groups")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getGroupsByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String getGroupsByRole(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                                  @PathParam("portfolio-id") String portfolioUuid, @PathParam("role") String role, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({})  is false", portfolioUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -4590,10 +4644,7 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String xmlGroups = dataProvider.getGroupsByRole(c, ui.userId, portfolioUuid, role);
-
-
-            return xmlGroups;
+            return dataProvider.getGroupsByRole(c, ui.userId, portfolioUuid, role);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -4607,8 +4658,7 @@ public class RestServicePortfolio {
         }
     }
 
-    /********************************************************/
-    /**
+    /*
      * ##   ##  #####  ####### #####     ###   ######
      * ##   ## ##   ## ##      ##   ## ##   ## ##   ##
      * ##   ## ##      ##      ##   ## ##      ##   ##
@@ -4616,8 +4666,7 @@ public class RestServicePortfolio {
      * ##   ##      ## ##      ##   ## ##   ## ##   ##
      * ##   ## ##   ## ##      ##   ## ##   ## ##   ##
      *  #####   #####  ####### ##   ##   ###   ##   ##
-     /** Managing and listing user groups
-     /********************************************************/
+     ** Managing and listing user groups*/
     /**
      * Create a new user group
      * POST /rest/api/usersgroups
@@ -4636,10 +4685,12 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             response = dataProvider.postUserGroup(c, groupname, ui.userId);
+            logger.debug("Add user '{}' in group '{}' provided group id {}", ui.userId, groupname, response);
 
-
-            if (response == -1)
+            if (response == -1) {
+                logger.warn("Add user '{}' in group '{}' NOT DONE !", ui.userId, groupname);
                 throw new RestWebApplicationException(Status.NOT_MODIFIED, "Error in creation");
+            }
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -4667,7 +4718,8 @@ public class RestServicePortfolio {
      **/
     @Path("/usersgroups")
     @PUT
-    public Response putUserInUserGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user, @QueryParam("label") String label) {
+    public Response putUserInUserGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group,
+                                       @QueryParam("user") Integer user, @QueryParam("label") String label) {
         UserInfo ui = checkCredential(httpServletRequest, null, null, null);
         Connection c = null;
         try {
@@ -4687,7 +4739,6 @@ public class RestServicePortfolio {
                 return Response.status(200).entity("Not OK").build();
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -4720,7 +4771,8 @@ public class RestServicePortfolio {
      **/
     @Path("/usersgroups")
     @GET
-    public String getUsersByUserGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("user") Integer user, @QueryParam("label") String groupLabel) {
+    public String getUsersByUserGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group,
+                                      @QueryParam("user") Integer user, @QueryParam("label") String groupLabel) {
         UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
         Connection c = null;
@@ -4742,7 +4794,6 @@ public class RestServicePortfolio {
 
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -4751,7 +4802,6 @@ public class RestServicePortfolio {
                 logger.error("Managed error", e);
             }
         }
-
         return xmlUsers;
     }
 
@@ -4771,18 +4821,14 @@ public class RestServicePortfolio {
         String response = "";
         Connection c = null;
         Boolean isOK = false;
-
         try {
             c = SqlUtils.getConnection();
             if (user == null)
                 isOK = dataProvider.deleteUsersGroups(c, group, ui.userId);
             else
                 isOK = dataProvider.deleteUsersFromUserGroups(c, user, group, ui.userId);
-
-
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -4794,8 +4840,7 @@ public class RestServicePortfolio {
         return response;
     }
 
-    /********************************************************/
-    /**
+    /*
      * ######   #####  ######  #######   ###   ######
      * ##   ## ##   ## ##   ##    #    ##   ## ##   ##
      * ##   ## ##   ## ##   ##    #    ##      ##   ##
@@ -4803,8 +4848,7 @@ public class RestServicePortfolio {
      * ##      ##   ## ## ##      #    ##   ## ##   ##
      * ##      ##   ## ##  ##     #    ##   ## ##   ##
      * ##       #####  ##   ##    #      ###   ##   ##
-     /** Managing and listing portfolios
-     /********************************************************/
+     ** Managing and listing portfolios */
     /**
      * Create a new portfolio group
      * POST /rest/api/portfoliogroups
@@ -4817,7 +4861,8 @@ public class RestServicePortfolio {
      **/
     @Path("/portfoliogroups")
     @POST
-    public Response postPortfolioGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("label") String groupname, @QueryParam("type") String type, @QueryParam("parent") Integer parent) {
+    public Response postPortfolioGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("label") String groupname,
+                                       @QueryParam("type") String type, @QueryParam("parent") Integer parent) {
         UserInfo ui = checkCredential(httpServletRequest, null, null, null);
         int response = -1;
         Connection c = null;
@@ -4826,14 +4871,11 @@ public class RestServicePortfolio {
         try {
             c = SqlUtils.getConnection();
             response = dataProvider.postPortfolioGroup(c, groupname, type, parent, ui.userId);
-
-
             if (response == -1) {
                 return Response.status(Status.NOT_MODIFIED).entity("Error in creation").build();
             }
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -4842,7 +4884,6 @@ public class RestServicePortfolio {
                 logger.error("Managed error", e);
             }
         }
-
         return Response.ok(Integer.toString(response)).build();
     }
 
@@ -4857,7 +4898,8 @@ public class RestServicePortfolio {
      **/
     @Path("/portfoliogroups")
     @PUT
-    public Response putPortfolioInPortfolioGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String uuid, @QueryParam("label") String label) {
+    public Response putPortfolioInPortfolioGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group,
+                                                 @QueryParam("uuid") String uuid, @QueryParam("label") String label) {
         UserInfo ui = checkCredential(httpServletRequest, null, null, null);
         Connection c = null;
 
@@ -4865,12 +4907,9 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
             int response = -1;
             response = dataProvider.putPortfolioInGroup(c, uuid, group, label, ui.userId);
-
-
             return Response.ok(Integer.toString(response)).build();
         } catch (Exception ex) {
             logger.error("Managed error", ex);
-
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         } finally {
             try {
@@ -4904,10 +4943,11 @@ public class RestServicePortfolio {
      **/
     @Path("/portfoliogroups")
     @GET
-    public String getPortfolioByPortfolioGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group, @QueryParam("uuid") String portfolioid, @QueryParam("label") String groupLabel) {
+    public String getPortfolioByPortfolioGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group,
+                                               @QueryParam("uuid") String portfolioid, @QueryParam("label") String groupLabel) {
         UserInfo ui = checkCredential(httpServletRequest, null, null, null);
         Connection c = null;
-        String xmlUsers = "";
+        String xmlUsers;
 
         try {
             c = SqlUtils.getConnection();
@@ -4923,7 +4963,6 @@ public class RestServicePortfolio {
                 xmlUsers = dataProvider.getPortfolioGroupList(c, ui.userId);
             else
                 xmlUsers = dataProvider.getPortfolioByPortfolioGroup(c, group, ui.userId);
-
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -4935,7 +4974,6 @@ public class RestServicePortfolio {
                 logger.error("Managed error", e);
             }
         }
-
         return xmlUsers;
     }
 
@@ -4952,7 +4990,7 @@ public class RestServicePortfolio {
     @DELETE
     public String deletePortfolioByPortfolioGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("group") int group, @QueryParam("uuid") String uuid) {
         UserInfo ui = checkCredential(httpServletRequest, null, null, null);
-        String response = "";
+        String response;
         Connection c = null;
 
         try {
@@ -4961,8 +4999,6 @@ public class RestServicePortfolio {
                 response = dataProvider.deletePortfolioGroups(c, group, ui.userId);
             else
                 response = dataProvider.deletePortfolioFromPortfolioGroups(c, uuid, group, ui.userId);
-
-
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -4977,8 +5013,7 @@ public class RestServicePortfolio {
         return response;
     }
 
-    /********************************************************/
-    /**
+    /*
      * ##   ##   ###     ###   #####     ###
      * ### ### ##   ## ##   ## ##   ## ##   ##
      * ## # ## ##   ## ##      ##   ## ##   ##
@@ -4987,7 +5022,6 @@ public class RestServicePortfolio {
      * ##   ## ##   ## ##   ## ##   ## ##   ##
      * ##   ## ##   ##   ###   ##   ##   ###
      /** Partie utilisation des macro-commandes et gestion **/
-    /********************************************************/
 
     /**
      * Executing pre-defined macro command on a node
@@ -4999,25 +5033,23 @@ public class RestServicePortfolio {
     @POST
     @Consumes(MediaType.APPLICATION_XML + "," + MediaType.TEXT_PLAIN)
     @Produces(MediaType.TEXT_PLAIN)
-    public String postMacro(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("uuid") String uuid, @PathParam("macro-name") String macroName,
+    public String postMacro(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                            @PathParam("uuid") String uuid, @PathParam("macro-name") String macroName,
                             @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(uuid)) {
             logger.error("isUUID({})  is false", uuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
-
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
-        String returnValue = "";
+        String returnValue;
         Connection c = null;
         try {
             c = SqlUtils.getConnection();
             // On execute l'action sur le noeud uuid
             if (uuid != null && macroName != null) {
                 returnValue = dataProvider.postMacroOnNode(c, ui.userId, uuid, macroName);
-
-
-                if (returnValue == "faux") {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
             }
@@ -5042,8 +5074,7 @@ public class RestServicePortfolio {
         }
     }
 
-    /********************************************************/
-    /**
+    /*
      * ######  #######   ###   ##   ## #######  #####
      * ##   ##    #    ##   ## ##   ##    #    ##   ##
      * ##   ##    #    ##      ##   ##    #    ##
@@ -5052,7 +5083,6 @@ public class RestServicePortfolio {
      * ##   ##    #    ##   ## ##   ##    #    ##   ##
      * ##   ## #######   ###   ##   ##    #     #####
      /** Partie groupe de droits et utilisateurs            **/
-    /********************************************************/
 
     /**
      * Change rights
@@ -5069,7 +5099,7 @@ public class RestServicePortfolio {
         String returnValue = "";
         Connection c = null;
         try {
-            /**
+            /*
              * <node uuid="">
              *   <role name="">
              *     <right RD="" WR="" DL="" />
@@ -5099,14 +5129,14 @@ public class RestServicePortfolio {
             Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes(StandardCharsets.UTF_8)));
 
             XPath xPath = XPathFactory.newInstance().newXPath();
-            ArrayList<String> portfolio = new ArrayList<String>();
+            ArrayList<String> portfolio = new ArrayList<>();
 //			String xpathRole = "//role";
             String xpathRole = "//*[local-name()='role']";
             XPathExpression findRole = xPath.compile(xpathRole);
 //			String xpathNodeFilter = "//xpath";
             String xpathNodeFilter = "//*[local-name()='xpath']";
             XPathExpression findXpath = xPath.compile(xpathNodeFilter);
-            String nodefilter = "";
+            String nodefilter;
             NodeList roles = null;
 
             /// Fetch portfolio(s)
@@ -5137,10 +5167,11 @@ public class RestServicePortfolio {
             }
 
             c = SqlUtils.getConnection();
-            ArrayList<String> nodes = new ArrayList<String>();
+            ArrayList<String> nodes = new ArrayList<>();
             // For all portfolio
             for (String portfolioUuid : portfolio) {
-                String portfolioStr = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, null, null, ui.subId, null).toString();
+                String portfolioStr = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, null,
+                        null, ui.subId, null).toString();
                 Document docPort = documentBuilder.parse(new ByteArrayInputStream(portfolioStr.getBytes(StandardCharsets.UTF_8)));
 
                 /// Fetch nodes inside those portfolios
@@ -5234,7 +5265,9 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getRightsGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portfolio, @QueryParam("user") Integer queryuser, @QueryParam("role") String role) {
+    public String getRightsGroup(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
+                                 @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portfolio, @QueryParam("user") Integer queryuser,
+                                 @QueryParam("role") String role) {
         if (!isUUID(portfolio)) {
             logger.error("isUUID({})  is false", portfolio);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -5242,18 +5275,15 @@ public class RestServicePortfolio {
 
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
-        String returnValue = "";
+        String returnValue;
         Connection c = null;
         try {
             c = SqlUtils.getConnection();
             // Retourne le contenu du type
             returnValue = dataProvider.getRRGList(c, ui.userId, portfolio, queryuser, role);
-
-
-            if (returnValue.equals("faux")) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
@@ -5279,12 +5309,12 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups/all/users")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getPortfolioRightInfo(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portId) {
+    public String getPortfolioRightInfo(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
+                                        @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portId) {
         if (!isUUID(portId)) {
             logger.error("isUUID({})  is false", portId);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
-
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
         String returnValue = "";
@@ -5296,7 +5326,7 @@ public class RestServicePortfolio {
                 returnValue = dataProvider.getPortfolioInfo(c, ui.userId, portId);
 
 
-                if (returnValue.equals("faux")) {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
 
@@ -5327,7 +5357,8 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getRightInfo(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
+    public String getRightInfo(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
+                               @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
         String returnValue = "";
@@ -5337,14 +5368,10 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (rrgId != null) {
                 returnValue = dataProvider.getRRGInfo(c, ui.userId, rrgId);
-
-
-                if (returnValue.equals("faux")) {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
-
             }
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
@@ -5370,7 +5397,8 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putRightInfo(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
+    public String putRightInfo(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                               @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
         String returnValue = "";
@@ -5380,14 +5408,10 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (rrgId != null) {
                 returnValue = dataProvider.putRRGUpdate(c, ui.userId, rrgId, xmlNode);
-
-
-                if (returnValue.equals("faux")) {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
-
             }
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
@@ -5413,29 +5437,26 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups/{portfolio-id}")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public String postRightGroups(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @PathParam("portfolio-id") String portfolio, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
+    public String postRightGroups(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                                  @PathParam("portfolio-id") String portfolio, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolio)) {
             logger.error("isUUID({})  is false", portfolio);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
         }
-
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
-        /**
+        /*
          * <node>LABEL</node>
          */
 
-        String returnValue = "";
+        String returnValue;
         Connection c = null;
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.postRRGCreate(c, ui.userId, portfolio, xmlNode);
-
-
-            if (returnValue.equals("faux")) {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
@@ -5461,20 +5482,17 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public String postRightGroupUser(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
+    public String postRightGroupUser(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                                     @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
-
-        String returnValue = "";
+        String returnValue;
         Connection c = null;
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.postRRGUsers(c, ui.userId, rrgId, xmlNode);
-
-
-            if (returnValue == "faux") {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
@@ -5500,20 +5518,19 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public String postRightGroupUsers(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId, @PathParam("user-id") Integer queryuser) {
+    public String postRightGroupUsers(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                                      @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId,
+                                      @PathParam("user-id") Integer queryuser) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
-        String returnValue = "";
+        String returnValue;
         Connection c = null;
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.postRRGUser(c, ui.userId, rrgId, queryuser);
-
-
-            if (returnValue == "faux") {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
@@ -5539,20 +5556,18 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deleteRightGroup(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
+    public String deleteRightGroup(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                                   @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
-        String returnValue = "";
+        String returnValue;
         Connection c = null;
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.deleteRRG(c, ui.userId, rrgId);
-
-
-            if (returnValue == "faux") {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
@@ -5578,20 +5593,19 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deleteRightGroupUser(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId, @PathParam("user-id") Integer queryuser) {
+    public String deleteRightGroupUser(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                                       @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId,
+                                       @PathParam("user-id") Integer queryuser) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
-        String returnValue = "";
+        String returnValue;
         Connection c = null;
         try {
             c = SqlUtils.getConnection();
             returnValue = dataProvider.deleteRRGUser(c, ui.userId, rrgId, queryuser);
-
-
-            if (returnValue == "faux") {
+            if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
-
             return returnValue;
         } catch (RestWebApplicationException ex) {
             logger.error("Managed error", ex);
@@ -5617,7 +5631,8 @@ public class RestServicePortfolio {
     @Path("/rolerightsgroups/all/users")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deletePortfolioRightInfo(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portId) {
+    public String deletePortfolioRightInfo(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                                           @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portId) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 
         String returnValue = "";
@@ -5627,9 +5642,7 @@ public class RestServicePortfolio {
             // Retourne le contenu du type
             if (portId != null) {
                 returnValue = dataProvider.deletePortfolioUser(c, ui.userId, portId);
-
-
-                if (returnValue == "faux") {
+                if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                     throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
                 }
 
@@ -5660,8 +5673,8 @@ public class RestServicePortfolio {
     @Path("/ning/activities")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getNingActivities(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
-                                    @QueryParam("type") Integer type) {
+    public String getNingActivities(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
+                                    @Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type) {
         checkCredential(httpServletRequest, user, token, group);
 
         Ning ning = new Ning();
@@ -5677,8 +5690,8 @@ public class RestServicePortfolio {
     @Path("/elgg/site/river_feed")
     @GET
     @Produces(MediaType.TEXT_HTML)
-    public String getElggSiteRiverFeed(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
-                                       @QueryParam("type") Integer type, @QueryParam("limit") String limit) {
+    public String getElggSiteRiverFeed(@CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
+                                       @Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type, @QueryParam("limit") String limit) {
         int iLimit;
         try {
             iLimit = Integer.parseInt(limit);
@@ -5705,10 +5718,9 @@ public class RestServicePortfolio {
     @Path("/elgg/wire")
     @POST
     @Produces(MediaType.APPLICATION_XML)
-    public String getElggSiteRiverFeed(String message, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
-                                       @QueryParam("type") Integer type) {
+    public String getElggSiteRiverFeed(String message, @CookieParam("user") String user, @CookieParam("credential") String token, @CookieParam("group") String group,
+                                       @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-
         try {
             Elgg elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User, elggDefaultUserPassword);
             return elgg.postWire(message);
@@ -5724,7 +5736,6 @@ public class RestServicePortfolio {
         } catch (Exception e) {
             return false;
         }
-
         return true;
     }
 
