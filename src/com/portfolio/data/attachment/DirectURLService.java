@@ -49,6 +49,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.utils.ConfigUtils;
+import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.SqlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -337,7 +338,7 @@ public class DirectURLService extends HttpServlet {
             nodedata = retdata.toString();
 
 			logger.debug("DIRECT FETCH NODE: {}", nodedata);
-            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
             doc = documentBuilder.parse(new ByteArrayInputStream(nodedata.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {

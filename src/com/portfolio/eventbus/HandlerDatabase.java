@@ -31,6 +31,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import com.portfolio.data.provider.DataProvider;
 import com.portfolio.data.provider.MysqlDataProvider;
+import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.rest.RestWebApplicationException;
 import org.slf4j.Logger;
@@ -128,7 +129,7 @@ public class HandlerDatabase implements KEventHandler {
     }
 
     Document parseString(String data) throws UnsupportedEncodingException, SAXException, IOException, ParserConfigurationException {
-        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
         DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
         Document doc = documentBuilder.parse(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)));
         doc.setXmlStandalone(true);

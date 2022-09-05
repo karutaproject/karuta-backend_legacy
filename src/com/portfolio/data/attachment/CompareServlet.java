@@ -25,6 +25,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import com.portfolio.data.provider.DataProvider;
+import com.portfolio.data.utils.DomUtils;
 import com.portfolio.data.utils.SqlUtils;
 import com.portfolio.security.Credential;
 import org.slf4j.Logger;
@@ -199,8 +200,8 @@ public class CompareServlet extends HttpServlet {
         }
 
         //parse les données du noeud
-        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder documentBuilder = null;
+        DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+        DocumentBuilder documentBuilder;
         try {
             documentBuilder = documentBuilderFactory.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
