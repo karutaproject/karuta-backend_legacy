@@ -228,8 +228,13 @@ public class RestServicePortfolio {
 
         UserInfo ui = new UserInfo();
         Integer val = (Integer) session.getAttribute("uid");
-        if (val != null)
+        if (val != null) {
             ui.userId = val;
+        } else {
+            // Non valid userid
+            logger.error("Request {} on '{}' unauthorized for a not logged in user", request.getMethod(), request.getRequestURI());
+            throw new RestWebApplicationException(Status.UNAUTHORIZED, "User not logged in");
+        }
 //		val = (Integer) session.getAttribute("gid");
 //		if( val != null )
 //			ui.groupId = val;
