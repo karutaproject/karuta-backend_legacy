@@ -160,17 +160,6 @@
             <artifactId>cas-client-support-distributed-memcached</artifactId>
             <version>${CAS_VER}</version>
         </dependency>
-        <!--    <dependency>-->
-        <!--      <groupId>cas</groupId>-->
-        <!--      <artifactId>casclient</artifactId>-->
-        <!--      <version>2.0.11</version>-->
-        <!--      <exclusions>-->
-        <!--        <exclusion>-->
-        <!--          <groupId>javax.servlet</groupId>-->
-        <!--          <artifactId>servlet-api</artifactId>-->
-        <!--        </exclusion>-->
-        <!--      </exclusions>-->
-        <!--    </dependency>-->
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
@@ -196,13 +185,6 @@
             <artifactId>commons-logging</artifactId>
             <version>1.2</version>
         </dependency>
-        <!--
-        <dependency>
-          <groupId>servlets.com</groupId>
-          <artifactId>cos</artifactId>
-          <version>05Nov2002</version>
-        </dependency>
-        -->
         <dependency>
             <groupId>org.apache.xmlgraphics</groupId>
             <artifactId>fop</artifactId>
@@ -233,13 +215,6 @@
             <artifactId>httpclient</artifactId>
             <version>4.5.13</version>
         </dependency>
-        <!--
-        <dependency>
-          <groupId>org.apache.httpcomponents</groupId>
-          <artifactId>httpcore</artifactId>
-          <version>4.3.2</version>
-        </dependency>
-        -->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
@@ -429,17 +404,6 @@
             <artifactId>jose4j</artifactId>
             <version>0.6.5</version>
         </dependency>
-        <!--    <dependency>-->
-        <!--      <groupId>org.apache.maven</groupId>-->
-        <!--      <artifactId>maven-embedder</artifactId>-->
-        <!--      <version>3.1.0</version>-->
-        <!--      <exclusions>-->
-        <!--        <exclusion>-->
-        <!--          <groupId>*</groupId>-->
-        <!--          <artifactId>*</artifactId>-->
-        <!--        </exclusion>-->
-        <!--      </exclusions>-->
-        <!--    </dependency>-->
         <dependency>
             <groupId>org.apache.servicemix.bundles</groupId>
             <artifactId>org.apache.servicemix.bundles.xalan</artifactId>
