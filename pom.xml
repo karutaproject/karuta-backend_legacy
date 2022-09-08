@@ -25,6 +25,13 @@
       </repository>
     </distributionManagement>
 
+    <licenses>
+      <license>
+        <name>Educational Community License version 2.0 ("ECL")</name>
+        <url>https://spdx.org/licenses/ECL-2.0.html</url>
+      </license>
+    </licenses>
+
     <properties>
         <JACKSON_VER>1.9.13</JACKSON_VER>
         <JERSEY_VER>2.34</JERSEY_VER>
