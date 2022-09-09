@@ -4258,7 +4258,7 @@ public class RestServicePortfolio {
         HttpSession session = httpServletRequest.getSession(true);
 
         String casUrlVal = casUrlValidation;
-        if (!casUrlsValidation.isEmpty()) {
+        if (casUrlsValidation != null && !casUrlsValidation.isEmpty()) {
             if (casUrlsValidation.containsKey(redir)) {
                 casUrlVal = casUrlsValidation.get(redir);
             } else {
