@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.eportfolium.karuta</groupId>
     <artifactId>karuta-backend</artifactId>
-    <version>2.1.6-SNAPSHOT</version>
+    <version>2.2.0</version>
     <packaging>war</packaging>
     <name>karuta-backend</name>
     <organization>
@@ -15,7 +15,7 @@
         <connection>scm:git:ssh://git@github.com/karutaproject/karuta-backend_legacy.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/karutaproject/karuta-backend_legacy.git</developerConnection>
         <url>https://github.com/karutaproject/karuta-backend_legacy.git</url>
-        <tag>HEAD</tag>
+        <tag>2.2.0</tag>
     </scm>
 
     <distributionManagement>
