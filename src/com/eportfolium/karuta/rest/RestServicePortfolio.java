@@ -72,10 +72,9 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import com.eportfolium.karuta.data.utils.ConfigUtils;
-import com.google.gson.Gson;
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.provider.MysqlDataProvider;
+import com.eportfolium.karuta.data.utils.ConfigUtils;
 import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.HttpClientUtils;
 import com.eportfolium.karuta.data.utils.MailUtils;
@@ -87,6 +86,7 @@ import com.eportfolium.karuta.security.Credential;
 import com.eportfolium.karuta.security.NodeRight;
 import com.eportfolium.karuta.socialnetwork.Elgg;
 import com.eportfolium.karuta.socialnetwork.Ning;
+import com.google.gson.Gson;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -5732,6 +5732,14 @@ public class RestServicePortfolio {
             logger.error("Managed error", ex);
             throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
+    }
+
+    @Path("/version")
+    @GET
+    @Produces({MediaType.APPLICATION_JSON})
+    public String getVersion(@Context HttpServletRequest httpServletRequest) {
+        Gson gson = new Gson();
+        return gson.toJson(ConfigUtils.getInstance().getBuildInfo());
     }
 
     public boolean isUUID(String uuidstr) {

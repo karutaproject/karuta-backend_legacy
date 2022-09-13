@@ -18,7 +18,11 @@ package com.eportfolium.karuta.data.utils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
+import java.util.StringJoiner;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 
 import javax.servlet.ServletContext;
 
@@ -41,6 +45,8 @@ public class ConfigUtils {
     private String karutaHome;
     private String servletName;
 
+    private BuildInfo buildInfo;
+
     private ConfigUtils(final ServletContext context) throws Exception {
         if (hasLoaded) return;
         try {
@@ -55,6 +61,7 @@ public class ConfigUtils {
             hasLoaded = true;
             logger.info("Configuration file loaded: {}", filePath);
             logger.trace("Loaded properties: {}", properties);
+            loadBuildedInfo(context);
         } catch (Exception e) {
             logger.error("Can't load file :" + filePath, e);
             throw e;
@@ -146,6 +153,25 @@ public class ConfigUtils {
         return value;
     }
 
+    private void loadBuildedInfo(final ServletContext context){
+        InputStream inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
+        Manifest manifest = null;
+        try {
+            manifest = new Manifest(inputStream);
+        } catch (IOException e) {
+            logger.error("The war have a build problem in generating Manifest.mf file !");
+            return;
+        }
+        Attributes attr = manifest.getMainAttributes();
+
+        BuildInfo bi = new BuildInfo();
+        bi.version = attr.getValue("Implementation-Version");
+        bi.buildTime = attr.getValue("Build-Time");
+        bi.buildBy = attr.getValue("Built-By");
+        this.buildInfo = bi;
+        logger.info("Loaded from META-INF/MANIFEST.MF build information: {}", this.buildInfo);
+    }
+
     public String getConfigPath() {
         return configPath;
     }
@@ -156,5 +182,36 @@ public class ConfigUtils {
 
     public String getServletName() {
         return servletName;
+    }
+
+    public BuildInfo getBuildInfo() {
+        return buildInfo;
+    }
+
+    public class BuildInfo {
+        protected String version;
+        protected String buildTime;
+        protected String buildBy;
+
+        public String getVersion() {
+            return version;
+        }
+
+        public String getBuildTime() {
+            return buildTime;
+        }
+
+        public String getBuildBy() {
+            return buildBy;
+        }
+
+        @Override
+        public String toString() {
+            return new StringJoiner(", ", BuildInfo.class.getSimpleName() + "[", "]")
+                    .add("version='" + version + "'")
+                    .add("buildTime='" + buildTime + "'")
+                    .add("buildBy='" + buildBy + "'")
+                    .toString();
+        }
     }
 }

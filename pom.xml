@@ -6,6 +6,10 @@
     <version>2.1.6-SNAPSHOT</version>
     <packaging>war</packaging>
     <name>karuta-backend</name>
+    <organization>
+        <name>ePortfolium</name>
+        <url>https://www.eportfolium.com</url>
+    </organization>
 
     <scm>
         <connection>scm:git:ssh://git@github.com/karutaproject/karuta-backend_legacy.git</connection>
@@ -33,6 +37,7 @@
     </licenses>
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <JACKSON_VER>1.9.13</JACKSON_VER>
         <JERSEY_VER>2.34</JERSEY_VER>
         <CAS_VER>3.6.4</CAS_VER>
@@ -520,6 +525,20 @@
                             </includes>
                         </resource>
                     </webResources>
+                    <archive>
+                        <manifest>
+                            <addDefaultEntries>true</addDefaultEntries>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+<!--                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>-->
+                        </manifest>
+                        <manifestEntries>
+                            <Build-Time>${maven.build.timestamp}</Build-Time>
+                            <Built-By>${user.name}</Built-By>
+                            <Build-Java>${java.version}</Build-Java>
+                            <Build-OS>${os.name}</Build-OS>
+                            <Build-Maven>Maven ${maven.version}</Build-Maven>
+                        </manifestEntries>
+                    </archive>
                 </configuration>
             </plugin>
             <plugin>
