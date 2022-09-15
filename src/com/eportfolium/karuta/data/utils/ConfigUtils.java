@@ -167,7 +167,7 @@ public class ConfigUtils {
         BuildInfo bi = new BuildInfo();
         bi.version = attr.getValue("Implementation-Version");
         bi.buildTime = attr.getValue("Build-Time");
-        bi.buildBy = attr.getValue("Built-By");
+        bi.builtBy = attr.getValue("Built-By");
         this.buildInfo = bi;
         logger.info("Loaded from META-INF/MANIFEST.MF build information: {}", this.buildInfo);
     }
@@ -191,7 +191,7 @@ public class ConfigUtils {
     public class BuildInfo {
         protected String version;
         protected String buildTime;
-        protected String buildBy;
+        protected String builtBy;
 
         public String getVersion() {
             return version;
@@ -201,8 +201,8 @@ public class ConfigUtils {
             return buildTime;
         }
 
-        public String getBuildBy() {
-            return buildBy;
+        public String getBuiltBy() {
+            return builtBy;
         }
 
         @Override
@@ -210,7 +210,7 @@ public class ConfigUtils {
             return new StringJoiner(", ", BuildInfo.class.getSimpleName() + "[", "]")
                     .add("version='" + version + "'")
                     .add("buildTime='" + buildTime + "'")
-                    .add("buildBy='" + buildBy + "'")
+                    .add("builtBy='" + builtBy + "'")
                     .toString();
         }
     }
