@@ -1,22 +1,22 @@
 # <a name="organize"></a>Code organization
-- [com.portfolio.data.attachment](../src/com/portfolio/data/attachment)
+- [com.eportfolium.karuta.data.attachment](../src/com/eportfolium/karuta/data/attachment)
 
 Other services:<br/>
 **ConvertCSV.java**: Send CSV, Receive JSon<br/>
 **FileServlet.java**: File server communication<br/>
 **XSLService.java**: Specific xml pre-processing and PDF generation
 
-- [com.portfolio.data.provider](../src/com/portfolio/data/provider)
+- [com.eportfolium.karuta.data.provider](../src/com/eportfolium/karuta/data/provider)
 
 Database manipulation.
 
 _Need code un-merging, some data manipulation need to be made "one level" above, in the Jersey layer or something in-between._
 
-- [com.portfolio.data.utils](../src/com/portfolio/data/utils)
+- [com.eportfolium.karuta.data.utils](../src/com/eportfolium/karuta/data/utils)
 
 Various helpers
 
-- [com.portfolio.eventbus](../src/com/portfolio/eventbus)
+- [com.eportfolium.karuta.eventbus](../src/com/eportfolium/karuta/eventbus)
 
 Vague attempt at process configuration.
 
@@ -26,16 +26,16 @@ The pipeline will be configured to add blocks, and those are configured to react
 
 _Definition incomplete_
 
-- [com.portfolio.rest](../src/com/portfolio/rest)
+- [com.eportfolium.karuta.rest](../src/com/eportfolium/karuta/rest)
 
 Jersey REST address definitions and request processing
 
-- [com.portfolio.security](../src/com/portfolio/security)
+- [com.eportfolium.karuta.security](../src/com/eportfolium/karuta/security)
 
 Helpers related to rights query and
 LTI stuff
 
-- [com.portfolio.socialnetwork](../src/com/portfolio/socialnetwork)
+- [com.eportfolium.karuta.socialnetwork](../src/com/eportfolium/karuta/socialnetwork)
 
 ELGG and NING interface
 

@@ -5,7 +5,7 @@
 	<display-name>Karuta Backend</display-name>
 
 	<listener>
-		<listener-class>com.portfolio.data.utils.Manager</listener-class>
+		<listener-class>com.eportfolium.karuta.data.utils.Manager</listener-class>
 	</listener>
 
 	<session-config>
@@ -23,7 +23,7 @@
 			<!--
 			<param-name>com.sun.jersey.config.property.packages</param-name>
 			-->
-			<param-value>com.portfolio.rest;</param-value>
+			<param-value>com.eportfolium.karuta.rest;</param-value>
 		</init-param>
 		<init-param>
 			<param-name>jersey.config.server.provider.classnames</param-name>
@@ -44,7 +44,7 @@
 		<description>OAuth 2.0 Authentication</description>
 		<display-name>OAuth2</display-name>
 		<servlet-name>OAuth2</servlet-name>
-		<servlet-class>com.portfolio.security.OAuth2</servlet-class>
+		<servlet-class>com.eportfolium.karuta.security.OAuth2</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>OAuth2</servlet-name>
@@ -56,7 +56,7 @@
             <description>I'm just a small proxy</description>
             <display-name>MiniProxy</display-name>
             <servlet-name>MiniProxy</servlet-name>
-            <servlet-class>com.portfolio.data.attachment.MiniProxy</servlet-class>
+            <servlet-class>attachment.data.com.eportfolium.karuta.MiniProxy</servlet-class>
             <init-param>
                 <param-name>baseURL</param-name>
                 <param-value>https://FIXED.BASE.URL/api</param-value>
@@ -72,7 +72,7 @@
 		<description>Exporting portfolio in zipped HTML format</description>
 		<display-name>ExportHTML</display-name>
 		<servlet-name>ExportHTML</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.ExportHTMLService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.ExportHTMLService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ExportHTML</servlet-name>
@@ -83,7 +83,7 @@
 		<description>Compare Servlet</description>
 		<display-name>CompareServlet</display-name>
 		<servlet-name>CompareServlet</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.CompareServlet</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.CompareServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>CompareServlet</servlet-name>
@@ -94,7 +94,7 @@
 		<description>File Servlet</description>
 		<display-name>FileServlet</display-name>
 		<servlet-name>FileServlet</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.FileServlet</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.FileServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>FileServlet</servlet-name>
@@ -105,7 +105,7 @@
 		<description>XSLT Servlet</description>
 		<display-name>XSLT Servlet</display-name>
 		<servlet-name>XSLTServlet</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.XSLService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.XSLService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>XSLTServlet</servlet-name>
@@ -116,7 +116,7 @@
 		<description>Message Servlet</description>
 		<display-name>Message Servlet</display-name>
 		<servlet-name>MessageServlet</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.MessageService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.MessageService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>MessageServlet</servlet-name>
@@ -127,7 +127,7 @@
 		<description>Direct URL Servlet</description>
 		<display-name>Direct URL Servlet</display-name>
 		<servlet-name>DirectURLServlet</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.DirectURLService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.DirectURLService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>DirectURLServlet</servlet-name>
@@ -138,7 +138,7 @@
 		<description>Mail Servlet</description>
 		<display-name>Mail Servlet</display-name>
 		<servlet-name>MailServlet</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.MailService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.MailService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>MailServlet</servlet-name>
@@ -149,7 +149,7 @@
 		<description>LTI Servlet Import</description>
 		<display-name>LTIServletImport</display-name>
 		<servlet-name>LTIServletImport</servlet-name>
-		<servlet-class>com.portfolio.security.LTIServletImport</servlet-class>
+		<servlet-class>com.eportfolium.karuta.security.LTIServletImport</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>LTIServletImport</servlet-name>
@@ -160,7 +160,7 @@
 		<description>Shib Auth Servlet</description>
 		<display-name>Shibboleth service</display-name>
 		<servlet-name>ShibeServe</servlet-name>
-		<servlet-class>com.portfolio.security.ShibeServlet</servlet-class>
+		<servlet-class>com.eportfolium.karuta.security.ShibeServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ShibeServe</servlet-name>
@@ -171,7 +171,7 @@
 		<description>CSV Servlet</description>
 		<display-name>CSVServlet</display-name>
 		<servlet-name>CSVServlet</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.ConvertCSV</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.ConvertCSV</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>CSVServlet</servlet-name>
@@ -182,7 +182,7 @@
 		<description>Register Servlet</description>
 		<display-name>Register Servlet</display-name>
 		<servlet-name>RegisterServlet</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.RegisterService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.RegisterService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>RegisterServlet</servlet-name>
@@ -193,7 +193,7 @@
 		<description>Emploi Store ROME service</description>
 		<display-name>Emploi Store ROME</display-name>
 		<servlet-name>EmploiStoreService</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.EmploiStoreService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.EmploiStoreService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>EmploiStoreService</servlet-name>
@@ -204,7 +204,7 @@
 		<description>Logging service</description>
 		<display-name>Logging service</display-name>
 		<servlet-name>LogginService</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.LoggingService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.LoggingService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>LogginService</servlet-name>
@@ -215,7 +215,7 @@
 		<description>Ping service</description>
 		<display-name>Ping service</display-name>
 		<servlet-name>PingService</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.PingService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.PingService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>PingService</servlet-name>
@@ -226,7 +226,7 @@
 		<description>Report service</description>
 		<display-name>Report service</display-name>
 		<servlet-name>ReportService</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.ReportService</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.ReportService</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ReportService</servlet-name>
@@ -237,7 +237,7 @@
 		<description>Report helper</description>
 		<display-name>Report helper</display-name>
 		<servlet-name>ReportHelper</servlet-name>
-		<servlet-class>com.portfolio.data.attachment.ReportHelper</servlet-class>
+		<servlet-class>com.eportfolium.karuta.data.attachment.ReportHelper</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ReportHelper</servlet-name>
@@ -246,7 +246,7 @@
 
 	<servlet>
 		<servlet-name>LTI</servlet-name>
-		<servlet-class>com.portfolio.security.LTIServlet</servlet-class>
+		<servlet-class>com.eportfolium.karuta.security.LTIServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>LTI</servlet-name>
@@ -254,7 +254,7 @@
 	</servlet-mapping>
 	<servlet>
 		<servlet-name>LTIv2</servlet-name>
-		<servlet-class>com.portfolio.security.LTIv2Servlet</servlet-class>
+		<servlet-class>com.eportfolium.karuta.security.LTIv2Servlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>LTIv2</servlet-name>
