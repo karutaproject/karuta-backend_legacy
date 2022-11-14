@@ -858,6 +858,159 @@ public class FileServlet extends HttpServlet {
         }
     }
 
+    @Override
+    protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        initialize(request);
+
+        Connection c = null;
+        try {
+            c = SqlUtils.getConnection();
+
+            int userId = 0;
+            int groupId = 0;
+            String user = "";
+            String context = request.getContextPath();
+            String url = request.getPathInfo();
+
+            HttpSession session = request.getSession(true);
+            if (session != null) {
+                Integer val = (Integer) session.getAttribute("uid");
+                if (val != null)
+                    userId = val;
+                val = (Integer) session.getAttribute("gid");
+                if (val != null)
+                    groupId = val;
+                user = (String) session.getAttribute("user");
+            }
+
+            // =====================================================================================
+            boolean trace = false;
+            StringBuffer outTrace = new StringBuffer();
+            StringBuffer outPrint = new StringBuffer();
+            String logFName = null;
+
+            response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
+
+            logger.info("FileServlet::doDelete: {} from user: {}", url, userId);
+            // ====== URI : /resources/file[/{lang}]/{context-id}
+            // ====== PathInfo: /resources/file[/{uuid}?lang={fr|en}&size={S|L}] pathInfo
+            //			String uri = request.getRequestURI();
+            String[] token = url.split("/");
+            if (token.length < 2) {
+                response.setStatus(404);
+                response.getOutputStream().close();
+                return;
+            }
+            String uuid = token[1];
+            //wadbackend.WadUtilities.appendlogfile(logFName, "GETfile:"+request.getRemoteAddr()+":"+uri);
+
+            /// FIXME: Passe la sécurité si la source provient de localhost, il faudrait un échange afin de s'assurer que n'importe quel servlet ne puisse y accéder
+            String sourceip = request.getRemoteAddr();
+
+            /// Vérification des droits d'accés
+            // TODO: Might be something special with proxy and export/PDF, to investigate
+
+            if (!ourIPs.contains(sourceip)) {
+                if (userId == 0) {
+                    logger.error("Forbidden access: no userID");
+                    throw new RestWebApplicationException(Status.FORBIDDEN, "");
+                }
+
+                if (!credential.hasNodeRight(c, userId, groupId, uuid, Credential.READ)) {
+                    logger.error("Forbidden access: no rights");
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                    //throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit READ sur le noeud "+nodeUuid);
+                }
+            } else    // Si la requête est locale et qu'il n'y a pas de session, on ignore la vérification
+            {
+                logger.error("IP OK: bypass");
+            }
+
+            /// On récupère le noeud de la ressource pour retrouver le lien
+            String data = dataProvider.getResNode(c, uuid, userId, groupId);
+
+            //			javax.servlet.http.HttpSession session = request.getSession(true);
+            //====================================================
+            //String ppath = session.getServletContext().getRealPath("/");
+            //logFName = ppath +"logs/logNode.txt";
+            //====================================================
+            String size = request.getParameter("size");
+            if (size == null)
+                size = "";
+
+            String lang = request.getParameter("lang");
+            if (lang == null) {
+                lang = "fr";
+            }
+
+            String ref = request.getHeader("referer");
+
+            /// Parse les données
+            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+            InputSource is = new InputSource(new StringReader("<node>" + data + "</node>"));
+            Document doc = documentBuilder.parse(is);
+            DOMImplementationLS impl = (DOMImplementationLS) doc.getImplementation().getFeature("LS", "3.0");
+            LSSerializer serial = impl.createLSSerializer();
+            serial.getDomConfig().setParameter("xml-declaration", false);
+
+            /// Trouve le bon noeud
+            XPath xPath = XPathFactory.newInstance().newXPath();
+
+            /// Either we have a fileid per language
+//			String filterRes = "//fileid[@lang='"+lang+"']";
+            String filterRes = "//*[local-name()='fileid' and @lang='" + lang + "']";
+            NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+            String resolve = "";
+            if (nodelist.getLength() != 0) {
+                Element fileNode = (Element) nodelist.item(0);
+                resolve = fileNode.getTextContent();
+            }
+
+            /// Or just a single one shared
+            if ("".equals(resolve)) {
+                response.setStatus(404);
+                response.getOutputStream().close();
+                return;
+            }
+
+            logger.info("!!! RESOLVE: " + resolve);
+
+            /// Envoie de la requête au servlet de fichiers
+            // http://localhost:8080/MiniRestFileServer/user/claudecoulombe/file/a8e0f07f-671c-4f6a-be6c-9dba12c519cf/ptype/sql
+            /// TODO: Ne plus avoir besoin du switch
+            String urlTarget = server + "/" + resolve;
+
+            if ("T".equals(size))
+                urlTarget = urlTarget + "/thumb";
+//			String urlTarget = "http://"+ server + "/user/" + resolve +"/"+ lang + "/ptype/fs";
+
+            HttpURLConnection connection = CreateConnection(urlTarget, request);
+            connection.connect();
+            
+            int responseCode = connection.getResponseCode();
+            response.setStatus(responseCode);
+            
+            connection.disconnect();
+        } catch (Exception e) {
+            logger.error("Intercepted error", e);
+            //TODO something is missing
+        }//wadbackend.WadUtilities.appendlogfile(logFName, "GETfile: error"+e);
+        finally {
+            try {
+                if (c != null) c.close();
+            } catch (Exception e) {
+                ServletOutputStream out = response.getOutputStream();
+                out.println("Erreur dans doDelete: " + e);
+                out.close();
+            }
+//				dataProvider.disconnect();
+            request.getInputStream().close();
+            response.getOutputStream().close();
+        }
+    }
+
+    
     HttpURLConnection CreateConnection(String url, HttpServletRequest request) throws MalformedURLException, IOException {
         /// Create connection
         URL urlConn = new URL(url);
