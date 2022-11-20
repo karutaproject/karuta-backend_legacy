@@ -36,9 +36,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 //import com.mysql.jdbc.Statement;
-import com.portfolio.data.utils.ConfigUtils;
-import com.portfolio.data.utils.LogUtils;
-import com.portfolio.security.Credential;
+import com.eportfolium.karuta.data.utils.ConfigUtils;
+import com.eportfolium.karuta.data.utils.LogUtils;
+import com.eportfolium.karuta.security.Credential;
 
 public class ReportHelperProvider {
 
