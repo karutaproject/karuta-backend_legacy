@@ -26,19 +26,3 @@ SET @sql = CONCAT("GRANT ALL PRIVILEGES ON `",@db,"` . * TO '",@user,"'@localhos
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
-SET @sql = CONCAT("CREATE USER '",@user,"' @ 'localhost' IDENTIFIED BY '",@pass,"'");
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @sql = CONCAT("CREATE DATABASE IF NOT EXISTS `",@db,"`");
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-
-SET @sql = CONCAT("GRANT ALL ON `",@db,"` . * TO '",@user,"' @ 'localhost'")";
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
