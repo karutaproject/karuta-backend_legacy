@@ -87,7 +87,14 @@ import com.eportfolium.karuta.security.NodeRight;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
@@ -113,6 +120,7 @@ public class MysqlDataProvider implements DataProvider {
     public static final Pattern ROLE_PATTERN = Pattern.compile("<roles>([^<]*)</roles>");
     public static final Pattern SEESTART_PAT = Pattern.compile("seestart=\"([^\"]*)");
     public static final Pattern SEEEND_PAT = Pattern.compile("seeend=\"([^\"]*)");
+    public static final Pattern FILEID_PAT = Pattern.compile("lang=\"([^\"]*)\">([^%]*)");
     public static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm");
     public static final SimpleDateFormat DATETIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     public static final String ONLYUSER = "(?<![-=+])(user)(?![-=+])";
@@ -557,6 +565,7 @@ public class MysqlDataProvider implements DataProvider {
         }
     }
 
+    
     private int deleteMySqlPortfolio(Connection c, String portfolioUuid, int userId, int groupId) throws SQLException {
         String sql;
         PreparedStatement st;
@@ -14268,6 +14277,87 @@ public class MysqlDataProvider implements DataProvider {
         return out.toString();
     }
 
+    @Override
+    public ArrayList<Pair<String, String>> getPortfolioUniqueFile( Connection c, String portfolioUuid, int userId ) throws Exception
+    {
+      PreparedStatement st = null;
+      ResultSet rs = null;
+      String sql;
+      ArrayList<Pair<String, String>> retval = new ArrayList<Pair<String,String>>();
+
+      try {
+      	/// Small temp table
+      	sql = "CREATE TEMPORARY TABLE t_fileid(" +
+      			"resuuid char(36), " +
+      			"fileid VARCHAR(64) NOT NULL) ENGINE=MEMORY DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;";
+        st = c.prepareStatement(sql);
+        st.executeUpdate();
+        st.close();
+        
+      	/// Insert added files in portfolio
+      	sql = "INSERT INTO t_fileid \n" + 
+      			"SELECT bin2uuid(n.node_uuid), " +
+      			"CONCAT(\"%\",REGEXP_SUBSTR(content, \"fileid[^>]*>[^<]+\"),\"%\") " +
+      			"FROM node n, resource_table rt " +
+      			"WHERE n.portfolio_id=uuid2bin(?) AND " +
+      			"n.res_node_uuid=rt.node_uuid AND " +
+      			"content LIKE \"%fileid%\";";
+        st = c.prepareStatement(sql);
+        st.setString(1, portfolioUuid);
+        st.executeUpdate();
+        st.close();
+        
+      	/// Clear empty values
+      	sql = "DELETE FROM t_fileid WHERE fileid=\"%%\";";
+        st = c.prepareStatement(sql);
+        st.executeUpdate();
+        st.close();
+     	
+      	/// Check referenced file count
+      	sql = "SELECT COUNT(*) AS fcount, t.resuuid, t.fileid " +
+      			"FROM resource_table rt, t_fileid t " +
+      			"WHERE rt.content LIKE t.fileid " +
+      			"GROUP BY t.fileid ORDER BY fcount;";
+        st = c.prepareStatement(sql);
+        rs = st.executeQuery();
+      	
+        while( rs.next() )
+        {
+        	int count = rs.getInt(1);
+        	/// Only keep value where count is 1
+        	if(count > 1) break;	// Values are ordered
+        	
+        	String nodeuuid = rs.getString(2);
+        	String rawfileid = rs.getString(3);
+        	
+        	// Fetch lang and fileid
+        	Matcher info = FILEID_PAT.matcher(rawfileid);
+        	String lang = "";
+        	if(info.find())
+        	{
+        		lang = info.group(1);
+        		
+          	// nodeid and lang
+        		Pair<String,String> data = Pair.of(nodeuuid, lang);
+        		retval.add(data);
+        	}
+        	
+        }
+        st.close();
+      }
+      catch( Exception e )
+      {
+        e.printStackTrace();
+      }
+      finally {
+        sql = "DROP TEMPORARY TABLE IF EXISTS t_fileid";
+        st = c.prepareStatement(sql);
+        st.execute();
+        st.close();
+      }
+      
+    	return retval;
+    }
 
     @Override
     public Object getNodesParent(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws Exception {

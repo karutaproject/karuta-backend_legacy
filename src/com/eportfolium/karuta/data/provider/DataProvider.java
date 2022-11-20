@@ -19,11 +19,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Set;
 
 import javax.activation.MimeType;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 import com.eportfolium.karuta.security.NodeRight;
 
@@ -66,6 +69,9 @@ public interface DataProvider {
 
     public String getPortfolioShared(Connection c, int user, int userId) throws SQLException;
 
+    // Return file ids from a given portfolio that are not found elsewhere
+    public ArrayList<Pair<String, String>> getPortfolioUniqueFile( Connection c, String portfolioUuid, int userId ) throws Exception;
+    
     public Object putPortfolio(Connection c, MimeType inMimeType, MimeType outMimeType, String in, String portfolioUuid, int userId, Boolean portfolioActive, int groupId, String modelId) throws Exception;
 
     public Object putPortfolioConfiguration(Connection c, String portfolioUuid, Boolean portfolioActive, Integer userId);

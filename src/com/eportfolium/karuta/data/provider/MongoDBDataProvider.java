@@ -19,11 +19,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Set;
 
 import javax.activation.MimeType;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 import com.eportfolium.karuta.security.NodeRight;
 
@@ -817,6 +820,13 @@ public class MongoDBDataProvider implements DataProvider {
     public String getPortfolioShared(Connection c, int user, int userId) throws SQLException {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public ArrayList<Pair<String, String>> getPortfolioUniqueFile( Connection c, String portfolioUuid, int userId )  throws Exception
+    {
+      // TODO Auto-generated method stub
+    	return null;
     }
 
     @Override

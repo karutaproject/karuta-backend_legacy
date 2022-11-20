@@ -1952,77 +1952,6 @@ public class RestServicePortfolio {
     }
 
     
-    /// Get file ids in file resource
-    private ArrayList<Pair<String, String>> getFilelist( Connection c, String portfolioUuid, HttpSession session, UserInfo ui ) throws Exception
-    {
-      String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, "true", "",
-          ui.subId, null).toString();
-      Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
-      /// Find all fileid/filename
-      XPath xPath = XPathFactory.newInstance().newXPath();
-      String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
-      NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
-      ArrayList<Pair<String, String>> items = new ArrayList<Pair<String, String>>();
-      
-      /// Fetch all files
-      for (int i = 0; i < nodelist.getLength(); ++i) {
-          String lang = "fr";
-          Node res = nodelist.item(i);
-          /// Check if fileid has a lang
-          Node langAtt = res.getAttributes().getNamedItem("lang");
-          String filterName;
-          if (langAtt != null) {
-              lang = langAtt.getNodeValue();
-              filterName = ".//*[local-name()='filename' and @lang='" + lang + "' and text()]";
-          } else {
-              filterName = ".//*[local-name()='filename' and @lang and text()]";
-          }
-
-          Node p = res.getParentNode();    // fileid -> resource
-          Node gp = p.getParentNode();    // resource -> context
-          Node uuidNode = gp.getAttributes().getNamedItem("id");
-          String uuid = uuidNode.getTextContent();
-
-          NodeList textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
-          String filename = "";
-          if (textList.getLength() != 0) {
-              Element fileNode = (Element) textList.item(0);
-              filename = fileNode.getTextContent();
-              lang = fileNode.getAttribute("lang");    // In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
-              if ("".equals(lang)) lang = "fr";
-          }
-
-          /// Check if user own this node
-          final Credential cred = new Credential();
-          Boolean isOwner = cred.isNodeOwner(c, ui.userId, uuid);
-
-          /// If not owner, skip
-          if (!isOwner) continue;
-          
-          Pair<String, String> item = Pair.of(uuid, lang);
-          items.add(item);
-
-          /*
-          String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
-          HttpDelete del = new HttpDelete(url);
-
-          // Transfer sessionid so that local request still get security checked
-          del.addHeader("Cookie", "JSESSIONID=" + session.getId());
-
-          // Send request
-          CloseableHttpClient client = HttpClients.createDefault();
-          CloseableHttpResponse ret = client.execute(del);
-          HttpEntity entity = ret.getEntity();
-
-          EntityUtils.consume(entity);
-          ret.close();
-          client.close();
-          //*/
-      }
-
-    	return items;
-    }
-
     /**
      * Delete portfolio
      * DELETE /rest/api/portfolios/portfolio/{portfolio-id}
@@ -2047,7 +1976,7 @@ public class RestServicePortfolio {
         	c = SqlUtils.getConnection();
         		// Get file list in portfolio
         		HttpSession session = httpServletRequest.getSession(true);
-        		ArrayList<Pair<String, String>> filelist = getFilelist(c, portfolioUuid, session, ui);
+        		ArrayList<Pair<String, String>> filelist = dataProvider.getPortfolioUniqueFile(c, portfolioUuid, ui.userId);
         	  
         	  // Loop through and delete
             final String sessionval = session.getId();
