@@ -15,17 +15,28 @@
 
 package com.eportfolium.karuta.data.utils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 import java.util.StringJoiner;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
 import javax.servlet.ServletContext;
+import javax.ws.rs.core.MediaType;
 
+import com.google.gson.Gson;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +57,8 @@ public class ConfigUtils {
     private String servletName;
 
     private BuildInfo buildInfo;
+
+    private BuildInfo fileServerBuildinfo;
 
     private ConfigUtils(final ServletContext context) throws Exception {
         if (hasLoaded) return;
@@ -172,6 +185,40 @@ public class ConfigUtils {
         logger.info("Loaded from META-INF/MANIFEST.MF build information: {}", this.buildInfo);
     }
 
+    private void loadFileserverBuildedInfo(){
+        String url = ConfigUtils.getInstance().getProperty("fileserver");
+        url = url.endsWith("/") ? url + "rest/api/version" : url + "/rest/api/version";
+
+        Set<Header> headers = new HashSet<>();
+        headers.add(new BasicHeader("Content-Type", MediaType.APPLICATION_JSON));
+        headers.add(new BasicHeader("Accept", MediaType.APPLICATION_JSON));
+        headers.add(new BasicHeader("Accept-Charset", StandardCharsets.UTF_8.name()));
+        final HttpResponse response = HttpClientUtils.goGet(headers, url);
+        if (response != null){
+            HttpEntity httpentity = response.getEntity();
+            try {
+                InputStream inputStream = httpentity.getContent();
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8);
+                StringBuilder sb = new StringBuilder();
+                String line = null;
+
+                while((line = reader.readLine()) != null) {
+                    sb.append(line + "\n");
+                }
+                inputStream.close();
+
+                Gson gson = new Gson();
+                fileServerBuildinfo = gson.fromJson(sb.toString(), BuildInfo.class);
+
+            } catch (IOException e) {
+                logger.error("Can't get Fileserver Version, the request to '{}' provided this error ", url, e);
+            }
+        }
+
+        logger.info("Loaded from '{}' build information: {}", url, this.fileServerBuildinfo);
+    }
+
     public String getConfigPath() {
         return configPath;
     }
@@ -186,6 +233,13 @@ public class ConfigUtils {
 
     public BuildInfo getBuildInfo() {
         return buildInfo;
+    }
+
+    public BuildInfo getFileServerBuildinfo() {
+        if (fileServerBuildinfo == null) {
+            this.loadFileserverBuildedInfo();
+        }
+        return fileServerBuildinfo;
     }
 
     public class BuildInfo {
