@@ -239,7 +239,7 @@ public class OAuth2 extends HttpServlet {
                 response.getWriter().close();
 
             } else {
-                logger.warn("Invalid OAuth2 query: state doesn't match");
+                logger.warn("Invalid OAuth2 query: state doesn't match '{}' vs '{}'", retstate, sesstate);
             }
         } else    /// Authentication start
         {

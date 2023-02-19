@@ -88,7 +88,7 @@ import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.http.HttpEntity;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
@@ -12006,7 +12006,7 @@ public class MysqlDataProvider implements DataProvider {
 
                 // FIXEME why doing that here ! never do an http request when doing database processing !
                 int prctElv = 0;
-                final HttpResponse response = HttpClientUtils.goGet(new HashSet<>(), backend + "/compare/" + uuids);
+                final HttpResponse response = HttpClientUtils.goGet(new HashSet<Header>(), backend + "/compare/" + uuids);
                 if (response != null) {
                     prctElv = Integer.parseInt(EntityUtils.toString(response.getEntity()));
                 }
