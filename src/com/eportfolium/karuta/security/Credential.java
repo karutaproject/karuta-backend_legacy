@@ -1381,5 +1381,26 @@ public class Credential {
         }
         return false;
     }
+    
+    public String getUsername( Connection c, Integer userId ) {
+    	if( userId == null )
+    		return "";
+    	
+    	ResultSet rs = null;
+    	PreparedStatement stmt = null;
+    	try {
+    		String query = "SELECT login FROM credential WHERE userid=?;";
+    		stmt = c.prepareStatement(query);
+    		stmt.setInt(1, userId);
+    		rs = stmt.executeQuery();
+    		
+    		if( rs.next() )
+    			return rs.getString(1);
+    	} catch (SQLException e) {
+    		e.printStackTrace();
+    		return "";
+    	}
+    	return "";
+    }
 
 }

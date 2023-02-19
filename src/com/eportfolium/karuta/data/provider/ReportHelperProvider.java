@@ -67,6 +67,15 @@ public class ReportHelperProvider {
 		ArrayList<String> cols = new ArrayList<String>();
 		ArrayList<String> vals = new ArrayList<String>();
 		Iterator<Entry<String, String>> iterval = values.iterator();
+
+		if( !cred.isAdmin(c, userId) )
+		{
+			// If user is not admin, check if read access is defined
+			cols.add( "a1=?" );
+			String user = cred.getUsername(c, userId);
+			vals.add(user);
+		}
+		
 		while( iterval.hasNext() )
 		{
 			Entry<String, String> entry = iterval.next();
