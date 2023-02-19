@@ -87,6 +87,8 @@ import org.xml.sax.InputSource;
 public class DomUtils
 {
 	final static Logger logger = LoggerFactory.getLogger(DomUtils.class);
+	final static String ACCESS_EXTERNAL_DTD = "http://javax.xml.XMLConstants/property/accessExternalDTD";
+	final static String ACCESS_EXTERNAL_STYLESHEET = "http://javax.xml.XMLConstants/property/accessExternalStylesheet";
 
 	//  =======================================
 	private static String dom2string(Document dom) throws Exception {  // à supprimer
@@ -236,12 +238,12 @@ public class DomUtils
 
 	private static TransformerFactory newSecureTransformerFactory() throws TransformerConfigurationException {
 		TransformerFactory transformerFactory = TransformerFactory.newInstance();
-		transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-		if (transformerFactory.getFeature(XMLConstants.ACCESS_EXTERNAL_DTD)) {
-			transformerFactory.setFeature(XMLConstants.ACCESS_EXTERNAL_DTD, false);
+		transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true); 
+		if (transformerFactory.getFeature(ACCESS_EXTERNAL_DTD)) {
+			transformerFactory.setFeature(ACCESS_EXTERNAL_DTD, false);
 		}
-		if (transformerFactory.getFeature(XMLConstants.ACCESS_EXTERNAL_STYLESHEET)) {
-			transformerFactory.setFeature(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, false);
+		if (transformerFactory.getFeature(ACCESS_EXTERNAL_STYLESHEET)) {
+			transformerFactory.setFeature(ACCESS_EXTERNAL_STYLESHEET, false);
 		}
 		return transformerFactory;
 	}
