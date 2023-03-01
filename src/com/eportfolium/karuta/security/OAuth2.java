@@ -27,6 +27,7 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -211,16 +212,27 @@ public class OAuth2 extends HttpServlet {
                         String username = (String) claims.getClaimValue("preferred_username");
 
                         //// Now log with username
-                        Connection connexion = SqlUtils.getConnection();
-                        String userId = dataProvider.getUserId(connexion, username, null);
-                        int uid = Integer.parseInt(userId);
-                        if (uid == 0) {
-                            userId = dataProvider.createUser(connexion, username, null);
-                            uid = Integer.parseInt(userId);
+                        Connection connexion = null;
+                        try {
+	                        connexion = SqlUtils.getConnection();
+	                        String userId = dataProvider.getUserId(connexion, username, null);
+	                        int uid = Integer.parseInt(userId);
+	                        if (uid == 0) {
+	                            userId = dataProvider.createUser(connexion, username, null);
+	                            uid = Integer.parseInt(userId);
+	                        }
+	                        session.setAttribute("uid", uid);
+	                        session.setAttribute("user", username);
+	                        session.setAttribute("fromoauth", 1);
+                        } catch( Exception e ) {
+                        	logger.error("Managed error", e);
+                        } finally {
+                        	try {
+                        		if( connexion != null ) connexion.close();
+                          } catch (SQLException e) {
+                              logger.error("Managed error", e);
+                          }
                         }
-                        session.setAttribute("uid", uid);
-                        session.setAttribute("user", username);
-                        session.setAttribute("fromoauth", 1);
 
                         /// Redirect to front-end
                         response.sendRedirect(defaultRedirectLocation);
