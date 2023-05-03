@@ -160,6 +160,7 @@ public class RestServicePortfolio {
     private boolean activelogin;
     private String backend;
     private boolean resetPWEnable;
+    private String emailResetMessage;
     private String ccEmail;
     private String basicLogoutRedirectionURL;
     private boolean casCreateAccount;
@@ -192,6 +193,7 @@ public class RestServicePortfolio {
             // Initialize
             activelogin = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("activate_login"));
             resetPWEnable = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("enable_password_reset"));
+            emailResetMessage = ConfigUtils.getInstance().getProperty("email_password_reset");
             ccEmail = ConfigUtils.getInstance().getProperty("sys_email");
             basicLogoutRedirectionURL = ConfigUtils.getInstance().getProperty("baseui_redirect_location");
             backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
@@ -4236,7 +4238,7 @@ public class RestServicePortfolio {
 
                     // Write change
                     boolean result = dataProvider.changePassword(c, username, password);
-                    String content = "Your new password: " + password + "<br>\n";
+                    String content = emailResetMessage + password + "<br>\n";
                     String referal = httpServletRequest.getHeader("referer");
 //				content += String.format("administrator - %s", referal);
 
