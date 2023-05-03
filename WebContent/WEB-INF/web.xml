@@ -309,4 +309,14 @@
 		<url-pattern>/*</url-pattern>
 	</filter-mapping>
 	-->
+	<servlet>
+		<description>CNAM module</description>
+		<display-name>CNAM</display-name>
+		<servlet-name>CNAM</servlet-name>
+		<servlet-class>com.eportfolium.karuta.data.attachment.CNAMBDO</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>CNAM</servlet-name>
+		<url-pattern>/cnam/*</url-pattern>
+	</servlet-mapping>
 </web-app>
