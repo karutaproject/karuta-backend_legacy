@@ -45,23 +45,27 @@ import net.oauth.OAuthAccessor;
 import net.oauth.OAuthConsumer;
 import net.oauth.OAuthException;
 import net.oauth.OAuthMessage;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.imsglobal.basiclti.Base64;
-import org.imsglobal.basiclti.BasicLTIConstants;
-import org.imsglobal.json.IMSJSONRequest;
-import org.imsglobal.lti2.LTI2Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.tsugi.basiclti.Base64;
+import org.tsugi.basiclti.BasicLTIConstants;
+import org.tsugi.json.IMSJSONRequest;
 
 public class LTIv2Servlet extends HttpServlet {
 
     private static final long serialVersionUID = -2442074091303775050L;
 
-    private static final Log logger = LogFactory.getLog(LTIv2Servlet.class);
+    private static final Logger logger = LoggerFactory.getLogger(LTIv2Servlet.class);
 
+    private static final String LTI_MESSAGE_TYPE_TOOLPROXYREGISTRATIONREQUEST = "ToolProxyRegistrationRequest";
+    private static final String LTI_MESSAGE_TYPE_TOOLPROXY_RE_REGISTRATIONREQUEST = "ToolProxyReregistrationRequest";
+    private static final String REG_KEY = "reg_key";
+    private static final String REG_PASSWORD = "reg_password";
+    private static final String TC_PROFILE_URL = "tc_profile_url";
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -168,11 +172,11 @@ public class LTIv2Servlet extends HttpServlet {
 
         String key = null;
         String passwd = null;
-        if (BasicLTIConstants.LTI_MESSAGE_TYPE_TOOLPROXYREGISTRATIONREQUEST.equals(
+        if (LTI_MESSAGE_TYPE_TOOLPROXYREGISTRATIONREQUEST.equals(
                 payload.get(BasicLTIConstants.LTI_MESSAGE_TYPE))) {
-            key = (String) payload.get(LTI2Constants.REG_KEY);
-            passwd = (String) payload.get(LTI2Constants.REG_PASSWORD);
-        } else if (BasicLTIConstants.LTI_MESSAGE_TYPE_TOOLPROXY_RE_REGISTRATIONREQUEST.equals(
+            key = (String) payload.get(REG_KEY);
+            passwd = (String) payload.get(REG_PASSWORD);
+        } else if (LTI_MESSAGE_TYPE_TOOLPROXY_RE_REGISTRATIONREQUEST.equals(
                 payload.get(BasicLTIConstants.LTI_MESSAGE_TYPE))) {
             key = (String) payload.get(LTIServletUtils.OAUTH_CONSUMER_KEY);
             final String configPrefix = "basiclti.provider." + key + ".";
@@ -184,7 +188,7 @@ public class LTIv2Servlet extends HttpServlet {
         }
 
         String returnUrl = (String) payload.get(BasicLTIConstants.LAUNCH_PRESENTATION_RETURN_URL);
-        String tcProfileUrl = (String) payload.get(LTI2Constants.TC_PROFILE_URL);
+        String tcProfileUrl = (String) payload.get(TC_PROFILE_URL);
 
         //Lookup tc profile
         if (tcProfileUrl != null && !"".equals(tcProfileUrl)) {

@@ -50,11 +50,11 @@ import net.oauth.signature.OAuthSignatureMethod;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.imsglobal.basiclti.BasicLTIConstants;
-import org.imsglobal.basiclti.BasicLTIUtil;
 import org.sakaiproject.basiclti.util.BlowFish;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tsugi.basiclti.BasicLTIConstants;
+import org.tsugi.basiclti.BasicLTIUtil;
 
 /**
  * Class supporting lti integration
