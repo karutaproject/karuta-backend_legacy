@@ -11781,8 +11781,10 @@ public class MysqlDataProvider implements DataProvider {
             Element rootMeta = doc.getDocumentElement();
 
             NamedNodeMap metaAttr = rootMeta.getAttributes();
-            int resetgroup = getRoleByNode(c, 1, nodeUuid, "resetter");    // Check for the possibility of resetter group
-            if ("reset".equals(macroName) && (cred.isAdmin(c, userId) || cred.isUserMemberOfRole(c, userId, resetgroup)))    // Admin, or part of resetter group
+            // int resetgroup = getRoleByNode(c, 1, nodeUuid, "resetter");    // Check for the possibility of resetter group
+            // if ("reset".equals(macroName) && (cred.isAdmin(c, userId) || cred.isUserMemberOfRole(c, userId, resetgroup)))    // Admin, or part of resetter group
+            
+            if ("reset".equals(macroName) && (cred.hasRightInPortfolio(c, userId, nodeUuid) ))    // Admin, or access to portfolio
             {
                 /// if reset and admin
                 // Call specific function to process current temporary table
