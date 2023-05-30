@@ -54,6 +54,7 @@ public class MysqlDataProviderTest {
             String portfolioUuid = "aaaa-bbbb-cccc";
             Integer userId = 2;
             int groupId = 26;
+            String rolename = "student";
 
 
             // putPortfolio
@@ -65,10 +66,10 @@ public class MysqlDataProviderTest {
             // getNode
             String uuid = "43020565-b650-4655-b466-af2c69b0c714";
             logger.debug("--- getNode(" + uuid + ") ------");
-            logger.debug("Node {}", dataProvider.getNode(connection, xmlMimeType, uuid, false, userId, groupId, null, null));
+            logger.debug("Node {}", dataProvider.getNode(connection, xmlMimeType, uuid, false, userId, groupId, rolename, null, null));
             // getNode with children
             logger.debug("--- getNode(" + uuid + ") with children ------");
-            logger.debug("Node {}", dataProvider.getNode(connection, xmlMimeType, uuid, true, userId, groupId, null, null));
+            logger.debug("Node {}", dataProvider.getNode(connection, xmlMimeType, uuid, true, userId, groupId, rolename, null, null));
 
             // putNode
             String parent_uuid_putnode = "82af4eae-0119-4055-b422-e37cece57e0f";
@@ -79,7 +80,7 @@ public class MysqlDataProviderTest {
 
             String uuid_deletenode = "b6b20bf7-3732-4256-ae16-171f42030207";
             logger.debug("--- deleteNode(" + uuid_deletenode + ") ------");
-            logger.debug("Result {}", dataProvider.deleteNode(connection, uuid_deletenode, userId, groupId));
+            logger.debug("Result {}", dataProvider.deleteNode(connection, uuid_deletenode, userId, groupId, rolename));
 
 
             // getPortfolio
@@ -90,13 +91,13 @@ public class MysqlDataProviderTest {
             //getPortfolios
             userId = null;
             logger.debug("--- getPortfolios(" + userId + ") ------");
-            logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, true, 0, null, null, false, null));
+            logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, rolename, true, 0, null, null, false, null));
 
             //getNodes
             String uuid_getnodes = "43020565-b650-4655-b466-af2c69b0c714";
             logger.debug("--- getNodes(" + uuid_getnodes + ") ------");
             logger.debug("Result {}", dataProvider.getNodes(connection, xmlMimeType, null,
-                    userId, groupId, null, uuid_getnodes, null,
+                    userId, groupId, rolename, null, uuid_getnodes, null,
                     null, null, null)
             );
 
@@ -107,7 +108,7 @@ public class MysqlDataProviderTest {
             //getPortfolios
             userId = null;
             logger.debug("--- getPortfolios(" + userId + ") ------");
-            logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, true, 0, null, null, false, null));
+            logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, rolename, true, 0, null, null, false, null));
 
 
         } catch (Exception ex) {

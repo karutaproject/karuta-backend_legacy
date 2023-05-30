@@ -572,7 +572,7 @@ public class MysqlDataProvider implements DataProvider {
         int status = 0;
         boolean hasRights = false;
 
-        NodeRight right = cred.getPortfolioRight(c, userId, groupId, portfolioUuid, Credential.DELETE);
+        NodeRight right = cred.getPortfolioRight(c, userId, groupId, portfolioUuid, Credential.DELETE, null);
         if (right.delete || cred.isAdmin(c, userId))
             hasRights = true;
 
@@ -1338,14 +1338,14 @@ public class MysqlDataProvider implements DataProvider {
 
 
     @Override
-    public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, Integer cutoff) throws Exception {
+    public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String userrole, String resource, String files, int substid, Integer cutoff) throws Exception {
         long t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0;
         long t0 = System.currentTimeMillis();
 
         String rootNodeUuid = getPortfolioRootNode(c, portfolioUuid);
         String header = "";
         String footer = "";
-        NodeRight nodeRight = cred.getPortfolioRight(c, userId, groupId, portfolioUuid, Credential.READ);
+        NodeRight nodeRight = cred.getPortfolioRight(c, userId, groupId, portfolioUuid, Credential.READ, userrole);
         if (!nodeRight.read) {
             userId = cred.getPublicUid(c);
 //			NodeRight nodeRight = new NodeRight(false,false,false,false,false,false);
@@ -1367,7 +1367,7 @@ public class MysqlDataProvider implements DataProvider {
 
             t2 = System.currentTimeMillis();
 
-            String data = getLinearXml(c, portfolioUuid, rootNodeUuid, null, true, null, userId, nodeRight.rrgId, nodeRight.groupLabel, cutoff);
+            String data = getLinearXml(c, portfolioUuid, rootNodeUuid, null, true, null, userId, nodeRight.groupId, nodeRight.groupLabel, cutoff);
 
             t3 = System.currentTimeMillis();
 
@@ -1428,11 +1428,11 @@ public class MysqlDataProvider implements DataProvider {
             footer = "}}";
         }
 
-        return header + getNode(c, outMimeType, rootNodeUuid, true, userId, groupId, label, cutoff).toString() + footer;
+        return header + getNode(c, outMimeType, rootNodeUuid, true, userId, groupId, userrole, null, cutoff).toString() + footer;
     }
 
     @Override
-    public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception {
+    public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String userRole, String resources, int substid) throws Exception {
         PreparedStatement st;
         String sql;
         ResultSet res = null;
@@ -1459,7 +1459,7 @@ public class MysqlDataProvider implements DataProvider {
                 result += DomUtils.getXmlAttributeOutput("id", res.getString("portfolio_id")) + " ";
                 result += DomUtils.getXmlAttributeOutput("root_node_id", res.getString("root_node_uuid")) + " ";
                 result += ">";
-                result += getNodeXmlOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId, groupId, null, false);
+                result += getNodeXmlOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId, groupId, userRole, null, false);
                 result += "</portfolio>";
             }
         }
@@ -1468,7 +1468,7 @@ public class MysqlDataProvider implements DataProvider {
     }
 
     @Override
-    public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) throws SQLException {
+    public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, String userRole, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) throws SQLException {
         PreparedStatement st;
         ResultSet res;
         Integer count = null;
@@ -1503,7 +1503,7 @@ public class MysqlDataProvider implements DataProvider {
                     sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
                 } else {
                     portfolioNoProject = true;
-                    return getPortfoliosNoProject(c, outMimeType, 0, groupId, sql, countOnly, search, portfolioActive);
+                    return getPortfoliosNoProject(c, outMimeType, 0, groupId, userRole, sql, countOnly, search, portfolioActive);
                     // Not efficient in MySQL, disabled
                     //sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
                     //sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
@@ -1582,7 +1582,7 @@ public class MysqlDataProvider implements DataProvider {
                     sql_count += "AND n.semantictag LIKE '%karuta-project%' ";
                 } else {
                     portfolioNoProject = true;
-                    return getPortfoliosNoProject(c, outMimeType, userId, groupId, sql, countOnly, search, portfolioActive);
+                    return getPortfoliosNoProject(c, outMimeType, userId, groupId, userRole, sql, countOnly, search, portfolioActive);
                     // Not efficient in MySQL, disabled
                     //sql += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
                     //sql_count += "AND SUBSTRING_INDEX(n.code, '.', 1) NOT IN (SELECT n.code  FROM portfolio p, node n LEFT JOIN resource_table r1 ON n.res_res_node_uuid=r1.node_uuid LEFT JOIN resource_table r2 ON n.res_context_node_uuid=r2.node_uuid LEFT JOIN resource_table r3 ON n.res_node_uuid=r3.node_uuid WHERE p.root_node_uuid=n.node_uuid AND n.semantictag LIKE '%karuta-project%' ) ";
@@ -1662,7 +1662,7 @@ public class MysqlDataProvider implements DataProvider {
 
                     if (res.getString("shared_node_uuid") != null)    // FIXME, add to query
                     {
-                        out.append(getNodeXmlOutput(c, res.getString("shared_node_uuid"), true, null, userId, groupId, null, true));
+                        out.append(getNodeXmlOutput(c, res.getString("shared_node_uuid"), true, null, userId, groupId, userRole, null, true));
                     } else {
                         String nodetype = res.getString("asm_type");
                         out.append("<").append(nodetype).append(" id=\"").append(res.getString("node_uuid")).append("\">");
@@ -1784,7 +1784,7 @@ public class MysqlDataProvider implements DataProvider {
                     out.append("{ ");
                     out.append(DomUtils.getJsonAttributeOutput("id", res.getString("portfolio_id"))).append(", ");
                     out.append(DomUtils.getJsonAttributeOutput("root_node_id", res.getString("root_node_uuid"))).append(", ");
-                    out.append(getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId, groupId, null, false));
+                    out.append(getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId, groupId, userRole, null, false));
                     out.append("} ");
                     firstPass = true;
                 }
@@ -1797,7 +1797,7 @@ public class MysqlDataProvider implements DataProvider {
         return out.toString();
     }
 
-    public Object getPortfoliosNoProject(Connection c, MimeType outMimeType, int userId, int groupId, String sql, Boolean countOnly, String search, Boolean portfolioActive) throws SQLException {
+    public Object getPortfoliosNoProject(Connection c, MimeType outMimeType, int userId, int groupId, String userRole, String sql, Boolean countOnly, String search, Boolean portfolioActive) throws SQLException {
         /// orz
         PreparedStatement st;
         ResultSet res;
@@ -1879,7 +1879,7 @@ public class MysqlDataProvider implements DataProvider {
 
                         if (res.getString("shared_node_uuid") != null)    // FIXME, add to query
                         {
-                            out.append(getNodeXmlOutput(c, res.getString("shared_node_uuid"), true, null, userId, groupId, null, true));
+                            out.append(getNodeXmlOutput(c, res.getString("shared_node_uuid"), true, null, userId, groupId, userRole, null, true));
                         } else {
                             String nodetype = res.getString("asm_type");
                             out.append("<").append(nodetype).append(" id=\"").append(res.getString("node_uuid")).append("\">");
@@ -1973,7 +1973,7 @@ public class MysqlDataProvider implements DataProvider {
                         result.append("{ ");
                         result.append(DomUtils.getJsonAttributeOutput("id", res.getString("portfolio_id"))).append(", ");
                         result.append(DomUtils.getJsonAttributeOutput("root_node_id", res.getString("root_node_uuid"))).append(", ");
-                        result.append(getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId, groupId, null, false));
+                        result.append(getNodeJsonOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId, groupId, userRole, null, false));
                         result.append("} ");
                         firstPass = true;
                     }
@@ -1990,7 +1990,7 @@ public class MysqlDataProvider implements DataProvider {
     }
 
     @Override
-    public Object getNodeBySemanticTag(Connection c, MimeType outMimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception {
+    public Object getNodeBySemanticTag(Connection c, MimeType outMimeType, String portfolioUuid, String semantictag, int userId, int groupId, String userRole) throws Exception {
         ResultSet res;
         String nodeUuid;
 
@@ -2003,9 +2003,9 @@ public class MysqlDataProvider implements DataProvider {
             return null;
 
         if (outMimeType.getSubType().equals("xml"))
-            return getNodeXmlOutput(c, nodeUuid, true, null, userId, groupId, null, true);
+            return getNodeXmlOutput(c, nodeUuid, true, null, userId, groupId, userRole, null, true);
         else if (outMimeType.getSubType().equals("json"))
-            return "{" + getNodeJsonOutput(c, nodeUuid, true, null, userId, groupId, null, true) + "}";
+            return "{" + getNodeJsonOutput(c, nodeUuid, true, null, userId, groupId, userRole, null, true) + "}";
         else
             return null;
     }
@@ -2639,18 +2639,18 @@ public class MysqlDataProvider implements DataProvider {
 
     @Override
     public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,
-                           int userId, int groupId, String semtag, String parentUuid, String filterId,
+                           int userId, int groupId, String userRole, String semtag, String parentUuid, String filterId,
                            String filterParameters, String sortId, Integer cutoff) throws SQLException {
         return getNodeXmlListOutput(c, parentUuid, true, userId, groupId);
     }
 
-    private StringBuffer getNodeJsonOutput(Connection c, String nodeUuid, boolean withChildren, String withChildrenOfXsiType, int userId, int groupId, String label, boolean checkSecurity) throws SQLException {
+    private StringBuffer getNodeJsonOutput(Connection c, String nodeUuid, boolean withChildren, String withChildrenOfXsiType, int userId, int groupId, String userRole, String label, boolean checkSecurity) throws SQLException {
         StringBuffer result = new StringBuffer();
         ResultSet resNode = getMysqlNode(c, nodeUuid, userId, groupId);
         ResultSet resResource;
 
         if (checkSecurity) {
-            NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, label);
+            NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, label, userRole);
             //
             if (!nodeRight.read)
                 return result;
@@ -2693,7 +2693,7 @@ public class MysqlDataProvider implements DataProvider {
                                 logger.error("Exception", ex);
                             }
                             if (withChildrenOfXsiType == null || withChildrenOfXsiType.equals(tmpXsiType))
-                                result.append(getNodeJsonOutput(c, arrayChild[i], true, null, userId, groupId, label, true));
+                                result.append(getNodeJsonOutput(c, arrayChild[i], true, null, userId, groupId, userRole, label, true));
 
                             if (withChildrenOfXsiType == null)
                                 if (arrayChild.length > 1)
@@ -2711,11 +2711,11 @@ public class MysqlDataProvider implements DataProvider {
         return result;
     }
 
-    private StringBuffer getNodeXmlOutput(Connection c, String nodeUuid, boolean withChildren, String withChildrenOfXsiType, int userId, int groupId, String label, boolean checkSecurity) throws SQLException {
+    private StringBuffer getNodeXmlOutput(Connection c, String nodeUuid, boolean withChildren, String withChildrenOfXsiType, int userId, int groupId, String userRole, String label, boolean checkSecurity) throws SQLException {
         StringBuffer result = new StringBuffer();
         // Verification securite
         if (checkSecurity) {
-            NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, label);
+            NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, label, userRole);
             if (!nodeRight.read) {
                 userId = cred.getPublicUid(c);
 //			NodeRight nodeRight = new NodeRight(false,false,false,false,false,false);
@@ -2739,7 +2739,7 @@ public class MysqlDataProvider implements DataProvider {
 
         if (resNode.next()) {
             if (resNode.getString("shared_node_uuid") != null) {
-                result.append(getNodeXmlOutput(c, resNode.getString("shared_node_uuid"), true, null, userId, groupId, null, true));
+                result.append(getNodeXmlOutput(c, resNode.getString("shared_node_uuid"), true, null, userId, groupId, userRole, null, true));
             } else {
                 result.append(indentation).append("<").append(resNode.getString("asm_type")).append(" ")
                         .append(DomUtils.getXmlAttributeOutput("id", resNode.getString("node_uuid"))).append(" ");
@@ -2848,7 +2848,7 @@ public class MysqlDataProvider implements DataProvider {
                                     logger.error("Exception", ex);
                                 }
                                 if (withChildrenOfXsiType == null || withChildrenOfXsiType.equals(tmpXsiType))
-                                    result.append(getNodeXmlOutput(c, s, true, null, userId, groupId, null, true));
+                                    result.append(getNodeXmlOutput(c, s, true, null, userId, groupId, userRole, null, true));
 
                                 resChildNode.close();
                             }
@@ -4039,12 +4039,12 @@ public class MysqlDataProvider implements DataProvider {
 
 
     @Override
-    public Object getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId, int groupId, String label, Integer cutoff) throws SQLException, TransformerFactoryConfigurationError, ParserConfigurationException, DOMException, SAXException, IOException, TransformerException {
+    public Object getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId, int groupId, String userRole, String label, Integer cutoff) throws SQLException, TransformerFactoryConfigurationError, ParserConfigurationException, DOMException, SAXException, IOException, TransformerException {
         StringBuffer nodexml = new StringBuffer();
 
         long t_start = System.currentTimeMillis();
 
-        NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, label);
+        NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, label, userRole);
 
         long t_nodeRight = System.currentTimeMillis();
 
@@ -4108,7 +4108,7 @@ public class MysqlDataProvider implements DataProvider {
 
             return nodexml;
         } else if (outMimeType.getSubType().equals("json"))
-            return "{" + getNodeJsonOutput(c, nodeUuid, withChildren, null, userId, groupId, label, true) + "}";
+            return "{" + getNodeJsonOutput(c, nodeUuid, withChildren, null, userId, groupId, userRole, label, true) + "}";
         else
             return null;
     }
@@ -4127,11 +4127,11 @@ public class MysqlDataProvider implements DataProvider {
     }
 
     @Override
-    public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId) {
+    public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId, String userRole ) {
         long t1, t2, t3, t4, t5, t6;
         long t0 = System.currentTimeMillis();
 
-        NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, Credential.DELETE);
+        NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, Credential.DELETE, userRole );
 
         if (!nodeRight.delete)
             if (!cred.isAdmin(c, userId) && !cred.isDesigner(c, userId, nodeUuid))
@@ -10384,7 +10384,7 @@ public class MysqlDataProvider implements DataProvider {
     }
 
     @Override
-    public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId) {
+    public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId, String userRole ) {
         String xml;
         try {
             /// Preparing parameters for future need, format: "par1:par1val;par2:par2val;..."
@@ -10400,7 +10400,7 @@ public class MysqlDataProvider implements DataProvider {
             }
 
             /// TODO: Test this more, should use getNode rather than having another output
-            xml = getNode(c, new MimeType("text/xml"), nodeUuid, true, userId, groupId, null, null).toString();
+            xml = getNode(c, new MimeType("text/xml"), nodeUuid, true, userId, groupId, userRole, null, null).toString();
             if (xml == null)
                 return null;
 
@@ -10420,13 +10420,13 @@ public class MysqlDataProvider implements DataProvider {
     }
 
     @Override
-    public Object postNodeFromModelBySemanticTag(Connection c, MimeType inMimeType, String parentNodeUuid, String semanticTag, int userId, int groupId) throws Exception {
+    public Object postNodeFromModelBySemanticTag(Connection c, MimeType inMimeType, String parentNodeUuid, String semanticTag, int userId, int groupId, String userRole ) throws Exception {
         String portfolioUid = getPortfolioUuidByNodeUuid(c, parentNodeUuid);
 
         String portfolioModelId = getPortfolioModelUuid(c, portfolioUid);
 
         String xml = getNodeBySemanticTag(c, inMimeType, portfolioModelId,
-                semanticTag, userId, groupId).toString();
+                semanticTag, userId, groupId, userRole).toString();
 
         ResultSet res = getMysqlOtherNodeUuidByPortfolioModelUuidBySemanticTag(c, portfolioModelId, semanticTag);
         String otherParentNodeUuid = null;
@@ -10459,8 +10459,8 @@ public class MysqlDataProvider implements DataProvider {
     }
 
     @Override
-    public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId) {
-        NodeRight right = cred.getPortfolioRight(c, userId, 0, portfolioUuid, Credential.READ);
+    public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId, String userRole ) {
+        NodeRight right = cred.getPortfolioRight(c, userId, 0, portfolioUuid, Credential.READ, userRole);
         if (!right.read)
             return null;
 
@@ -10827,10 +10827,10 @@ public class MysqlDataProvider implements DataProvider {
     }
 
     @Override
-    public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException {
+    public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String userRole, String label) throws SQLException {
         StringBuffer result = new StringBuffer();
         // Verification securite
-        NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, label);
+        NodeRight nodeRight = cred.getNodeRight(c, userId, groupId, nodeUuid, label, userRole);
 
         if (!nodeRight.read)
             return result;
@@ -12016,7 +12016,7 @@ public class MysqlDataProvider implements DataProvider {
 
                 //parse le noeud
                 String lbl = null;
-                Object ndSol = getNode(c, new MimeType("text/xml"), nodePrct, true, 1, 0, lbl, null);
+                Object ndSol = getNode(c, new MimeType("text/xml"), nodePrct, true, 1, 0, null, lbl, null);
                 if (ndSol == null)
                     return null;
 
@@ -12051,7 +12051,7 @@ public class MysqlDataProvider implements DataProvider {
 
                 //Recuperation uuidNoeud sur lequel effectuer l'action, role et action
                 String lbl2 = null;
-                Object nd = getNode(c, new MimeType("text/xml"), contextActionNodeUuid, true, 1, 0, lbl2, null);
+                Object nd = getNode(c, new MimeType("text/xml"), contextActionNodeUuid, true, 1, 0, null, lbl2, null);
                 if (nd == null)
                     return null;
 
@@ -14015,7 +14015,7 @@ public class MysqlDataProvider implements DataProvider {
     }
 
     @Override
-    public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent, Integer cutoff) throws SQLException {
+    public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String userRole, String semtag_parent, String code_parent, Integer cutoff) throws SQLException {
         PreparedStatement st = null;
         String sql;
         ResultSet res;
@@ -14027,7 +14027,7 @@ public class MysqlDataProvider implements DataProvider {
         if ("".equals(pid))
             throw new RestWebApplicationException(Status.NOT_FOUND, "Not found");
 
-        NodeRight right = cred.getPortfolioRight(c, userId, groupId, pid, Credential.READ);
+        NodeRight right = cred.getPortfolioRight(c, userId, groupId, pid, Credential.READ, userRole );
         if (!right.read && !cred.isAdmin(c, userId) && !cred.isPublic(c, null, pid) && !cred.isOwner(c, userId, pid))
             throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 

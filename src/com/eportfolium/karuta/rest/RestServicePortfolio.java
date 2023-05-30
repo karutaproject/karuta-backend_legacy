@@ -702,7 +702,7 @@ public class RestServicePortfolio {
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, "application/zip", MediaType.APPLICATION_OCTET_STREAM})
     public Object getPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,
                                @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept,
-                               @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resource,
+                               @QueryParam("user") Integer userId, @QueryParam("userrole") String userrole, @QueryParam("resources") String resource,
                                @QueryParam("files") String files, @QueryParam("export") String export, @QueryParam("lang") String lang, @QueryParam("level") Integer cutoff) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({}) is false", portfolioUuid);
@@ -715,7 +715,7 @@ public class RestServicePortfolio {
         Response response = null;
         try {
             c = SqlUtils.getConnection();
-            String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, this.label, resource, "", ui.subId, cutoff).toString();
+            String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0, userrole, resource, "", ui.subId, cutoff).toString();
 
             if (MysqlDataProvider.DATABASE_FALSE.equals(portfolio)) {
                 response = Response.status(403).build();
@@ -912,7 +912,7 @@ public class RestServicePortfolio {
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     public Object getPortfolioByCode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("code") String code,
                                      @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept,
-                                     @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("resources") String resources) {
+                                     @QueryParam("user") Integer userId, @QueryParam("group") Integer group, @QueryParam("userrole") String userrole, @QueryParam("resources") String resources) {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
         Connection c = null;
 
@@ -922,7 +922,7 @@ public class RestServicePortfolio {
             // Try with world public access
             String userid = dataProvider.getUserId(c, "public", null);
             int uid = Integer.parseInt(userid);
-            String portfo = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, uid, -1, "true", -1).toString();
+            String portfo = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, uid, -1, userrole, "true", -1).toString();
 
             if( !"faux".equals(portfo) )
             {
@@ -935,7 +935,7 @@ public class RestServicePortfolio {
 
             if (resources == null)
                 resources = "false";
-            String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, ui.userId, groupId, resources, ui.subId).toString();
+            String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, ui.userId, groupId, userrole, resources, ui.subId).toString();
             if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 logger.error("Code {} not found or user without rights", code);
                 throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -999,7 +999,7 @@ public class RestServicePortfolio {
     @GET
     @Consumes(MediaType.APPLICATION_XML)
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
+    public String getPortfolios(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("userrole") String userrole, @QueryParam("group") int groupId, @Context ServletConfig sc,
                                 @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("active") String active,
                                 @QueryParam("userid") Integer userId, @QueryParam("code") String code, @QueryParam("portfolio") String portfolioUuid,
                                 @QueryParam("i") String index, @QueryParam("n") String numResult, @QueryParam("level") Integer cutoff, @QueryParam("public") String public_var,
@@ -1009,8 +1009,9 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
+            
             if (portfolioUuid != null) {
-                String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, groupId, this.label, null,
+                String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, groupId, userrole, null,
                         null, ui.subId, cutoff).toString();
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
@@ -1056,18 +1057,18 @@ public class RestServicePortfolio {
                 }
 
                 if (portfolioCode != null) {
-                    returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), portfolioCode, ui.userId, groupId, null, ui.subId).toString();
+                    returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), portfolioCode, ui.userId, groupId, userrole, null, ui.subId).toString();
                 } else {
                     if (public_var != null) {
                         int publicid = credential.getMysqlUserUid(c, "public");
-                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, portfolioActive, 0, portfolioProject,
+                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, userrole, portfolioActive, 0, portfolioProject,
                                 portfolioProjectId, countOnly, search).toString();
                     } else if (userId != null && credential.isAdmin(c, ui.userId)) {
-                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, portfolioActive, ui.subId, portfolioProject,
+                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, userrole, portfolioActive, ui.subId, portfolioProject,
                                 portfolioProjectId, countOnly, search).toString();
                     } else    /// For user logged in
                     {
-                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), ui.userId, groupId, portfolioActive, ui.subId, portfolioProject,
+                        returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), ui.userId, groupId, userrole, portfolioActive, ui.subId, portfolioProject,
                                 portfolioProjectId, countOnly, search).toString();
                     }
 
@@ -2031,7 +2032,7 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @PathParam("node-id") String nodeUuid,
+    public String getNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole, @PathParam("node-id") String nodeUuid,
                           @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId,
                           @QueryParam("level") Integer cutoff) {
         if (!isUUID(nodeUuid)) {
@@ -2044,7 +2045,7 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId, this.label, cutoff).toString();
+            String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId, userrole, this.label, cutoff).toString();
             if (returnValue == null)
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
             if (returnValue.length() != 0) {
@@ -2090,7 +2091,7 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodeWithChildren(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String getNodeWithChildren(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole, 
                                       @PathParam("node-id") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
                                       @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId, @QueryParam("level") Integer cutoff) {
         if (!isUUID(nodeUuid)) {
@@ -2103,7 +2104,7 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId, this.label, cutoff).toString();
+            String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId, userrole, this.label, cutoff).toString();
             if (returnValue == null)
                 throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
             if (returnValue.length() != 0) {
@@ -2143,7 +2144,7 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodeMetadataWad(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String getNodeMetadataWad(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole, 
                                      @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
                                      @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
@@ -2156,7 +2157,7 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.getNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId, this.label).toString();
+            String returnValue = dataProvider.getNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId, userrole, this.label).toString();
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
@@ -2404,7 +2405,7 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodeBySemanticTag(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String getNodeBySemanticTag(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole, 
                                        @PathParam("portfolio-uuid") String portfolioUuid, @PathParam("semantictag") String semantictag, @Context ServletConfig sc,
                                        @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
         if (!isUUID(portfolioUuid)) {
@@ -2417,7 +2418,7 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.getNodeBySemanticTag(c, new MimeType("text/xml"), portfolioUuid, semantictag, ui.userId, groupId).toString();
+            String returnValue = dataProvider.getNodeBySemanticTag(c, new MimeType("text/xml"), portfolioUuid, semantictag, ui.userId, groupId, userrole).toString();
             if (returnValue.length() != 0) {
                 return returnValue;
             } else {
@@ -2930,7 +2931,7 @@ public class RestServicePortfolio {
     @GET
     @Produces({MediaType.APPLICATION_XML})
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodes(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String getNodes(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole, 
                            @PathParam("dest-id") String parentId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
                            @QueryParam("portfoliocode") String portfoliocode, @QueryParam("semtag") String semtag, @QueryParam("semtag_parent") String semtag_parent,
                            @QueryParam("code_parent") String code_parent, @QueryParam("level") Integer cutoff) {
@@ -2939,7 +2940,7 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.getNodes(c, new MimeType("text/xml"), portfoliocode, semtag, ui.userId, groupId, semtag_parent, code_parent, cutoff).toString();
+            String returnValue = dataProvider.getNodes(c, new MimeType("text/xml"), portfoliocode, semtag, ui.userId, groupId, userrole, semtag_parent, code_parent, cutoff).toString();
 
 
             if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
@@ -3202,7 +3203,7 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{node-uuid}")
     @DELETE
     @Produces(MediaType.APPLICATION_XML)
-    public String deleteNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String deleteNode(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole, 
                              @PathParam("node-uuid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({})  is false", nodeUuid);
@@ -3214,7 +3215,7 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            int nbDeletedNodes = Integer.parseInt(dataProvider.deleteNode(c, nodeUuid, ui.userId, groupId).toString());
+            int nbDeletedNodes = Integer.parseInt(dataProvider.deleteNode(c, nodeUuid, ui.userId, groupId, userrole).toString());
             if (nbDeletedNodes == 0) {
 
 
@@ -3988,7 +3989,7 @@ public class RestServicePortfolio {
     @Path("/groups/{portfolio-id}")
     @GET
     @Produces(MediaType.APPLICATION_XML)
-    public String getGroupsPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String getGroupsPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole, 
                                      @PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(portfolioUuid)) {
             logger.error("isUUID({})  is false", portfolioUuid);
@@ -4001,7 +4002,7 @@ public class RestServicePortfolio {
             c = SqlUtils.getConnection();
 
 
-            return dataProvider.getGroupsPortfolio(c, portfolioUuid, ui.userId);
+            return dataProvider.getGroupsPortfolio(c, portfolioUuid, ui.userId, userrole);
         } catch (Exception ex) {
             logger.error("Managed error", ex);
 
@@ -4481,7 +4482,7 @@ public class RestServicePortfolio {
     @Path("/nodes/{node-id}")
     @GET
     @Consumes(MediaType.APPLICATION_XML)
-    public String getNodeWithXSL(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String getNodeWithXSL(@CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole, 
                                  @PathParam("node-id") String nodeUuid, @QueryParam("xsl-file") String xslFile, @Context ServletConfig sc,
                                  @Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept, @QueryParam("user") Integer userId,
                                  @QueryParam("lang") String lang, @QueryParam("p1") String p1, @QueryParam("p2") String p2, @QueryParam("p3") String p3) {
@@ -4505,7 +4506,7 @@ public class RestServicePortfolio {
             ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
             xslFile = ppath + xslFile;
 
-            String returnValue = dataProvider.getNodeWithXSL(c, new MimeType("text/xml"), nodeUuid, xslFile, parameters, ui.userId, groupId).toString();
+            String returnValue = dataProvider.getNodeWithXSL(c, new MimeType("text/xml"), nodeUuid, xslFile, parameters, ui.userId, groupId, userrole).toString();
             if (returnValue.length() != 0) {
                 if (MediaType.APPLICATION_JSON.equals(accept))
                     returnValue = XML.toJSONObject(returnValue).toString();
@@ -4545,7 +4546,7 @@ public class RestServicePortfolio {
     @POST
     @Consumes(MediaType.APPLICATION_XML)
     @Produces(MediaType.APPLICATION_XML)
-    public String postNodeFromModelBySemanticTag(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String postNodeFromModelBySemanticTag(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole, 
                                                  @PathParam("node-id") String nodeUuid, @PathParam("semantic-tag") String semantictag, @Context ServletConfig sc,
                                                  @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
         if (!isUUID(nodeUuid)) {
@@ -4558,7 +4559,7 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
-            String returnValue = dataProvider.postNodeFromModelBySemanticTag(c, new MimeType("text/xml"), nodeUuid, semantictag, ui.userId, groupId).toString();
+            String returnValue = dataProvider.postNodeFromModelBySemanticTag(c, new MimeType("text/xml"), nodeUuid, semantictag, ui.userId, groupId, userrole).toString();
 
 
             if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {

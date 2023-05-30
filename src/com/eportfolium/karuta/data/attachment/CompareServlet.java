@@ -191,9 +191,9 @@ public class CompareServlet extends HttpServlet {
         try {
             provider = SqlUtils.initProvider();
             c = SqlUtils.getConnection();
-            ingt = provider.getNode(c, new MimeType("text/xml"), uuidNd, true, 1, groupId, lbl, null); //pour test remplacer uuidNd par strNoeud
-            ingtREP = provider.getNode(c, new MimeType("text/xml"), uuidREP, true, 1, groupId, lbl, null);
-            ingtSOL = provider.getNode(c, new MimeType("text/xml"), uuidSOL, true, 1, groupId, lbl, null);
+            ingt = provider.getNode(c, new MimeType("text/xml"), uuidNd, true, 1, groupId, null, lbl, null); //pour test remplacer uuidNd par strNoeud
+            ingtREP = provider.getNode(c, new MimeType("text/xml"), uuidREP, true, 1, groupId, null, lbl, null);
+            ingtSOL = provider.getNode(c, new MimeType("text/xml"), uuidSOL, true, 1, groupId, null, lbl, null);
         } catch (Exception e) {
             logger.error("Intercepted error", e);
             // TODO managing error

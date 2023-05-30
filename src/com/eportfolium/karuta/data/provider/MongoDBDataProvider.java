@@ -60,7 +60,7 @@ public class MongoDBDataProvider implements DataProvider {
 	//*/
 
     @Override
-    public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId) throws Exception {
+    public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId, String userRole ) throws Exception {
         // TODO Auto-generated method stub
         return null;
     }
@@ -87,7 +87,7 @@ public class MongoDBDataProvider implements DataProvider {
 
     @Override
     public Object getNode(Connection c, MimeType outMimeType, String nodeUuid,
-                          boolean withChildren, int userId, int groupId, String label, Integer cutoff) throws Exception {
+                          boolean withChildren, int userId, int groupId, String userRole, String label, Integer cutoff) throws Exception {
         // TODO Auto-generated method stub
         return null;
     }
@@ -100,7 +100,7 @@ public class MongoDBDataProvider implements DataProvider {
 
     @Override
     public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid,
-                           int userId, int groupId,
+                           int userId, int groupId, String userRole, 
                            String semtag, String parentUuid, String filterId,
                            String filterParameters, String sortId, Integer cutoff) throws Exception {
         // TODO Auto-generated method stub
@@ -115,7 +115,7 @@ public class MongoDBDataProvider implements DataProvider {
     }
 
     @Override
-    public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) throws Exception {
+    public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, String userRole, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) throws Exception {
         // TODO Auto-generated method stub
         return null;
     }
@@ -268,7 +268,7 @@ public class MongoDBDataProvider implements DataProvider {
 
     @Override
     public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode,
-                                     int userId, int groupId, String resources, int substid) throws Exception {
+                                     int userId, int groupId, String userRole, String resources, int substid) throws Exception {
         // TODO Auto-generated method stub
         return null;
     }
@@ -380,7 +380,7 @@ public class MongoDBDataProvider implements DataProvider {
 
     @Override
     public Object getNodeBySemanticTag(Connection c, MimeType mimeType, String portfolioUuid,
-                                       String semantictag, int userId, int groupId) {
+                                       String semantictag, int userId, int groupId, String userRole ) {
         // TODO Auto-generated method stub
         return null;
     }
@@ -471,20 +471,20 @@ public class MongoDBDataProvider implements DataProvider {
 
     @Override
     public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid,
-                                 String xslFile, String parameters, int userId, int groupId) {
+                                 String xslFile, String parameters, int userId, int groupId, String userRole ) {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public Object postNodeFromModelBySemanticTag(Connection c, MimeType mimeType,
-                                                 String nodeUuid, String semantictag, int userId, int groupId) {
+                                                 String nodeUuid, String semantictag, int userId, int groupId, String userRole ) {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId) {
+    public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId, String userRole ) {
         // TODO Auto-generated method stub
         return null;
     }
@@ -636,7 +636,7 @@ public class MongoDBDataProvider implements DataProvider {
 
     @Override
     public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid,
-                                     boolean b, int userId, int groupId, String label) throws SQLException {
+                                     boolean b, int userId, int groupId, String userRole, String label) throws SQLException {
         // TODO Auto-generated method stub
         return null;
     }
@@ -798,7 +798,7 @@ public class MongoDBDataProvider implements DataProvider {
 
     @Override
     public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag,
-                           int userId, int groupId, String semtag_parent, String code_parent, Integer cutoff) throws SQLException {
+                           int userId, int groupId, String userRole, String semtag_parent, String code_parent, Integer cutoff) throws SQLException {
         // TODO Auto-generated method stub
         return null;
     }

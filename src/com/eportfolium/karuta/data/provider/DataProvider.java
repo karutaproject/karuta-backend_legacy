@@ -57,11 +57,11 @@ public interface DataProvider {
     public boolean isAdmin(Connection c, String uid);
 
     /// Relatif aux portfolios
-    public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label, String resource, String files, int substid, Integer cutoff) throws Exception;
+    public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String userrole, String resource, String files, int substid, Integer cutoff) throws Exception;
 
-    public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) throws Exception;
+    public Object getPortfolios(Connection c, MimeType outMimeType, int userId, int groupId, String userRole, Boolean portfolioActive, int substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) throws Exception;
 
-    public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String resources, int substid) throws Exception;
+    public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId, String userRole, String resources, int substid) throws Exception;
 
     public String getPortfolioUuidByNodeUuid(Connection c, String nodeUuid) throws Exception;
 
@@ -104,7 +104,7 @@ public interface DataProvider {
     public Object postModels(Connection c, MimeType mimeType, String xmlModel, int userId) throws Exception;
 
     /// Relatif aux noeuds
-    public Object getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId, int groupId, String label, Integer cutoff) throws Exception;
+    public Object getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId, int groupId, String userRole, String label, Integer cutoff) throws Exception;
 
     public String getNodePortfolioId(Connection c, String nodeUuid) throws Exception;
 
@@ -117,19 +117,19 @@ public interface DataProvider {
      * @param sortId           Id du tri personnalisé
      * @return une chaine XML
      */
-    public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String semtag, String parentUuid, String filterId, String filterParameters, String sortId, Integer cutoff) throws Exception;
+    public Object getNodes(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId, String userRole, String semtag, String parentUuid, String filterId, String filterParameters, String sortId, Integer cutoff) throws Exception;
 
-    public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent, Integer cutoff) throws SQLException;
+    public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String userRole, String semtag_parent, String code_parent, Integer cutoff) throws SQLException;
 
-    public Object getNodeBySemanticTag(Connection c, MimeType mimeType, String portfolioUuid, String semantictag, int userId, int groupId) throws Exception;
+    public Object getNodeBySemanticTag(Connection c, MimeType mimeType, String portfolioUuid, String semantictag, int userId, int groupId, String userRole ) throws Exception;
 
     Object getNodesBySemanticTag(Connection c, MimeType outMimeType, int userId, int groupId, String portfolioUuid, String semanticTag) throws SQLException;
 
-    public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId);
+    public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid, String xslFile, String parameters, int userId, int groupId, String userRole );
 
     public Object getNodesParent(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId, int groupId, String semtag_parent, String code_parent) throws Exception;
 
-    public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String label) throws SQLException;
+    public Object getNodeMetadataWad(Connection c, MimeType mimeType, String nodeUuid, boolean b, int userId, int groupId, String userRole, String label) throws SQLException;
 
     public String getResNode(Connection c, String contextUuid, int userId, int groupId) throws Exception;
 
@@ -149,7 +149,7 @@ public interface DataProvider {
 
     public Object postNode(Connection c, MimeType inMimeType, String parentNodeUuid, String in, int userId, int groupId, boolean forcedUuid) throws Exception;
 
-    public Object postNodeFromModelBySemanticTag(Connection c, MimeType mimeType, String nodeUuid, String semantictag, int userId, int groupId) throws Exception;
+    public Object postNodeFromModelBySemanticTag(Connection c, MimeType mimeType, String nodeUuid, String semantictag, int userId, int groupId, String userRole ) throws Exception;
 
     public Object postImportNode(Connection c, MimeType inMimeType, String destUuid, String tag, String code, String srcuuid, int userId, int groupId) throws Exception;
 
@@ -164,7 +164,7 @@ public interface DataProvider {
 
     public boolean postChangeNodeParent(Connection c, int userid, String uuid, String uuidParent);
 
-    public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId) throws Exception;
+    public Object deleteNode(Connection c, String nodeUuid, int userId, int groupId, String userRole ) throws Exception;
 
     /// Relatif aux ressources
     public Object getResource(Connection c, MimeType outMimeType, String nodeParentUuid, int userId, int groupId) throws Exception;
@@ -238,7 +238,7 @@ public interface DataProvider {
 
     public String getGroupsByRole(Connection c, int userId, String portfolioUuid, String role);
 
-    public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId);
+    public String getGroupsPortfolio(Connection c, String portfolioUuid, int userId, String userRole );
 
     public Integer getRoleByNode(Connection c, int userId, String nodeUuid, String role);
 

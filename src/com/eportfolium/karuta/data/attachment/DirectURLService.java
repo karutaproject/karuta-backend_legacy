@@ -326,7 +326,7 @@ public class DirectURLService extends HttpServlet {
         String nodedata = "";
         try {
             c = SqlUtils.getConnection();
-            Object retdata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, "", 1);
+            Object retdata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, null, "", 1);
             if (retdata == null) {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 PrintWriter writer = response.getWriter();

@@ -138,7 +138,7 @@ public class Credential {
 
 
     //test pour l'affichage du getPortfolio
-    public NodeRight getPortfolioRight(Connection c, int userId, int groupId, String portfolioUuid, String droit) {
+    public NodeRight getPortfolioRight(Connection c, int userId, int groupId, String portfolioUuid, String droit, String userRole) {
         PreparedStatement st;
         String sql;
         ResultSet res;
@@ -157,7 +157,7 @@ public class Credential {
                 if (res.getInt("modif_user_id") == userId)    // Is the owner
                     reponse.add = reponse.delete = reponse.read = reponse.write = true;
                 else    // General case
-                    reponse = getNodeRight(c, userId, groupId, res.getString("root_node_uuid"), droit);
+                    reponse = getNodeRight(c, userId, groupId, res.getString("root_node_uuid"), droit, userRole);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -220,7 +220,7 @@ public class Credential {
     }
 
     public boolean hasNodeRight(Connection c, int userId, int groupId, String node_uuid, String droit) {
-        NodeRight nodeRight = getNodeRight(c, userId, groupId, node_uuid, null);
+        NodeRight nodeRight = getNodeRight(c, userId, groupId, node_uuid, null, null);
         if (droit.equals(READ))
             return nodeRight.read;
         else if (droit.equals(WRITE))
@@ -234,7 +234,7 @@ public class Credential {
     }
 
     //test pour l'affichage des differentes methodes de Node
-    public NodeRight getNodeRight(Connection c, int userId, int groupId, String node_uuid, String label) {
+    public NodeRight getNodeRight(Connection c, int userId, int groupId, String node_uuid, String rightType, String userRole ) {
         PreparedStatement st = null;
         String sql;
         ResultSet res = null;
@@ -242,6 +242,15 @@ public class Credential {
         // On initialise les droits à false : par defaut accès à rien
         NodeRight nodeRight = new NodeRight(false, false, false, false, false, false);
 
+        // If userrole specified, use it if something is found
+        int groupid = getGroupid(c, userRole, node_uuid);
+        if ( groupid != -1 )
+        {
+        	groupId = groupid;
+        	nodeRight.groupId = groupId;
+        	nodeRight.groupLabel = userRole;
+        }
+        
         try {
             long t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0;
             long t0 = System.currentTimeMillis();
@@ -1402,5 +1411,32 @@ public class Credential {
     	}
     	return "";
     }
+
+    public int getGroupid(Connection c, String role, String nodeUuid) {
+      if (role == null || nodeUuid == null)
+          return -1;
+
+      ///
+      ResultSet rs = null;
+      PreparedStatement stmt = null;
+      try {
+          String query = "SELECT gri.grid " +
+                  "FROM group_info gi, group_right_info gri, node n " +
+                  "WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND gri.grid=gi.grid " +
+                  "AND gi.label=?;";
+          stmt = c.prepareStatement(query);
+          stmt.setString(1, nodeUuid);
+          stmt.setString(2, role);
+          rs = stmt.executeQuery();
+
+          if (rs.next())
+              return rs.getInt(1);
+      } catch (SQLException e) {
+          e.printStackTrace();
+          return -1;
+      }
+      return -1;
+  }
+  
 
 }
