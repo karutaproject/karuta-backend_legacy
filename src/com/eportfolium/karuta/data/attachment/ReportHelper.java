@@ -36,8 +36,11 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import com.eportfolium.karuta.data.provider.ReportHelperProvider;
+import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.LogUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
+
+import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -119,8 +122,8 @@ public class ReportHelper  extends HttpServlet
 			String vectorValue = dataProvider.getVector(c, uid, map);
 
 			// Send result
-			response.setContentType("application/xml");
-			response.setCharacterEncoding("utf-8");
+            response.setContentType(ContentType.APPLICATION_XML.getMimeType());
+            response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 			OutputStream output = response.getOutputStream();
 			output.write(vectorValue.getBytes(StandardCharsets.UTF_8));
 			output.close();
@@ -171,10 +174,8 @@ public class ReportHelper  extends HttpServlet
 		//*/
 		
 		Connection c = null;
-		try
-		{
-			/// Parse data
-      DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        try {
+            DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
 			Document doc = documentBuilder.parse(request.getInputStream());
 			NodeList vectorNode = doc.getElementsByTagName("vector");
@@ -202,21 +203,17 @@ public class ReportHelper  extends HttpServlet
       HashMap<String, HashSet<String>> groups = new HashMap<String, HashSet<String>>();
       String[] attribName = {"w","r","d"};
 			Node nRight = nList.item(0);
-      if( nRight != null )
-      {
-      	NamedNodeMap attribs = nRight.getAttributes();
-      	for( String att : attribName )
-      	{
+            if (nRight != null) {
+                NamedNodeMap attribs = nRight.getAttributes();
+                for (String att : attribName) {
         	Node value = attribs.getNamedItem(att);
         	if( value == null ) continue;
         	String names = value.getTextContent();
         	String[] split = names.split(",");
-        	for( String s : split )
-        	{
-        		s = s.trim();
-        		HashSet<String> right = groups.get(s);
-        		if( right == null )
-        		{
+                    for (String s : split) {
+                        s = s.trim();
+                        HashSet<String> right = groups.get(s);
+                        if (right == null) {
         			right = new HashSet<String>();
         			groups.put(s, right);
         		}
@@ -241,36 +238,24 @@ public class ReportHelper  extends HttpServlet
 			output.write(text.getBytes());
 			output.close();
 
+        } catch (Exception e) {
+            logger.error("Exception", e);
+            try {
+                if (c != null)
+                    c.rollback();
+            } catch( SQLException e1 ) {
+                logger.error("SQLException",e1);
+            }
+            response.setStatus(500);
+        } finally {
+            try {
+                if (c != null) {
+                    c.commit();
+                    c.close();
+                }
+            } catch (SQLException e) {
+                logger.error("SQLException", e); }
 		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-			logger.error(e.getMessage());
-			try
-			{
-				c.rollback();
-			}
-			catch( SQLException e1 )
-			{
-				e1.printStackTrace();
-			}
-			response.setStatus(500);
-		}
-		finally
-		{
-			try
-			{
-				if( c != null )
-				{
-					c.commit();
-					c.close();
-				}
-//				if( reader != null ) reader.close();
-//				response.getWriter().close();
-			}
-			catch( SQLException e ){ e.printStackTrace(); }
-		}
-
 	}
 	
 	/// Delete specific vector

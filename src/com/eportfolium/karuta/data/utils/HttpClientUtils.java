@@ -33,7 +33,7 @@ public class HttpClientUtils {
 
             final CloseableHttpResponse response = httpclient.execute(get);
             if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-                logger.error("Method failed: {}", response.getStatusLine());
+                logger.error("Method failed: {} on {} and with headers {}", response.getStatusLine(), url, headers);
                 return null;
             }
 

@@ -15,7 +15,6 @@
 
 package com.eportfolium.karuta.data.provider;
 
-import java.io.BufferedWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -35,9 +34,6 @@ import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-//import com.mysql.jdbc.Statement;
-import com.eportfolium.karuta.data.utils.ConfigUtils;
-import com.eportfolium.karuta.data.utils.LogUtils;
 import com.eportfolium.karuta.security.Credential;
 
 public class ReportHelperProvider {
@@ -45,18 +41,10 @@ public class ReportHelperProvider {
 	final Logger logger = LoggerFactory.getLogger(ReportHelperProvider.class);
 
 	final private Credential cred = new Credential();
-	static BufferedWriter securityLog = null;
-	private String dbserveur = null;
 
 	DataSource ds = null;
 
-	public ReportHelperProvider() throws Exception
-	{
-		dbserveur = ConfigUtils.getInstance().getProperty("serverType");
-		String securitylog = ConfigUtils.getInstance().getProperty("security_log");
-		if( !"".equals(securitylog) && securitylog != null )
-			securityLog = LogUtils.getLog(securitylog);
-	}
+	public ReportHelperProvider() throws Exception {}
 
 	public String getVector( Connection c, int userId, HashMap<String, String> map ) throws SQLException
 	{
@@ -121,8 +109,7 @@ public class ReportHelperProvider {
 		return output.toString();
 	}
 
-	public int writeVector( Connection c, int userId, HashMap<String, String> map, HashMap<String, HashSet<String>> groups ) throws SQLException
-	{
+    public int writeVector( Connection c, int userId, HashMap<String, String> map, HashMap<String, HashSet<String>> groups ) throws SQLException {
 		PreparedStatement st;
 		String sql;
 
@@ -143,9 +130,9 @@ public class ReportHelperProvider {
 		int count = checkVector(c, cols, vals);
 		if( count > 0 ) return -1;
 		
-		String colsjoin = String.join(",", cols);
-		String holderjoin = String.join(",", holder);
-		sql = String.format("INSERT INTO vector_table(%s) VALUES(%s);", colsjoin, holderjoin);
+        sql = String.format("INSERT INTO vector_table(%s) VALUES(%s);",
+                String.join(",", cols),
+                String.join(",", holder));
 		st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 		
 		logger.debug("SQL: "+sql);
@@ -159,7 +146,6 @@ public class ReportHelperProvider {
 		
 		/// Get lineid
 		int lineid = 0;
-		int userid = Integer.parseInt( map.get("userid") );
 		ResultSet rs = st.getGeneratedKeys();
 		if( rs.next() ){
 			lineid = rs.getInt(1);
@@ -174,23 +160,18 @@ public class ReportHelperProvider {
 			if( "all".equals(gr.getKey()) )	// 0 will apply to all users
 			{
 				sqlgroup = "INSERT INTO vector_usergroup(userid, lineid) VALUES(0, ?);";
+				st = c.prepareStatement(sqlgroup, Statement.RETURN_GENERATED_KEYS);
+				st.setInt(1, lineid);
 			}
 			else
 			{
 				sqlgroup = "INSERT INTO vector_usergroup(userid, lineid) " +
 						"SELECT userid, ? FROM credential WHERE login=?;";
-			}
-			st = c.prepareStatement(sqlgroup, Statement.RETURN_GENERATED_KEYS);
-			
-			if( "all".equals(gr.getKey()) )
-			{
-				st.setInt(1, lineid);
-			}
-			else
-			{
+				st = c.prepareStatement(sqlgroup, Statement.RETURN_GENERATED_KEYS);
 				st.setInt(1, lineid);
 				st.setString(2, gr.getKey());
 			}
+			
 			st.executeUpdate();
 			rs = st.getGeneratedKeys();
 			int groupid = 0;
@@ -199,18 +180,14 @@ public class ReportHelperProvider {
 			st.close();
 			
 			// Write rights
-			if( groupid != 0 )
-			{
+            if (groupid != 0) {
 				HashSet<String> r = gr.getValue();
 				String sqlrights = "INSERT INTO vector_rights(groupid, RD, WR, DL) VALUES(?, ?, ?, ?);";
 				st = c.prepareStatement(sqlrights);
 				st.setInt(1, groupid);
-				if( r.contains("r") ) st.setBoolean(2, true);
-				else st.setBoolean(2, false);
-				if( r.contains("w") ) st.setBoolean(3, true);
-				else st.setBoolean(3, false);
-				if( r.contains("d") ) st.setBoolean(4, true);
-				else st.setBoolean(4, false);
+        st.setBoolean(2, r.contains("r"));
+        st.setBoolean(3, r.contains("w"));
+        st.setBoolean(4, r.contains("d"));
 				st.executeUpdate();
 				st.close();
 			}
@@ -219,20 +196,14 @@ public class ReportHelperProvider {
 		return 0;
 	}
 	
-	public int deleteVector( Connection c, HashMap<String, String> map ) throws SQLException
-	{
+	public int deleteVector( Connection c, HashMap<String, String> map ) throws SQLException {
 		ArrayList<String> cols = new ArrayList<String>();
 		ArrayList<String> vals = new ArrayList<String>();
-		Iterator<Entry<String, String>> iterval = map.entrySet().iterator();
 		int userid = 0;
-		while( iterval.hasNext() )
-		{
-			Entry<String, String> entry = iterval.next();
-			if( "date".equals(entry.getKey()) )
-				cols.add("v."+entry.getKey()+"<?");
-			else if( "userid".equals(entry.getKey()) )
-			{
-				userid = Integer.parseInt( entry.getValue() );
+    for (Entry<String, String> entry : map.entrySet()) {
+      if ("date".equals(entry.getKey()))
+          cols.add("v." + entry.getKey() + "<?");
+      else if ("userid".equals(entry.getKey())) {
 				continue;
 			}
 			else
@@ -240,37 +211,31 @@ public class ReportHelperProvider {
 			vals.add(entry.getValue());
 		}
 
-		String col = String.join(" AND ", cols);
-
-		ResultSet rsCheck;
-		String sqlCheck;
 		String addRight = "AND (v.userid=? OR u.userid=?) AND r.DL=1";
-		
-		if( cred.isAdmin(c, userid) )
-		{
-			addRight = "";
+
+		if( cred.isAdmin(c, userid) ) {
+			addRight = null;
 		}
 		
 		/// Check entries that have a right to delete
-		sqlCheck = String.format("SELECT v.lineid " +
-				"FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
-				"LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
-				"WHERE %s %s;", col, addRight);
+    final String sqlCheck = String.format("SELECT v.lineid " +
+        "FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
+        "LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
+        "WHERE %s %s;", String.join(" AND ", cols), addRight != null ? addRight : "");
+    logger.debug("SQL: {}", sqlCheck);
+
 		PreparedStatement stCheck = c.prepareStatement(sqlCheck);
-		for( int i=0; i<vals.size(); i++ )
-		{
+		for( int i=0; i<vals.size(); i++ ) {
 			stCheck.setString(i+1, vals.get(i));
-			logger.debug("PARAMS "+(i+1)+" VAL: "+vals.get(i));
+      logger.debug("PARAMS {} VAL: {}", i+1, vals.get(i));
 		}
-		if(!"".equals(addRight))
-		{
+    if (addRight != null) {
 			stCheck.setInt(vals.size()+1, userid);
 			stCheck.setInt(vals.size()+2, userid);
 		}
-		rsCheck = stCheck.executeQuery();
+    ResultSet rsCheck = stCheck.executeQuery();
 		HashSet<Integer> entries = new HashSet<Integer>();
-		while( rsCheck.next() )
-		{
+		while( rsCheck.next() ) {
 			entries.add(rsCheck.getInt(1));
 		}
 		stCheck.close();
@@ -283,8 +248,7 @@ public class ReportHelperProvider {
 					"LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
 					"WHERE v.lineid=?;";
 			PreparedStatement st = c.prepareStatement(sql);
-			for( Integer entry : entries )
-			{
+            for (Integer entry : entries) {
 				st.setInt(1, entry);
 				st.executeUpdate();
 			}

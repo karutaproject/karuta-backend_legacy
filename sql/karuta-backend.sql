@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `log_table` (
   `log_out_body` text COLLATE utf8_unicode_ci,
   `log_code` int(12) NOT NULL,
   PRIMARY KEY (`log_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Contenu de la table `log`
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS `node` (
   KEY `res_node_uuid` (`res_node_uuid`),
   KEY `res_res_node_uuid` (`res_res_node_uuid`),
   KEY `res_context_node_uuid` (`res_context_node_uuid`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Contenu de la table `node`
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS `portfolio` (
   `active` int(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`portfolio_id`),
   KEY `root_node_uuid` (`root_node_uuid`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Contenu de la table `portfolio`
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS `resource_table` (
   `modif_date` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`node_uuid`),
   FULLTEXT KEY `content` (`content`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 -- Contenu de la table `resource`
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS `credential` (
   `other` varchar(255) DEFAULT '' NOT NULL,
   PRIMARY KEY (`userid`),
   UNIQUE KEY `login` (`login`)
-) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- credential_substitution
 CREATE TABLE IF NOT EXISTS `credential_substitution` (
@@ -142,21 +142,21 @@ CREATE TABLE IF NOT EXISTS `credential_substitution` (
   `id` bigint(20) NOT NULL,
   `type` enum('USER','GROUP') COLLATE utf8_unicode_ci NOT NULL DEFAULT 'USER',
   PRIMARY KEY (`userid`,`id`,`type`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- credential_group
 CREATE TABLE IF NOT EXISTS `credential_group` (
   `cg` bigint(20) NOT NULL AUTO_INCREMENT,
   `label` varchar(255) COLLATE utf8_unicode_ci NOT NULL UNIQUE,
   PRIMARY KEY (`cg`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- credential_group_members
 CREATE TABLE IF NOT EXISTS `credential_group_members` (
   `cg` bigint(20) NOT NULL,
   `userid` bigint(20) NOT NULL,
   PRIMARY KEY (`cg`,`userid`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Portfolio group
 CREATE TABLE IF NOT EXISTS `portfolio_group` (
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS `portfolio_group` (
   `type` enum('GROUP','PORTFOLIO') COLLATE utf8_unicode_ci NOT NULL,
   `pg_parent` bigint(20),
   PRIMARY KEY (`pg`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 --
 
 -- portfolio_group_members
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS `portfolio_group_members` (
   `pg` bigint(20) NOT NULL,
   `portfolio_id` binary(16) NOT NULL DEFAULT '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0',
   PRIMARY KEY (`pg`,`portfolio_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- password = UNHEX(SHA1('password'))
 
@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS `group_right_info` (
   `change_rights` tinyint(1) NOT NULL DEFAULT '0',
   `portfolio_id` binary(16) DEFAULT NULL,
   PRIMARY KEY (`grid`)
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Droit et groupe
 CREATE TABLE IF NOT EXISTS `group_rights` (
@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS `group_rights` (
   `rules_id` text COLLATE utf8_unicode_ci,
   `notify_roles` text COLLATE utf8_unicode_ci,
   PRIMARY KEY (`grid`,`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Group Info
 CREATE TABLE IF NOT EXISTS `group_info` (
@@ -210,21 +210,21 @@ CREATE TABLE IF NOT EXISTS `group_info` (
   `owner` bigint(20) NOT NULL,
   `label` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'Nouveau groupe',
   PRIMARY KEY (`gid`)
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Group with users
 CREATE TABLE IF NOT EXISTS `group_user` (
   `gid` bigint(20) NOT NULL,
   `userid` bigint(20) NOT NULL,
   PRIMARY KEY (`gid`,`userid`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Group with groups
 CREATE TABLE IF NOT EXISTS `group_group` (
   `gid` bigint(20) NOT NULL,
   `child_gid` bigint(20) NOT NULL,
   PRIMARY KEY (`gid`,`child_gid`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- Annotation
 CREATE TABLE IF NOT EXISTS `annotation` (
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS `annotation` (
   `a_user` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `wad_identifier` varchar(45) COLLATE utf8_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`nodeid`,`rank`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 --
 
 
@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS `data_table` (
   `c_date` bigint(20) DEFAULT NULL,
   `data` blob,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 --
 

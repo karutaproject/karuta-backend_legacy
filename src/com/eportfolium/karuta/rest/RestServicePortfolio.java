@@ -5772,6 +5772,15 @@ public class RestServicePortfolio {
         return gson.toJson(ConfigUtils.getInstance().getBuildInfo());
     }
 
+    @Path("/fileserver-version")
+    @GET
+    @Produces({MediaType.APPLICATION_JSON})
+    public String getFileServerVersion(@Context HttpServletRequest httpServletRequest) {
+        Gson gson = new Gson();
+        return gson.toJson(ConfigUtils.getInstance().getFileServerBuildinfo());
+    }
+
+
     public boolean isUUID(String uuidstr) {
         try {
             UUID uuid = UUID.fromString(uuidstr);
