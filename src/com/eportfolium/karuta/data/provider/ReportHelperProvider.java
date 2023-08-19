@@ -204,6 +204,7 @@ public class ReportHelperProvider {
       if ("date".equals(entry.getKey()))
           cols.add("v." + entry.getKey() + "<?");
       else if ("userid".equals(entry.getKey())) {
+				userid = Integer.parseInt(entry.getValue());
 				continue;
 			}
 			else
@@ -226,8 +227,8 @@ public class ReportHelperProvider {
 
 		PreparedStatement stCheck = c.prepareStatement(sqlCheck);
 		for( int i=0; i<vals.size(); i++ ) {
+			logger.debug("PARAMS {} VAL: {}", i+1, vals.get(i));
 			stCheck.setString(i+1, vals.get(i));
-      logger.debug("PARAMS {} VAL: {}", i+1, vals.get(i));
 		}
     if (addRight != null) {
 			stCheck.setInt(vals.size()+1, userid);
