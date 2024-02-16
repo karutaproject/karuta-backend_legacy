@@ -25,6 +25,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -57,6 +58,8 @@ public class RegisterService extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(RegisterService.class);
     private static final long serialVersionUID = 9188067506635747901L;
 
+    private String header="";
+    
     //	DataProvider dataProvider;
     boolean hasNodeReadRight = false;
     boolean hasNodeWriteRight = false;
@@ -64,6 +67,7 @@ public class RegisterService extends HttpServlet {
     int groupId = -1;
     String user = "";
     String context = "";
+
     HttpSession session;
     String dataProviderName;
     DataProvider dataProvider = null;
@@ -75,6 +79,18 @@ public class RegisterService extends HttpServlet {
             ConfigUtils.init(getServletContext());
             dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
             dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+            ServletContext sc = config.getServletContext();
+            String servletDir = sc.getRealPath("/");
+            
+            header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                "<!DOCTYPE xsl:stylesheet [" +
+                "<!ENTITY % lat1 PUBLIC \"-//W3C//ENTITIES Latin 1 for XHTML//EN\" \"" + servletDir + "xhtml-lat1.ent\">" +
+                "<!ENTITY % symbol PUBLIC \"-//W3C//ENTITIES Symbols for XHTML//EN\" \"" + servletDir + "xhtml-symbol.ent\">" +
+                "<!ENTITY % special PUBLIC \"-//W3C//ENTITIES Special for XHTML//EN\" \"" + servletDir + "xhtml-special.ent\">" +
+                "%lat1;" +
+                "%symbol;" +
+                "%special;" +
+                "]>";
         } catch (Exception e) {
 			logger.error("Can't init servlet", e);
 			throw new ServletException(e);

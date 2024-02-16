@@ -15,7 +15,10 @@
 
 package com.eportfolium.karuta.data.attachment;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -27,11 +30,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -40,6 +45,7 @@ import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.LogUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +64,16 @@ public class ReportHelper  extends HttpServlet
 	static final Logger logger = LoggerFactory.getLogger(ReportHelper.class);
 	ReportHelperProvider dataProvider = null;
 
+	final String header;
+	String servletDir;
+	
+	public ReportHelper() {
+		header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+        "<!DOCTYPE vectors [" +
+        "<!ENTITY nbsp \"&#xA0;\">" +
+        "]>%s";
+	}
+	
 	@Override
 	public void init( ServletConfig config ) throws ServletException
 	{
@@ -67,6 +83,8 @@ public class ReportHelper  extends HttpServlet
 			LogUtils.initDirectory(getServletContext());
 			
 			dataProvider = SqlUtils.initProviderHelper();
+      ServletContext sc = config.getServletContext();
+      servletDir = sc.getRealPath("/");
 		}
 		catch( Exception e )
 		{
@@ -176,8 +194,15 @@ public class ReportHelper  extends HttpServlet
 		Connection c = null;
         try {
             DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+            documentBuilderFactory.setAttribute("http://apache.org/xml/features/disallow-doctype-decl", false);
       DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			Document doc = documentBuilder.parse(request.getInputStream());
+      
+      String sanitizedXml = String.format(header,
+					IOUtils.toString(request.getInputStream(), StandardCharsets.UTF_8));
+      
+      logger.error(sanitizedXml);
+      
+			Document doc = documentBuilder.parse(new ByteArrayInputStream(sanitizedXml.getBytes()));
 			NodeList vectorNode = doc.getElementsByTagName("vector");
 			HashMap<String, String> map = new HashMap<>();
 			map.put("userid", Integer.toString(uid));
