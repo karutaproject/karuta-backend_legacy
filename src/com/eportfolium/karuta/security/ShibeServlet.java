@@ -68,10 +68,6 @@ public class ShibeServlet extends HttpServlet {
             if (Boolean.parseBoolean(ConfigUtils.getInstance().getProperty(SHIB_AUTH))) {
                 logger.info("the Shibboleth Auth is Activated from the configuration.");
                 // init header attributes to use
-                firstNameRequestHeader = ConfigUtils.getInstance().getProperty(SHIB_FIRSTNAME);
-                lastNameRequestHeader = ConfigUtils.getInstance().getProperty(SHIB_LASTNAME);
-                fullNameRequestHeader = ConfigUtils.getInstance().getProperty(SHIB_FULLNAME);
-                emailRequestHeader = ConfigUtils.getInstance().getRequiredProperty(SHIB_EMAIL);
                 final String principalHeaderName = ConfigUtils.getInstance().getProperty(SHIB_REMOTE_USER);
                 if (principalHeaderName != null && !principalHeaderName.trim().isEmpty()) {
                     principalRequestHeader = principalHeaderName;
@@ -82,6 +78,10 @@ public class ShibeServlet extends HttpServlet {
                 }
 
                 if (createUserNotExisting) {
+                  firstNameRequestHeader = ConfigUtils.getInstance().getProperty(SHIB_FIRSTNAME);
+                  lastNameRequestHeader = ConfigUtils.getInstance().getProperty(SHIB_LASTNAME);
+                  fullNameRequestHeader = ConfigUtils.getInstance().getProperty(SHIB_FULLNAME);
+                  emailRequestHeader = ConfigUtils.getInstance().getRequiredProperty(SHIB_EMAIL);
                     logger.warn("User creation from shibboleth auth is activated");
                     final boolean fnAndLnAreSet = firstNameRequestHeader != null && !firstNameRequestHeader.trim().isEmpty()
                             && lastNameRequestHeader != null && !lastNameRequestHeader.trim().isEmpty();
