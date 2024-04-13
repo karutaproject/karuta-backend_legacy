@@ -1151,6 +1151,40 @@ public class Credential {
         return status;
     }
 
+    public boolean isSharer(Connection c, Integer userId) {
+        boolean status = false;
+        if (userId == null)
+            return status;
+
+        ResultSet rs = null;
+        PreparedStatement stmt = null;
+        try {
+            String query = "SELECT is_sharer FROM credential WHERE userid=? AND is_sharer=1";
+            stmt = c.prepareStatement(query);
+            stmt.setInt(1, userId);
+            rs = stmt.executeQuery();
+
+            if (rs.next())
+                status = true;
+        } catch (SQLException e) {
+            logger.error(e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (stmt != null) try {
+                stmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            if (rs != null) try {
+                rs.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return status;
+    }
+
     // System-wide designer
     public boolean isCreator(Connection c, Integer userId) {
         boolean status = false;

@@ -9545,7 +9545,9 @@ public class MysqlDataProvider implements DataProvider {
                     result.append(res.getString("is_admin"));
                     result.append("</admin><designer>");
                     result.append(res.getString("is_designer"));
-                    result.append("</designer><email>");
+                    result.append("</designer><sharer>");
+                    result.append(res.getString("is_sharer"));
+                    result.append("</sharer><email>");
                     result.append(res.getString("email"));
                     result.append("</email><active>");
                     result.append(res.getString("active"));
@@ -9696,6 +9698,7 @@ public class MysqlDataProvider implements DataProvider {
         String active = null;
         String is_admin = null;
         String is_designer = null;
+        String is_sharer = null;
         String hasSubstitute = null;
         String other = "";
 
@@ -9733,34 +9736,37 @@ public class MysqlDataProvider implements DataProvider {
                 if (children2.item(y).getNodeName().equals("username")) {
                     username = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("prevpass")) {
+                else if (children2.item(y).getNodeName().equals("prevpass")) {
                     originalp = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("password")) {
+                else if (children2.item(y).getNodeName().equals("password")) {
                     password = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("firstname")) {
+                else if (children2.item(y).getNodeName().equals("firstname")) {
                     firstname = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("lastname")) {
+                else if (children2.item(y).getNodeName().equals("lastname")) {
                     lastname = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("email")) {
+                else if (children2.item(y).getNodeName().equals("email")) {
                     email = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("admin")) {
+                else if (children2.item(y).getNodeName().equals("admin")) {
                     is_admin = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("designer")) {
+                else if (children2.item(y).getNodeName().equals("designer")) {
                     is_designer = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("active")) {
+                else if (children2.item(y).getNodeName().equals("sharer")) {
+                    is_sharer = DomUtils.getInnerXml(children2.item(y));
+                }
+                else if (children2.item(y).getNodeName().equals("active")) {
                     active = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("substitute")) {
+                else if (children2.item(y).getNodeName().equals("substitute")) {
                     hasSubstitute = DomUtils.getInnerXml(children2.item(y));
                 }
-                if (children2.item(y).getNodeName().equals("other")) {
+                else if (children2.item(y).getNodeName().equals("other")) {
                     other = DomUtils.getInnerXml(children2.item(y));
                 }
             }
@@ -9811,19 +9817,8 @@ public class MysqlDataProvider implements DataProvider {
                         st.setInt(2, userid2);
                         st.executeUpdate();
                     }
+                    /// Can continue setting rights
                 case 1:    // Only do creator changes, with password
-                    if (is_designer != null) {
-                        int is_designerInt = 0;
-                        if ("1".equals(is_designer))
-                            is_designerInt = 1;
-
-                        sql = "UPDATE credential SET is_designer = ? WHERE  userid = ?";
-
-                        st = c.prepareStatement(sql);
-                        st.setInt(1, is_designerInt);
-                        st.setInt(2, userid2);
-                        st.executeUpdate();
-                    }
                     if (username != null) {
                         sql = "UPDATE credential SET login = ? WHERE  userid = ?";
 
@@ -9914,8 +9909,7 @@ public class MysqlDataProvider implements DataProvider {
                         if (subst != null)
                             subst.close();
                     }
-                    break;
-
+                    /// Can continue setting rights
                 case 2:    /// admin/designer account without password given
                     if (is_designer != null && userId == userid2) {
                         int is_designerInt = 0;
@@ -9928,8 +9922,19 @@ public class MysqlDataProvider implements DataProvider {
                         st.setInt(1, is_designerInt);
                         st.setInt(2, userId);    // Change for self only
                         st.executeUpdate();
-                    } else
-                        return null;
+                    }
+                    if (is_sharer != null) {
+                        int is_sharerInt = 0;
+                        if ("1".equals(is_sharer))
+                            is_sharerInt = 1;
+
+                        sql = "UPDATE credential SET is_sharer = ? WHERE  userid = ?";
+
+                        st = c.prepareStatement(sql);
+                        st.setInt(1, is_sharerInt);
+                        st.setInt(2, userid2);
+                        st.executeUpdate();
+                    }
                     break;
 
                 default:
@@ -13046,7 +13051,7 @@ public class MysqlDataProvider implements DataProvider {
 
     @Override
     public String postRRGUsers(Connection c, int userId, Integer rrgid, String data) {
-        if (!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgid))
+        if (!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgid) && !cred.isSharer(c, userId))
             throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 
         String value = "";

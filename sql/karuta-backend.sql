@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS `credential` (
   `can_substitute` int(11) NOT NULL DEFAULT '0',
   `is_admin` int(11) NOT NULL DEFAULT '0',
   `is_designer` int(11) NOT NULL DEFAULT '0',
+  `is_sharer` int(11) NOT NULL DEFAULT '0',
   `active` int(11) NOT NULL DEFAULT '1',
   `display_firstname` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
   `display_lastname` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
