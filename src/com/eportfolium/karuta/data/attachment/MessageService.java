@@ -28,187 +28,188 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import com.eportfolium.karuta.data.utils.ConfigUtils;
-import com.eportfolium.karuta.data.utils.MailUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.eportfolium.karuta.data.utils.ConfigUtils;
+import com.eportfolium.karuta.data.utils.MailUtils;
+
 public class MessageService extends HttpServlet {
 
-    /**
-     *
-     */
-    private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
-    private static final long serialVersionUID = 9188067506635747901L;
+	/**
+	 *
+	 */
+	private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
+	private static final long serialVersionUID = 9188067506635747901L;
 
-    boolean hasNodeReadRight = false;
-    boolean hasNodeWriteRight = false;
-    int userId;
-    int groupId = -1;
-    HttpSession session;
+	boolean hasNodeReadRight = false;
+	boolean hasNodeWriteRight = false;
+	int userId;
+	int groupId = -1;
+	HttpSession session;
 
-    private String notification;
-    private String sakaiInterfaceURL;
-    private String sakaiUsername;
-    private String sakaiPassword;
-    private String sakaiDirectSessionURL;
+	private String notification;
+	private String sakaiInterfaceURL;
+	private String sakaiUsername;
+	private String sakaiPassword;
+	private String sakaiDirectSessionURL;
 
-    public void initialize(HttpServletRequest httpServletRequest) throws Exception {
-        ConfigUtils.init(getServletContext());
-        notification = ConfigUtils.getInstance().getProperty("notification");
-        sakaiInterfaceURL = ConfigUtils.getInstance().getRequiredProperty("sakaiInterface");
-        sakaiUsername = ConfigUtils.getInstance().getRequiredProperty("sakaiUsername");
-        sakaiPassword = ConfigUtils.getInstance().getRequiredProperty("sakaiPassword");
-        sakaiDirectSessionURL = ConfigUtils.getInstance().getRequiredProperty("sakaiDirectSessionUrl");
-    }
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) {
+		/// Check if user has an account
+		final HttpSession session = request.getSession(false);
+		if (session == null) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) {
-        /// Check if user has an account
-        HttpSession session = request.getSession(false);
-        if (session == null) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
+		final int uid = (Integer) session.getAttribute("uid");
+		if (uid == 0) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
-        int uid = (Integer) session.getAttribute("uid");
-        if (uid == 0) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
+		/// From
+		/// Recipient
+		final String recipient = request.getParameter("recipient");
+		/// CC
+		final String recipient_cc = request.getParameter("recipient_cc");
+		request.getParameter("recipient_bcc");
+		/// Subject
+		final String subject = request.getParameter("subject");
+		/// Message
+		final String message = request.getParameter("message");
 
-        /// From
-        /// Recipient
-        String recipient = request.getParameter("recipient");
-        /// CC
-        String recipient_cc = request.getParameter("recipient_cc");
-        /// BCC
-        String recipient_bcc = request.getParameter("recipient_bcc");
-        /// Subject
-        String subject = request.getParameter("subject");
-        /// Message
-        String message = request.getParameter("message");
+		final ServletConfig config = getServletConfig();
+		logger.debug("Message to '{}'", notification);
+		switch (notification) {
+		case "email":
+			try {
+				MailUtils.postMail(config, recipient, recipient_cc, subject, message, logger);
+			} catch (final Exception e) {
+				logger.error(e.getMessage());
+				//TODO Something is missing
+			}
+			break;
+		case "sakai":
+			/// Recipient is username list rather than email address
+			final String[] recip = recipient.split(",");
+			final String[] var = getSakaiTicket();
 
-        ServletConfig config = getServletConfig();
-        logger.debug("Message to '{}'", notification);
-        switch (notification) {
-            case "email":
-                try {
-                    MailUtils.postMail(config, recipient, recipient_cc, subject, message, logger);
-                } catch (Exception e) {
-                    logger.error(e.getMessage());
-                    //TODO Something is missing
-                }
-                break;
-            case "sakai":
-                /// Recipient is username list rather than email address
-                final String[] recip = recipient.split(",");
-                final String[] var = getSakaiTicket();
+			for (final String user : recip) {
+				final int status = sendMessage(var, user, message);
+				logger.debug("Message sent to '{}' -> '{}' ", user, status);
+			}
+			break;
+		default:
+			logger.error("Unknown notification method {} ", notification);
+			throw new IllegalStateException(String.format("Unknown notification method '%s' ", notification));
+		}
 
-                for (String user : recip) {
-                    int status = sendMessage(var, user, message);
-                    logger.debug("Message sent to '{}' -> '{}' ", user, status);
-                }
-                break;
-            default:
-                logger.error("Unknown notification method {} ", notification);
-                throw new IllegalStateException(String.format("Unknown notification method '%s' ", notification));
-        }
+		try {
+			response.getOutputStream().close();
+			request.getInputStream().close();
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+		}
+	}
 
-        try {
-            response.getOutputStream().close();
-            request.getInputStream().close();
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
-    }
+	String[] getSakaiTicket() {
+		final String[] ret = { "", "" };
+		try {
+			/// Configurable?
 
-    int sendMessage(String[] auth, String user, String message) {
-        int ret = 500;
+			final String urlParameters = "_username=" + sakaiUsername + "&_password=" + sakaiPassword;
 
-        try {
-            String urlParameters = "notification=\"" + message + "\"&_sessionId=" + auth[0];
+			/// Will have to use some context config
+			final URL urlTicker = new URL(sakaiDirectSessionURL);
 
-            /// Send for this user
-            URL urlTicker = new URL(sakaiInterfaceURL + user);
+			final HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
+			connect.setDoOutput(true);
+			connect.setDoInput(true);
+			connect.setInstanceFollowRedirects(false);
+			connect.setRequestMethod("POST");
+			connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			connect.setRequestProperty("charset", "utf-8");
+			connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
+			connect.setUseCaches(false);
+			connect.connect();
 
-            HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
-            connect.setDoOutput(true);
-            connect.setDoInput(true);
-            connect.setInstanceFollowRedirects(false);
-            connect.setRequestMethod("POST");
-            connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connect.setRequestProperty("charset", "utf-8");
-            connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
-            connect.setUseCaches(false);
-            connect.setRequestProperty("Cookie", auth[1]);
-            connect.connect();
+			final DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
+			wr.writeBytes(urlParameters);
+			wr.flush();
+			wr.close();
 
-            DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
-            wr.writeBytes(urlParameters);
-            wr.flush();
-            wr.close();
+			final StringBuilder readTicket = new StringBuilder();
+			final BufferedReader rd = new BufferedReader(
+					new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
+			final char[] buffer = new char[1024];
+			int offset = 0;
+			int read = 0;
+			do {
+				read = rd.read(buffer, offset, 1024);
+				offset += read;
+				readTicket.append(buffer);
+			} while (read == 1024);
+			rd.close();
 
-            ret = connect.getResponseCode();
+			ret[1] = connect.getHeaderField("Set-Cookie");
 
-            logger.debug("Notification '{}'", ret);
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
+			connect.disconnect();
 
-        return ret;
-    }
+			ret[0] = readTicket.toString();
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+		}
 
-    String[] getSakaiTicket() {
-        String[] ret = {"", ""};
-        try {
-            /// Configurable?
+		return ret;
+	}
 
-            final String urlParameters = "_username=" + sakaiUsername + "&_password=" + sakaiPassword;
+	public void initialize(HttpServletRequest httpServletRequest) throws Exception {
+		ConfigUtils.init(getServletContext());
+		notification = ConfigUtils.getInstance().getProperty("notification");
+		sakaiInterfaceURL = ConfigUtils.getInstance().getRequiredProperty("sakaiInterface");
+		sakaiUsername = ConfigUtils.getInstance().getRequiredProperty("sakaiUsername");
+		sakaiPassword = ConfigUtils.getInstance().getRequiredProperty("sakaiPassword");
+		sakaiDirectSessionURL = ConfigUtils.getInstance().getRequiredProperty("sakaiDirectSessionUrl");
+	}
 
-            /// Will have to use some context config
-            URL urlTicker = new URL(sakaiDirectSessionURL);
+	int sendMessage(String[] auth, String user, String message) {
+		int ret = 500;
 
-            HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
-            connect.setDoOutput(true);
-            connect.setDoInput(true);
-            connect.setInstanceFollowRedirects(false);
-            connect.setRequestMethod("POST");
-            connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connect.setRequestProperty("charset", "utf-8");
-            connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
-            connect.setUseCaches(false);
-            connect.connect();
+		try {
+			final String urlParameters = "notification=\"" + message + "\"&_sessionId=" + auth[0];
 
-            DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
-            wr.writeBytes(urlParameters);
-            wr.flush();
-            wr.close();
+			/// Send for this user
+			final URL urlTicker = new URL(sakaiInterfaceURL + user);
 
-            StringBuilder readTicket = new StringBuilder();
-            BufferedReader rd = new BufferedReader(new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
-            char[] buffer = new char[1024];
-            int offset = 0;
-            int read = 0;
-            do {
-                read = rd.read(buffer, offset, 1024);
-                offset += read;
-                readTicket.append(buffer);
-            } while (read == 1024);
-            rd.close();
+			final HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
+			connect.setDoOutput(true);
+			connect.setDoInput(true);
+			connect.setInstanceFollowRedirects(false);
+			connect.setRequestMethod("POST");
+			connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			connect.setRequestProperty("charset", "utf-8");
+			connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
+			connect.setUseCaches(false);
+			connect.setRequestProperty("Cookie", auth[1]);
+			connect.connect();
 
-            ret[1] = connect.getHeaderField("Set-Cookie");
+			final DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
+			wr.writeBytes(urlParameters);
+			wr.flush();
+			wr.close();
 
-            connect.disconnect();
+			ret = connect.getResponseCode();
 
-            ret[0] = readTicket.toString();
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
+			logger.debug("Notification '{}'", ret);
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+		}
 
-        return ret;
-    }
+		return ret;
+	}
 }

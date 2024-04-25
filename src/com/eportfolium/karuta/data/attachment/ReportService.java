@@ -36,262 +36,268 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import com.eportfolium.karuta.data.provider.DataProvider;
-import com.eportfolium.karuta.data.utils.DomUtils;
-import com.eportfolium.karuta.data.utils.SqlUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
+import com.eportfolium.karuta.data.provider.DataProvider;
+import com.eportfolium.karuta.data.utils.DomUtils;
+import com.eportfolium.karuta.data.utils.SqlUtils;
+
 public class ReportService extends HttpServlet {
-    private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
-    private static final long serialVersionUID = -1464636556529383111L;
-    /**
-     *
-     */
+	private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
+	private static final long serialVersionUID = -1464636556529383111L;
+	/**
+	 *
+	 */
 
-    DataProvider dataProvider = null;
+	DataProvider dataProvider = null;
 
-    @Override
-    public void init(ServletConfig config) throws ServletException {
-        super.init(config);
-        try {
-            dataProvider = SqlUtils.initProvider();
-        } catch (Exception e) {
-            logger.error("Can't init servlet", e);
-            throw new ServletException(e);
-        }
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+		/// Check if user is logged in
+		final HttpSession session = request.getSession(false);
+		if (session == null || session.getAttribute("uid") == null) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
-    }
+		final int uid = (Integer) session.getAttribute("uid");
+		if (uid == 0) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
-        /// Check if user is logged in
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("uid") == null) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
+		Connection c = null;
+		try {
+			/// Find user's username
+			c = SqlUtils.getConnection();
+			final String userinfo = dataProvider.getInfUser(c, 1, uid);
+			final Document doc = DomUtils.xmlString2Document(userinfo, null);
+			final NodeList usernameNodes = doc.getElementsByTagName("username");
+			final String username = usernameNodes.item(0).getTextContent();
 
-        int uid = (Integer) session.getAttribute("uid");
-        if (uid == 0) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
+			if (null == username) {
+				response.setStatus(400);
+				final PrintWriter writer = response.getWriter();
+				writer.append("Username error");
+				writer.close();
+				return;
+			}
 
-        Connection c = null;
-        try {
-            /// Find user's username
-            c = SqlUtils.getConnection();
-            String userinfo = dataProvider.getInfUser(c, 1, uid);
-            Document doc = DomUtils.xmlString2Document(userinfo, null);
-            NodeList usernameNodes = doc.getElementsByTagName("username");
-            String username = usernameNodes.item(0).getTextContent();
+			final String pathinfo = request.getPathInfo();
+			String urlTarget = "http://127.0.0.1:8081";
+			/// FIXME: Add user id in filename
+			if (pathinfo != null && pathinfo.length() > 0) {
+				urlTarget += "/" + username + "__" + pathinfo.substring(1);
+			}
+			logger.info("Path: " + pathinfo + " -> " + urlTarget);
 
-            if (null == username) {
-                response.setStatus(400);
-                PrintWriter writer = response.getWriter();
-                writer.append("Username error");
-                writer.close();
-                return;
-            }
+			/// Create connection
+			final URL urlConn = new URL(urlTarget);
+			final HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
+			connection.setDoOutput(true);
+			connection.setUseCaches(false);
+			connection.setInstanceFollowRedirects(false);
+			final String method = request.getMethod();
+			connection.setRequestMethod(method);
 
-            String pathinfo = request.getPathInfo();
-            String urlTarget = "http://127.0.0.1:8081";
-            /// FIXME: Add user id in filename
-            if (pathinfo != null && pathinfo.length() > 0) {
-                urlTarget += "/" + username + "__" + pathinfo.substring(1);
-            }
-            logger.info("Path: " + pathinfo + " -> " + urlTarget);
+			final String context = request.getContextPath();
+			connection.setRequestProperty("app", context);
 
-            /// Create connection
-            URL urlConn = new URL(urlTarget);
-            HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
-            connection.setDoOutput(true);
-            connection.setUseCaches(false);
-            connection.setInstanceFollowRedirects(false);
-            String method = request.getMethod();
-            connection.setRequestMethod(method);
+			/// Transfer headers
+			String key = "";
+			String value = "";
+			final Enumeration<String> header = request.getHeaderNames();
+			while (header.hasMoreElements()) {
+				key = header.nextElement();
+				value = request.getHeader(key);
+				connection.setRequestProperty(key, value);
+			}
 
-            String context = request.getContextPath();
-            connection.setRequestProperty("app", context);
+			connection.connect();
 
-            /// Transfer headers
-            String key = "";
-            String value = "";
-            Enumeration<String> header = request.getHeaderNames();
-            while (header.hasMoreElements()) {
-                key = header.nextElement();
-                value = request.getHeader(key);
-                connection.setRequestProperty(key, value);
-            }
+			/// Those 2 lines are needed, otherwise, no request sent
+			final int code = connection.getResponseCode();
+			final String msg = connection.getResponseMessage();
 
-            connection.connect();
+			if (code != HttpURLConnection.HTTP_OK) {
+				logger.error("Couldn't send file: " + msg);
+				response.setStatus(code);
+				final PrintWriter writer = response.getWriter();
+				writer.write(msg);
+				writer.close();
+			} else {
+				final OutputStream output = response.getOutputStream();
+				/// Send data to report daemon
+				final InputStream inputData = connection.getInputStream();
+				IOUtils.copy(inputData, output);
+				inputData.close();
+				output.close();
+			}
 
-            /// Those 2 lines are needed, otherwise, no request sent
-            int code = connection.getResponseCode();
-            String msg = connection.getResponseMessage();
+			// Close connection to report daemon
+			connection.disconnect();
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+			response.setStatus(500);
+		} finally {
+			/// Close connections
+			try {
+				if (c != null) {
+					c.close();
+					//			request.getReader().close();
+					//			response.getWriter().close();
+				}
+			} catch (final Exception e) {
+				logger.error("Intercepted error", e);
+				//TODO something is missing
+			}
+		}
 
-            if (code != HttpURLConnection.HTTP_OK) {
-                logger.error("Couldn't send file: " + msg);
-                response.setStatus(code);
-                PrintWriter writer = response.getWriter();
-                writer.write(msg);
-                writer.close();
-            } else {
-                OutputStream output = response.getOutputStream();
-                /// Send data to report daemon
-                InputStream inputData = connection.getInputStream();
-                IOUtils.copy(inputData, output);
-                inputData.close();
-                output.close();
-            }
+	}
 
-            // Close connection to report daemon
-            connection.disconnect();
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-            response.setStatus(500);
-        } finally {
-            /// Close connections
-            try {
-                if (c != null)
-                    c.close();
-                //			request.getReader().close();
-                //			response.getWriter().close();
-            } catch (Exception e) {
-                logger.error("Intercepted error", e);
-                //TODO something is missing
-            }
-        }
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) {
+		/// Check if user is logged in
+		final HttpSession session = request.getSession(false);
+		//		/*
+		if (session == null) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
-    }
+		final int uid = (Integer) session.getAttribute("uid");
+		if (uid == 0) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
+		//*/
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) {
-        /// Check if user is logged in
-        HttpSession session = request.getSession(false);
-//		/*
-        if (session == null) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
+		Connection c = null;
+		try {
+			/// Find user's username
+			c = SqlUtils.getConnection();
+			final String userinfo = dataProvider.getInfUser(c, 1, uid);
+			final Document doc = DomUtils.xmlString2Document(userinfo, null);
+			final NodeList usernameNodes = doc.getElementsByTagName("username");
+			final String username = usernameNodes.item(0).getTextContent();
 
-        int uid = (Integer) session.getAttribute("uid");
-        if (uid == 0) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
-        //*/
+			if (null == username) {
+				response.setStatus(400);
+				final PrintWriter writer = response.getWriter();
+				writer.append("Username error");
+				writer.close();
+				return;
+			}
 
-        Connection c = null;
-        try {
-            /// Find user's username
-            c = SqlUtils.getConnection();
-            String userinfo = dataProvider.getInfUser(c, 1, uid);
-            Document doc = DomUtils.xmlString2Document(userinfo, null);
-            NodeList usernameNodes = doc.getElementsByTagName("username");
-            String username = usernameNodes.item(0).getTextContent();
+			/// Prepare to transfer username to report daemon
+			final StringWriter writer = new StringWriter();
+			IOUtils.copy(request.getInputStream(), writer, Charset.defaultCharset());
+			String data = writer.toString();
 
-            if (null == username) {
-                response.setStatus(400);
-                PrintWriter writer = response.getWriter();
-                writer.append("Username error");
-                writer.close();
-                return;
-            }
+			data += "&user=" + username;
 
-            /// Prepare to transfer username to report daemon
-            StringWriter writer = new StringWriter();
-            IOUtils.copy(request.getInputStream(), writer, Charset.defaultCharset());
-            String data = writer.toString();
+			final String pathinfo = request.getPathInfo();
+			String urlTarget = "http://127.0.0.1:8081";
+			if (pathinfo != null) {
+				urlTarget += pathinfo;
+			}
+			logger.debug("Path: {} -> {}", pathinfo, urlTarget);
 
-            data += "&user=" + username;
+			/// Create connection
+			final URL urlConn = new URL(urlTarget);
+			final HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
+			connection.setDoOutput(true);
+			connection.setUseCaches(false);
+			connection.setInstanceFollowRedirects(false);
+			final String method = request.getMethod();
+			connection.setRequestMethod(method);
 
-            String pathinfo = request.getPathInfo();
-            String urlTarget = "http://127.0.0.1:8081";
-            if (pathinfo != null)
-                urlTarget += pathinfo;
-            logger.debug("Path: {} -> {}", pathinfo, urlTarget);
+			final String context = request.getContextPath();
+			connection.setRequestProperty("app", context);
 
-            /// Create connection
-            URL urlConn = new URL(urlTarget);
-            HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
-            connection.setDoOutput(true);
-            connection.setUseCaches(false);
-            connection.setInstanceFollowRedirects(false);
-            String method = request.getMethod();
-            connection.setRequestMethod(method);
+			/// Transfer headers
+			String key = "";
+			String value = "";
+			final Enumeration<String> header = request.getHeaderNames();
+			while (header.hasMoreElements()) {
+				key = header.nextElement();
+				value = request.getHeader(key);
+				/// Prevent case when "connection: closed" make post not send data
+				if (key.equals("connection")) {
+					continue;
+				}
 
-            String context = request.getContextPath();
-            connection.setRequestProperty("app", context);
+				connection.setRequestProperty(key, value);
+			}
 
-            /// Transfer headers
-            String key = "";
-            String value = "";
-            Enumeration<String> header = request.getHeaderNames();
-            while (header.hasMoreElements()) {
-                key = header.nextElement();
-                value = request.getHeader(key);
-                /// Prevent case when "connection: closed" make post not send data
-                if (key.equals("connection")) {
-                    continue;
-                }
+			connection.connect();
 
-                connection.setRequestProperty(key, value);
-            }
+			/// Send data to report daemon
+			logger.debug("Sending: {}", data);
+			final ByteArrayInputStream bais = new ByteArrayInputStream(data.getBytes());
+			final OutputStream outputData = connection.getOutputStream();
+			final int transferred = IOUtils.copy(bais, outputData);
+			if (transferred == data.length()) {
+				logger.debug("Send: Complete");
+			} else {
+				logger.error("Send mismatch: " + transferred + " != " + data.length());
+			}
 
-            connection.connect();
+			/// Those 2 lines are needed, otherwise, no request sent
+			final int code = connection.getResponseCode();
+			final String msg = connection.getResponseMessage();
 
-            /// Send data to report daemon
-            logger.debug("Sending: {}", data);
-            ByteArrayInputStream bais = new ByteArrayInputStream(data.getBytes());
-            OutputStream outputData = connection.getOutputStream();
-            int transferred = IOUtils.copy(bais, outputData);
-            if (transferred == data.length())
-                logger.debug("Send: Complete");
-            else
-                logger.error("Send mismatch: " + transferred + " != " + data.length());
+			if (code != HttpURLConnection.HTTP_OK) {
+				logger.error("Couldn't send file: {}", msg);
+			} else {
+				logger.debug("Code: ({}) msg {} ", code, msg);
+			}
 
-            /// Those 2 lines are needed, otherwise, no request sent
-            int code = connection.getResponseCode();
-            String msg = connection.getResponseMessage();
+			/// Retrieving info
+			final InputStream objReturn = connection.getInputStream();
 
-            if (code != HttpURLConnection.HTTP_OK)
-                logger.error("Couldn't send file: {}", msg);
-            else {
-                logger.debug("Code: ({}) msg {} ", code, msg);
-            }
+			/// Write back daemon response
+			final ServletOutputStream os = response.getOutputStream();
+			IOUtils.copy(objReturn, os);
 
-            /// Retrieving info
-            InputStream objReturn = connection.getInputStream();
+			// Close connection to report daemon
+			connection.disconnect();
 
-            /// Write back daemon response
-            ServletOutputStream os = response.getOutputStream();
-            IOUtils.copy(objReturn, os);
+			objReturn.close();
+			os.close();
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+			response.setStatus(500);
+		} finally {
+			try {
+				if (c != null) {
+					c.close();
+				}
+				request.getInputStream().close();
+				//				response.getWriter().close();
+			} catch (SQLException | IOException e) {
+				logger.error("Intercepted error", e);
+				//TODO something is missing
+			}
+		}
 
-            // Close connection to report daemon
-            connection.disconnect();
+	}
 
-            objReturn.close();
-            os.close();
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-            response.setStatus(500);
-        } finally {
-            try {
-                if (c != null) c.close();
-                request.getInputStream().close();
-//				response.getWriter().close();
-            } catch (SQLException | IOException e) {
-                logger.error("Intercepted error", e);
-                //TODO something is missing
-            }
-        }
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			dataProvider = SqlUtils.initProvider();
+		} catch (final Exception e) {
+			logger.error("Can't init servlet", e);
+			throw new ServletException(e);
+		}
 
-    }
+	}
 }

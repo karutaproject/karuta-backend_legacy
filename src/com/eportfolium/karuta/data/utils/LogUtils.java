@@ -32,64 +32,71 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class LogUtils {
-    private static final Logger logger = LoggerFactory.getLogger(LogUtils.class);
-    private static final String KARUTA_ENV_REPORT_FOLDER = "KARUTA_REPORT_FOLDER";
-    private static final String KARUTA_PROP_REPORT_FOLDER = "karuta.report-folder";
-    static boolean hasLoaded = false;
-    static String filePath = "";
+	private static final Logger logger = LoggerFactory.getLogger(LogUtils.class);
+	private static final String KARUTA_ENV_REPORT_FOLDER = "KARUTA_REPORT_FOLDER";
+	private static final String KARUTA_PROP_REPORT_FOLDER = "karuta.report-folder";
+	static boolean hasLoaded = false;
+	static String filePath = "";
 
-    /// The folder we use is {CATALINA.BASE}/logs/{SERVLET-NAME}_logs
-    public static void initDirectory(ServletContext context) throws ServletException {
-        if (hasLoaded) return;
-        /// Preparing logfile for direct access
-        final String servName = context.getContextPath();
-        //Default value
-        String reportFolder = System.getProperty("catalina.base") + "/logs/" + servName + "_logs";
+	public static String getCurrentDate() {
+		final DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		final Date date = new Date();
+		return dateFormat.format(date);
+	}
 
-        final String reportEnvDir = System.getenv(KARUTA_ENV_REPORT_FOLDER);
-        final String reportPropDir = System.getProperty(KARUTA_PROP_REPORT_FOLDER);
+	public static BufferedWriter getLog(String filename) throws IOException {
+		// Ensure directory exists
+		final File dir = new File(filePath);
+		if (!dir.exists()) {
+			dir.mkdirs();
+		}
+		// Ensure file exists
+		final File file = new File(filePath + filename);
+		if (!file.exists()) {
+			file.createNewFile();
+		}
 
-        final String reportDir = (reportPropDir != null && !reportPropDir.trim().isEmpty()) ? reportPropDir : reportEnvDir;
+		final FileOutputStream fos = new FileOutputStream(file, true);
+		final OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
+		final BufferedWriter bwrite = new BufferedWriter(osw);
 
-        if (reportDir != null && !reportDir.trim().isEmpty())
-            reportFolder = reportDir.trim();
+		return bwrite;
+	}
 
-        try {
-            /// Check if folder exists
-            File logFolder = new File(reportFolder);
-            if (logFolder.mkdirs()) {
-                logger.info("Log folder {} was created", logFolder.getCanonicalPath());
-            }
+	/// The folder we use is {CATALINA.BASE}/logs/{SERVLET-NAME}_logs
+	public static void initDirectory(ServletContext context) throws ServletException {
+		if (hasLoaded) {
+			return;
+		}
+		/// Preparing logfile for direct access
+		final String servName = context.getContextPath();
+		//Default value
+		String reportFolder = System.getProperty("catalina.base") + "/logs/" + servName + "_logs";
 
-            filePath = logFolder.getCanonicalPath();
-            hasLoaded = true;
+		final String reportEnvDir = System.getenv(KARUTA_ENV_REPORT_FOLDER);
+		final String reportPropDir = System.getProperty(KARUTA_PROP_REPORT_FOLDER);
 
-        } catch (Exception e) {
-            logger.error("Can't create folder: {} from {}:'{}' and {}:'{}'", filePath, KARUTA_ENV_REPORT_FOLDER, reportEnvDir, KARUTA_PROP_REPORT_FOLDER, reportPropDir,  e);
-            throw new ServletException(e);
-        }
-    }
+		final String reportDir = (reportPropDir != null && !reportPropDir.trim().isEmpty()) ? reportPropDir
+				: reportEnvDir;
 
-    public static BufferedWriter getLog(String filename) throws IOException {
-        // Ensure directory exists
-        File dir = new File(filePath);
-        if (!dir.exists())
-            dir.mkdirs();
-        // Ensure file exists
-        File file = new File(filePath + filename);
-        if (!file.exists())
-            file.createNewFile();
+		if (reportDir != null && !reportDir.trim().isEmpty()) {
+			reportFolder = reportDir.trim();
+		}
 
-        FileOutputStream fos = new FileOutputStream(file, true);
-        OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
-        BufferedWriter bwrite = new BufferedWriter(osw);
+		try {
+			/// Check if folder exists
+			final File logFolder = new File(reportFolder);
+			if (logFolder.mkdirs()) {
+				logger.info("Log folder {} was created", logFolder.getCanonicalPath());
+			}
 
-        return bwrite;
-    }
+			filePath = logFolder.getCanonicalPath();
+			hasLoaded = true;
 
-    public static String getCurrentDate() {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-        Date date = new Date();
-        return dateFormat.format(date);
-    }
+		} catch (final Exception e) {
+			logger.error("Can't create folder: {} from {}:'{}' and {}:'{}'", filePath, KARUTA_ENV_REPORT_FOLDER,
+					reportEnvDir, KARUTA_PROP_REPORT_FOLDER, reportPropDir, e);
+			throw new ServletException(e);
+		}
+	}
 }

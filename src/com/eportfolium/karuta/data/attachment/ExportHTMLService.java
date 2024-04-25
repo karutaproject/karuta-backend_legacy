@@ -43,10 +43,6 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import com.eportfolium.karuta.data.provider.DataProvider;
-import com.eportfolium.karuta.data.utils.ConfigUtils;
-import com.eportfolium.karuta.data.utils.DomUtils;
-import com.eportfolium.karuta.data.utils.SqlUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -61,310 +57,338 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import com.eportfolium.karuta.data.provider.DataProvider;
+import com.eportfolium.karuta.data.utils.ConfigUtils;
+import com.eportfolium.karuta.data.utils.DomUtils;
+import com.eportfolium.karuta.data.utils.SqlUtils;
+
 public class ExportHTMLService extends HttpServlet {
 
-    public static final Pattern IMG_URL_PATTERN = Pattern.compile("img[^>]*src=\"(?!files)([^\"]*)");
-    public static final SimpleDateFormat DATE_PATTERN_FILENAME = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
-    private static final Logger logger = LoggerFactory.getLogger(ExportHTMLService.class);
-    private static final long serialVersionUID = 9188067506635747901L;
+	public static final Pattern IMG_URL_PATTERN = Pattern.compile("img[^>]*src=\"(?!files)([^\"]*)");
+	public static final SimpleDateFormat DATE_PATTERN_FILENAME = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
+	private static final Logger logger = LoggerFactory.getLogger(ExportHTMLService.class);
+	private static final long serialVersionUID = 9188067506635747901L;
 
-    public static final Pattern STYLESHEET_URL_PATTERN = Pattern.compile("stylesheet.*?href=\"([^\"]*)");
+	public static final Pattern STYLESHEET_URL_PATTERN = Pattern.compile("stylesheet.*?href=\"([^\"]*)");
 
-    private DataProvider dataProvider;
-    private String tempdir;
-    private String backend;
+	private DataProvider dataProvider;
+	private String tempdir;
+	private String backend;
 
-    @Override
-    public void init(ServletConfig config) throws ServletException {
-        super.init(config);
-        try {
-            ConfigUtils.init(getServletContext());
-            dataProvider = SqlUtils.initProvider();
-            tempdir = System.getProperty("java.io.tmpdir", null);
-            backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
-        } catch (Exception e) {
-            logger.error("Can't init servlet", e);
-            throw new ServletException(e);
-        }
-    }
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		request.getReader().close();
+		response.getWriter().close();
+	}
 
-    public void initialize(HttpServletRequest httpServletRequest) {
-    }
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		/// Check if user is logged in
+		final HttpSession session = request.getSession(false);
+		if (session == null) {
+			return;
+		}
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        request.getReader().close();
-        response.getWriter().close();
-    }
+		final int uid = (Integer) session.getAttribute("uid");
+		if (uid == 0) {
+			return;
+		}
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        /// Check if user is logged in
-        HttpSession session = request.getSession(false);
-        if (session == null)
-            return;
+		request.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 
-        int uid = (Integer) session.getAttribute("uid");
-        if (uid == 0)
-            return;
+		final String portfolioUuid = request.getParameter("pid");
+		String lang = request.getParameter("lang");
 
-        request.setCharacterEncoding(StandardCharsets.UTF_8.toString());
+		final StringBuilder data = new StringBuilder();
+		/// Only a div
+		data.append(request.getParameter("content"));
 
-        String portfolioUuid = request.getParameter("pid");
-        String lang = request.getParameter("lang");
+		// Fetch raw portfolio, since it's easier to know if it's a document or image
+		Connection c;
+		String portfolio = "";
+		try {
+			c = SqlUtils.getConnection();
+			portfolio = dataProvider
+					.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, uid, 0, "", "true", "", uid, null)
+					.toString();
+			c.close();
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+		}
 
-        StringBuilder data = new StringBuilder();
-        /// Only a div
-        data.append(request.getParameter("content"));
+		/// Temp file in temp directory
+		final File tempDir = new File(tempdir);
+		if (!tempDir.isDirectory()) {
+			tempDir.mkdirs();
+		}
+		final File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
 
-        // Fetch raw portfolio, since it's easier to know if it's a document or image
-        Connection c;
-        String portfolio = "";
-        try {
-            c = SqlUtils.getConnection();
-            portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, uid, 0, "", "true", "", uid, null).toString();
-            c.close();
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
+		final FileOutputStream fos = new FileOutputStream(tempZip);
+		final ZipOutputStream zos = new ZipOutputStream(fos);
 
-        /// Temp file in temp directory
-        File tempDir = new File(tempdir);
-        if (!tempDir.isDirectory())
-            tempDir.mkdirs();
-        File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
+		final String ref = request.getHeaders(HttpHeaders.REFERER).nextElement();
+		final String appliname = ref.replaceFirst("(http[s]?://[^/]*/[^/]*/).*", "$1");
 
-        FileOutputStream fos = new FileOutputStream(tempZip);
-        ZipOutputStream zos = new ZipOutputStream(fos);
+		//////// Check where the CSS are in the webpage
+		// http://localhost:8079/karuta/other/bootstrap/css/bootstrap.min.css
 
-        String ref = request.getHeaders(HttpHeaders.REFERER).nextElement();
-        String appliname = ref.replaceFirst("(http[s]?://[^/]*/[^/]*/).*", "$1");
+		Matcher m = STYLESHEET_URL_PATTERN.matcher(data);
+		//// Find all css links
+		while (m.find()) {
+			String link = m.group(1);
+			final String filename = link.substring(link.lastIndexOf("/") + 1);
+			// Fix relative CSS link, could easily break.
+			if (link.contains("../../../")) {
+				final String servername = request.getScheme() +
+						"://" +
+						request.getServerName() +
+						":" +
+						request.getServerPort() +
+						"/";
+				link = servername + link.replace("../../../", ""); // Main CSS files
+			} else if (link.contains("../../")) // Usual location
+			{
+				link = appliname + link.replace("../../", ""); // other css
+			} else {
+				link = appliname + link.replace("../", "application/"); // specific CSS files (usual location)
+			}
+			// Fetch them and put them in the zip file
+			logger.info(link + " ->" + filename);
+			WriteURLInZip(session, link, "css" + File.separator + filename, zos);
+		}
 
-        //////// Check where the CSS are in the webpage
-        // http://localhost:8079/karuta/other/bootstrap/css/bootstrap.min.css
+		//// Rewrite html link for the CSS
+		String datastr = data.toString();
+		datastr = datastr.replaceAll("href=\"[^\"]*(/[^\"]*.[css|less]\")", "href=\"css$1");
 
-        Matcher m = STYLESHEET_URL_PATTERN.matcher(data);
-        //// Find all css links
-        while (m.find()) {
-            String link = m.group(1);
-            String filename = link.substring(link.lastIndexOf("/") + 1);
-            // Fix relative CSS link, could easily break.
-            if (link.contains("../../../")) {
-                String servername = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/";
-                link = servername + link.replace("../../../", "");    // Main CSS files
-            } else if (link.contains("../../"))    // Usual location
-            {
-                link = appliname + link.replace("../../", "");    // other css
-            } else {
-                link = appliname + link.replace("../", "application/");    // specific CSS files (usual location)
-            }
-            // Fetch them and put them in the zip file
-            logger.info(link + " ->" + filename);
-            WriteURLInZip(session, link, "css" + File.separator + filename, zos);
-        }
+		// Add export javascript file
+		WriteURLInZip(session, appliname + "/exported.js", "exported.js", zos);
+		// Insert definition in html page
+		datastr = datastr.replaceFirst("</head>", "<script src=\"exported.js\"></script></head>");
 
-        //// Rewrite html link for the CSS
-        String datastr = data.toString();
-        datastr = datastr.replaceAll("href=\"[^\"]*(/[^\"]*.[css|less]\")", "href=\"css$1");
+		//////// Find all fileid/filename
+		Document doc;
+		NodeList nodelist = null;
+		final XPath xPath = XPathFactory.newInstance().newXPath();
+		try {
+			doc = DomUtils.xmlString2Document(portfolio, new StringBuilder());
+			final String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
+			nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+		}
 
-        // Add export javascript file
-        WriteURLInZip(session, appliname + "/exported.js", "exported.js", zos);
-        // Insert definition in html page
-        datastr = datastr.replaceFirst("</head>", "<script src=\"exported.js\"></script></head>");
+		/// Fetch all files
+		for (int i = 0; i < nodelist.getLength(); ++i) {
+			// Fetch back parent node that has all info under or at that level
+			final Node res = nodelist.item(i).getParentNode();
+			/// Check if fileid has a lang
+			final Element resel = (Element) res;
 
-        //////// Find all fileid/filename
-        Document doc;
-        NodeList nodelist = null;
-        XPath xPath = XPathFactory.newInstance().newXPath();
-        try {
-            doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
-            String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
-            nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
+			final NodeList fileids = resel.getElementsByTagName("fileid");
+			final NodeList filenames = resel.getElementsByTagName("filename");
+			for (int j = 0; j < fileids.getLength(); ++j) {
+				final Node resLang = fileids.item(j);
+				final Node resFilename = filenames.item(j);
+				final Node langAtt = resLang.getAttributes().getNamedItem("lang");
+				final String contextid = res.getAttributes().getNamedItem("contextid").getTextContent();
+				final String realFilename = resFilename.getTextContent();
+				final String fileid = resLang.getTextContent();
+				logger.info("===== context: {} =====", i);
+				logger.info("Context: {}", contextid);
+				logger.info("Fileid: {}", fileid);
+				logger.info("Filename: {}", realFilename);
+				logger.info("Lang: {}", langAtt);
+				logger.info("==========");
+				String filterName = "";
+				if (langAtt != null) {
+					lang = langAtt.getNodeValue();
+					filterName = ".//*[local-name()='filename' and @lang='" + lang + "' and text()]";
+				} else {
+					filterName = ".//*[local-name()='filename' and @lang and text()]";
+				}
 
-        /// Fetch all files
-        for (int i = 0; i < nodelist.getLength(); ++i) {
-            // Fetch back parent node that has all info under or at that level
-            Node res = nodelist.item(i).getParentNode();
-            /// Check if fileid has a lang
-            Element resel = (Element) res;
+				final Node p = res.getParentNode(); // fileid -> resource
+				final Node gp = p.getParentNode(); // resource -> context
+				final Node uuidNode = gp.getAttributes().getNamedItem("id");
+				final String uuid = uuidNode.getTextContent();
 
-            NodeList fileids = resel.getElementsByTagName("fileid");
-            NodeList filenames = resel.getElementsByTagName("filename");
-            for (int j = 0; j < fileids.getLength(); ++j) {
-                Node resLang = fileids.item(j);
-                Node resFilename = filenames.item(j);
-                Node langAtt = resLang.getAttributes().getNamedItem("lang");
-                String contextid = res.getAttributes().getNamedItem("contextid").getTextContent();
-                String realFilename = resFilename.getTextContent();
-                String fileid = resLang.getTextContent();
-                logger.info("===== context: {} =====", i);
-                logger.info("Context: {}", contextid);
-                logger.info("Fileid: {}", fileid);
-                logger.info("Filename: {}", realFilename);
-                logger.info("Lang: {}", langAtt);
-                logger.info("==========");
-                String filterName = "";
-                if (langAtt != null) {
-                    lang = langAtt.getNodeValue();
-                    filterName = ".//*[local-name()='filename' and @lang='" + lang + "' and text()]";
-                } else {
-                    filterName = ".//*[local-name()='filename' and @lang and text()]";
-                }
+				NodeList textList = null;
+				try {
+					textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
+				} catch (final XPathExpressionException e1) {
+					e1.printStackTrace();
+				}
+				String filename = null;
+				if (textList != null && textList.getLength() != 0) {
+					final Element fileNode = (Element) textList.item(0);
+					filename = fileNode.getTextContent();
+					lang = fileNode.getAttribute("lang"); // In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
+					if ("".equals(lang)) {
+						lang = "fr";
+					}
+				}
 
-                Node p = res.getParentNode();    // fileid -> resource
-                Node gp = p.getParentNode();    // resource -> context
-                Node uuidNode = gp.getAttributes().getNamedItem("id");
-                String uuid = uuidNode.getTextContent();
+				// Put specific name for later recovery
+				if (filename == null || filename.isEmpty()) {
+					continue;
+				}
+				int lastDot = filename.lastIndexOf(".");
+				if (lastDot < 0) {
+					lastDot = 0;
+				}
+				String filenameext = filename.substring(0); /// find extension
+				final int extindex = filenameext.lastIndexOf(".") + 1;
+				filenameext = uuid + "_" + lang + "." + filenameext.substring(extindex);
 
-                NodeList textList = null;
-                try {
-                    textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
-                } catch (XPathExpressionException e1) {
-                    e1.printStackTrace();
-                }
-                String filename = null;
-                if (textList != null && textList.getLength() != 0) {
-                    Element fileNode = (Element) textList.item(0);
-                    filename = fileNode.getTextContent();
-                    lang = fileNode.getAttribute("lang");    // In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
-                    if ("".equals(lang)) lang = "fr";
-                }
+				final String url = backend + "/resources/resource/file/" + contextid + "?lang=" + lang;
 
-                // Put specific name for later recovery
-                if (filename == null || filename.isEmpty())
-                    continue;
-                int lastDot = filename.lastIndexOf(".");
-                if (lastDot < 0)
-                    lastDot = 0;
-                String filenameext = filename.substring(0);    /// find extension
-                int extindex = filenameext.lastIndexOf(".") + 1;
-                filenameext = uuid + "_" + lang + "." + filenameext.substring(extindex);
+				final String filepath = "files" + File.separator + lang + File.separator + filename;
 
-                final String url = backend + "/resources/resource/file/" + contextid + "?lang=" + lang;
+				logger.info("Added files URL: {}", url);
 
-                final String filepath = "files" + File.separator + lang + File.separator + filename;
+				WriteURLInZip(session, url, filepath, zos);
 
-                logger.info("Added files URL: {}", url);
+				/// Rewrite file link
+				logger.info("Replacing: {}?lang={}", contextid, lang);
+				if (datastr.contains(contextid + "?lang=" + lang)) {
+					logger.debug("ISIN");
+				}
+				datastr = datastr.replaceFirst("['\"][^'\"]*" + contextid + "\\?lang=" + lang + "[^'\"]*['\"]",
+						filepath);
+				if (logger.isDebugEnabled()) {
+					if (datastr.contains(contextid + "?lang=" + lang)) {
+						logger.debug("ISSTILLIN");
+					} else {
+						logger.debug("REPLACED");
+					}
+				}
+			}
+		}
 
-                WriteURLInZip(session, url, filepath, zos);
+		/// Resolve remaining resources (logo, icons, etc) that have not been replaced
+		m = IMG_URL_PATTERN.matcher(data);
+		// Find all resource links
+		while (m.find()) {
+			final String baselink = m.group(1);
+			final String filename = baselink.substring(baselink.lastIndexOf("/") + 1);
+			// Fix relative resource link, could easily break.
+			final String servername = request.getScheme() +
+					"://" +
+					request.getServerName() +
+					":" +
+					request.getServerPort() +
+					"/";
+			String link = baselink;
+			if (baselink.contains("../../../")) {
+				link = servername + baselink.replace("../../../", "");
+			} else {
+				link = appliname + baselink.replace("../", "karuta/"); /// Will easily break
+			}
+			// Fetch them and put them in the zip file
+			logger.info("Other res: " + link + " ->" + filename);
+			WriteURLInZip(session, link, "files" + File.separator + filename, zos);
 
-                /// Rewrite file link
-                logger.info("Replacing: {}?lang={}", contextid, lang);
-                if (datastr.contains(contextid + "?lang=" + lang))
-                    logger.debug("ISIN");
-                datastr = datastr.replaceFirst("['\"][^'\"]*" + contextid + "\\?lang=" + lang + "[^'\"]*['\"]", filepath);
-                if (logger.isDebugEnabled()) {
-                    if (datastr.contains(contextid + "?lang=" + lang))
-                        logger.debug("ISSTILLIN");
-                    else
-                        logger.debug("REPLACED");
-                }
-            }
-        }
+			/// Rewrite base resource
+			datastr = datastr.replaceAll(baselink, "files/" + filename);
+		}
 
-        /// Resolve remaining resources (logo, icons, etc) that have not been replaced
-        m = IMG_URL_PATTERN.matcher(data);
-        // Find all resource links
-        while (m.find()) {
-            String baselink = m.group(1);
-            String filename = baselink.substring(baselink.lastIndexOf("/") + 1);
-            // Fix relative resource link, could easily break.
-            String servername = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/";
-            String link = baselink;
-            if (baselink.contains("../../../")) {
-                link = servername + baselink.replace("../../../", "");
-            } else {
-                link = appliname + baselink.replace("../", "karuta/");    /// Will easily break
-            }
-            // Fetch them and put them in the zip file
-            logger.info("Other res: " + link + " ->" + filename);
-            WriteURLInZip(session, link, "files" + File.separator + filename, zos);
+		/// Try to put the font files, will really easily break
+		WriteURLInZip(session, appliname + "other/bootstrap/fonts/glyphicons-halflings-regular.woff2",
+				"fonts" + File.separator + "glyphicons-halflings-regular.woff2", zos);
+		WriteURLInZip(session, appliname + "other/bootstrap/fonts/glyphicons-halflings-regular.woff",
+				"fonts" + File.separator + "glyphicons-halflings-regular.woff", zos);
+		WriteURLInZip(session, appliname + "other/bootstrap/fonts/glyphicons-halflings-regular.ttf",
+				"fonts" + File.separator + "glyphicons-halflings-regular.ttf", zos);
 
-            /// Rewrite base resource
-            datastr = datastr.replaceAll(baselink, "files/" + filename);
-        }
+		/// Write main html file to zip
+		final ZipEntry ze = new ZipEntry("portfolio.html");
+		zos.putNextEntry(ze);
 
-        /// Try to put the font files, will really easily break
-        WriteURLInZip(session, appliname + "other/bootstrap/fonts/glyphicons-halflings-regular.woff2", "fonts" + File.separator + "glyphicons-halflings-regular.woff2", zos);
-        WriteURLInZip(session, appliname + "other/bootstrap/fonts/glyphicons-halflings-regular.woff", "fonts" + File.separator + "glyphicons-halflings-regular.woff", zos);
-        WriteURLInZip(session, appliname + "other/bootstrap/fonts/glyphicons-halflings-regular.ttf", "fonts" + File.separator + "glyphicons-halflings-regular.ttf", zos);
+		final byte[] bytes = datastr.getBytes();
+		zos.write(bytes);
 
-        /// Write main html file to zip
-        ZipEntry ze = new ZipEntry("portfolio.html");
-        zos.putNextEntry(ze);
+		zos.closeEntry();
 
-        byte[] bytes = datastr.getBytes();
-        zos.write(bytes);
+		zos.close();
+		fos.close();
 
-        zos.closeEntry();
+		/// Return data
+		final RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
+		final byte[] b = new byte[(int) f.length()];
+		f.read(b);
+		f.close();
 
+		final String timeFormat = DATE_PATTERN_FILENAME.format(new Date());
 
-        zos.close();
-        fos.close();
+		response.addHeader("Content-Type", "application/zip");
+		response.addHeader("Content-Length", Integer.toString(b.length));
+		response.addHeader("Content-Disposition", "attachment; filename=\"Export-" + timeFormat + ".zip\"");
+		final ServletOutputStream writer = response.getOutputStream();
+		writer.write(b);
+		writer.close();
+		request.getInputStream().close();
 
+		/// Cleanup
+		tempZip.delete();
+	}
 
-        /// Return data
-        RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
-        byte[] b = new byte[(int) f.length()];
-        f.read(b);
-        f.close();
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			ConfigUtils.init(getServletContext());
+			dataProvider = SqlUtils.initProvider();
+			tempdir = System.getProperty("java.io.tmpdir", null);
+			backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
+		} catch (final Exception e) {
+			logger.error("Can't init servlet", e);
+			throw new ServletException(e);
+		}
+	}
 
+	public void initialize(HttpServletRequest httpServletRequest) {
+	}
 
-        final String timeFormat = DATE_PATTERN_FILENAME.format(new Date());
+	protected void WriteURLInZip(HttpSession session, String url, String filepath, ZipOutputStream zipfile)
+			throws IllegalStateException, IOException {
+		final HttpGet get = new HttpGet(url);
 
-        response.addHeader("Content-Type", "application/zip");
-        response.addHeader("Content-Length", Integer.toString(b.length));
-        response.addHeader("Content-Disposition", "attachment; filename=\"Export-" + timeFormat + ".zip\"");
-        ServletOutputStream writer = response.getOutputStream();
-        writer.write(b);
-        writer.close();
-        request.getInputStream().close();
+		// Transfer sessionid so that local request still get security checked
+		get.addHeader("Cookie", "JSESSIONID=" + session.getId());
 
-        /// Cleanup
-        tempZip.delete();
-    }
+		// Send request
+		final CloseableHttpClient client = HttpClients.createDefault();
+		final CloseableHttpResponse ret = client.execute(get);
+		final HttpEntity entity = ret.getEntity();
 
-    protected void WriteURLInZip(HttpSession session, String url, String filepath, ZipOutputStream zipfile) throws IllegalStateException, IOException {
-        HttpGet get = new HttpGet(url);
-
-        // Transfer sessionid so that local request still get security checked
-        get.addHeader("Cookie", "JSESSIONID=" + session.getId());
-
-        // Send request
-        CloseableHttpClient client = HttpClients.createDefault();
-        CloseableHttpResponse ret = client.execute(get);
-        HttpEntity entity = ret.getEntity();
-
-        // Save it to zip file with a folder name
-        InputStream content = entity.getContent();
-        ZipEntry ze = new ZipEntry(filepath);
-        try {
-            int totalread = 0;
-            zipfile.putNextEntry(ze);
-            int inByte;
-            byte[] buf = new byte[4096];
-            while ((inByte = content.read(buf)) != -1) {
-                totalread += inByte;
-                zipfile.write(buf, 0, inByte);
-            }
-            logger.info("FILE: {} => {} : {}", url, filepath, totalread);
-            content.close();
-            zipfile.closeEntry();
-        } catch (ZipException e) {
-            logger.error("Zip error", e);
-            // TODO something is missing
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
-        EntityUtils.consume(entity);
-        ret.close();
-        client.close();
-    }
+		// Save it to zip file with a folder name
+		final InputStream content = entity.getContent();
+		final ZipEntry ze = new ZipEntry(filepath);
+		try {
+			int totalread = 0;
+			zipfile.putNextEntry(ze);
+			int inByte;
+			final byte[] buf = new byte[4096];
+			while ((inByte = content.read(buf)) != -1) {
+				totalread += inByte;
+				zipfile.write(buf, 0, inByte);
+			}
+			logger.info("FILE: {} => {} : {}", url, filepath, totalread);
+			content.close();
+			zipfile.closeEntry();
+		} catch (final ZipException e) {
+			logger.error("Zip error", e);
+			// TODO something is missing
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+		}
+		EntityUtils.consume(entity);
+		ret.close();
+		client.close();
+	}
 
 }

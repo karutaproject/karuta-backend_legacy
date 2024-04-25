@@ -24,107 +24,110 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
-import com.eportfolium.karuta.data.provider.DataProvider;
-import com.eportfolium.karuta.data.provider.ReportHelperProvider;
-
 import org.apache.commons.dbcp2.cpdsadapter.DriverAdapterCPDS;
 import org.apache.commons.dbcp2.datasources.SharedPoolDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.eportfolium.karuta.data.provider.DataProvider;
+import com.eportfolium.karuta.data.provider.ReportHelperProvider;
+
 public class SqlUtils {
-    public static final String PROP_DATA_PROVIDER_CLASS = "dataProviderClass";
+	public static final String PROP_DATA_PROVIDER_CLASS = "dataProviderClass";
 
-    static final Logger logger = LoggerFactory.getLogger(SqlUtils.class);
+	static final Logger logger = LoggerFactory.getLogger(SqlUtils.class);
 
-    static boolean loaded = false;
-    static InitialContext ctx = null;
-    static DataSource ds = null;
-    static DataProvider dp = null;
-    static ReportHelperProvider rh = null;
+	static boolean loaded = false;
+	static InitialContext ctx = null;
+	static DataSource ds = null;
+	static DataProvider dp = null;
+	static ReportHelperProvider rh = null;
 
-    public static String getCurrentTimeStamp() {
-        java.util.Date date = new java.util.Date();
-        return new Timestamp(date.getTime()).toString();
-    }
+	public static void close() {
+		try {
+			if (ctx != null) {
+				ctx.close();
+				ctx = null;
+			}
+		} catch (final NamingException e) {
+			logger.error("Intercept error", e);
+		}
+	}
 
-    public static Timestamp getCurrentTimeStamp2() {
-        return new Timestamp(System.currentTimeMillis());
-    }
+	// If servContext is null, only load from pooled connection
+	public static Connection getConnection() throws Exception {
+		if (!loaded) {
+			final String resourceDatasourceName = ConfigUtils.getInstance().getProperty("JDBC.external.resourceName");
+			if (resourceDatasourceName != null) {
+				ctx = new InitialContext();
+				final Context envCtx = (Context) ctx.lookup("java:comp/env");
+				ds = (DataSource) envCtx.lookup(resourceDatasourceName);
+				logger.info("Using external datasource with name {}: {}", resourceDatasourceName, ds.toString());
 
-    public static DataProvider initProvider() throws Exception {
-        //============= init servers ===============================
-        final String dataProviderName = ConfigUtils.getInstance().getRequiredProperty(PROP_DATA_PROVIDER_CLASS);
-        if (dp == null)
-            dp = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+			} else {
+				final DriverAdapterCPDS cpds = new DriverAdapterCPDS();
+				cpds.setDriver(ConfigUtils.getInstance().getRequiredProperty("DBDriver"));
+				cpds.setUrl(ConfigUtils.getInstance().getRequiredProperty("DBUrl"));
 
-//		Connection connection = getConnection(application);
-//		dataProvider.setConnection(connection);
+				final Properties info = new Properties();
+				info.put("user", ConfigUtils.getInstance().getRequiredProperty("DBUser"));
+				info.put("password", ConfigUtils.getInstance().getRequiredProperty("DBPass"));
+				cpds.setConnectionProperties(info);
 
-        return dp;
-    }
+				final SharedPoolDataSource tds = new SharedPoolDataSource();
+				tds.setConnectionPoolDataSource(cpds);
 
-    public static ReportHelperProvider initProviderHelper() throws Exception {
-  	//============= init servers ===============================
-  		final String dataProviderName = "com.eportfolium.karuta.data.provider.ReportHelperProvider";
-  		if( rh == null )
-  			rh = (ReportHelperProvider)Class.forName(dataProviderName).getConstructor().newInstance();
-  		return rh;
-  	}
-    // If servContext is null, only load from pooled connection
-    public static Connection getConnection() throws Exception {
-        if (!loaded) {
-            final String resourceDatasourceName = ConfigUtils.getInstance().getProperty("JDBC.external.resourceName");
-            if (resourceDatasourceName != null) {
-                ctx = new InitialContext();
-                Context envCtx = (Context) ctx.lookup("java:comp/env");
-                ds = (DataSource) envCtx.lookup(resourceDatasourceName);
-                logger.info("Using external datasource with name {}: {}", resourceDatasourceName, ds.toString());
+				/// TODO: Complete it with other parameters, also, benchmark
+				/// Configuring other stuff
+				tds.setValidationQuery("SELECT 1 FROM DUAL");
+				tds.setDefaultTestOnBorrow(true);
+				tds.setDefaultTestWhileIdle(true);
+				tds.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 
-            } else {
-                DriverAdapterCPDS cpds = new DriverAdapterCPDS();
-                cpds.setDriver(ConfigUtils.getInstance().getRequiredProperty("DBDriver"));
-                cpds.setUrl(ConfigUtils.getInstance().getRequiredProperty("DBUrl"));
+				tds.setMaxTotal(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxTotal", "1000")));
+				tds.setDefaultMinIdle(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MinIdle", "5")));
+				tds.setDefaultMaxIdle(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxIdle", "1000")));
+				tds.setDefaultTimeBetweenEvictionRunsMillis(
+						Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.WaitEviction", "60000")));
+				tds.setDefaultNumTestsPerEvictionRun(
+						Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.NumTestEviction", "5")));
+				ds = tds;
+				logger.info("Using internal datasource {} !", tds);
+			}
 
-                Properties info = new Properties();
-                info.put("user", ConfigUtils.getInstance().getRequiredProperty("DBUser"));
-                info.put("password", ConfigUtils.getInstance().getRequiredProperty("DBPass"));
-                cpds.setConnectionProperties(info);
+			loaded = true;
+		}
+		return ds.getConnection();
+	}
 
-                SharedPoolDataSource tds = new SharedPoolDataSource();
-                tds.setConnectionPoolDataSource(cpds);
+	public static String getCurrentTimeStamp() {
+		final java.util.Date date = new java.util.Date();
+		return new Timestamp(date.getTime()).toString();
+	}
 
-                /// TODO: Complete it with other parameters, also, benchmark
-                /// Configuring other stuff
-                tds.setValidationQuery("SELECT 1 FROM DUAL");
-                tds.setDefaultTestOnBorrow(true);
-                tds.setDefaultTestWhileIdle(true);
-                tds.setDefaultTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+	public static Timestamp getCurrentTimeStamp2() {
+		return new Timestamp(System.currentTimeMillis());
+	}
 
-                tds.setDefaultMaxWaitMillis(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxWait", "10000")));
-                tds.setMaxTotal(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxTotal", "1000")));
-                tds.setDefaultMinIdle(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MinIdle", "5")));
-                tds.setDefaultMaxIdle(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.MaxIdle", "1000")));
-                tds.setDefaultTimeBetweenEvictionRunsMillis(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.WaitEviction", "60000")));
-                tds.setDefaultNumTestsPerEvictionRun(Integer.parseInt(ConfigUtils.getInstance().getProperty("DB.NumTestEviction", "5")));
-                ds = tds;
-                logger.info("Using internal datasource {} !", tds);
-            }
+	public static DataProvider initProvider() throws Exception {
+		//============= init servers ===============================
+		final String dataProviderName = ConfigUtils.getInstance().getRequiredProperty(PROP_DATA_PROVIDER_CLASS);
+		if (dp == null) {
+			dp = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+		}
 
+		//		Connection connection = getConnection(application);
+		//		dataProvider.setConnection(connection);
 
-            loaded = true;
-        }
-        return ds.getConnection();
-    }
+		return dp;
+	}
 
-    public static void close() {
-        try {
-            if (ctx != null) {
-                ctx.close();
-                ctx = null;
-            }
-        } catch (NamingException e) {
-            logger.error("Intercept error", e);
-        }
-    }
+	public static ReportHelperProvider initProviderHelper() throws Exception {
+		//============= init servers ===============================
+		final String dataProviderName = "com.eportfolium.karuta.data.provider.ReportHelperProvider";
+		if (rh == null) {
+			rh = (ReportHelperProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+		}
+		return rh;
+	}
 }

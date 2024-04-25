@@ -37,11 +37,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import com.eportfolium.karuta.data.provider.DataProvider;
-import com.eportfolium.karuta.data.utils.ConfigUtils;
-import com.eportfolium.karuta.data.utils.DomUtils;
-import com.eportfolium.karuta.data.utils.MailUtils;
-import com.eportfolium.karuta.data.utils.SqlUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,159 +45,160 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import com.eportfolium.karuta.data.provider.DataProvider;
+import com.eportfolium.karuta.data.utils.ConfigUtils;
+import com.eportfolium.karuta.data.utils.DomUtils;
+import com.eportfolium.karuta.data.utils.MailUtils;
+import com.eportfolium.karuta.data.utils.SqlUtils;
+
 public class RegisterService extends HttpServlet {
 
-    /**
-     *
-     */
-    private static final Logger logger = LoggerFactory.getLogger(RegisterService.class);
-    private static final long serialVersionUID = 9188067506635747901L;
+	/**
+	 *
+	 */
+	private static final Logger logger = LoggerFactory.getLogger(RegisterService.class);
+	private static final long serialVersionUID = 9188067506635747901L;
 
-    private String header="";
-    
-    //	DataProvider dataProvider;
-    boolean hasNodeReadRight = false;
-    boolean hasNodeWriteRight = false;
-    int userId;
-    int groupId = -1;
-    String user = "";
-    String context = "";
+	//	DataProvider dataProvider;
+	boolean hasNodeReadRight = false;
+	boolean hasNodeWriteRight = false;
+	int userId;
+	int groupId = -1;
+	String user = "";
+	String context = "";
 
-    HttpSession session;
-    String dataProviderName;
-    DataProvider dataProvider = null;
+	HttpSession session;
+	String dataProviderName;
+	DataProvider dataProvider = null;
 
-    @Override
-    public void init(ServletConfig config) throws ServletException {
-        super.init(config);
-        try {
-            ConfigUtils.init(getServletContext());
-            dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
-            dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
-            ServletContext sc = config.getServletContext();
-            String servletDir = sc.getRealPath("/");
-            
-            header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                "<!DOCTYPE xsl:stylesheet [" +
-                "<!ENTITY % lat1 PUBLIC \"-//W3C//ENTITIES Latin 1 for XHTML//EN\" \"" + servletDir + "xhtml-lat1.ent\">" +
-                "<!ENTITY % symbol PUBLIC \"-//W3C//ENTITIES Symbols for XHTML//EN\" \"" + servletDir + "xhtml-symbol.ent\">" +
-                "<!ENTITY % special PUBLIC \"-//W3C//ENTITIES Special for XHTML//EN\" \"" + servletDir + "xhtml-special.ent\">" +
-                "%lat1;" +
-                "%symbol;" +
-                "%special;" +
-                "]>";
-        } catch (Exception e) {
-			logger.error("Can't init servlet", e);
-			throw new ServletException(e);
-        }
-    }
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		//		DataProvider dataProvider = initialize(request);
+		Connection connection = null;
+		try {
+			connection = SqlUtils.getConnection();
+		} catch (final Exception e1) {
+			e1.printStackTrace();
+		}
 
-    public DataProvider initialize(HttpServletRequest httpServletRequest) {
-        return dataProvider;
-    }
+		response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
+		final StringWriter inputdata = new StringWriter();
+		IOUtils.copy(request.getInputStream(), inputdata, StandardCharsets.UTF_8);
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-//		DataProvider dataProvider = initialize(request);
-        Connection connection = null;
-        try {
-            connection = SqlUtils.getConnection();
-        } catch (Exception e1) {
-            e1.printStackTrace();
-        }
+		try {
+			final Document doc = DomUtils.xmlString2Document(inputdata.toString(), new StringBuilder());
+			final Element credentialElement = doc.getDocumentElement();
+			String username = "";
+			String password = "";
+			String mail = "";
+			final String mailcc = "";
+			boolean hasChanged = false;
 
-        response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
-        StringWriter inputdata = new StringWriter();
-        IOUtils.copy(request.getInputStream(), inputdata, StandardCharsets.UTF_8);
+			String converted = "";
+			if (credentialElement.getNodeName().equals("users")) {
+				final NodeList children = credentialElement.getChildNodes();
+				for (int i = 0; i < children.getLength(); i++) {
+					if (children.item(i).getNodeName().equals("user")) {
+						NodeList children2 = null;
+						children2 = children.item(i).getChildNodes();
+						for (int y = 0; y < children2.getLength(); y++) {
+							if (children2.item(y).getNodeName().equals("username")) {
+								username = DomUtils.getInnerXml(children2.item(y));
+							}
+							if (children2.item(y).getNodeName().equals("email")) {
+								mail = DomUtils.getInnerXml(children2.item(y));
+							}
+						}
 
-        try {
-            Document doc = DomUtils.xmlString2Document(inputdata.toString(), new StringBuffer());
-            Element credentialElement = doc.getDocumentElement();
-            String username = "";
-            String password = "";
-            String mail = "";
-            String mailcc = "";
-            boolean hasChanged = false;
+						/// Generate password
+						final long base = System.currentTimeMillis();
+						final MessageDigest md = MessageDigest.getInstance("SHA-1");
+						final byte[] output = md.digest(Long.toString(base).getBytes());
+						password = String.format("%032X", new BigInteger(1, output));
+						password = password.substring(0, 9);
 
-            String converted = "";
-            if (credentialElement.getNodeName().equals("users")) {
-                NodeList children = children = credentialElement.getChildNodes();
-                for (int i = 0; i < children.getLength(); i++) {
-                    if (children.item(i).getNodeName().equals("user")) {
-                        NodeList children2 = null;
-                        children2 = children.item(i).getChildNodes();
-                        for (int y = 0; y < children2.getLength(); y++) {
-                            if (children2.item(y).getNodeName().equals("username")) {
-                                username = DomUtils.getInnerXml(children2.item(y));
-                            }
-                            if (children2.item(y).getNodeName().equals("email")) {
-                                mail = DomUtils.getInnerXml(children2.item(y));
-                            }
-                        }
+						//// Force a password in it and set as designer
+						final Node passNode = doc.createElement("password");
+						passNode.setTextContent(password);
+						children.item(i).appendChild(passNode);
+						final Node designerNode = doc.createElement("designer");
+						designerNode.setTextContent("1");
+						children.item(i).appendChild(designerNode);
 
-                        /// Generate password
-                        long base = System.currentTimeMillis();
-                        MessageDigest md = MessageDigest.getInstance("SHA-1");
-                        byte[] output = md.digest(Long.toString(base).getBytes());
-                        password = String.format("%032X", new BigInteger(1, output));
-                        password = password.substring(0, 9);
+						/// Change it back to string
+						final TransformerFactory tf = TransformerFactory.newInstance();
+						final Transformer transformer = tf.newTransformer();
+						transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+						final StringWriter writer = new StringWriter();
+						transformer.transform(new DOMSource(doc), new StreamResult(writer));
+						converted = writer.getBuffer().toString().replaceAll("((\n)|(\r))", "");
 
-                        //// Force a password in it and set as designer
-                        Node passNode = doc.createElement("password");
-                        passNode.setTextContent(password);
-                        children.item(i).appendChild(passNode);
-                        Node designerNode = doc.createElement("designer");
-                        designerNode.setTextContent("1");
-                        children.item(i).appendChild(designerNode);
+						break;
+					}
+				}
+			}
 
-                        /// Change it back to string
-                        TransformerFactory tf = TransformerFactory.newInstance();
-                        Transformer transformer = tf.newTransformer();
-                        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-                        StringWriter writer = new StringWriter();
-                        transformer.transform(new DOMSource(doc), new StreamResult(writer));
-                        converted = writer.getBuffer().toString().replaceAll("((\n)|(\r))", "");
+			if (!"".equals(username)) {
+				final String val = dataProvider.postUsers(connection, converted, 1);
+				if (!"".equals(val)) {
+					logger.debug("Account create: " + val);
+					hasChanged = true;
+				} else {
+					logger.debug("Account creation fail: " + username);
+				}
+			}
 
-                        break;
-                    }
-                }
-            }
-
-            if (!"".equals(username)) {
-                String val = dataProvider.postUsers(connection, converted, 1);
-                if (!"".equals(val)) {
-                    logger.debug("Account create: " + val);
-                    hasChanged = true;
-                } else
-                    logger.debug("Account creation fail: " + username);
-            }
-
-            // Username should be in an email format
-            if (hasChanged) {
-                response.setStatus(200);
-                // Send email
-                String content = "Your account with username: " + username + " has been created with the password: " + password;
-                MailUtils.postMail(getServletConfig(), mail, mailcc, "Account created for Karuta: " + username, content, logger);
-                PrintWriter output = response.getWriter();
-                output.write("created");
-                output.close();
-            } else {
-                response.setStatus(400);
-                PrintWriter output = response.getWriter();
-                output.write("username exists");
-                output.close();
-                request.getInputStream().close();
-            }
-        } catch (Exception e) {
+			// Username should be in an email format
+			if (hasChanged) {
+				response.setStatus(200);
+				// Send email
+				final String content = "Your account with username: " +
+						username +
+						" has been created with the password: " +
+						password;
+				MailUtils.postMail(getServletConfig(), mail, mailcc, "Account created for Karuta: " + username, content,
+						logger);
+				final PrintWriter output = response.getWriter();
+				output.write("created");
+				output.close();
+			} else {
+				response.setStatus(400);
+				final PrintWriter output = response.getWriter();
+				output.write("username exists");
+				output.close();
+				request.getInputStream().close();
+			}
+		} catch (final Exception e) {
 			logger.error("Intercepted error", e);
 			//TODO something is missing
-        } finally {
-            try {
-                if (connection != null) connection.close();
-            } catch (SQLException e) {
+		} finally {
+			try {
+				if (connection != null) {
+					connection.close();
+				}
+			} catch (final SQLException e) {
 				logger.error("Intercepted error", e);
 				//TODO something is missing
-            }
-        }
-    }
+			}
+		}
+	}
+
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			ConfigUtils.init(getServletContext());
+			dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
+			dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+			final ServletContext sc = config.getServletContext();
+			sc.getRealPath("/");
+		} catch (final Exception e) {
+			logger.error("Can't init servlet", e);
+			throw new ServletException(e);
+		}
+	}
+
+	public DataProvider initialize(HttpServletRequest httpServletRequest) {
+		return dataProvider;
+	}
 }

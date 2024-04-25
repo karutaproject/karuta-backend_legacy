@@ -20,102 +20,101 @@ import java.util.Properties;
 
 import javax.activation.MimeType;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
 import com.eportfolium.karuta.security.Credential;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 public class MysqlDataProviderTest {
 
-    private static final Logger logger = LoggerFactory.getLogger(MysqlDataProviderTest.class);
+	private static final Logger logger = LoggerFactory.getLogger(MysqlDataProviderTest.class);
 
-    /**
-     * @param args
-     */
-    public static void main(String[] args) {
-        // TODO Auto-generated method stub
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
 
-        String dataProviderName = "com.eportfolium.karuta.data.provider.MysqlDataProvider";
-        Properties connectionProperties = new Properties();
-        connectionProperties.setProperty("url", "jdbc:mysql://localhost/portfolio");
-        connectionProperties.setProperty("login", "root");
-        connectionProperties.setProperty("password", "");
+		final String dataProviderName = "com.eportfolium.karuta.data.provider.MysqlDataProvider";
+		final Properties connectionProperties = new Properties();
+		connectionProperties.setProperty("url", "jdbc:mysql://localhost/portfolio");
+		connectionProperties.setProperty("login", "root");
+		connectionProperties.setProperty("password", "");
 
+		try {
+			final MimeType xmlMimeType = new MimeType("text/xml");
+			final DataProvider dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor()
+					.newInstance();
+			final Connection connection = SqlUtils.getConnection();
+			new Credential();
 
-        try {
-            MimeType xmlMimeType = new MimeType("text/xml");
-            DataProvider dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
-            Connection connection = SqlUtils.getConnection();
-            Credential cred = new Credential();
+			final String portfolioUuid = "aaaa-bbbb-cccc";
+			Integer userId = 2;
+			final int groupId = 26;
+			final String rolename = "student";
 
-            String portfolioUuid = "aaaa-bbbb-cccc";
-            Integer userId = 2;
-            int groupId = 26;
-            String rolename = "student";
+			// putPortfolio
+			final String xml = DomUtils.file2String("c:\\temp\\iut2.xml", new StringBuilder());
+			logger.debug("--- putPortfolio() ------");
+			dataProvider.putPortfolio(connection, xmlMimeType, xmlMimeType, xml, portfolioUuid, userId, true, groupId,
+					null);
 
+			// getNode
+			final String uuid = "43020565-b650-4655-b466-af2c69b0c714";
+			logger.debug("--- getNode(" + uuid + ") ------");
+			logger.debug("Node {}",
+					dataProvider.getNode(connection, xmlMimeType, uuid, false, userId, groupId, rolename, null, null));
+			// getNode with children
+			logger.debug("--- getNode(" + uuid + ") with children ------");
+			logger.debug("Node {}",
+					dataProvider.getNode(connection, xmlMimeType, uuid, true, userId, groupId, rolename, null, null));
 
-            // putPortfolio
-            String xml = DomUtils.file2String("c:\\temp\\iut2.xml", new StringBuffer());
-            logger.debug("--- putPortfolio() ------");
-            dataProvider.putPortfolio(connection, xmlMimeType, xmlMimeType, xml, portfolioUuid, userId, true, groupId, null);
+			// putNode
+			final String parent_uuid_putnode = "82af4eae-0119-4055-b422-e37cece57e0f";
+			logger.debug("--- putNode(" + parent_uuid_putnode + ") ------");
+			final String xml_putnode = DomUtils.file2String("c:\\temp\\putnode.xml", new StringBuilder());
+			logger.debug("Node {}",
+					dataProvider.putNode(connection, xmlMimeType, parent_uuid_putnode, xml_putnode, userId, groupId));
 
+			final String uuid_deletenode = "b6b20bf7-3732-4256-ae16-171f42030207";
+			logger.debug("--- deleteNode(" + uuid_deletenode + ") ------");
+			logger.debug("Result {}", dataProvider.deleteNode(connection, uuid_deletenode, userId, groupId, rolename));
 
-            // getNode
-            String uuid = "43020565-b650-4655-b466-af2c69b0c714";
-            logger.debug("--- getNode(" + uuid + ") ------");
-            logger.debug("Node {}", dataProvider.getNode(connection, xmlMimeType, uuid, false, userId, groupId, rolename, null, null));
-            // getNode with children
-            logger.debug("--- getNode(" + uuid + ") with children ------");
-            logger.debug("Node {}", dataProvider.getNode(connection, xmlMimeType, uuid, true, userId, groupId, rolename, null, null));
+			// getPortfolio
+			logger.debug("--- getPortfolio() ------");
+			final String xml_out = dataProvider
+					.getPortfolio(connection, xmlMimeType, portfolioUuid, userId, groupId, null, null, null, 0, null)
+					.toString();
+			DomUtils.saveString(xml_out, "c:\\temp\\out2.xml");
 
-            // putNode
-            String parent_uuid_putnode = "82af4eae-0119-4055-b422-e37cece57e0f";
-            logger.debug("--- putNode(" + parent_uuid_putnode + ") ------");
-            String xml_putnode = DomUtils.file2String("c:\\temp\\putnode.xml", new StringBuffer());
-            logger.debug("Node {}", dataProvider.putNode(connection, xmlMimeType, parent_uuid_putnode, xml_putnode, userId, groupId));
+			//getPortfolios
+			userId = null;
+			logger.debug("--- getPortfolios(" + userId + ") ------");
+			logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, rolename,
+					true, 0, null, null, false, null));
 
+			//getNodes
+			final String uuid_getnodes = "43020565-b650-4655-b466-af2c69b0c714";
+			logger.debug("--- getNodes(" + uuid_getnodes + ") ------");
+			logger.debug("Result {}", dataProvider.getNodes(connection, xmlMimeType, null, userId, groupId, rolename,
+					null, uuid_getnodes, null, null, null, null));
 
-            String uuid_deletenode = "b6b20bf7-3732-4256-ae16-171f42030207";
-            logger.debug("--- deleteNode(" + uuid_deletenode + ") ------");
-            logger.debug("Result {}", dataProvider.deleteNode(connection, uuid_deletenode, userId, groupId, rolename));
+			//deletePortfolio
+			//logger.debug("--- deletePortfolio("+portfolioUuid+") ------");
+			//logger.debug(dataProvider.deletePortfolio(portfolioUuid));
+			//getPortfolios
+			userId = null;
+			logger.debug("--- getPortfolios(" + userId + ") ------");
+			logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, rolename,
+					true, 0, null, null, false, null));
 
+		} catch (final Exception ex) {
+			ex.printStackTrace();
+		}
 
-            // getPortfolio
-            logger.debug("--- getPortfolio() ------");
-            String xml_out = dataProvider.getPortfolio(connection, xmlMimeType, portfolioUuid, userId, groupId, null, null, null, 0, null).toString();
-            DomUtils.saveString(xml_out, "c:\\temp\\out2.xml");
-
-            //getPortfolios
-            userId = null;
-            logger.debug("--- getPortfolios(" + userId + ") ------");
-            logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, rolename, true, 0, null, null, false, null));
-
-            //getNodes
-            String uuid_getnodes = "43020565-b650-4655-b466-af2c69b0c714";
-            logger.debug("--- getNodes(" + uuid_getnodes + ") ------");
-            logger.debug("Result {}", dataProvider.getNodes(connection, xmlMimeType, null,
-                    userId, groupId, rolename, null, uuid_getnodes, null,
-                    null, null, null)
-            );
-
-
-            //deletePortfolio
-            //logger.debug("--- deletePortfolio("+portfolioUuid+") ------");
-            //logger.debug(dataProvider.deletePortfolio(portfolioUuid));
-            //getPortfolios
-            userId = null;
-            logger.debug("--- getPortfolios(" + userId + ") ------");
-            logger.debug("Result {}", dataProvider.getPortfolios(connection, xmlMimeType, userId, groupId, rolename, true, 0, null, null, false, null));
-
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-
-    }
+	}
 
 }

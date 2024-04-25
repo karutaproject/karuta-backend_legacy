@@ -44,246 +44,240 @@ public class ReportHelperProvider {
 
 	DataSource ds = null;
 
-	public ReportHelperProvider() throws Exception {}
+	public ReportHelperProvider() throws Exception {
+	}
 
-	public String getVector( Connection c, int userId, HashMap<String, String> map ) throws SQLException
-	{
+	/// Because can't make UNIQUE key on all column. Size is too big
+	public int checkVector(Connection c, ArrayList<String> cols, ArrayList<String> vals) throws SQLException {
+		String col = String.join("=? AND ", cols);
+		col += "=?";
+		final String sql = String.format("SELECT COUNT(*) FROM vector_table WHERE %s;", col);
+		logger.debug("SQL: " + sql);
+		final PreparedStatement st = c.prepareStatement(sql);
+
+		for (int i = 0; i < vals.size(); i++) {
+			st.setString(i + 1, vals.get(i));
+		}
+		final ResultSet rs = st.executeQuery();
+
+		int count = 0;
+		if (rs != null && (rs.next())) {
+			count = rs.getInt(1);
+		}
+
+		rs.close();
+		st.close();
+
+		logger.debug(String.format("VECTOR CHECK FOUND (%d) VALUES", count));
+
+		return count;
+	}
+
+	public int deleteVector(Connection c, HashMap<String, String> map) throws SQLException {
+		final ArrayList<String> cols = new ArrayList<String>();
+		final ArrayList<String> vals = new ArrayList<String>();
+		int userid = 0;
+		for (final Entry<String, String> entry : map.entrySet()) {
+			if ("date".equals(entry.getKey())) {
+				cols.add("v." + entry.getKey() + "<?");
+			} else if ("userid".equals(entry.getKey())) {
+				userid = Integer.parseInt(entry.getValue());
+				continue;
+			} else {
+				cols.add("v." + entry.getKey() + "=?");
+			}
+			vals.add(entry.getValue());
+		}
+
+		String addRight = "AND (v.userid=? OR u.userid=?) AND r.DL=1";
+
+		if (cred.isAdmin(c, userid)) {
+			addRight = null;
+		}
+
+		/// Check entries that have a right to delete
+		final String sqlCheck = String.format("SELECT v.lineid " +
+				"FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
+				"LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
+				"WHERE %s %s;", String.join(" AND ", cols), addRight != null ? addRight : "");
+		logger.debug("SQL: {}", sqlCheck);
+
+		final PreparedStatement stCheck = c.prepareStatement(sqlCheck);
+		for (int i = 0; i < vals.size(); i++) {
+			logger.debug("PARAMS {} VAL: {}", i + 1, vals.get(i));
+			stCheck.setString(i + 1, vals.get(i));
+		}
+		if (addRight != null) {
+			stCheck.setInt(vals.size() + 1, userid);
+			stCheck.setInt(vals.size() + 2, userid);
+		}
+		final ResultSet rsCheck = stCheck.executeQuery();
+		final HashSet<Integer> entries = new HashSet<Integer>();
+		while (rsCheck.next()) {
+			entries.add(rsCheck.getInt(1));
+		}
+		stCheck.close();
+
+		/// Delete related lines if there is a right on it
+		if (!entries.isEmpty()) {
+			final String sql = "DELETE v, u, r " +
+					"FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
+					"LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
+					"WHERE v.lineid=?;";
+			final PreparedStatement st = c.prepareStatement(sql);
+			for (final Integer entry : entries) {
+				st.setInt(1, entry);
+				st.executeUpdate();
+			}
+			st.close();
+		}
+
+		return entries.size();
+	}
+
+	public String getVector(Connection c, int userId, HashMap<String, String> map) throws SQLException {
 		PreparedStatement st;
 		String sql;
 
-		Set<Entry<String, String>> values = map.entrySet();
-		ArrayList<String> cols = new ArrayList<String>();
-		ArrayList<String> vals = new ArrayList<String>();
-		Iterator<Entry<String, String>> iterval = values.iterator();
+		final Set<Entry<String, String>> values = map.entrySet();
+		final ArrayList<String> cols = new ArrayList<String>();
+		final ArrayList<String> vals = new ArrayList<String>();
+		final Iterator<Entry<String, String>> iterval = values.iterator();
 
-		if( !cred.isAdmin(c, userId) )
-		{
+		if (!cred.isAdmin(c, userId)) {
 			// If user is not admin, check if read access is defined
-			cols.add( "a1=?" );
-			String user = cred.getUsername(c, userId);
+			cols.add("a1=?");
+			final String user = cred.getUsername(c, userId);
 			vals.add(user);
 		}
-		
-		while( iterval.hasNext() )
-		{
-			Entry<String, String> entry = iterval.next();
-			cols.add(entry.getKey()+"=?");
+
+		while (iterval.hasNext()) {
+			final Entry<String, String> entry = iterval.next();
+			cols.add(entry.getKey() + "=?");
 			vals.add(entry.getValue());
 		}
-		
-		String col = String.join(" AND ", cols);
+
+		final String col = String.join(" AND ", cols);
 		sql = String.format("SELECT * FROM vector_table WHERE %s;", col);
-		logger.debug("SQL: "+sql);
+		logger.debug("SQL: " + sql);
 		st = c.prepareStatement(sql);
-		
-		for( int i=0; i<vals.size(); i++ )
-		{
-			st.setString(i+1, vals.get(i));
-			logger.debug("PARAMS "+(i+1)+" VAL: "+vals.get(i));
+
+		for (int i = 0; i < vals.size(); i++) {
+			st.setString(i + 1, vals.get(i));
+			logger.debug("PARAMS " + (i + 1) + " VAL: " + vals.get(i));
 		}
-		ResultSet rs = st.executeQuery();
-		StringBuilder output = new StringBuilder();
+		final ResultSet rs = st.executeQuery();
+		final StringBuilder output = new StringBuilder();
 		output.append("<vectors>");
-		if( rs != null)
-			while( rs.next() )
-			{
-				int userid = rs.getInt("userid");
-				Date date = rs.getDate("date");
-				output.append(MessageFormat.format("<vector uid=''{0,number,integer}'' date=''{1,date,short} {1,time,medium}''>", userid, date));
-				
-				for(int i=1; i<=10; i++)
-				{
-					String a_n = "a"+i;
-					String a_val = rs.getString(a_n);
-					if( !"".equals(a_val) )
+		if (rs != null) {
+			while (rs.next()) {
+				final int userid = rs.getInt("userid");
+				final Date date = rs.getDate("date");
+				output.append(MessageFormat.format(
+						"<vector uid=''{0,number,integer}'' date=''{1,date,short} {1,time,medium}''>", userid, date));
+
+				for (int i = 1; i <= 10; i++) {
+					final String a_n = "a" + i;
+					final String a_val = rs.getString(a_n);
+					if (!"".equals(a_val)) {
 						output.append(String.format("<%s>%s</%s>", a_n, a_val, a_n));
+					}
 				}
-				
+
 				output.append("</vector>");
 			}
+		}
 		output.append("</vectors>");
-		
+
 		rs.close();
 		st.close();
 
 		return output.toString();
 	}
 
-    public int writeVector( Connection c, int userId, HashMap<String, String> map, HashMap<String, HashSet<String>> groups ) throws SQLException {
+	public int writeVector(Connection c, int userId, HashMap<String, String> map,
+			HashMap<String, HashSet<String>> groups) throws SQLException {
 		PreparedStatement st;
 		String sql;
 
-		Set<Entry<String, String>> values = map.entrySet();
-		ArrayList<String> holder = new ArrayList<String>();
-		ArrayList<String> cols = new ArrayList<String>();
-		ArrayList<String> vals = new ArrayList<String>();
-		Iterator<Entry<String, String>> iterval = values.iterator();
-		while( iterval.hasNext() )
-		{
-			Entry<String, String> entry = iterval.next();
+		final Set<Entry<String, String>> values = map.entrySet();
+		final ArrayList<String> holder = new ArrayList<String>();
+		final ArrayList<String> cols = new ArrayList<String>();
+		final ArrayList<String> vals = new ArrayList<String>();
+		final Iterator<Entry<String, String>> iterval = values.iterator();
+		while (iterval.hasNext()) {
+			final Entry<String, String> entry = iterval.next();
 			holder.add("?");
 			cols.add(entry.getKey());
 			vals.add(entry.getValue());
 		}
-		
+
 		// Check if previous vector exist
-		int count = checkVector(c, cols, vals);
-		if( count > 0 ) return -1;
-		
-        sql = String.format("INSERT INTO vector_table(%s) VALUES(%s);",
-                String.join(",", cols),
-                String.join(",", holder));
+		final int count = checkVector(c, cols, vals);
+		if (count > 0) {
+			return -1;
+		}
+
+		sql = String.format("INSERT INTO vector_table(%s) VALUES(%s);", String.join(",", cols),
+				String.join(",", holder));
 		st = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-		
-		logger.debug("SQL: "+sql);
-		
-		for( int i=0; i<vals.size(); i++ )
-		{
-			st.setString(i+1, vals.get(i));
-			logger.debug("PARAMS "+(i+1)+" VAL: "+vals.get(i));
+
+		logger.debug("SQL: " + sql);
+
+		for (int i = 0; i < vals.size(); i++) {
+			st.setString(i + 1, vals.get(i));
+			logger.debug("PARAMS " + (i + 1) + " VAL: " + vals.get(i));
 		}
 		st.executeUpdate();
-		
+
 		/// Get lineid
 		int lineid = 0;
 		ResultSet rs = st.getGeneratedKeys();
-		if( rs.next() ){
+		if (rs.next()) {
 			lineid = rs.getInt(1);
 		}
 		st.close();
 
 		// Rights management
-		for( Entry<String, HashSet<String>> gr : groups.entrySet() )
-		{
+		for (final Entry<String, HashSet<String>> gr : groups.entrySet()) {
 			// Create userid/lineid -> groupid entry
 			String sqlgroup = null;
-			if( "all".equals(gr.getKey()) )	// 0 will apply to all users
+			if ("all".equals(gr.getKey())) // 0 will apply to all users
 			{
 				sqlgroup = "INSERT INTO vector_usergroup(userid, lineid) VALUES(0, ?);";
 				st = c.prepareStatement(sqlgroup, Statement.RETURN_GENERATED_KEYS);
 				st.setInt(1, lineid);
-			}
-			else
-			{
+			} else {
 				sqlgroup = "INSERT INTO vector_usergroup(userid, lineid) " +
 						"SELECT userid, ? FROM credential WHERE login=?;";
 				st = c.prepareStatement(sqlgroup, Statement.RETURN_GENERATED_KEYS);
 				st.setInt(1, lineid);
 				st.setString(2, gr.getKey());
 			}
-			
+
 			st.executeUpdate();
 			rs = st.getGeneratedKeys();
 			int groupid = 0;
-			if( rs.next() )
+			if (rs.next()) {
 				groupid = rs.getInt(1);
+			}
 			st.close();
-			
+
 			// Write rights
-            if (groupid != 0) {
-				HashSet<String> r = gr.getValue();
-				String sqlrights = "INSERT INTO vector_rights(groupid, RD, WR, DL) VALUES(?, ?, ?, ?);";
+			if (groupid != 0) {
+				final HashSet<String> r = gr.getValue();
+				final String sqlrights = "INSERT INTO vector_rights(groupid, RD, WR, DL) VALUES(?, ?, ?, ?);";
 				st = c.prepareStatement(sqlrights);
 				st.setInt(1, groupid);
-        st.setBoolean(2, r.contains("r"));
-        st.setBoolean(3, r.contains("w"));
-        st.setBoolean(4, r.contains("d"));
+				st.setBoolean(2, r.contains("r"));
+				st.setBoolean(3, r.contains("w"));
+				st.setBoolean(4, r.contains("d"));
 				st.executeUpdate();
 				st.close();
 			}
 		}
-		
+
 		return 0;
 	}
-	
-	public int deleteVector( Connection c, HashMap<String, String> map ) throws SQLException {
-		ArrayList<String> cols = new ArrayList<String>();
-		ArrayList<String> vals = new ArrayList<String>();
-		int userid = 0;
-    for (Entry<String, String> entry : map.entrySet()) {
-      if ("date".equals(entry.getKey()))
-          cols.add("v." + entry.getKey() + "<?");
-      else if ("userid".equals(entry.getKey())) {
-				userid = Integer.parseInt(entry.getValue());
-				continue;
-			}
-			else
-				cols.add("v."+entry.getKey()+"=?");
-			vals.add(entry.getValue());
-		}
 
-		String addRight = "AND (v.userid=? OR u.userid=?) AND r.DL=1";
-
-		if( cred.isAdmin(c, userid) ) {
-			addRight = null;
-		}
-		
-		/// Check entries that have a right to delete
-    final String sqlCheck = String.format("SELECT v.lineid " +
-        "FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
-        "LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
-        "WHERE %s %s;", String.join(" AND ", cols), addRight != null ? addRight : "");
-    logger.debug("SQL: {}", sqlCheck);
-
-		PreparedStatement stCheck = c.prepareStatement(sqlCheck);
-		for( int i=0; i<vals.size(); i++ ) {
-			logger.debug("PARAMS {} VAL: {}", i+1, vals.get(i));
-			stCheck.setString(i+1, vals.get(i));
-		}
-    if (addRight != null) {
-			stCheck.setInt(vals.size()+1, userid);
-			stCheck.setInt(vals.size()+2, userid);
-		}
-    ResultSet rsCheck = stCheck.executeQuery();
-		HashSet<Integer> entries = new HashSet<Integer>();
-		while( rsCheck.next() ) {
-			entries.add(rsCheck.getInt(1));
-		}
-		stCheck.close();
-		
-		/// Delete related lines if there is a right on it
-		if( !entries.isEmpty() )
-		{
-			String sql = "DELETE v, u, r " +
-					"FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
-					"LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
-					"WHERE v.lineid=?;";
-			PreparedStatement st = c.prepareStatement(sql);
-            for (Integer entry : entries) {
-				st.setInt(1, entry);
-				st.executeUpdate();
-			}
-			st.close();
-		}
-		
-		return entries.size();
-	}
-	
-	/// Because can't make UNIQUE key on all column. Size is too big
-	public int checkVector( Connection c, ArrayList<String> cols, ArrayList<String> vals ) throws SQLException
-	{
-		String col = String.join("=? AND ", cols);
-		col += "=?";
-		String sql = String.format("SELECT COUNT(*) FROM vector_table WHERE %s;", col);
-		logger.debug("SQL: "+sql);
-		PreparedStatement st = c.prepareStatement(sql);
-		
-		for( int i=0; i<vals.size(); i++ )
-		{
-			st.setString(i+1, vals.get(i));
-		}
-		ResultSet rs = st.executeQuery();
-		
-		int count = 0;
-		if (rs != null && ( rs.next() ) )
-			count = rs.getInt(1);
-		
-		rs.close();
-		st.close();
-		
-		logger.debug(String.format("VECTOR CHECK FOUND (%d) VALUES", count));
-		
-		return count;
-	}
-	
 }

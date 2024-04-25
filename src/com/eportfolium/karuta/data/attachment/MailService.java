@@ -36,9 +36,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import com.eportfolium.karuta.data.utils.ConfigUtils;
-import com.eportfolium.karuta.data.utils.DomUtils;
-import com.eportfolium.karuta.data.utils.MailUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
@@ -46,257 +43,270 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
+import com.eportfolium.karuta.data.utils.ConfigUtils;
+import com.eportfolium.karuta.data.utils.DomUtils;
+import com.eportfolium.karuta.data.utils.MailUtils;
+
 public class MailService extends HttpServlet {
 
-    /**
-     *
-     */
-    private static final Logger logger = LoggerFactory.getLogger(MailService.class);
-    private static final long serialVersionUID = 9188067506635747901L;
+	/**
+	 *
+	 */
+	private static final Logger logger = LoggerFactory.getLogger(MailService.class);
+	private static final long serialVersionUID = 9188067506635747901L;
 
-    boolean hasNodeReadRight = false;
-    boolean hasNodeWriteRight = false;
-    int userId;
-    int groupId = -1;
-    HttpSession session;
-    ArrayList<String> ourIPs = new ArrayList<>();
+	boolean hasNodeReadRight = false;
+	boolean hasNodeWriteRight = false;
+	int userId;
+	int groupId = -1;
+	HttpSession session;
+	ArrayList<String> ourIPs = new ArrayList<>();
 
-    private String notification;
-    private String sakaiInterfaceURL;
-    private String sakaiUsername;
-    private String sakaiPassword;
-    private String sakaiDirectSessionURL;
+	private String notification;
+	private String sakaiInterfaceURL;
+	private String sakaiUsername;
+	private String sakaiPassword;
+	private String sakaiDirectSessionURL;
 
-    @Override
-    public void init(ServletConfig config) throws ServletException {
-        super.init(config);
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) {
+		/// Check if user is logged in
+		final HttpSession session = request.getSession(false);
+		if (session == null) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
-        /// List possible local address
-        try {
-            ConfigUtils.init(getServletContext());
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                NetworkInterface current = interfaces.nextElement();
-                if (!current.isUp() || current.isLoopback() || current.isVirtual()) continue;
-                Enumeration<InetAddress> addresses = current.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    InetAddress current_addr = addresses.nextElement();
-                    if (current_addr instanceof Inet4Address)
-                        ourIPs.add(current_addr.getHostAddress());
-                }
-            }
-            notification = ConfigUtils.getInstance().getProperty("notification");
-            sakaiInterfaceURL = ConfigUtils.getInstance().getRequiredProperty("sakaiInterface");
-            sakaiUsername = ConfigUtils.getInstance().getRequiredProperty("sakaiUsername");
-            sakaiPassword = ConfigUtils.getInstance().getRequiredProperty("sakaiPassword");
-            sakaiDirectSessionURL = ConfigUtils.getInstance().getRequiredProperty("sakaiDirectSessionUrl");
-        } catch (Exception e) {
-            logger.error("Can't init servlet", e);
-            throw new ServletException(e);
-        }
-    }
+		final int uid = (Integer) session.getAttribute("uid");
+		if (uid == 0) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 
-    public void initialize(HttpServletRequest httpServletRequest) {
-    }
+		final boolean keepcc = BooleanUtils.toBoolean(request.getParameter("ccsender"));
 
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) {
-        /// Check if user is logged in
-        HttpSession session = request.getSession(false);
-        if (session == null) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
+		logger.trace("Sending mail for user '{}'", uid);
 
-        int uid = (Integer) session.getAttribute("uid");
-        if (uid == 0) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
+		String sender = "";
+		String recipient = "";
+		String subject = "";
+		String message = "";
 
-        final boolean keepcc = BooleanUtils.toBoolean(request.getParameter("ccsender"));
+		final StringWriter writer = new StringWriter();
+		try {
+			IOUtils.copy(request.getInputStream(), writer, StandardCharsets.UTF_8);
+			final String data = writer.toString();
+			if ("".equals(data)) {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				final PrintWriter responsewriter = response.getWriter();
+				responsewriter.println("Empty content");
+				responsewriter.close();
+				return;
+			}
+			final Document doc = DomUtils.xmlString2Document(data, new StringBuilder());
+			final NodeList senderNode = doc.getElementsByTagName("sender");
+			final NodeList recipientNode = doc.getElementsByTagName("recipient");
+			final NodeList recipient_ccNode = doc.getElementsByTagName("recipient_cc");
+			final NodeList recipient_bccNode = doc.getElementsByTagName("recipient_bcc");
+			final NodeList subjectNode = doc.getElementsByTagName("subject");
+			final NodeList messageNode = doc.getElementsByTagName("message");
 
-        logger.trace("Sending mail for user '{}'", uid);
+			/// From
+			if (senderNode.getLength() > 0) {
+				sender = senderNode.item(0).getFirstChild().getNodeValue();
+			}
+			/// Recipient
+			if (recipientNode.getLength() > 0) {
+				recipient = recipientNode.item(0).getFirstChild().getNodeValue();
+			}
+			/// CC
+			if (recipient_ccNode.getLength() > 0 && recipient_ccNode.item(0).getFirstChild() != null) {
+				recipient_ccNode.item(0).getFirstChild().getNodeValue();
+			}
+			/// BCC
+			if (recipient_bccNode.getLength() > 0 && recipient_bccNode.item(0).getFirstChild() != null) {
+				recipient_bccNode.item(0).getFirstChild().getNodeValue();
+			}
+			/// Subject
+			if (subjectNode.getLength() > 0) {
+				subject = subjectNode.item(0).getFirstChild().getNodeValue();
+			}
+			/// Message
+			if (messageNode.getLength() > 0) {
+				message = messageNode.item(0).getFirstChild().getNodeValue();
+			}
+		} catch (final Exception e) {
+			logger.error("Erreur d'envoie de mail", e);
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			return;
+		}
 
-        String sender = "";
-        String recipient = "";
-        String recipient_cc = "";
-        String recipient_bcc = "";
-        String subject = "";
-        String message = "";
+		final ServletConfig config = getServletConfig();
+		logger.trace("Message via '{}'", notification);
 
-        StringWriter writer = new StringWriter();
-        try {
-            IOUtils.copy(request.getInputStream(), writer, StandardCharsets.UTF_8);
-            String data = writer.toString();
-            if ("".equals(data)) {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                PrintWriter responsewriter = response.getWriter();
-                responsewriter.println("Empty content");
-                responsewriter.close();
-                return;
-            }
-            Document doc = DomUtils.xmlString2Document(data, new StringBuffer());
-            NodeList senderNode = doc.getElementsByTagName("sender");
-            NodeList recipientNode = doc.getElementsByTagName("recipient");
-            NodeList recipient_ccNode = doc.getElementsByTagName("recipient_cc");
-            NodeList recipient_bccNode = doc.getElementsByTagName("recipient_bcc");
-            NodeList subjectNode = doc.getElementsByTagName("subject");
-            NodeList messageNode = doc.getElementsByTagName("message");
+		int retval = 0;
+		try {
+			switch (notification) {
+			case "email":
+				if (keepcc) {
+					retval = MailUtils.postMail(config, recipient, sender, subject, message, logger);
+				} else {
+					retval = MailUtils.postMail(config, recipient, "", subject, message, logger);
+				}
+				logger.trace("Mail to '{}' from '{}' by uid '{}'", recipient, sender, uid);
+				break;
+			case "sakai":
+				final String[] recip = recipient.split(",");
+				final String[] var = getSakaiTicket();
 
-            /// From
-            if (senderNode.getLength() > 0)
-                sender = senderNode.item(0).getFirstChild().getNodeValue();
-            /// Recipient
-            if (recipientNode.getLength() > 0)
-                recipient = recipientNode.item(0).getFirstChild().getNodeValue();
-            /// CC
-            if (recipient_ccNode.getLength() > 0 && recipient_ccNode.item(0).getFirstChild() != null)
-                recipient_cc = recipient_ccNode.item(0).getFirstChild().getNodeValue();
-            /// BCC
-            if (recipient_bccNode.getLength() > 0 && recipient_bccNode.item(0).getFirstChild() != null)
-                recipient_bcc = recipient_bccNode.item(0).getFirstChild().getNodeValue();
-            /// Subject
-            if (subjectNode.getLength() > 0)
-                subject = subjectNode.item(0).getFirstChild().getNodeValue();
-            /// Message
-            if (messageNode.getLength() > 0)
-                message = messageNode.item(0).getFirstChild().getNodeValue();
-        } catch (Exception e) {
-            logger.error("Erreur d'envoie de mail", e);
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            return;
-        }
+				for (final String user : recip) {
+					final int status = sendMessage(var, user, message);
+					logger.trace("Message sent to {} -> {}", user, status);
+				}
+				break;
+			default:
+				logger.error("Unknown notification method {} ", notification);
+				throw new IllegalStateException(String.format("Unknown notification method '%s' ", notification));
+			}
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+		}
 
-        ServletConfig config = getServletConfig();
-        logger.trace("Message via '{}'", notification);
+		try {
+			if (retval < 0) {
+				response.setStatus(HttpServletResponse.SC_GONE);
+			}
+			response.getOutputStream().close();
+			request.getInputStream().close();
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+		}
+	}
 
-        int retval = 0;
-        try {
-            switch (notification) {
-                case "email":
-                    if (keepcc)
-                        retval = MailUtils.postMail(config, recipient, sender, subject, message, logger);
-                    else
-                        retval = MailUtils.postMail(config, recipient, "", subject, message, logger);
-                    logger.trace("Mail to '{}' from '{}' by uid '{}'", recipient, sender, uid);
-                    break;
-                case "sakai":
-                    final String[] recip = recipient.split(",");
-                    final String[] var = getSakaiTicket();
+	String[] getSakaiTicket() {
+		final String[] ret = { "", "" };
+		try {
+			/// Configurable?
 
-                    for (String user : recip) {
-                        int status = sendMessage(var, user, message);
-                        logger.trace("Message sent to {} -> {}", user, status);
-                    }
-                    break;
-                default:
-                    logger.error("Unknown notification method {} ", notification);
-					throw new IllegalStateException(String.format("Unknown notification method '%s' ", notification));
-            }
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
+			final String urlParameters = "_username=" + sakaiUsername + "&_password=" + sakaiPassword;
 
-        try {
-            if (retval < 0)
-                response.setStatus(HttpServletResponse.SC_GONE);
-            response.getOutputStream().close();
-            request.getInputStream().close();
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-    }
+			/// Will have to use some context config
+			final URL urlTicker = new URL(sakaiDirectSessionURL);
 
-    int sendMessage(String[] auth, String user, String message) {
-        int ret = 500;
+			final HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
+			connect.setDoOutput(true);
+			connect.setDoInput(true);
+			connect.setInstanceFollowRedirects(false);
+			connect.setRequestMethod("POST");
+			connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			connect.setRequestProperty("charset", "utf-8");
+			connect.setRequestProperty("Content-Length", String.valueOf(urlParameters.getBytes().length));
+			connect.setUseCaches(false);
+			connect.connect();
 
-        try {
-            String urlParameters = "notification=\"" + message + "\"&_sessionId=" + auth[0];
+			final DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
+			wr.writeBytes(urlParameters);
+			wr.flush();
+			wr.close();
 
-            /// Send for this user
-            URL urlTicker = new URL(sakaiInterfaceURL + user);
+			final StringBuilder readTicket = new StringBuilder();
+			final BufferedReader rd = new BufferedReader(
+					new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
+			final char[] buffer = new char[1024];
+			int offset = 0;
+			int read;
+			do {
+				read = rd.read(buffer, offset, 1024);
+				offset += read;
+				readTicket.append(buffer);
+			} while (read == 1024);
+			rd.close();
 
-            HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
-            connect.setDoOutput(true);
-            connect.setDoInput(true);
-            connect.setInstanceFollowRedirects(false);
-            connect.setRequestMethod("POST");
-            connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connect.setRequestProperty("charset", "utf-8");
-            connect.setRequestProperty("Content-Length", String.valueOf(urlParameters.getBytes().length));
-            connect.setUseCaches(false);
-            connect.setRequestProperty("Cookie", auth[1]);
-            connect.connect();
+			ret[1] = connect.getHeaderField("Set-Cookie");
 
-            DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
-            wr.writeBytes(urlParameters);
-            wr.flush();
-            wr.close();
+			connect.disconnect();
 
-            ret = connect.getResponseCode();
+			ret[0] = readTicket.toString();
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+		}
 
-            logger.trace("Notification '{}'", ret);
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
+		return ret;
+	}
 
-        return ret;
-    }
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
 
-    String[] getSakaiTicket() {
-        String[] ret = {"", ""};
-        try {
-            /// Configurable?
+		/// List possible local address
+		try {
+			ConfigUtils.init(getServletContext());
+			final Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+			while (interfaces.hasMoreElements()) {
+				final NetworkInterface current = interfaces.nextElement();
+				if (!current.isUp() || current.isLoopback() || current.isVirtual()) {
+					continue;
+				}
+				final Enumeration<InetAddress> addresses = current.getInetAddresses();
+				while (addresses.hasMoreElements()) {
+					final InetAddress current_addr = addresses.nextElement();
+					if (current_addr instanceof Inet4Address) {
+						ourIPs.add(current_addr.getHostAddress());
+					}
+				}
+			}
+			notification = ConfigUtils.getInstance().getProperty("notification");
+			sakaiInterfaceURL = ConfigUtils.getInstance().getRequiredProperty("sakaiInterface");
+			sakaiUsername = ConfigUtils.getInstance().getRequiredProperty("sakaiUsername");
+			sakaiPassword = ConfigUtils.getInstance().getRequiredProperty("sakaiPassword");
+			sakaiDirectSessionURL = ConfigUtils.getInstance().getRequiredProperty("sakaiDirectSessionUrl");
+		} catch (final Exception e) {
+			logger.error("Can't init servlet", e);
+			throw new ServletException(e);
+		}
+	}
 
+	public void initialize(HttpServletRequest httpServletRequest) {
+	}
 
-            final String urlParameters = "_username=" + sakaiUsername + "&_password=" + sakaiPassword;
+	int sendMessage(String[] auth, String user, String message) {
+		int ret = 500;
 
-            /// Will have to use some context config
-            URL urlTicker = new URL(sakaiDirectSessionURL);
+		try {
+			final String urlParameters = "notification=\"" + message + "\"&_sessionId=" + auth[0];
 
-            HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
-            connect.setDoOutput(true);
-            connect.setDoInput(true);
-            connect.setInstanceFollowRedirects(false);
-            connect.setRequestMethod("POST");
-            connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connect.setRequestProperty("charset", "utf-8");
-            connect.setRequestProperty("Content-Length", String.valueOf(urlParameters.getBytes().length));
-            connect.setUseCaches(false);
-            connect.connect();
+			/// Send for this user
+			final URL urlTicker = new URL(sakaiInterfaceURL + user);
 
-            DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
-            wr.writeBytes(urlParameters);
-            wr.flush();
-            wr.close();
+			final HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
+			connect.setDoOutput(true);
+			connect.setDoInput(true);
+			connect.setInstanceFollowRedirects(false);
+			connect.setRequestMethod("POST");
+			connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			connect.setRequestProperty("charset", "utf-8");
+			connect.setRequestProperty("Content-Length", String.valueOf(urlParameters.getBytes().length));
+			connect.setUseCaches(false);
+			connect.setRequestProperty("Cookie", auth[1]);
+			connect.connect();
 
-            StringBuilder readTicket = new StringBuilder();
-            BufferedReader rd = new BufferedReader(new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
-            char[] buffer = new char[1024];
-            int offset = 0;
-            int read;
-            do {
-                read = rd.read(buffer, offset, 1024);
-                offset += read;
-                readTicket.append(buffer);
-            } while (read == 1024);
-            rd.close();
+			final DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
+			wr.writeBytes(urlParameters);
+			wr.flush();
+			wr.close();
 
-            ret[1] = connect.getHeaderField("Set-Cookie");
+			ret = connect.getResponseCode();
 
-            connect.disconnect();
+			logger.trace("Notification '{}'", ret);
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+		}
 
-            ret[0] = readTicket.toString();
-        } catch (Exception e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
-
-        return ret;
-    }
+		return ret;
+	}
 
 }
