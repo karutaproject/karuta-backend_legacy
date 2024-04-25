@@ -2712,7 +2712,7 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{nodeid}/nodecontext")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole,
                                      @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
@@ -2728,6 +2728,11 @@ public class RestServicePortfolio {
 
         try {
             c = SqlUtils.getConnection();
+            
+            /// If no groupId was specified, but a role was sent
+            if( groupId == 0 && userrole != null )
+            	groupId = credential.getGroupid(c, userrole, nodeUuid);
+
             String returnValue = dataProvider.putNodeNodeContext(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
@@ -2765,7 +2770,7 @@ public class RestServicePortfolio {
     @Path("/nodes/node/{nodeid}/noderesource")
     @PUT
     @Produces(MediaType.APPLICATION_XML)
-    public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
+    public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId, @QueryParam("userrole") String userrole,
                                       @QueryParam("info") String info, @PathParam("nodeid") String nodeUuid, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
         if (!isUUID(nodeUuid)) {
             logger.error("isUUID({}) is false", nodeUuid);
@@ -2785,6 +2790,11 @@ public class RestServicePortfolio {
             /// putNode(MimeType inMimeType, String nodeUuid, String in,int userId, int groupId)
             //          String returnValue = dataProvider.putNode(new MimeType("text/xml"),nodeUuid,xmlNode,this.userId,this.groupId).toString();
             c = SqlUtils.getConnection();
+            
+            /// If no groupId was specified, but a role was sent
+            if( groupId == 0 && userrole != null )
+            	groupId = credential.getGroupid(c, userrole, nodeUuid);
+
             String returnValue = dataProvider.putNodeNodeResource(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
             if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
                 errorLog.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlNode));
@@ -3367,7 +3377,7 @@ public class RestServicePortfolio {
     @Produces(MediaType.APPLICATION_XML)
     public String putResource(String xmlResource, @CookieParam("user") String user, @CookieParam("credential") String token, @QueryParam("group") int groupId,
                               @QueryParam("info") String info, @PathParam("node-parent-uuid") String nodeParentUuid, @Context ServletConfig sc,
-                              @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId) {
+                              @Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId, @QueryParam("userrole") String userrole) {
         if (!isUUID(nodeParentUuid)) {
             logger.error("isUUID({})  is false", nodeParentUuid);
             throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
@@ -3389,6 +3399,11 @@ public class RestServicePortfolio {
             logformat = logFormatShort;
         try {
             c = SqlUtils.getConnection();
+            
+            /// If no groupId was specified, but a role was sent
+            if( groupId == 0 && userrole != null )
+            	groupId = credential.getGroupid(c, userrole, nodeParentUuid);
+            
             String returnValue = dataProvider.putResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId).toString();
 
             editLog.info(String.format(logformat, "OK", nodeParentUuid, "resource", ui.userId, timeFormat, httpServletRequest.getRemoteAddr(), xmlResource));
