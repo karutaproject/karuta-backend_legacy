@@ -20,14 +20,6 @@ PUT: Ressource d'un noeud
 > Parameters:
 > None
 >
-> Return:
-> None
-PUT: Replace ressource d'un noeud
-> Parameters:
-> None
->
-> Return:
->
 	0 or 1
 
 ### /resources/resource/file/{contextid}?lang={langcode}
