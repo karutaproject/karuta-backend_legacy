@@ -15,6 +15,21 @@ PUT: Replace ressource d'un noeud
 		<text>2013/06/15</text>
 	</asmResource> 
 
+### /resources/resource/{context-id}[?userrole={userrole}
+PUT: Ressource d'un noeud
+> Parameters:
+> None
+>
+> Return:
+> None
+PUT: Replace ressource d'un noeud
+> Parameters:
+> None
+>
+> Return:
+>
+	0 or 1
+
 ### /resources/resource/file/{contextid}?lang={langcode}
 GET:
 > Parameters:
