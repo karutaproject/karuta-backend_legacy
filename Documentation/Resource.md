@@ -15,7 +15,7 @@ PUT: Replace ressource d'un noeud
 		<text>2013/06/15</text>
 	</asmResource> 
 
-### /resources/resource/{context-id}[?userrole={userrole}
+### /resources/resource/{context-id}[?userrole={userrole}]
 PUT: Ressource d'un noeud
 > Parameters:
 > None
