@@ -549,7 +549,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// Credential checking use hashing, we'll never reach this.
-			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', is_designer=?, other=?, password=SUBSTR(PASSWORD(?), 26)";
+			sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', is_designer=?, other=?, password=SUBSTR(CONCAT('*', UPPER(SHA1(UNHEX(SHA1(?))))), 26)";
 			if (dbserveur.equals("oracle")) {
 				sql = "INSERT INTO credential SET login=?, display_firstname=?, email=?, display_lastname='', is_designer=?, other=?, password=?";
 			}
