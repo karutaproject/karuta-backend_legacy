@@ -146,6 +146,7 @@ public class Credential {
 		if (groupid != -1) {
 			groupId = groupid;
 			nodeRight.groupId = groupId;
+			nodeRight.rrgId = groupId;
 			nodeRight.groupLabel = userRole;
 		}
 
@@ -551,13 +552,14 @@ public class Credential {
 		}
 		if (droit.equals(WRITE)) {
 			return nodeRight.write;
-		} else if (droit.equals(SUBMIT)) {
-			return nodeRight.submit;
-		} else if (droit.equals(DELETE)) {
-			return nodeRight.delete;
-		} else {
-			return false;
 		}
+		if (droit.equals(SUBMIT)) {
+			return nodeRight.submit;
+		}
+		if (droit.equals(DELETE)) {
+			return nodeRight.delete;
+		}
+		return false;
 	}
 
 	public boolean hasRightInPortfolio(Connection c, int userId, String nodeUuid) {
@@ -884,7 +886,7 @@ public class Credential {
 	{
 		if( userId == null )
 			return false;
-	
+
 		ResultSet rs=null;
 		PreparedStatement stmt=null;
 		try
@@ -893,7 +895,7 @@ public class Credential {
 			stmt=connection.prepareStatement(query);
 			stmt.setInt(1, userId);
 			rs = stmt.executeQuery();
-	
+
 			if( rs.next() )
 				return true;
 		}
