@@ -138,6 +138,15 @@ public class Credential {
 		String sql;
 		ResultSet res = null;
 
+		// Public user
+		if (isPublicUser(c, userId)) {
+			// Node has public access
+			if (isPublic(c, node_uuid, null)) {
+				return new NodeRight(false, true, false, false, false, false);
+			}
+			return new NodeRight(false, false, false, false, false, false);
+		}
+
 		// On initialise les droits à false : par defaut accès à rien
 		final NodeRight nodeRight = new NodeRight(false, false, false, false, false, false);
 
@@ -880,34 +889,6 @@ public class Credential {
 		return false;
 	}
 
-	/*
-	/// Across the system
-	public boolean isDesigner( Integer userId )
-	{
-		if( userId == null )
-			return false;
-
-		ResultSet rs=null;
-		PreparedStatement stmt=null;
-		try
-		{
-			String query = "SELECT c.userid FROM credential c WHERE c.userid=? AND c.is_designer=1 ";
-			stmt=connection.prepareStatement(query);
-			stmt.setInt(1, userId);
-			rs = stmt.executeQuery();
-
-			if( rs.next() )
-				return true;
-		}
-		catch( SQLException e )
-		{
-			e.printStackTrace();
-			return false;
-		}
-		return false;
-	}
-	//*/
-
 	public boolean isOwnerRRG(Connection c, Integer userId, int rrg) {
 		if (userId == null) {
 			return false;
@@ -935,6 +916,34 @@ public class Credential {
 		}
 		return false;
 	}
+
+	/*
+	/// Across the system
+	public boolean isDesigner( Integer userId )
+	{
+		if( userId == null )
+			return false;
+	
+		ResultSet rs=null;
+		PreparedStatement stmt=null;
+		try
+		{
+			String query = "SELECT c.userid FROM credential c WHERE c.userid=? AND c.is_designer=1 ";
+			stmt=connection.prepareStatement(query);
+			stmt.setInt(1, userId);
+			rs = stmt.executeQuery();
+	
+			if( rs.next() )
+				return true;
+		}
+		catch( SQLException e )
+		{
+			e.printStackTrace();
+			return false;
+		}
+		return false;
+	}
+	//*/
 
 	/// From node, check if portoflio has user 'sys_public' in group 'all'
 	/// To differentiate between 'public' to the world, and 'public' to people with an account
@@ -988,6 +997,42 @@ public class Credential {
 			}
 		}
 		return val;
+	}
+
+	private boolean isPublicUser(Connection c, int userId) {
+		String sql;
+		PreparedStatement st = null;
+		ResultSet res = null;
+		try {
+			// Fetching 'sys_public' userid
+			sql = "SELECT userid FROM credential WHERE (login='sys_public' OR login='public') AND userid=?";
+			st = c.prepareStatement(sql);
+			st.setInt(1, userId);
+			res = st.executeQuery();
+			if (res.next()) {
+				return true;
+			}
+			return false;
+		} catch (final Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (st != null) {
+				try {
+					st.close();
+				} catch (final SQLException e) {
+					e.printStackTrace();
+				}
+			}
+			if (res != null) {
+				try {
+					res.close();
+				} catch (final SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+		return false;
 	}
 
 	public boolean isSharer(Connection c, Integer userId) {
