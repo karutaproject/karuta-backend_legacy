@@ -9287,8 +9287,7 @@ public class MysqlDataProvider implements DataProvider {
 						doc = documentBuilder.parse(is);
 						attribNode = doc.getDocumentElement();
 						attribMap = attribNode.getAttributes();
-						
-						
+
 						try
 						{
 							Node publicatt = attribMap.getNamedItem("public");
@@ -12535,10 +12534,12 @@ public class MysqlDataProvider implements DataProvider {
 					String email = null;
 					String designerstr = null;
 					String active = "1";
+					String is_sharerstr = null;
 					String substitute = null;
 					String other = "";
 					int id = 0;
 					int designer;
+					int is_sharer;
 
 					if (children.item(i).getNodeName().equals("user")) {
 						NodeList children2;
@@ -12558,6 +12559,9 @@ public class MysqlDataProvider implements DataProvider {
 							}
 							if (children2.item(y).getNodeName().equals("email")) {
 								email = DomUtils.getInnerXml(children2.item(y));
+							}
+							if (children2.item(y).getNodeName().equals("sharer")) {
+								is_sharerstr = DomUtils.getInnerXml(children2.item(y));
 							}
 							if (children2.item(y).getNodeName().equals("active")) {
 								active = DomUtils.getInnerXml(children2.item(y));
@@ -12581,10 +12585,10 @@ public class MysqlDataProvider implements DataProvider {
 						}
 
 						//On ajoute l'utilisateur dans la base de donnees
-						sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer, other) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)),?,?,?)";
+						sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_sharer, is_designer, other) VALUES (?, ?, ?, ?, UNHEX(SHA1(?)),?,?,?,?)";
 						stInsert = c.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
 						if (dbserveur.equals("oracle")) {
-							sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_designer, other) VALUES (?, ?, ?, ?, crypt(?),?,?,?)";
+							sqlInsert = "INSERT INTO credential(login, display_firstname, display_lastname,email, password, active, is_sharer, is_designer, other) VALUES (?, ?, ?, ?, crypt(?),?,?,?,?)";
 							stInsert = c.prepareStatement(sqlInsert, new String[] { "userid" });
 						}
 
@@ -12612,13 +12616,20 @@ public class MysqlDataProvider implements DataProvider {
 						}
 						stInsert.setString(6, active);
 
+						if ("1".equals(is_sharerstr)) {
+							is_sharer = 1;
+						} else {
+							is_sharer = 0;
+						}
+						stInsert.setInt(7, is_sharer);
+
 						if ("1".equals(designerstr)) {
 							designer = 1;
 						} else {
 							designer = 0;
 						}
-						stInsert.setInt(7, designer);
-						stInsert.setString(8, other);
+						stInsert.setInt(8, designer);
+						stInsert.setString(9, other);
 
 						stInsert.executeUpdate();
 
