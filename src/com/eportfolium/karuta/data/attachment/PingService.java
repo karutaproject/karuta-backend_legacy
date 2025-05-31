@@ -15,24 +15,21 @@
 
 package com.eportfolium.karuta.data.attachment;
 
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
-public class PingService extends HttpServlet
-{
+public class PingService extends HttpServlet {
 	/**
 	 *
 	 */
 	private static final long serialVersionUID = 4969750715693599979L;
 
 	@Override
-	protected void doGet(HttpServletRequest request, HttpServletResponse response)
-	{
-		HttpSession session = request.getSession(false);
-		if( session == null || session.getAttribute("uid") == null )
-		{
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+		final HttpSession session = request.getSession(false);
+		if (session == null || session.getAttribute("uid") == null) {
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
 		}

@@ -33,14 +33,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.activation.MimeType;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
@@ -56,10 +48,10 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload2.core.DiskFileItemFactory;
+import org.apache.commons.fileupload2.core.FileItem;
+import org.apache.commons.fileupload2.core.FileUploadException;
+import org.apache.commons.fileupload2.jakarta.servlet6.JakartaServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.apache.fop.apps.Fop;
 import org.apache.fop.apps.FopFactory;
@@ -82,6 +74,15 @@ import org.w3c.dom.NodeList;
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
+
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 public class XSLService extends HttpServlet {
 
@@ -172,7 +173,7 @@ public class XSLService extends HttpServlet {
 			String line;
 			while( (line = rd.readLine()) != null )
 				sb.append(line);
-			
+
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 			DocumentBuilder documentBuilder = null;
 			Document doc=null;
@@ -185,7 +186,7 @@ public class XSLService extends HttpServlet {
 			{
 				e.printStackTrace();
 			}
-			
+
 			/// On lit les paramètres
 			NodeList portfolioNode = doc.getElementsByTagName("portfolioid");
 			NodeList nodeNode = doc.getElementsByTagName("nodeid");
@@ -441,14 +442,14 @@ public class XSLService extends HttpServlet {
 
 				/*
 				HttpURLConnection connection = CreateConnection( urlTarget, request );
-				
+
 				/// Helping construct Json
 				connection.setRequestProperty("referer", origin);
-				
+
 				/// Send post data
 				ServletInputStream inputData = request.getInputStream();
 				DataOutputStream writer = new DataOutputStream(connection.getOutputStream());
-				
+
 				byte[] buffer = new byte[1024];
 				int dataSize;
 				while( (dataSize = inputData.read(buffer,0,buffer.length)) != -1 )
@@ -457,7 +458,7 @@ public class XSLService extends HttpServlet {
 				}
 				inputData.close();
 				writer.close();
-				
+
 				RetrieveAnswer(connection, response, origin);
 				//*/
 				logger.trace("Done converting");
@@ -518,9 +519,9 @@ public class XSLService extends HttpServlet {
 
 		/// FORM name="data"
 		// Create a factory for disk-based file items
-		final DiskFileItemFactory factory = new DiskFileItemFactory();
+		final DiskFileItemFactory factory = DiskFileItemFactory.builder().get();
 		// Create a new file upload handler
-		final ServletFileUpload upload = new ServletFileUpload(factory);
+		final JakartaServletFileUpload upload = new JakartaServletFileUpload(factory);
 
 		List<FileItem> items;
 		final StringWriter data = new StringWriter();

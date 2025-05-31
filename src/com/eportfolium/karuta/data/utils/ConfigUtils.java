@@ -29,10 +29,6 @@ import java.util.StringJoiner;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
-import javax.servlet.ServletContext;
-import javax.ws.rs.core.MediaType;
-
-import com.google.gson.Gson;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -40,232 +36,258 @@ import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+
+import jakarta.servlet.ServletContext;
+import jakarta.ws.rs.core.MediaType;
+
 public class ConfigUtils {
-    public static final String KARUTA_ENV_HOME = "KARUTA_HOME";
-    public static final String KARUTA_PROP_HOME = "karuta.home";
+	public class BuildInfo {
+		protected String version;
+		protected String buildTime;
+		protected String builtBy;
 
-    private static final Logger logger = LoggerFactory.getLogger(ConfigUtils.class);
+		public String getBuildTime() {
+			return buildTime;
+		}
 
-    // Singleton pattern
-    private static ConfigUtils INSTANCE;
+		public String getBuiltBy() {
+			return builtBy;
+		}
 
-    private boolean hasLoaded = false;
-    private final Properties properties = new Properties();
-    private String filePath;
-    private String configPath;
-    private String karutaHome;
-    private String servletName;
+		public String getVersion() {
+			return version;
+		}
 
-    private BuildInfo buildInfo;
+		@Override
+		public String toString() {
+			return new StringJoiner(", ", BuildInfo.class.getSimpleName() + "[", "]").add("version='" + version + "'")
+					.add("buildTime='" + buildTime + "'").add("builtBy='" + builtBy + "'").toString();
+		}
+	}
 
-    private BuildInfo fileServerBuildinfo;
+	public static final String KARUTA_ENV_HOME = "KARUTA_HOME";
 
-    private ConfigUtils(final ServletContext context) throws Exception {
-        if (hasLoaded) return;
-        try {
-            this.loadConfigDirectory(context);
+	public static final String KARUTA_PROP_HOME = "karuta.home";
 
-            filePath = configPath + "configKaruta.properties";
-            // loading properties
-            FileInputStream fileProps = new FileInputStream(filePath);
-            properties.load(fileProps);
-            fileProps.close();
+	private static final Logger logger = LoggerFactory.getLogger(ConfigUtils.class);
 
-            hasLoaded = true;
-            logger.info("Configuration file loaded: {}", filePath);
-            logger.trace("Loaded properties: {}", properties);
-            loadBuildedInfo(context);
-        } catch (Exception e) {
-            logger.error("Can't load file :" + filePath, e);
-            throw e;
-        }
-    }
+	// Singleton pattern
+	private static ConfigUtils INSTANCE;
 
-    public static ConfigUtils getInstance() {
-        if (INSTANCE == null) {
-            throw new AssertionError("The init wasn't done !");
-        }
-        return INSTANCE;
-    }
+	public static ConfigUtils getInstance() {
+		if (INSTANCE == null) {
+			throw new AssertionError("The init wasn't done !");
+		}
+		return INSTANCE;
+	}
 
+	public synchronized static ConfigUtils init(final ServletContext context) throws Exception {
+		if (INSTANCE == null) {
+			INSTANCE = new ConfigUtils(context);
+		}
 
-    public synchronized static ConfigUtils init(final ServletContext context) throws Exception {
-        if (INSTANCE == null) {
-            INSTANCE = new ConfigUtils(context);
-        }
+		return INSTANCE;
+	}
 
-        return INSTANCE;
-    }
+	private boolean hasLoaded = false;
+	private final Properties properties = new Properties();
+	private String filePath;
 
-    private void loadConfigDirectory(final ServletContext context) throws IOException, InternalError {
-        final String configEnvDir = System.getenv(KARUTA_ENV_HOME);
-        final String configPropDir = System.getProperty(KARUTA_PROP_HOME);
-        // The jvm property override the environment property if set
-        final String configDir = (configPropDir != null && !configPropDir.trim().isEmpty()) ? configPropDir : configEnvDir;
-        servletName = context.getContextPath();
-        if (configDir != null && !configDir.trim().isEmpty()) {
-            final File base = new File(configDir.trim());
-            if (base.exists() && base.isDirectory() && base.canWrite()) {
-                setConfigFolder(base);
-            } else {
-                logger.error("The environment variable '" + KARUTA_ENV_HOME + "' '" + configEnvDir
-                        + "' or the jvm property '" + KARUTA_PROP_HOME + "' '" + configPropDir
-                        + "' doesn't exist or isn't writable. Please provide a writable directory path !");
-                throw new IllegalArgumentException("The environment variable '" + KARUTA_ENV_HOME + "' '" + configEnvDir
-                        + "' or the jvm property '" + KARUTA_PROP_HOME + "' '" + configPropDir
-                        + "' doesn't exist or isn't writable. Please provide a writable directory path !");
-            }
-        } else {
-            final String defaultDir = System.getProperty("catalina.base");
-            logger.warn("The environment variable '" + KARUTA_ENV_HOME
-                    + "' or the jvm property '" + KARUTA_PROP_HOME + "' wasn't set."
-                    + " Use theses variables to set a custom configuration path outside of tomcat installation."
-                    + " Fallback on default folder '" + defaultDir + "'.");
-            final File base = new File(defaultDir);
-            if (base.exists() && base.isDirectory() && base.canWrite()) {
-                setConfigFolder(base);
-            } else {
-                logger.error("The folder '" + defaultDir
-                        + "' provided from 'catalina.base' doesn't exist or isn't writable. It's required for configuration files !");
-                throw new IllegalArgumentException("The folder '" + defaultDir
-                        + "' provided from 'catalina.base' doesn't exist or isn't writable. It's required for configuration files !");
-            }
+	private String configPath;
 
-        }
-    }
+	private String karutaHome;
 
-    private void setConfigFolder(final File base) throws IOException {
-        try {
-            karutaHome = base.getCanonicalPath();
-            configPath = karutaHome + servletName + "_config" + File.separatorChar;
-            logger.info("Karuta-backend Servlet configpath @ " + configPath);
-        } catch (IOException e) {
-            logger.error("The configuration directory '" + karutaHome + "' wasn't defined", e);
-            throw e;
-        }
-    }
+	private String servletName;
 
-    public String getRequiredProperty(final String key) throws IllegalStateException {
-        final String value = properties.getProperty(key);
-        if (value == null) {
-            logger.error("Required property key '" + key + "' not found");
-            throw new IllegalStateException("Required key '" + key + "' not found");
-        }
-        return value;
-    }
+	private BuildInfo buildInfo;
 
-    public String getProperty(final String key) {
-        return properties.getProperty(key);
-    }
+	private BuildInfo fileServerBuildinfo;
 
-    public String getProperty(final String key, final String defaultValue) {
-        final String value = properties.getProperty(key);
-        if (value == null) {
-            return defaultValue;
-        }
-        return value;
-    }
+	private ConfigUtils(final ServletContext context) throws Exception {
+		if (hasLoaded) {
+			return;
+		}
+		try {
+			this.loadConfigDirectory(context);
 
-    private void loadBuildedInfo(final ServletContext context){
-        InputStream inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
-        Manifest manifest = null;
-        try {
-            manifest = new Manifest(inputStream);
-        } catch (IOException e) {
-            logger.error("The war have a build problem in generating Manifest.mf file !");
-            return;
-        }
-        Attributes attr = manifest.getMainAttributes();
+			filePath = configPath + "configKaruta.properties";
+			// loading properties
+			final FileInputStream fileProps = new FileInputStream(filePath);
+			properties.load(fileProps);
+			fileProps.close();
 
-        BuildInfo bi = new BuildInfo();
-        bi.version = attr.getValue("Implementation-Version");
-        bi.buildTime = attr.getValue("Build-Time");
-        bi.builtBy = attr.getValue("Built-By");
-        this.buildInfo = bi;
-        logger.info("Loaded from META-INF/MANIFEST.MF build information: {}", this.buildInfo);
-    }
+			hasLoaded = true;
+			logger.info("Configuration file loaded: {}", filePath);
+			logger.trace("Loaded properties: {}", properties);
+			loadBuildedInfo(context);
+		} catch (final Exception e) {
+			logger.error("Can't load file :" + filePath, e);
+			throw e;
+		}
+	}
 
-    private void loadFileserverBuildedInfo(){
-        String url = ConfigUtils.getInstance().getProperty("fileserver");
-        url = url.endsWith("/") ? url + "rest/api/version" : url + "/rest/api/version";
+	public BuildInfo getBuildInfo() {
+		return buildInfo;
+	}
 
-        Set<Header> headers = new HashSet<>();
-        headers.add(new BasicHeader("Content-Type", MediaType.APPLICATION_JSON));
-        headers.add(new BasicHeader("Accept", MediaType.APPLICATION_JSON));
-        headers.add(new BasicHeader("Accept-Charset", StandardCharsets.UTF_8.name()));
-        final HttpResponse response = HttpClientUtils.goGet(headers, url);
-        if (response != null){
-            HttpEntity httpentity = response.getEntity();
-            try {
-                InputStream inputStream = httpentity.getContent();
+	public String getConfigPath() {
+		return configPath;
+	}
 
-                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8);
-                StringBuilder sb = new StringBuilder();
-                String line = null;
+	public BuildInfo getFileServerBuildinfo() {
+		if (fileServerBuildinfo == null) {
+			this.loadFileserverBuildedInfo();
+		}
+		return fileServerBuildinfo;
+	}
 
-                while((line = reader.readLine()) != null) {
-                    sb.append(line + "\n");
-                }
-                inputStream.close();
+	public String getKarutaHome() {
+		return karutaHome;
+	}
 
-                Gson gson = new Gson();
-                fileServerBuildinfo = gson.fromJson(sb.toString(), BuildInfo.class);
+	public String getProperty(final String key) {
+		return properties.getProperty(key);
+	}
 
-            } catch (IOException e) {
-                logger.error("Can't get Fileserver Version, the request to '{}' provided this error ", url, e);
-            }
-        }
+	public String getProperty(final String key, final String defaultValue) {
+		final String value = properties.getProperty(key);
+		if (value == null) {
+			return defaultValue;
+		}
+		return value;
+	}
 
-        logger.info("Loaded from '{}' build information: {}", url, this.fileServerBuildinfo);
-    }
+	public String getRequiredProperty(final String key) throws IllegalStateException {
+		final String value = properties.getProperty(key);
+		if (value == null) {
+			logger.error("Required property key '" + key + "' not found");
+			throw new IllegalStateException("Required key '" + key + "' not found");
+		}
+		return value;
+	}
 
-    public String getConfigPath() {
-        return configPath;
-    }
+	public String getServletName() {
+		return servletName;
+	}
 
-    public String getKarutaHome() {
-        return karutaHome;
-    }
+	private void loadBuildedInfo(final ServletContext context) {
+		final InputStream inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
+		Manifest manifest = null;
+		try {
+			manifest = new Manifest(inputStream);
+		} catch (final IOException e) {
+			logger.error("The war have a build problem in generating Manifest.mf file !");
+			return;
+		}
+		final Attributes attr = manifest.getMainAttributes();
 
-    public String getServletName() {
-        return servletName;
-    }
+		final BuildInfo bi = new BuildInfo();
+		bi.version = attr.getValue("Implementation-Version");
+		bi.buildTime = attr.getValue("Build-Time");
+		bi.builtBy = attr.getValue("Built-By");
+		this.buildInfo = bi;
+		logger.info("Loaded from META-INF/MANIFEST.MF build information: {}", this.buildInfo);
+	}
 
-    public BuildInfo getBuildInfo() {
-        return buildInfo;
-    }
+	private void loadConfigDirectory(final ServletContext context) throws IOException, InternalError {
+		final String configEnvDir = System.getenv(KARUTA_ENV_HOME);
+		final String configPropDir = System.getProperty(KARUTA_PROP_HOME);
+		// The jvm property override the environment property if set
+		final String configDir = (configPropDir != null && !configPropDir.trim().isEmpty()) ? configPropDir
+				: configEnvDir;
+		servletName = context.getContextPath();
+		if (configDir != null && !configDir.trim().isEmpty()) {
+			final File base = new File(configDir.trim());
+			if (!base.exists() || !base.isDirectory() || !base.canWrite()) {
+				logger.error("The environment variable '" +
+						KARUTA_ENV_HOME +
+						"' '" +
+						configEnvDir +
+						"' or the jvm property '" +
+						KARUTA_PROP_HOME +
+						"' '" +
+						configPropDir +
+						"' doesn't exist or isn't writable. Please provide a writable directory path !");
+				throw new IllegalArgumentException("The environment variable '" +
+						KARUTA_ENV_HOME +
+						"' '" +
+						configEnvDir +
+						"' or the jvm property '" +
+						KARUTA_PROP_HOME +
+						"' '" +
+						configPropDir +
+						"' doesn't exist or isn't writable. Please provide a writable directory path !");
+			}
+			setConfigFolder(base);
+		} else {
+			final String defaultDir = System.getProperty("catalina.base");
+			logger.warn("The environment variable '" +
+					KARUTA_ENV_HOME +
+					"' or the jvm property '" +
+					KARUTA_PROP_HOME +
+					"' wasn't set." +
+					" Use theses variables to set a custom configuration path outside of tomcat installation." +
+					" Fallback on default folder '" +
+					defaultDir +
+					"'.");
+			final File base = new File(defaultDir);
+			if (!base.exists() || !base.isDirectory() || !base.canWrite()) {
+				logger.error("The folder '" +
+						defaultDir +
+						"' provided from 'catalina.base' doesn't exist or isn't writable. It's required for configuration files !");
+				throw new IllegalArgumentException("The folder '" +
+						defaultDir +
+						"' provided from 'catalina.base' doesn't exist or isn't writable. It's required for configuration files !");
+			}
+			setConfigFolder(base);
 
-    public BuildInfo getFileServerBuildinfo() {
-        if (fileServerBuildinfo == null) {
-            this.loadFileserverBuildedInfo();
-        }
-        return fileServerBuildinfo;
-    }
+		}
+	}
 
-    public class BuildInfo {
-        protected String version;
-        protected String buildTime;
-        protected String builtBy;
+	private void loadFileserverBuildedInfo() {
+		String url = ConfigUtils.getInstance().getProperty("fileserver");
+		url = url.endsWith("/") ? url + "rest/api/version" : url + "/rest/api/version";
 
-        public String getVersion() {
-            return version;
-        }
+		final Set<Header> headers = new HashSet<>();
+		headers.add(new BasicHeader("Content-Type", MediaType.APPLICATION_JSON));
+		headers.add(new BasicHeader("Accept", MediaType.APPLICATION_JSON));
+		headers.add(new BasicHeader("Accept-Charset", StandardCharsets.UTF_8.name()));
+		final HttpResponse response = HttpClientUtils.goGet(headers, url);
+		if (response != null) {
+			final HttpEntity httpentity = response.getEntity();
+			try {
+				final InputStream inputStream = httpentity.getContent();
 
-        public String getBuildTime() {
-            return buildTime;
-        }
+				final BufferedReader reader = new BufferedReader(
+						new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8);
+				final StringBuilder sb = new StringBuilder();
+				String line = null;
 
-        public String getBuiltBy() {
-            return builtBy;
-        }
+				while ((line = reader.readLine()) != null) {
+					sb.append(line + "\n");
+				}
+				inputStream.close();
 
-        @Override
-        public String toString() {
-            return new StringJoiner(", ", BuildInfo.class.getSimpleName() + "[", "]")
-                    .add("version='" + version + "'")
-                    .add("buildTime='" + buildTime + "'")
-                    .add("builtBy='" + builtBy + "'")
-                    .toString();
-        }
-    }
+				final Gson gson = new Gson();
+				fileServerBuildinfo = gson.fromJson(sb.toString(), BuildInfo.class);
+
+			} catch (final IOException e) {
+				logger.error("Can't get Fileserver Version, the request to '{}' provided this error ", url, e);
+			}
+		}
+
+		logger.info("Loaded from '{}' build information: {}", url, this.fileServerBuildinfo);
+	}
+
+	private void setConfigFolder(final File base) throws IOException {
+		try {
+			karutaHome = base.getCanonicalPath();
+			configPath = karutaHome + servletName + "_config" + File.separatorChar;
+			logger.info("Karuta-backend Servlet configpath @ " + configPath);
+		} catch (final IOException e) {
+			logger.error("The configuration directory '" + karutaHome + "' wasn't defined", e);
+			throw e;
+		}
+	}
 }

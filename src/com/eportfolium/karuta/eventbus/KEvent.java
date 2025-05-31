@@ -17,17 +17,30 @@ package com.eportfolium.karuta.eventbus;
 
 import java.util.HashMap;
 
-import javax.ws.rs.core.MediaType;
-
 import org.w3c.dom.Document;
 
-public class KEvent
-{
-	public enum EventType {LOGIN, LOGOUT, PORTFOLIO, NODE, FILE};
-	public enum RequestType {GET, POST, PUT, DELETE};
-	public enum InputType {BINARY, TEXT, PARAMETER};
-	public enum OutputType {BINARY, XML, JSON};
-	public enum DataType {COMMENT}
+import jakarta.ws.rs.core.MediaType;
+
+public class KEvent {
+	public enum DataType {
+		COMMENT
+	};
+
+	public enum EventType {
+		LOGIN, LOGOUT, PORTFOLIO, NODE, FILE
+	};
+
+	public enum InputType {
+		BINARY, TEXT, PARAMETER
+	};
+
+	public enum OutputType {
+		BINARY, XML, JSON
+	};
+
+	public enum RequestType {
+		GET, POST, PUT, DELETE
+	}
 
 	public EventType eventType;
 	public RequestType requestType;
@@ -36,12 +49,12 @@ public class KEvent
 	public String mediaType = MediaType.APPLICATION_XML;
 	public DataType dataType;
 
-	public String uuid = null;   // uuid being edited (portfolio/node/context)
+	public String uuid = null; // uuid being edited (portfolio/node/context)
 	public String message = null;
-	public String inputData = null;  // Raw input data
-	public HashMap<String, String> inputParameter = null;    // Parameters given
+	public String inputData = null; // Raw input data
+	public HashMap<String, String> inputParameter = null; // Parameters given
 	public Integer nodeOwner = null;
 	public int status = 500;
 
-	public Document doc = null;  // Exchange format, current edition state
+	public Document doc = null; // Exchange format, current edition state
 }

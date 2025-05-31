@@ -24,10 +24,11 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
-import javax.servlet.ServletConfig;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
+
+import jakarta.servlet.ServletConfig;
 
 public class MailUtils {
 	//===============================================================
@@ -160,7 +161,7 @@ public class MailUtils {
 			}
 		}
 		fichierSrce.close();
-	
+
 		return config;
 	}
 	//*/

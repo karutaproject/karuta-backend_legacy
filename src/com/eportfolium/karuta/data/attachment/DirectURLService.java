@@ -38,12 +38,6 @@ import javax.activation.MimeType;
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -57,6 +51,13 @@ import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
+
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 public class DirectURLService extends HttpServlet {
 
@@ -266,14 +267,14 @@ public class DirectURLService extends HttpServlet {
 				/// Prevent sharing with another personal account after being evaluated.
 				/// Since the specific group will be the username (specific rights),
 				/// we can also know if student tried sharing it with self first
-
+				
 				///// Check if this user is not giving rights to self (existing user account)
-
+				
 				///// Check if user has some access to this uuid
 				/// Prevent somebody else to share another student node
-
+				
 				///// Check if user has right to share
-
+				
 				//// Put person in specified group
 				//*/
 

@@ -57,9 +57,6 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import javax.activation.MimeType;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -74,8 +71,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload2.core.DiskFileItemFactory;
+import org.apache.commons.fileupload2.jakarta.servlet6.JakartaServletFileUpload;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.Header;
@@ -104,6 +101,11 @@ import com.eportfolium.karuta.data.utils.SqlUtils;
 import com.eportfolium.karuta.rest.RestWebApplicationException;
 import com.eportfolium.karuta.security.Credential;
 import com.eportfolium.karuta.security.NodeRight;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.ws.rs.core.Response.Status;
 
 /**
  * @author vassoill Implementation du dataProvider pour MySQL
@@ -11659,11 +11661,10 @@ public class MysqlDataProvider implements DataProvider {
 
 		//		boolean isMultipart = ServletFileUpload.isMultipartContent(httpServletRequest);
 		// Create a factory for disk-based file items
-		final DiskFileItemFactory factory = new DiskFileItemFactory();
+		final File repository = new File(System.getProperty("java.io.tmpdir", null));
+		final DiskFileItemFactory factory = DiskFileItemFactory.builder().setFile(repository).get();
 
 		httpServletRequest.getSession().getServletContext();
-		final File repository = new File(System.getProperty("java.io.tmpdir", null));
-		factory.setRepository(repository);
 
 		if (projectName == null) {
 			projectName = "";
@@ -11671,7 +11672,7 @@ public class MysqlDataProvider implements DataProvider {
 			projectName = projectName.trim();
 		}
 
-		new ServletFileUpload(factory);
+		new JakartaServletFileUpload(factory);
 
 		final DataInputStream inZip = new DataInputStream(inputStream);
 		// Parse the request
@@ -11680,7 +11681,7 @@ public class MysqlDataProvider implements DataProvider {
 		String[] allFiles;
 		final byte[] buff = new byte[0x100000]; // 1MB buffer
 
-		final javax.servlet.http.HttpSession session = httpServletRequest.getSession(true);
+		final HttpSession session = httpServletRequest.getSession(true);
 		final String baseDirString = ConfigUtils.getInstance().getServletName() + "_files" + File.separator;
 		final File baseDir = new File(repository, baseDirString);
 		logger.info("Zip file will be saved on {}", baseDir.getCanonicalPath());

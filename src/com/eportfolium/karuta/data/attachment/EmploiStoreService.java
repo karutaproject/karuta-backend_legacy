@@ -28,168 +28,173 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-import com.eportfolium.karuta.data.utils.ConfigUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.eportfolium.karuta.data.utils.ConfigUtils;
+
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
 public class EmploiStoreService extends HttpServlet {
-    private static final long serialVersionUID = -5389232495090560087L;
+	private static final long serialVersionUID = -5389232495090560087L;
 
-    private static final Logger logger = LoggerFactory.getLogger(EmploiStoreService.class);
+	private static final Logger logger = LoggerFactory.getLogger(EmploiStoreService.class);
 
-    public static final Pattern PATTERN_TOKEN = Pattern.compile("access_token\":\"([^\"]*)");
-    public static final String ROME_SERVICE_URL = "ROMEServiceURL";
-    public static final String ROME_CLIENT_ID = "ROMEclientid";
-    public static final String ROME_CLIENT_SECRET = "ROMEclientsecret";
-    public static final String ROME_SCOPE = "ROMEscope";
-    public static final String ROME_REPO_URL = "ROMERepoURL";
+	public static final Pattern PATTERN_TOKEN = Pattern.compile("access_token\":\"([^\"]*)");
+	public static final String ROME_SERVICE_URL = "ROMEServiceURL";
+	public static final String ROME_CLIENT_ID = "ROMEclientid";
+	public static final String ROME_CLIENT_SECRET = "ROMEclientsecret";
+	public static final String ROME_SCOPE = "ROMEscope";
+	public static final String ROME_REPO_URL = "ROMERepoURL";
 
-    private String serviceURL;
-    private String clientid;
-    private String clientsecret;
-    private String scopestr;
-    private String repoURL;
+	private String serviceURL;
+	private String clientid;
+	private String clientsecret;
+	private String scopestr;
+	private String repoURL;
 
-    public void init(ServletConfig config) throws ServletException {
-        super.init(config);
-        try {
-            ConfigUtils.init(getServletContext());
-        } catch (Exception e) {
-            logger.error("Can't init servlet:", e);
-            throw new ServletException(e);
-        }
-    }
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+		/// Only people from our system can query
+		final HttpSession session = request.getSession(false);
+		if (session == null || session.getAttribute("uid") == null) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			PrintWriter out;
+			try {
+				out = response.getWriter();
+				out.write("403");
+				out.close();
+			} catch (final IOException e) {
+				logger.error("Intercepted error", e);
+				//TODO something is missing
+			}
+			return;
+		}
 
-    private void lazyInitProps() {
-        if (serviceURL == null || clientid == null) {
-            serviceURL = ConfigUtils.getInstance().getRequiredProperty(ROME_SERVICE_URL);
-            clientid = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_ID);
-            clientsecret = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_SECRET);
-            scopestr = ConfigUtils.getInstance().getRequiredProperty(ROME_SCOPE);
-            repoURL = ConfigUtils.getInstance().getRequiredProperty(ROME_REPO_URL);
-        }
-    }
+		//// Login to service
+		try {
+			final String scope = String.format("application_%s%%20%s", clientid, scopestr);
+			final String body = String.format("grant_type=client_credentials&client_id=%s&client_secret=%s&scope=%s",
+					clientid, clientsecret, scope);
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
-        /// Only people from our system can query
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("uid") == null) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            PrintWriter out;
-            try {
-                out = response.getWriter();
-                out.write("403");
-                out.close();
-            } catch (IOException e) {
-                logger.error("Intercepted error", e);
-                //TODO something is missing
-            }
-            return;
-        }
+			lazyInitProps();
 
-        //// Login to service
-        try {
-            final String scope = String.format("application_%s%%20%s", clientid, scopestr);
-            final String body = String.format("grant_type=client_credentials&client_id=%s&client_secret=%s&scope=%s", clientid, clientsecret, scope);
+			URL urlConn = new URL(serviceURL);
+			HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
+			connection.setDoOutput(true);
+			connection.setUseCaches(false);
+			connection.setInstanceFollowRedirects(false);
+			connection.setRequestMethod("POST");
+			connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-            lazyInitProps();
+			/// Send login information
+			final ByteArrayInputStream bais = new ByteArrayInputStream(body.getBytes());
+			final OutputStream outputData = connection.getOutputStream();
+			final int transferred = IOUtils.copy(bais, outputData);
+			if (transferred == body.length()) {
+				logger.debug("Send: Complete");
+			} else {
+				logger.error("Send mismatch: " + transferred + " != " + body.length());
+			}
 
-            URL urlConn = new URL(serviceURL);
-            HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
-            connection.setDoOutput(true);
-            connection.setUseCaches(false);
-            connection.setInstanceFollowRedirects(false);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			/// Read answer
+			int code = connection.getResponseCode();
+			String msg = connection.getResponseMessage();
+			if (code != HttpURLConnection.HTTP_OK) {
+				logger.error("Couldn't log: {}", msg);
+			} else {
+				logger.debug("Code: ({}) msg: {}", code, msg);
+			}
 
-            /// Send login information
-            ByteArrayInputStream bais = new ByteArrayInputStream(body.getBytes());
-            OutputStream outputData = connection.getOutputStream();
-            int transferred = IOUtils.copy(bais, outputData);
-            if (transferred == body.length())
-                logger.debug("Send: Complete");
-            else
-                logger.error("Send mismatch: " + transferred + " != " + body.length());
+			final StringBuilder logininfo = new StringBuilder();
+			String line;
+			final InputStream objReturn = connection.getInputStream();
+			final BufferedReader breader = new BufferedReader(new InputStreamReader(objReturn, StandardCharsets.UTF_8));
+			while ((line = breader.readLine()) != null) {
+				logininfo.append(line);
+			}
+			connection.disconnect();
 
-            /// Read answer
-            int code = connection.getResponseCode();
-            String msg = connection.getResponseMessage();
-            if (code != HttpURLConnection.HTTP_OK)
-                logger.error("Couldn't log: {}", msg);
-            else {
-                logger.debug("Code: ({}) msg: {}", code, msg);
-            }
+			/// Can't be bothered to parse json
+			final Matcher pmatcher = PATTERN_TOKEN.matcher(logininfo.toString());
+			String access_token = "";
+			if (pmatcher.find()) {
+				access_token = pmatcher.group(1);
+			}
+			logger.info("Current token: {}", access_token);
 
-            StringBuilder logininfo = new StringBuilder();
-            String line;
-            InputStream objReturn = connection.getInputStream();
-            BufferedReader breader = new BufferedReader(new InputStreamReader(objReturn, StandardCharsets.UTF_8));
-            while ((line = breader.readLine()) != null) {
-                logininfo.append(line);
-            }
-            connection.disconnect();
+			///// Send wanted query
+			String pathinfo = request.getPathInfo();
+			String query = request.getQueryString();
+			if ("/".equals(pathinfo) || pathinfo == null) {
+				pathinfo = "";
+				query = "?" + query;
+			} else {
+				query = "";
+			}
 
-            /// Can't be bothered to parse json
-            Matcher pmatcher = PATTERN_TOKEN.matcher(logininfo.toString());
-            String access_token = "";
-            if (pmatcher.find()) {
-                access_token = pmatcher.group(1);
-            }
-            logger.info("Current token: {}", access_token);
+			final String queryURL = String.format("%s%s%s", repoURL, pathinfo, query);
+			logger.info("Query to: {}", queryURL);
 
-            ///// Send wanted query
-            String pathinfo = request.getPathInfo();
-            String query = request.getQueryString();
-            if ("/".equals(pathinfo) || pathinfo == null) {
-                pathinfo = "";
-                query = "?" + query;
-            } else
-                query = "";
+			urlConn = new URL(queryURL);
+			connection = (HttpURLConnection) urlConn.openConnection();
+			connection.setRequestMethod("GET");
+			connection.setRequestProperty("Authorization", String.format("Bearer %s", access_token));
+			// Need some user agent, otherwise return 409
+			connection.setRequestProperty("User-Agent", "Error 409 without user-agent");
+			//			connection.connect();
 
-            final String queryURL = String.format("%s%s%s", repoURL, pathinfo, query);
-            logger.info("Query to: {}", queryURL);
+			code = connection.getResponseCode();
+			msg = connection.getResponseMessage();
 
-            urlConn = new URL(queryURL);
-            connection = (HttpURLConnection) urlConn.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty("Authorization", String.format("Bearer %s", access_token));
-            // Need some user agent, otherwise return 409
-            connection.setRequestProperty("User-Agent", "Error 409 without user-agent");
-//			connection.connect();
+			if (code != HttpURLConnection.HTTP_OK) {
+				logger.error("Couldn't get file: " + msg);
+				response.setStatus(code);
+				final PrintWriter writer = response.getWriter();
+				writer.write(msg);
+				writer.close();
+			} else {
+				final OutputStream output = response.getOutputStream();
+				/// Send data to report daemon
+				final InputStream inputData = connection.getInputStream();
+				IOUtils.copy(inputData, output);
+				inputData.close();
+				output.close();
+			}
 
-            code = connection.getResponseCode();
-            msg = connection.getResponseMessage();
+			connection.disconnect();
+		} catch (IOException | IllegalStateException e) {
+			logger.error("Intercepted error", e);
+			//TODO something is missing
+		}
 
-            if (code != HttpURLConnection.HTTP_OK) {
-                logger.error("Couldn't get file: " + msg);
-                response.setStatus(code);
-                PrintWriter writer = response.getWriter();
-                writer.write(msg);
-                writer.close();
-            } else {
-                OutputStream output = response.getOutputStream();
-                /// Send data to report daemon
-                InputStream inputData = connection.getInputStream();
-                IOUtils.copy(inputData, output);
-                inputData.close();
-                output.close();
-            }
+		response.setStatus(HttpServletResponse.SC_OK);
+	}
 
-            connection.disconnect();
-        } catch (IOException | IllegalStateException e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			ConfigUtils.init(getServletContext());
+		} catch (final Exception e) {
+			logger.error("Can't init servlet:", e);
+			throw new ServletException(e);
+		}
+	}
 
-        response.setStatus(HttpServletResponse.SC_OK);
-    }
+	private void lazyInitProps() {
+		if (serviceURL == null || clientid == null) {
+			serviceURL = ConfigUtils.getInstance().getRequiredProperty(ROME_SERVICE_URL);
+			clientid = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_ID);
+			clientsecret = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_SECRET);
+			scopestr = ConfigUtils.getInstance().getRequiredProperty(ROME_SCOPE);
+			repoURL = ConfigUtils.getInstance().getRequiredProperty(ROME_REPO_URL);
+		}
+	}
 }
