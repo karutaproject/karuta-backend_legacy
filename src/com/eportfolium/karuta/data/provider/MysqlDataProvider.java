@@ -59,7 +59,6 @@ import java.util.zip.ZipOutputStream;
 import javax.activation.MimeType;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -104,6 +103,8 @@ import com.eportfolium.karuta.data.utils.SqlUtils;
 import com.eportfolium.karuta.rest.RestWebApplicationException;
 import com.eportfolium.karuta.security.Credential;
 import com.eportfolium.karuta.security.NodeRight;
+
+import jakarta.ws.rs.core.Response.Status;
 
 /**
  * @author vassoill Implementation du dataProvider pour MySQL
@@ -9287,7 +9288,7 @@ public class MysqlDataProvider implements DataProvider {
 						doc = documentBuilder.parse(is);
 						attribNode = doc.getDocumentElement();
 						attribMap = attribNode.getAttributes();
-
+						
 						try
 						{
 							Node publicatt = attribMap.getNamedItem("public");
@@ -12987,6 +12988,8 @@ public class MysqlDataProvider implements DataProvider {
 				changeLevel = 99;
 			}
 
+			c.setAutoCommit(false);
+
 			switch (changeLevel) {
 			case 0: // Do admin and creator changes, with password
 				if (is_admin != null) {
@@ -13001,6 +13004,19 @@ public class MysqlDataProvider implements DataProvider {
 					st.setInt(1, is_adminInt);
 					st.setInt(2, userid2);
 					st.executeUpdate();
+				}
+				if (is_designer != null) {
+					int is_designerInt = 0;
+					if ("1".equals(is_designer)) {
+						is_designerInt = 1;
+					}
+
+					sql = "UPDATE credential SET is_designer = ? WHERE  userid = ?";
+
+					st = c.prepareStatement(sql);
+					st.setInt(1, is_designerInt);
+					st.setInt(2, userid2); // Change for self only
+					st.execute();
 				}
 				/// Can continue setting rights
 			case 1: // Only do creator changes, with password
@@ -13132,6 +13148,8 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 		}
+
+		c.setAutoCommit(true);
 
 		result1 = "" + userid2;
 

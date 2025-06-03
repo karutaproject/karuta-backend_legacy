@@ -24,117 +24,130 @@ import java.sql.Connection;
 import javax.activation.MimeType;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.provider.MysqlDataProvider;
 import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
 import com.eportfolium.karuta.rest.RestWebApplicationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
 
+import jakarta.ws.rs.core.Response.Status;
 
 public class HandlerDatabase implements KEventHandler {
-    private static final Logger logger = LoggerFactory.getLogger(HandlerDatabase.class);
-    HttpServletRequest httpServletRequest;
-    HttpSession session;
-    int userId;
-    int groupId;
-    DataProvider dataProvider;
-    Connection connection;
+	private static final Logger logger = LoggerFactory.getLogger(HandlerDatabase.class);
+	HttpServletRequest httpServletRequest;
+	HttpSession session;
+	int userId;
+	int groupId;
+	DataProvider dataProvider;
+	Connection connection;
 
-    public HandlerDatabase(HttpServletRequest request, DataProvider provider) {
-        httpServletRequest = request;
-        dataProvider = provider;
-        try {
-            connection = SqlUtils.getConnection();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+	public HandlerDatabase(HttpServletRequest request, DataProvider provider) {
+		httpServletRequest = request;
+		dataProvider = provider;
+		try {
+			connection = SqlUtils.getConnection();
+		} catch (final Exception e) {
+			e.printStackTrace();
+		}
 
-        this.session = request.getSession(true);
-        Integer val = (Integer) session.getAttribute("uid");
-        if (val != null)
-            this.userId = val;
-        val = (Integer) session.getAttribute("gid");
-        if (val != null)
-            this.groupId = val;
-    }
+		this.session = request.getSession(true);
+		Integer val = (Integer) session.getAttribute("uid");
+		if (val != null) {
+			this.userId = val;
+		}
+		val = (Integer) session.getAttribute("gid");
+		if (val != null) {
+			this.groupId = val;
+		}
+	}
 
-    @Override
-    public boolean processEvent(KEvent event) {
+	Document parseString(String data)
+			throws UnsupportedEncodingException, SAXException, IOException, ParserConfigurationException {
+		final DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+		final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+		final Document doc = documentBuilder.parse(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)));
+		doc.setXmlStandalone(true);
 
-        //  initialize(httpServletRequest,true);
-        try {
-            switch (event.eventType) {
-                case LOGIN:
-                    String[] resultCredential = dataProvider.postCredentialFromXml(connection, this.userId, event.inputData, "", null);
-                    if (resultCredential != null) {
-                        String login1 = resultCredential[0];
-                        String tokenID = resultCredential[1];
+		return doc;
+	}
 
-                        if (tokenID == null) throw new RestWebApplicationException(Status.FORBIDDEN, "invalid credential or invalid group member");
-                        else if (tokenID.length() == 0) throw new RestWebApplicationException(Status.FORBIDDEN, "invalid credential or invalid group member");
+	@Override
+	public boolean processEvent(KEvent event) {
 
-                        this.userId = Integer.parseInt(resultCredential[3]);
-                        session.setAttribute("user", login1);
-                        session.setAttribute("uid", this.userId);
+		//  initialize(httpServletRequest,true);
+		try {
+			switch (event.eventType) {
+			case LOGIN:
+				final String[] resultCredential = dataProvider.postCredentialFromXml(connection, this.userId,
+						event.inputData, "", null);
+				if (resultCredential == null) {
+					throw new RestWebApplicationException(Status.FORBIDDEN,
+							"invalid credential or invalid group member");
+				}
+				final String login1 = resultCredential[0];
+				final String tokenID = resultCredential[1];
 
-                        event.status = 200;
-                        event.doc = parseString(resultCredential[2]);
+				if (tokenID == null) {
+					throw new RestWebApplicationException(Status.FORBIDDEN,
+							"invalid credential or invalid group member");
+				} else if (tokenID.length() == 0) {
+					throw new RestWebApplicationException(Status.FORBIDDEN,
+							"invalid credential or invalid group member");
+				}
 
-                        logger.debug("LOGIN event");
-                    } else throw new RestWebApplicationException(Status.FORBIDDEN, "invalid credential or invalid group member");
+				this.userId = Integer.parseInt(resultCredential[3]);
+				session.setAttribute("user", login1);
+				session.setAttribute("uid", this.userId);
 
-                    break;
+				event.status = 200;
+				event.doc = parseString(resultCredential[2]);
 
-                case NODE:
-                    if (event.requestType == KEvent.RequestType.POST) {
-                        String returnValue = dataProvider.postNode(connection, new MimeType("text/xml"), event.uuid, event.inputData, this.userId, this.groupId, true).toString();
-                        if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
-                            event.message = "Vous n'avez pas les droits d'acces";
-                            event.status = 403;
-                        } else {
-                            event.status = 200;
-                            event.doc = parseString(returnValue);
-                        }
+				logger.debug("LOGIN event");
 
-                        logger.debug("POST NODE event");
-                    }
-                    break;
+				break;
 
-                default:
-                    break;
-            }
+			case NODE:
+				if (event.requestType == KEvent.RequestType.POST) {
+					final String returnValue = dataProvider.postNode(connection, new MimeType("text/xml"), event.uuid,
+							event.inputData, this.userId, this.groupId, true).toString();
+					if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
+						event.message = "Vous n'avez pas les droits d'acces";
+						event.status = 403;
+					} else {
+						event.status = 200;
+						event.doc = parseString(returnValue);
+					}
+
+					logger.debug("POST NODE event");
+				}
+				break;
+
+			default:
+				break;
+			}
 			/*
 			String xmlUsers = dataProvider.getUsersByGroup(this.userId);
 			logRestRequest(httpServletRequest, "", xmlUsers, Status.OK.getStatusCode());
 			return xmlUsers;
 			//*/
-        } catch (Exception ex) {
-            logger.error("Intercepted error", ex);
+		} catch (final Exception ex) {
+			logger.error("Intercepted error", ex);
 			/*
 			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
 			//*/
-        }
+		}
 
-        return true;
-    }
-
-    Document parseString(String data) throws UnsupportedEncodingException, SAXException, IOException, ParserConfigurationException {
-        DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
-        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-        Document doc = documentBuilder.parse(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)));
-        doc.setXmlStandalone(true);
-
-        return doc;
-    }
+		return true;
+	}
 
 }

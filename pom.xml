@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.eportfolium.karuta</groupId>
 	<artifactId>karuta-backend</artifactId>
-    <version>2.3.2-SNAPSHOT</version>
+	<version>2.3.2-SNAPSHOT</version>
 	<packaging>war</packaging>
 	<name>${project.groupId}:${project.artifactId}</name>
 	<description>The backend part of the Karuta project that manage portfolios</description>
@@ -46,51 +46,57 @@
 		</snapshotRepository>
 		<repository>
 			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+			<url>
+				https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
 		</repository>
 	</distributionManagement>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<JACKSON_VER>1.9.13</JACKSON_VER>
-		<JERSEY_VER>2.34</JERSEY_VER>
+		<JERSEY_VER>3.0.0-M1</JERSEY_VER>
 		<CAS_VER>3.6.4</CAS_VER>
-		<xmlgraphics.version>2.7</xmlgraphics.version>
+		<xmlgraphics.version>2.11</xmlgraphics.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
-			<version>3.1.0</version>
+			<version>4.0.1</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
-			<groupId>org.javassist</groupId>
-			<artifactId>javassist</artifactId>
-			<version>3.29.0-GA</version>
+			<groupId>jakarta.ws.rs</groupId>
+			<artifactId>jakarta.ws.rs-api</artifactId>
+			<version>3.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpcore</artifactId>
+			<version>4.4.16</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.17.0</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.activation</groupId>
+			<artifactId>activation</artifactId>
+			<version>1.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.activation</groupId>
+			<artifactId>jakarta.activation-api</artifactId>
+			<version>2.1.3</version>
 		</dependency>
 
 		<dependency>
-			<groupId>asm</groupId>
-			<artifactId>asm</artifactId>
-			<version>3.3.1</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.avalon.framework</groupId>
-			<artifactId>avalon-framework-api</artifactId>
-			<version>4.3.1</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.avalon.framework</groupId>
-			<artifactId>avalon-framework-impl</artifactId>
-			<version>4.3.1</version>
-		</dependency>
-		<dependency>
 			<groupId>org.sakaiproject.basiclti</groupId>
 			<artifactId>basiclti-util</artifactId>
-			<version>22.2</version>
+			<version>23.3</version>
 			<exclusions>
 				<exclusion>
 					<groupId>net.oauth.core</groupId>
@@ -138,7 +144,7 @@
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
-			<version>1.15</version>
+			<version>1.18.0</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-fileupload</groupId>
@@ -148,21 +154,21 @@
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
-			<version>2.11.0</version>
+			<version>2.19.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-text</artifactId>
-			<version>1.10.0</version>
+			<version>1.13.1</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-logging</groupId>
 			<artifactId>commons-logging</artifactId>
-			<version>1.2</version>
+			<version>1.3.5</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.xmlgraphics</groupId>
-			<artifactId>fop</artifactId>
+			<artifactId>fop-core</artifactId>
 			<version>${xmlgraphics.version}</version>
 			<exclusions>
 				<exclusion>
@@ -191,18 +197,18 @@
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
-			<version>2.9.0</version>
+			<version>2.13.1</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
-			<version>4.5.13</version>
+			<version>4.5.14</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpmime</artifactId>
-			<version>4.5.13</version>
+			<version>4.5.14</version>
 		</dependency>
 		<dependency>
 			<groupId>org.imgscalr</groupId>
@@ -230,7 +236,7 @@
 		<dependency>
 			<groupId>org.json</groupId>
 			<artifactId>json</artifactId>
-			<version>20231013</version>
+			<version>20250517</version>
 		</dependency>
 		<dependency>
 			<groupId>com.googlecode.json-simple</groupId>
@@ -251,18 +257,23 @@
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
-			<version>1.2.13</version>
+			<version>1.5.18</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>2.0.10</version>
 		</dependency>
 
 		<dependency>
-			<groupId>mysql</groupId>
-			<artifactId>mysql-connector-java</artifactId>
-			<version>8.0.29</version>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
+			<version>8.0.33</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mariadb.jdbc</groupId>
 			<artifactId>mariadb-java-client</artifactId>
-			<version>3.0.6</version>
+			<version>3.5.3</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ning</groupId>
@@ -297,12 +308,12 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-pool2</artifactId>
-			<version>2.11.1</version>
+			<version>2.12.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-dbcp2</artifactId>
-			<version>2.9.0</version>
+			<version>2.13.0</version>
 		</dependency>
 
 		<dependency>
@@ -313,12 +324,12 @@
 		<dependency>
 			<groupId>org.bitbucket.b_c</groupId>
 			<artifactId>jose4j</artifactId>
-			<version>0.9.4</version>
+			<version>0.9.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.servicemix.bundles</groupId>
 			<artifactId>org.apache.servicemix.bundles.xalan</artifactId>
-			<version>2.7.2_3</version><!--$NO-MVN-MAN-VER$-->
+			<version>2.7.3_3</version><!--$NO-MVN-MAN-VER$-->
 			<exclusions>
 				<exclusion>
 					<groupId>xml-apis</groupId>
@@ -334,30 +345,50 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-clean-plugin</artifactId>
-					<version>3.2.0</version>
+					<version>3.5.0</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-install-plugin</artifactId>
-					<version>3.1.0</version>
+					<version>3.1.4</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-deploy-plugin</artifactId>
-					<version>3.0.0</version>
+					<version>3.1.4</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
-					<version>3.0.0-M7</version>
+					<version>3.5.3</version>
 				</plugin>
 			</plugins>
 		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>3.5.0</version>
+				<executions>
+					<execution>
+						<id>enforce-maven</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireMavenVersion>
+									<version>3.6.3</version>
+								</requireMavenVersion>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.2.1</version>
+				<version>3.3.1</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -370,7 +401,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>3.4.1</version>
+				<version>3.11.2</version>
 				<executions>
 					<execution>
 						<id>attach-javadocs</id>
@@ -386,7 +417,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.11.0</version>
+				<version>3.14.0</version>
 				<configuration>
 					<fork>true</fork>
 					<source>9</source>
@@ -397,7 +428,7 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>exec-maven-plugin</artifactId>
-				<version>1.6.0</version>
+				<version>3.5.1</version>
 				<configuration>
 					<executable>java</executable>
 					<arguments>
@@ -411,7 +442,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-war-plugin</artifactId>
-				<version>3.3.2</version>
+				<version>3.4.0</version>
 				<configuration>
 					<failOnMissingWebXml>false</failOnMissingWebXml>
 					<warName>karuta-backend</warName>
@@ -443,7 +474,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-resources-plugin</artifactId>
-				<version>3.3.0</version>
+				<version>3.3.1</version>
 				<configuration>
 					<encoding>UTF-8</encoding>
 				</configuration>
@@ -461,21 +492,21 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-release-plugin</artifactId>
-				<version>3.0.0-M7</version>
+				<version>3.1.1</version>
 				<configuration>
 					<autoVersionSubmodules>true</autoVersionSubmodules>
 					<localCheckout>true</localCheckout>
 					<tagNameFormat>@{project.version}</tagNameFormat>
 					<pushChanges>true</pushChanges>
 					<useReleaseProfile>false</useReleaseProfile>
-                    <releaseProfiles>release</releaseProfiles>
-                    <goals>deploy</goals>
+					<releaseProfiles>release</releaseProfiles>
+					<goals>deploy</goals>
 				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>3.0.1</version>
+				<version>3.2.7</version>
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
@@ -486,17 +517,17 @@
 					</execution>
 				</executions>
 			</plugin>
-					<plugin>
-						<groupId>org.sonatype.plugins</groupId>
-						<artifactId>nexus-staging-maven-plugin</artifactId>
-						<version>1.6.13</version>
-            <extensions>true</extensions>
-						<configuration>
-							<serverId>ossrh</serverId>
-							<nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
-							<autoReleaseAfterClose>true</autoReleaseAfterClose>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<version>1.7.0</version>
+				<extensions>true</extensions>
+				<configuration>
+					<serverId>ossrh</serverId>
+					<nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+					<autoReleaseAfterClose>true</autoReleaseAfterClose>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 </project>

@@ -15,22 +15,26 @@
 
 package com.eportfolium.karuta.rest;
 
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response.Status;
 
-
-public class RestWebApplicationException extends WebApplicationException
-{
+public class RestWebApplicationException extends WebApplicationException {
 	Status stat;
 	String msg;
-	public RestWebApplicationException(Status status, String message)
-	{
+
+	public RestWebApplicationException(Status status, String message) {
 		super(Response.status(status).entity(message).type(MediaType.TEXT_PLAIN).build());
 		msg = message;
 		stat = status;
 	}
-	public String getCustomMessage(){ return msg; }
-	public Status getStatus(){ return stat; }
+
+	public String getCustomMessage() {
+		return msg;
+	}
+
+	public Status getStatus() {
+		return stat;
+	}
 }
