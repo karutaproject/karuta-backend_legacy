@@ -45,6 +45,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -750,14 +751,13 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	private int deleteMySqlResource(Connection c, String resourceUuid, int userId, int groupId) throws SQLException {
-		String sql;
-		PreparedStatement st;
+		final String sql = " DELETE FROM resource_table WHERE node_uuid=uuid2bin(?) ";
 
 		if (cred.hasNodeRight(c, userId, groupId, resourceUuid, Credential.DELETE)) {
-			sql = " DELETE FROM resource_table WHERE node_uuid=uuid2bin(?) ";
-			st = c.prepareStatement(sql);
-			st.setString(1, resourceUuid);
-			return st.executeUpdate();
+			try (PreparedStatement st = c.prepareStatement(sql)) {
+				st.setString(1, resourceUuid);
+				return st.executeUpdate();
+			}
 		}
 		return 0;
 	}
@@ -1792,7 +1792,7 @@ public class MysqlDataProvider implements DataProvider {
 
 			result.append("</groupRight>");
 		}
-
+		res.close();
 		result.append("</groupRights>");
 
 		return result.toString();
@@ -1818,7 +1818,7 @@ public class MysqlDataProvider implements DataProvider {
 				result.append("</groupRightInfo>");
 			}
 		}
-
+		res.close();
 		result.append("</groupRightsInfos>");
 
 		return result.toString();
@@ -1826,28 +1826,20 @@ public class MysqlDataProvider implements DataProvider {
 
 	@Override
 	public String getGroupsByRole(Connection c, int userId, String portfolioUuid, String role) {
-		String sql;
-		PreparedStatement st;
-		ResultSet res;
+		final String sql = "SELECT DISTINCT gu.gid FROM group_right_info gri, group_info gi, group_user gu WHERE gu.gid = gi.gid AND gi.grid = gri.grid AND gri.portfolio_id = uuid2bin(?) AND gri.label = ?";
+		final StringBuilder result = new StringBuilder("<groups>");
 
-		try {
-			sql = "SELECT DISTINCT gu.gid FROM group_right_info gri, group_info gi, group_user gu WHERE gu.gid = gi.gid AND gi.grid = gri.grid AND gri.portfolio_id = uuid2bin(?) AND gri.label = ?";
-			st = c.prepareStatement(sql);
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			st.setString(1, portfolioUuid);
 			st.setString(2, role);
-			res = st.executeQuery();
+			try (ResultSet res = st.executeQuery()) {
+				while (res.next()) {
+					result.append(DomUtils.getXmlElementOutput("group", res.getString("gid")));
+				}
+			}
 		} catch (final Exception ex) {
 			ex.printStackTrace();
 			return null;
-		}
-
-		final StringBuilder result = new StringBuilder("<groups>");
-		try {
-			while (res.next()) {
-				result.append(DomUtils.getXmlElementOutput("group", res.getString("gid")));
-			}
-		} catch (final SQLException e) {
-			e.printStackTrace();
 		}
 
 		result.append("</groups>");
@@ -1892,27 +1884,22 @@ public class MysqlDataProvider implements DataProvider {
 
 	@Override
 	public String getInfUser(Connection c, int userId, int userid) {
-		PreparedStatement st;
-		String sql;
-		ResultSet res;
-		String result = "";
+		//requetes SQL permettant de recuperer toutes les informations
+		//dans la table credential pour un userid(utilisateur) particulier
+		final String sql = "SELECT * FROM credential c " +
+				"LEFT JOIN credential_substitution cs " +
+				"ON c.userid=cs.userid " +
+				"WHERE c.userid = ?";
+		final StringBuilder result = new StringBuilder();
 
-		try {
-			//requetes SQL permettant de recuperer toutes les informations
-			//dans la table credential pour un userid(utilisateur) particulier
-			sql = "SELECT * FROM credential c " +
-					"LEFT JOIN credential_substitution cs " +
-					"ON c.userid=cs.userid " +
-					"WHERE c.userid = ?";
-			st = c.prepareStatement(sql);
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			st.setInt(1, userid);
-			res = st.executeQuery();
+			try (ResultSet res = st.executeQuery()) {
 
-			if (!res.next()) {
-				return "User " + userid + " not found";
-			}
-			//traitement de la reponse, renvoie des donnees sous forme d'un xml
-			try {
+				if (!res.next()) {
+					return "User " + userid + " not found";
+				}
+				//traitement de la reponse, renvoie des donnees sous forme d'un xml
 				String subs = res.getString("id");
 				if (subs != null) {
 					subs = "1";
@@ -1920,31 +1907,26 @@ public class MysqlDataProvider implements DataProvider {
 					subs = "0";
 				}
 
-				result += "<user ";
-				result += DomUtils.getXmlAttributeOutput("id", res.getString("userid")) + " ";
-				result += ">";
-				result += DomUtils.getXmlElementOutput("username", res.getString("login"));
-				result += DomUtils.getXmlElementOutput("firstname", res.getString("display_firstname"));
-				result += DomUtils.getXmlElementOutput("lastname", res.getString("display_lastname"));
-				result += DomUtils.getXmlElementOutput("email", res.getString("email"));
-				result += DomUtils.getXmlElementOutput("admin", res.getString("is_admin"));
-				result += DomUtils.getXmlElementOutput("designer", res.getString("is_designer"));
-				result += DomUtils.getXmlElementOutput("active", res.getString("active"));
-				result += DomUtils.getXmlElementOutput("substitute", subs);
-				result += DomUtils.getXmlElementOutput("other", res.getString("other"));
-				result += "</user>";
-
-			} catch (final SQLException e) {
-				e.printStackTrace();
+				result.append("<user ");
+				result.append(DomUtils.getXmlAttributeOutput("id", res.getString("userid"))).append(" ");
+				result.append(">");
+				result.append(DomUtils.getXmlElementOutput("username", res.getString("login")));
+				result.append(DomUtils.getXmlElementOutput("firstname", res.getString("display_firstname")));
+				result.append(DomUtils.getXmlElementOutput("lastname", res.getString("display_lastname")));
+				result.append(DomUtils.getXmlElementOutput("email", res.getString("email")));
+				result.append(DomUtils.getXmlElementOutput("admin", res.getString("is_admin")));
+				result.append(DomUtils.getXmlElementOutput("designer", res.getString("is_designer")));
+				result.append(DomUtils.getXmlElementOutput("active", res.getString("active")));
+				result.append(DomUtils.getXmlElementOutput("substitute", subs));
+				result.append(DomUtils.getXmlElementOutput("other", res.getString("other")));
+				result.append("</user>");
 			}
-
 		} catch (final SQLException e) {
 			logger.error("User " + userid + " not found", e);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "User " + userid + " not found");
-
 		}
 
-		return result;
+		return result.toString();
 	}
 
 	private String getLinearXml(Connection c, String portfolioUuid, String rootuuid, int userId, int groupId,
@@ -2230,27 +2212,31 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
-	private ResultSet getMysqlNodeUuidBySemanticTag(Connection c, String portfolioUuid, String semantictag)
-			throws SQLException {
-		String sql;
-		PreparedStatement st;
+	private List<HashMap<String, String>> getMysqlNodeUuidBySemanticTag(Connection c, String portfolioUuid,
+			String semantictag) throws SQLException {
+		final String sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_node_uuid) AS res_node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, bin2uuid(res_context_node_uuid) AS res_context_node_uuid, " +
+				"node_children_uuid, code, asm_type, label, node_order " +
+				"FROM node WHERE portfolio_id = uuid2bin(?) AND " +
+				"semantictag LIKE ? ORDER BY code, node_order";
 		final String text = "%" + semantictag + "%";
+		final List<HashMap<String, String>> result = new ArrayList<HashMap<String, String>>();
 
-		try {
-			sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_node_uuid) AS res_node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, bin2uuid(res_context_node_uuid) AS res_context_node_uuid, " +
-					"node_children_uuid, code, asm_type, label, node_order " +
-					"FROM node WHERE portfolio_id = uuid2bin(?) AND " +
-					"semantictag LIKE ? ORDER BY code, node_order";
-			st = c.prepareStatement(sql);
-
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			st.setString(1, portfolioUuid);
 			st.setString(2, text);
 
-			return st.executeQuery();
+			try (ResultSet rs = st.executeQuery()) {
+				while (rs.next()) {
+					final HashMap<String, String> resMap = new HashMap<String, String>();
+					resMap.put("node_uuid", rs.getString("node_uuid"));
+					resMap.put("asm_type", rs.getString("asm_type"));
+					result.add(resMap);
+				}
+			}
 		} catch (final Exception ex) {
 			ex.printStackTrace();
-			return null;
 		}
+		return result;
 	}
 
 	private ResultSet getMysqlOtherNodeUuidByPortfolioModelUuidBySemanticTag(Connection c, String portfolioModelUuid,
@@ -2434,25 +2420,22 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	public String[] getMysqlResourceByNodeParentUuid(Connection c, String nodeParentUuid) {
-		PreparedStatement st;
-		String sql;
-
+		// On recupere d'abord les informations dans la table structures
+		final String sql = "SELECT bin2uuid(r.node_uuid) AS node_uuid, r.xsi_type, r.content, r.user_id, r.modif_user_id, r.modif_date " +
+				"FROM resource_table r, node n " +
+				"WHERE r.node_uuid=n.res_node_uuid AND " +
+				"n.node_uuid = uuid2bin(?)";
 		String[] data = null;
 
-		try {
-			// On recupere d'abord les informations dans la table structures
-			sql = "SELECT bin2uuid(r.node_uuid) AS node_uuid, r.xsi_type, r.content, r.user_id, r.modif_user_id, r.modif_date " +
-					"FROM resource_table r, node n " +
-					"WHERE r.node_uuid=n.res_node_uuid AND " +
-					"n.node_uuid = uuid2bin(?)";
-			st = c.prepareStatement(sql);
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			st.setString(1, nodeParentUuid);
 
-			final ResultSet res = st.executeQuery();
-			if (res.next()) {
-				data = new String[2];
-				data[0] = res.getString("node_uuid");
-				data[1] = res.getString("content");
+			try (ResultSet res = st.executeQuery()) {
+				if (res.next()) {
+					data = new String[2];
+					data[0] = res.getString("node_uuid");
+					data[1] = res.getString("content");
+				}
 			}
 		} catch (final Exception e) {
 			e.printStackTrace();
@@ -3019,13 +3002,13 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object getNodeBySemanticTag(Connection c, MimeType outMimeType, String portfolioUuid, String semantictag,
 			int userId, int groupId, String userRole) throws Exception {
-		ResultSet res;
-		String nodeUuid;
+		String nodeUuid = null;
 
 		// On recupere d'abord l'uuid du premier noeud trouve correspondant au semantictag
-		res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semantictag);
-		res.next();
-		nodeUuid = res.getString("node_uuid");
+		final List<HashMap<String, String>> res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semantictag);
+		if (!res.isEmpty()) {
+			nodeUuid = res.getFirst().get("node_uuid");
+		}
 
 		if (!cred.hasNodeRight(c, userId, groupId, nodeUuid, Credential.READ)) {
 			return null;
@@ -3156,6 +3139,7 @@ public class MysqlDataProvider implements DataProvider {
 		return result;
 	}
 
+	@Deprecated
 	public Integer getNodeOrderByNodeUuid(Connection c, String nodeUuid) {
 		PreparedStatement st;
 		String sql;
@@ -3174,6 +3158,7 @@ public class MysqlDataProvider implements DataProvider {
 		}
 	}
 
+	@Deprecated
 	public String getNodeParentUuidByNodeUuid(Connection c, String nodeUuid) {
 		PreparedStatement st;
 		String sql;
@@ -3612,13 +3597,15 @@ public class MysqlDataProvider implements DataProvider {
 	public String getNodePortfolioId(Connection c, String nodeUuid) throws Exception {
 		final String sql = "SELECT bin2uuid(portfolio_id) FROM node WHERE node_uuid=uuid2bin(?)";
 		String portfolioid = "";
-		final PreparedStatement st = c.prepareStatement(sql);
-		st.setString(1, nodeUuid);
-		final ResultSet res = st.executeQuery();
-		if (res.next()) {
-			portfolioid = res.getString(1);
+
+		try (PreparedStatement st = c.prepareStatement(sql)) {
+			st.setString(1, nodeUuid);
+			try (ResultSet res = st.executeQuery()) {
+				if (res.next()) {
+					portfolioid = res.getString(1);
+				}
+			}
 		}
-		st.close();
 
 		return portfolioid;
 	}
@@ -3878,7 +3865,7 @@ public class MysqlDataProvider implements DataProvider {
 			res = st.executeQuery();
 
 			if (res.next()) {
-				ResultSet res1;
+				List<HashMap<String, String>> res1;
 
 				try {
 					res1 = getMysqlNodeUuidBySemanticTag(c, pid, semtag);
@@ -3888,15 +3875,15 @@ public class MysqlDataProvider implements DataProvider {
 				}
 
 				result.append("<nodes>");
-
-				while (res1 != null && res1.next()) {
+				for (final HashMap<String, String> resMap : res1) {
+					final String nodeUuid = resMap.get("node_uuid");
 					result.append("<node ");
-					result.append(DomUtils.getXmlAttributeOutput("id", res1.getString("node_uuid")));
+					result.append(DomUtils.getXmlAttributeOutput("id", nodeUuid));
 					result.append(">");
-					if (res1.getString("asm_type").equalsIgnoreCase("asmContext")) {
-						result.append(getRessource(c, res1.getString("node_uuid"), userId, groupId, "Context"));
+					if ("asmContext".equalsIgnoreCase(resMap.get("asm_type"))) {
+						result.append(getRessource(c, nodeUuid, userId, groupId, "Context"));
 					} else {
-						result.append(getRessource(c, res1.getString("node_uuid"), userId, groupId, "nonContext"));
+						result.append(getRessource(c, nodeUuid, userId, groupId, "nonContext"));
 					}
 					result.append("</node>");
 				}
@@ -3931,12 +3918,12 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object getNodesBySemanticTag(Connection c, MimeType outMimeType, int userId, int groupId,
 			String portfolioUuid, String semanticTag) throws SQLException {
-		final ResultSet res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semanticTag);
+		final List<HashMap<String, String>> res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semanticTag);
 		StringBuilder result = new StringBuilder();
 		if (outMimeType.getSubType().equals("xml")) {
 			result = new StringBuilder("<nodes>");
-			while (res.next()) {
-				final String nodeUuid = res.getString("node_uuid");
+			for (final HashMap<String, String> resMap : res) {
+				final String nodeUuid = resMap.get("node_uuid");
 				if (!cred.hasNodeRight(c, userId, groupId, nodeUuid, Credential.READ)) {
 					return null;
 				}
@@ -3951,12 +3938,12 @@ public class MysqlDataProvider implements DataProvider {
 
 			result = new StringBuilder("{ \"nodes\": { \"node\": [");
 			boolean firstPass = false;
-			while (res.next()) {
+			for (final HashMap<String, String> resMap : res) {
 				if (firstPass) {
 					result.append(",");
 				}
 				result.append("{ ");
-				result.append(DomUtils.getJsonAttributeOutput("id", res.getString("id"))).append(", ");
+				result.append(DomUtils.getJsonAttributeOutput("id", resMap.get("node_uuid"))).append(", ");
 
 				result.append("} ");
 				firstPass = true;
@@ -3968,6 +3955,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
+	@Deprecated
 	public Object getNodesParent(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId,
 			int groupId, String semtag_parent, String code_parent) throws Exception {
 		PreparedStatement st = null;
@@ -4626,37 +4614,32 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId,
 			String userRole, String resources, int substid) throws Exception {
-		PreparedStatement st;
-		String sql;
-		ResultSet res = null;
+		final String sql = "SELECT  bin2uuid(portfolio_id) AS portfolio_id,bin2uuid(root_node_uuid) as root_node_uuid, modif_user_id,modif_date, active, user_id " +
+				"FROM portfolio " +
+				"WHERE portfolio_id = uuid2bin(?) ";
 		final String pid = this.getPortfolioUuidByPortfolioCode(c, portfolioCode);
 		final boolean withResources = Boolean.parseBoolean(resources);
-		;
 		String result = "";
 
 		if (withResources) {
 			return this.getPortfolio(c, new MimeType("text/xml"), pid, userId, groupId, null, null, null, substid, null)
 					.toString();
 		}
-		try {
-			sql = "SELECT  bin2uuid(portfolio_id) AS portfolio_id,bin2uuid(root_node_uuid) as root_node_uuid, modif_user_id,modif_date, active, user_id " +
-					"FROM portfolio " +
-					"WHERE portfolio_id = uuid2bin(?) ";
-			st = c.prepareStatement(sql);
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			st.setString(1, pid);
-			res = st.executeQuery();
+			try (ResultSet res = st.executeQuery()) {
+				if (res.next()) {
+					result += "<portfolio ";
+					result += DomUtils.getXmlAttributeOutput("id", res.getString("portfolio_id")) + " ";
+					result += DomUtils.getXmlAttributeOutput("root_node_id", res.getString("root_node_uuid")) + " ";
+					result += ">";
+					result += getNodeXmlOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId, groupId,
+							userRole, null, false);
+					result += "</portfolio>";
+				}
+			}
 		} catch (final Exception e) {
 			logger.error("getPortfolioByCode error", e);
-		}
-
-		if (res.next()) {
-			result += "<portfolio ";
-			result += DomUtils.getXmlAttributeOutput("id", res.getString("portfolio_id")) + " ";
-			result += DomUtils.getXmlAttributeOutput("root_node_id", res.getString("root_node_uuid")) + " ";
-			result += ">";
-			result += getNodeXmlOutput(c, res.getString("root_node_uuid"), false, "nodeRes", userId, groupId, userRole,
-					null, false);
-			result += "</portfolio>";
 		}
 
 		return result;
@@ -4664,44 +4647,29 @@ public class MysqlDataProvider implements DataProvider {
 
 	@Override
 	public String getPortfolioByPortfolioGroup(Connection c, Integer portfolioGroupId, int userId) {
-		String sql;
-		PreparedStatement st = null;
-		ResultSet res = null;
+		final String sql = "SELECT bin2uuid(portfolio_id) AS portfolio_id FROM portfolio_group_members WHERE pg=?";
 
 		final StringBuilder result = new StringBuilder();
 		result.append("<group id=\"").append(portfolioGroupId).append("\">");
 		//		String result = "<group id=\""+portfolioGroupId+"\">";
-		try {
-			sql = "SELECT bin2uuid(portfolio_id) AS portfolio_id FROM portfolio_group_members WHERE pg=?";
-			st = c.prepareStatement(sql);
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			st.setInt(1, portfolioGroupId);
-			res = st.executeQuery();
-
-			while (res.next()) {
-				result.append("<portfolio");
-				//				result +="<portfolio";
-				result.append(" id=\"");
-				result.append(res.getString("portfolio_id"));
-				result.append("\"");
-				//				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("userid"))+" ";
-				result.append(">");
-				//				result += ">";
-				result.append("</portfolio>");
-				//				result += "</portfolio>";
+			try (ResultSet res = st.executeQuery()) {
+				while (res.next()) {
+					result.append("<portfolio");
+					//				result +="<portfolio";
+					result.append(" id=\"");
+					result.append(res.getString("portfolio_id"));
+					result.append("\"");
+					//				result += DomUtils.getXmlAttributeOutput("id", ""+res.getInt("userid"))+" ";
+					result.append(">");
+					//				result += ">";
+					result.append("</portfolio>");
+					//				result += "</portfolio>";
+				}
 			}
 		} catch (final SQLException e) {
 			e.printStackTrace();
-		} finally {
-			try {
-				if (res != null) {
-					res.close();
-				}
-				if (st != null) {
-					st.close();
-				}
-			} catch (final SQLException e) {
-				e.printStackTrace();
-			}
 		}
 
 		result.append("</group>");
@@ -4978,21 +4946,17 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	public String getPortfolioRootNode(Connection c, String portfolioUuid) throws SQLException {
-		PreparedStatement st;
-		String sql;
-		ResultSet res;
-
-		sql = "SELECT bin2uuid(root_node_uuid) AS root_node_uuid FROM portfolio WHERE portfolio_id = uuid2bin(?) ";
-		st = c.prepareStatement(sql);
-		st.setString(1, portfolioUuid);
-		res = st.executeQuery();
+		final String sql = "SELECT bin2uuid(root_node_uuid) AS root_node_uuid FROM portfolio WHERE portfolio_id = uuid2bin(?) ";
 		String root_node = "";
-		if (res.next()) {
-			root_node = res.getString("root_node_uuid");
-		}
 
-		st.close();
-		res.close();
+		try (PreparedStatement st = c.prepareStatement(sql)) {
+			st.setString(1, portfolioUuid);
+			try (ResultSet res = st.executeQuery()) {
+				if (res.next()) {
+					root_node = res.getString("root_node_uuid");
+				}
+			}
+		}
 
 		return root_node;
 	}
@@ -5719,26 +5683,22 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	public String getPortfolioUuidByPortfolioCode(Connection c, String portfolioCode) {
-		PreparedStatement st;
-		String sql;
-		ResultSet res;
+		final String sql = "SELECT bin2uuid(p.portfolio_id) AS portfolio_id " +
+				"FROM portfolio p, node n " +
+				"WHERE p.active=1 AND p.portfolio_id=n.portfolio_id AND p.root_node_uuid=n.node_uuid AND n.code = ?";
 
-		try {
-			sql = "SELECT bin2uuid(p.portfolio_id) AS portfolio_id " +
-					"FROM portfolio p, node n " +
-					"WHERE p.active=1 AND p.portfolio_id=n.portfolio_id AND p.root_node_uuid=n.node_uuid AND n.code = ?";
-			st = c.prepareStatement(sql);
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			st.setString(1, portfolioCode);
-			res = st.executeQuery();
-
-			if (res.next()) {
-				return res.getString("portfolio_id");
+			try (ResultSet res = st.executeQuery()) {
+				if (res.next()) {
+					return res.getString("portfolio_id");
+				}
 			}
 			return "";
 		} catch (final Exception ex) {
 			ex.printStackTrace();
-			return null;
 		}
+		return null;
 	}
 
 	@Override
@@ -6063,27 +6023,22 @@ public class MysqlDataProvider implements DataProvider {
 
 	@Override
 	public String getRoleUser(Connection c, int userId, int userid) {
-		PreparedStatement st;
-		String sql;
-		ResultSet res;
-
+		final String sql = "SELECT * FROM group_user gu, group_info gi, group_right_info gri WHERE userid = ? and gi.gid = gu.gid and gi.grid = gri.grid";
 		final StringBuilder result = new StringBuilder("<profiles>");
 
-		try {
-			sql = "SELECT * FROM group_user gu, group_info gi, group_right_info gri WHERE userid = ? and gi.gid = gu.gid and gi.grid = gri.grid";
-			st = c.prepareStatement(sql);
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			st.setInt(1, userid);
-			res = st.executeQuery();
-
 			result.append("<profile>");
 
-			while (res.next()) {
-				result.append("<group");
-				result.append(DomUtils.getXmlAttributeOutput("id", res.getString("gid"))).append(" ");
-				result.append(">");
-				result.append(DomUtils.getXmlElementOutput("label", res.getString("gi.label")));
-				result.append(DomUtils.getXmlElementOutput("role", res.getString("grid.label")));
-				result.append("</group>");
+			try (ResultSet res = st.executeQuery()) {
+				while (res.next()) {
+					result.append("<group");
+					result.append(DomUtils.getXmlAttributeOutput("id", res.getString("gid"))).append(" ");
+					result.append(">");
+					result.append(DomUtils.getXmlElementOutput("label", res.getString("gi.label")));
+					result.append(DomUtils.getXmlElementOutput("role", res.getString("grid.label")));
+					result.append("</group>");
+				}
 			}
 			result.append("</profile>");
 		} catch (final SQLException e) {
@@ -6552,6 +6507,7 @@ public class MysqlDataProvider implements DataProvider {
 			result.append(DomUtils.getXmlElementOutput("label", res.getString("label")));
 			result.append("</group>");
 		}
+		res.close();
 
 		result.append("</groups>");
 
@@ -6560,29 +6516,28 @@ public class MysqlDataProvider implements DataProvider {
 
 	@Override
 	public String getUserId(Connection c, String username, String email) throws Exception {
-		PreparedStatement st;
-		String sql;
-		ResultSet res;
 		String retval = "0";
 
-		try {
-			if (!"".equals(username) && username != null) {
-				sql = "SELECT userid FROM credential WHERE login = ? ";
-				st = c.prepareStatement(sql);
+		if (!"".equals(username) && username != null) {
+			final String sql = "SELECT userid FROM credential WHERE login = ? ";
+			try (PreparedStatement st = c.prepareStatement(sql)) {
 				st.setString(1, username);
-			} else if (!"".equals(email) && email != null) {
-				sql = "SELECT userid FROM credential WHERE email = ? ";
-				st = c.prepareStatement(sql);
+				try (ResultSet res = st.executeQuery()) {
+					if (res.next()) {
+						retval = res.getString(1);
+					}
+				}
+			}
+		} else if (!"".equals(email) && email != null) {
+			final String sql = "SELECT userid FROM credential WHERE email = ? ";
+			try (PreparedStatement st = c.prepareStatement(sql)) {
 				st.setString(1, email);
-			} else {
-				return retval;
+				try (ResultSet res = st.executeQuery()) {
+					if (res.next()) {
+						retval = res.getString(1);
+					}
+				}
 			}
-			res = st.executeQuery();
-			if (res.next()) {
-				retval = res.getString(1);
-			}
-		} catch (final Exception ex) {
-			ex.printStackTrace();
 		}
 
 		return retval;
@@ -14556,46 +14511,35 @@ public class MysqlDataProvider implements DataProvider {
 	public boolean touchPortfolio(Connection c, String fromNodeuuid, String fromPortuuid) {
 		boolean hasChanged = false;
 
-		String sql;
-		PreparedStatement st = null;
-		final ResultSet res = null;
+		if (fromNodeuuid != null) {
+			String sql = "UPDATE portfolio SET modif_date=NOW() ";
+			if (dbserveur.equals("oracle")) {
+				sql = "UPDATE portfolio SET modif_date=CURRENT_TIMESTAMP ";
+			}
+			sql += "WHERE portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
 
-		try {
-			if (fromNodeuuid != null) {
-				sql = "UPDATE portfolio SET modif_date=NOW() ";
-				if (dbserveur.equals("oracle")) {
-					sql = "UPDATE portfolio SET modif_date=CURRENT_TIMESTAMP ";
-				}
-				sql += "WHERE portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
-				st = c.prepareStatement(sql);
+			try (PreparedStatement st = c.prepareStatement(sql)) {
 				st.setString(1, fromNodeuuid);
 				st.executeUpdate();
 
 				hasChanged = true;
-			} else if (fromPortuuid != null) {
-				sql = "UPDATE portfolio SET modif_date=NOW() ";
-				if (dbserveur.equals("oracle")) {
-					sql = "UPDATE portfolio SET modif_date=CURRENT_TIMESTAMP ";
-				}
-				sql += "WHERE portfolio_id=uuid2bin(?)";
-				st = c.prepareStatement(sql);
+			} catch (final Exception ex) {
+				ex.printStackTrace();
+			}
+		} else if (fromPortuuid != null) {
+			String sql = "UPDATE portfolio SET modif_date=NOW() ";
+			if (dbserveur.equals("oracle")) {
+				sql = "UPDATE portfolio SET modif_date=CURRENT_TIMESTAMP ";
+			}
+			sql += "WHERE portfolio_id=uuid2bin(?)";
+
+			try (PreparedStatement st = c.prepareStatement(sql)) {
 				st.setString(1, fromPortuuid);
 				st.executeUpdate();
 
 				hasChanged = true;
-			}
-		} catch (final Exception ex) {
-			ex.printStackTrace();
-		} finally {
-			try {
-				if (res != null) {
-					res.close();
-				}
-				if (st != null) {
-					st.close();
-				}
-			} catch (final SQLException e) {
-				e.printStackTrace();
+			} catch (final Exception ex) {
+				ex.printStackTrace();
 			}
 		}
 
@@ -14747,18 +14691,15 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	private int updateMysqlResource(Connection c, String uuid, String xsiType, String content, int userId) {
-		String sql = "";
-		PreparedStatement st = null;
-
-		try {
-			if (xsiType != null) {
-				if (dbserveur.equals("mysql")) {
-					sql = "REPLACE INTO resource_table(node_uuid,xsi_type,content,user_id,modif_user_id,modif_date) ";
-					sql += "VALUES(uuid2bin(?),?,?,?,?,?)";
-				} else if (dbserveur.equals("oracle")) {
-					sql = "MERGE INTO resource_table d USING (SELECT uuid2bin(?) node_uuid,? xsi_type,? content,? user_id,? modif_user_id,? modif_date FROM DUAL) s ON (d.node_uuid = s.node_uuid) WHEN MATCHED THEN UPDATE SET d.xsi_type = s.xsi_type, d.content = s.content, d.user_id = s.user_id, d.modif_user_id = s.modif_user_id, d.modif_date = s.modif_date WHEN NOT MATCHED THEN INSERT (d.node_uuid, d.xsi_type, d.content, d.user_id, d.modif_user_id, d.modif_date) VALUES (s.node_uuid, s.xsi_type, s.content, s.user_id, s.modif_user_id, s.modif_date)";
-				}
-				st = c.prepareStatement(sql);
+		if (xsiType != null) {
+			String sql = "";
+			if (dbserveur.equals("mysql")) {
+				sql = "REPLACE INTO resource_table(node_uuid,xsi_type,content,user_id,modif_user_id,modif_date) ";
+				sql += "VALUES(uuid2bin(?),?,?,?,?,?)";
+			} else if (dbserveur.equals("oracle")) {
+				sql = "MERGE INTO resource_table d USING (SELECT uuid2bin(?) node_uuid,? xsi_type,? content,? user_id,? modif_user_id,? modif_date FROM DUAL) s ON (d.node_uuid = s.node_uuid) WHEN MATCHED THEN UPDATE SET d.xsi_type = s.xsi_type, d.content = s.content, d.user_id = s.user_id, d.modif_user_id = s.modif_user_id, d.modif_date = s.modif_date WHEN NOT MATCHED THEN INSERT (d.node_uuid, d.xsi_type, d.content, d.user_id, d.modif_user_id, d.modif_date) VALUES (s.node_uuid, s.xsi_type, s.content, s.user_id, s.modif_user_id, s.modif_date)";
+			}
+			try (PreparedStatement st = c.prepareStatement(sql)) {
 				st.setString(1, uuid);
 				st.setString(2, xsiType);
 				st.setString(3, content);
@@ -14769,34 +14710,26 @@ public class MysqlDataProvider implements DataProvider {
 				} else if (dbserveur.equals("oracle")) {
 					st.setTimestamp(6, SqlUtils.getCurrentTimeStamp2());
 				}
-
-			} else {
-				sql = "UPDATE  resource_table SET content = ?,user_id = ?,modif_user_id = ?,modif_date = ? WHERE node_uuid = uuid2bin(?) ";
-				st = c.prepareStatement(sql);
-				st.setString(1, content);
-				st.setInt(2, userId);
-				st.setInt(3, userId);
-				if (dbserveur.equals("mysql")) {
-					st.setString(4, SqlUtils.getCurrentTimeStamp());
-				} else if (dbserveur.equals("oracle")) {
-					st.setTimestamp(4, SqlUtils.getCurrentTimeStamp2());
-				}
-				st.setString(5, uuid);
-
+				return st.executeUpdate();
+			} catch (final Exception e) {
+				return 0;
 			}
+		}
+		final String sql = "UPDATE  resource_table SET content = ?,user_id = ?,modif_user_id = ?,modif_date = ? WHERE node_uuid = uuid2bin(?) ";
+		try (PreparedStatement st = c.prepareStatement(sql)) {
+			st.setString(1, content);
+			st.setInt(2, userId);
+			st.setInt(3, userId);
+			if (dbserveur.equals("mysql")) {
+				st.setString(4, SqlUtils.getCurrentTimeStamp());
+			} else if (dbserveur.equals("oracle")) {
+				st.setTimestamp(4, SqlUtils.getCurrentTimeStamp2());
+			}
+			st.setString(5, uuid);
+
 			return st.executeUpdate();
-		} catch (final Exception ex) {
-			logger.error(ex.getMessage());
-			ex.printStackTrace();
-			return -1;
-		} finally {
-			if (st != null) {
-				try {
-					st.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
+		} catch (final Exception e) {
+			return 0;
 		}
 	}
 

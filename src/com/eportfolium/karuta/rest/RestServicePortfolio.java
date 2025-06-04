@@ -1394,10 +1394,8 @@ public class RestServicePortfolio {
 		}
 
 		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-		Connection c = null;
 
-		try {
-			c = SqlUtils.getConnection();
+		try (Connection c = SqlUtils.getConnection()) {
 			final String returnValue = dataProvider.getNodeBySemanticTag(c, new MimeType("text/xml"), portfolioUuid,
 					semantictag, ui.userId, groupId, userrole).toString();
 			if (returnValue.length() != 0) {
@@ -1410,14 +1408,6 @@ public class RestServicePortfolio {
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		} finally {
-			try {
-				if (c != null) {
-					c.close();
-				}
-			} catch (final SQLException e) {
-				logger.error("Managed error", e);
-			}
 		}
 	}
 

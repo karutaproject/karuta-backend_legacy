@@ -88,25 +88,21 @@ public class Credential {
 			return -1;
 		}
 
-		///
-		ResultSet rs = null;
-		PreparedStatement stmt = null;
-		try {
-			final String query = "SELECT gri.grid " +
-					"FROM group_info gi, group_right_info gri, node n " +
-					"WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND gri.grid=gi.grid " +
-					"AND gi.label=?;";
-			stmt = c.prepareStatement(query);
+		final String query = "SELECT gri.grid " +
+				"FROM group_info gi, group_right_info gri, node n " +
+				"WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND gri.grid=gi.grid " +
+				"AND gi.label=?;";
+
+		try (PreparedStatement stmt = c.prepareStatement(query)) {
 			stmt.setString(1, nodeUuid);
 			stmt.setString(2, role);
-			rs = stmt.executeQuery();
-
-			if (rs.next()) {
-				return rs.getInt(1);
+			try (ResultSet rs = stmt.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt(1);
+				}
 			}
 		} catch (final SQLException e) {
 			e.printStackTrace();
-			return -1;
 		}
 		return -1;
 	}
@@ -202,8 +198,8 @@ public class Credential {
 						nodeRight.groupLabel = groupName;
 					}
 
-					st.close();
 					res.close();
+					st.close();
 				}
 
 				t2 = System.currentTimeMillis();
@@ -226,8 +222,8 @@ public class Credential {
 					nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
 				}
 
-				st.close();
 				res.close();
+				st.close();
 
 				t3 = System.currentTimeMillis();
 
@@ -326,16 +322,14 @@ public class Credential {
 	}
 
 	public int getOwner(Connection c, Integer userId, String portfolio) {
-		ResultSet rs = null;
-		PreparedStatement stmt = null;
-		try {
-			final String query = "SELECT modif_user_id FROM portfolio WHERE portfolio_id=uuid2bin(?)";
-			stmt = c.prepareStatement(query);
+		final String query = "SELECT modif_user_id FROM portfolio WHERE portfolio_id=uuid2bin(?)";
+		try (PreparedStatement stmt = c.prepareStatement(query)) {
 			stmt.setString(1, portfolio);
-			rs = stmt.executeQuery();
+			try (ResultSet rs = stmt.executeQuery()) {
 
-			if (rs.next()) {
-				return rs.getInt(1);
+				if (rs.next()) {
+					return rs.getInt(1);
+				}
 			}
 		} catch (final SQLException e) {
 			e.printStackTrace();
@@ -414,25 +408,22 @@ public class Credential {
 	//test pour l'affichage du getPortfolio
 	public NodeRight getPortfolioRight(Connection c, int userId, int groupId, String portfolioUuid, String droit,
 			String userRole) {
-		PreparedStatement st;
-		String sql;
-		ResultSet res;
+		final String sql = "SELECT user_id, modif_user_id, bin2uuid(root_node_uuid) as root_node_uuid FROM portfolio " +
+				"WHERE portfolio_id = uuid2bin(?)";
 		//		boolean reponse = false;
 		NodeRight reponse = new NodeRight(false, false, false, false, false, false);
 
-		try {
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			/// modif_user_id => current owner
 			//sql = "SELECT distinct portfolio_id FROM GroupRights gr, group_user gu, group_info gi, node n WHERE gu.gid = gi.gid AND gi.grid = gr.grid and gr.id = n.node_uuid AND gu.userid = ? and gr.grid =  '26'";
-			sql = "SELECT user_id, modif_user_id, bin2uuid(root_node_uuid) as root_node_uuid FROM portfolio " +
-					"WHERE portfolio_id = uuid2bin(?)";
-			st = c.prepareStatement(sql);
 			st.setString(1, portfolioUuid);
-			res = st.executeQuery();
-			if (res.next()) {
-				if (res.getInt("modif_user_id") == userId) { // Is the owner
-					reponse.add = reponse.delete = reponse.read = reponse.write = true;
-				} else { // Is the owner
-					reponse = getNodeRight(c, userId, groupId, res.getString("root_node_uuid"), droit, userRole);
+			try (ResultSet res = st.executeQuery()) {
+				if (res.next()) {
+					if (res.getInt("modif_user_id") == userId) { // Is the owner
+						reponse.add = reponse.delete = reponse.read = reponse.write = true;
+					} else { // Is the owner
+						reponse = getNodeRight(c, userId, groupId, res.getString("root_node_uuid"), droit, userRole);
+					}
 				}
 			}
 		} catch (final Exception ex) {
@@ -444,88 +435,50 @@ public class Credential {
 	}
 
 	public NodeRight getPublicRight(Connection c, int userId, int groupId, String node_uuid, String label) {
-		String sql;
-		PreparedStatement st = null;
-		ResultSet res = null;
+		final String sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
+				"FROM group_rights gr " +
+				"LEFT JOIN group_right_info gri ON gr.grid=gri.grid " +
+				"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
+				"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
+				"WHERE id=uuid2bin(?) " +
+				"AND gri.label='all' " +
+				"AND gu.userid=?";
 		final NodeRight nodeRight = new NodeRight(false, false, false, false, false, false);
 
 		/// userId doit être celui de publique, pire cas c'est un autre utilisateur
 		/// mais si cette personne n'as pas de droits, il n'y aura rien en retour
-		try {
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			/// A partir du moment ou c'est publique, peu importe le groupe d'appartenance
 			/// le noeud est accessible
-			sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
-					"FROM group_rights gr " +
-					"LEFT JOIN group_right_info gri ON gr.grid=gri.grid " +
-					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
-					"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
-					"WHERE id=uuid2bin(?) " +
-					"AND gri.label='all' " +
-					"AND gu.userid=?";
-			st = c.prepareStatement(sql);
 			st.setString(1, node_uuid);
 			st.setInt(2, userId);
 
-			res = st.executeQuery();
-			if (res.next()) {
-				nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
-				nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
-				nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
-				nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
+			try (ResultSet res = st.executeQuery()) {
+				if (res.next()) {
+					nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
+					nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
+					nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
+					nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
+				}
 			}
 		} catch (final Exception e) {
 			e.printStackTrace();
-		} finally {
-			if (st != null) {
-				try {
-					st.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
-			if (res != null) {
-				try {
-					res.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
 
 		return nodeRight;
 	}
 
 	public int getPublicUid(Connection c) {
-		String sql;
-		PreparedStatement st = null;
-		ResultSet res = null;
+		// Fetching 'sys_public' userid
+		final String sql = "SELECT userid FROM credential WHERE login='sys_public'";
 		int publicid = 0;
 
-		try {
-			// Fetching 'sys_public' userid
-			sql = "SELECT userid FROM credential WHERE login='sys_public'";
-			st = c.prepareStatement(sql);
-			res = st.executeQuery();
+		try (PreparedStatement st = c.prepareStatement(sql); ResultSet res = st.executeQuery()) {
 			if (res.next()) {
 				publicid = res.getInt(1);
 			}
 		} catch (final Exception e) {
 			e.printStackTrace();
-		} finally {
-			if (st != null) {
-				try {
-					st.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
-			if (res != null) {
-				try {
-					res.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
 
 		return publicid;
@@ -661,37 +614,17 @@ public class Credential {
 			return status;
 		}
 
-		///
-		ResultSet rs = null;
-		PreparedStatement stmt = null;
-		try {
-			final String query = "SELECT userid FROM credential WHERE userid=?  AND is_admin=1 ";
-			stmt = c.prepareStatement(query);
+		final String query = "SELECT userid FROM credential WHERE userid=?  AND is_admin=1 ";
+		try (PreparedStatement stmt = c.prepareStatement(query)) {
 			stmt.setInt(1, userId);
-			rs = stmt.executeQuery();
-
-			if (rs.next()) {
-				status = true;
+			try (ResultSet rs = stmt.executeQuery()) {
+				if (rs.next()) {
+					status = true;
+				}
 			}
-			;
 		} catch (final SQLException e) {
 			logger.error(e.getMessage());
 			e.printStackTrace();
-		} finally {
-			if (stmt != null) {
-				try {
-					stmt.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
-			if (rs != null) {
-				try {
-					rs.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
 
 		return status;
@@ -744,43 +677,27 @@ public class Credential {
 			return status;
 		}
 
-		ResultSet rs = null;
-		PreparedStatement stmt = null;
-		try {
-			// FIXME
-			final String query = "SELECT gu.userid " +
-					"FROM node n " +
-					"LEFT JOIN group_right_info gri ON n.portfolio_id=gri.portfolio_id " +
-					"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
-					"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
-					"WHERE gu.userid=? AND n.node_uuid=uuid2bin(?) AND gri.label='designer' ";
-			stmt = c.prepareStatement(query);
+		// FIXME
+		final String query = "SELECT gu.userid " +
+				"FROM node n " +
+				"LEFT JOIN group_right_info gri ON n.portfolio_id=gri.portfolio_id " +
+				"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
+				"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
+				"WHERE gu.userid=? AND n.node_uuid=uuid2bin(?) AND gri.label='designer' ";
+
+		try (PreparedStatement stmt = c.prepareStatement(query)) {
 			stmt.setInt(1, userId);
 			stmt.setString(2, nodeId);
-			rs = stmt.executeQuery();
-
-			if (rs.next()) {
-				status = true;
+			try (ResultSet rs = stmt.executeQuery()) {
+				if (rs.next()) {
+					status = true;
+				}
 			}
 		} catch (final SQLException e) {
 			e.printStackTrace();
 			status = false;
-		} finally {
-			if (stmt != null) {
-				try {
-					stmt.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
-			if (rs != null) {
-				try {
-					rs.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
+
 		return status;
 	}
 
@@ -813,37 +730,20 @@ public class Credential {
 			return false;
 		}
 
-		ResultSet rs = null;
-		PreparedStatement stmt = null;
-		try {
-			final String query = "SELECT modif_user_id FROM node WHERE asm_type='asmRoot' AND modif_user_id=? AND portfolio_id=uuid2bin(?)";
-			stmt = c.prepareStatement(query);
+		final String query = "SELECT modif_user_id FROM node WHERE asm_type='asmRoot' AND modif_user_id=? AND portfolio_id=uuid2bin(?)";
+		try (PreparedStatement stmt = c.prepareStatement(query)) {
 			stmt.setInt(1, userId);
 			stmt.setString(2, portfolio);
-			rs = stmt.executeQuery();
-
-			if (rs.next()) {
-				return true;
+			try (ResultSet rs = stmt.executeQuery()) {
+				if (rs.next()) {
+					return true;
+				}
 			}
 		} catch (final SQLException e) {
 			e.printStackTrace();
 			return false;
-		} finally {
-			if (rs != null) {
-				try {
-					rs.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
-			if (stmt != null) {
-				try {
-					stmt.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
+
 		return false;
 	}
 
@@ -948,88 +848,59 @@ public class Credential {
 	/// From node, check if portoflio has user 'sys_public' in group 'all'
 	/// To differentiate between 'public' to the world, and 'public' to people with an account
 	public boolean isPublic(Connection c, String node_uuid, String portfolio_uuid) {
-		PreparedStatement st = null;
-		ResultSet res = null;
-		String sql = "";
 		boolean val = false;
 		try {
 			if (node_uuid != null) {
-				sql = "SELECT gu.userid " +
+				final String sql = "SELECT gu.userid " +
 						"FROM node n, group_right_info gri, group_info gi, group_user gu, credential c " +
 						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
 						"n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id " +
 						"AND gri.label='all' " +
 						"AND c.login='sys_public'";
-				st = c.prepareStatement(sql);
-				st.setString(1, node_uuid);
+				try (PreparedStatement st = c.prepareStatement(sql)) {
+					st.setString(1, node_uuid);
+					try (ResultSet res = st.executeQuery()) {
+						if (res.next()) {
+							val = true;
+						}
+					}
+				}
 			} else {
-				sql = "SELECT gu.userid " +
+				final String sql = "SELECT gu.userid " +
 						"FROM group_right_info gri, group_info gi, group_user gu, credential c " +
 						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
 						"gri.portfolio_id=uuid2bin(?) " +
 						"AND gri.label='all' " +
 						"AND c.login='sys_public'";
-				st = c.prepareStatement(sql);
-				st.setString(1, portfolio_uuid);
+				try (PreparedStatement st = c.prepareStatement(sql)) {
+					st.setString(1, portfolio_uuid);
+					try (ResultSet res = st.executeQuery()) {
+						if (res.next()) {
+							val = true;
+						}
+					}
+				}
 			}
-			res = st.executeQuery();
-			if (res.next()) {
-				val = true;
-			}
-			res.close();
-			st.close();
 		} catch (final Exception e) {
 			e.printStackTrace();
-		} finally {
-			if (st != null) {
-				try {
-					st.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
-			if (res != null) {
-				try {
-					res.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
+
 		return val;
 	}
 
 	private boolean isPublicUser(Connection c, int userId) {
-		String sql;
-		PreparedStatement st = null;
-		ResultSet res = null;
-		try {
-			// Fetching 'sys_public' userid
-			sql = "SELECT userid FROM credential WHERE (login='sys_public' OR login='public') AND userid=?";
-			st = c.prepareStatement(sql);
+		// Fetching 'sys_public' userid
+		final String sql = "SELECT userid FROM credential WHERE (login='sys_public' OR login='public') AND userid=?";
+		try (PreparedStatement st = c.prepareStatement(sql)) {
 			st.setInt(1, userId);
-			res = st.executeQuery();
-			if (res.next()) {
-				return true;
+			try (ResultSet res = st.executeQuery()) {
+				if (res.next()) {
+					return true;
+				}
 			}
 			return false;
 		} catch (final Exception e) {
 			e.printStackTrace();
-		} finally {
-			if (st != null) {
-				try {
-					st.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
-			if (res != null) {
-				try {
-					res.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
 
 		return false;
