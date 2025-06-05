@@ -322,10 +322,8 @@ public class RestServicePortfolio {
 		}
 
 		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-		Connection c = null;
 
-		try {
-			c = SqlUtils.getConnection();
+		try (Connection c = SqlUtils.getConnection()) {
 			final int nbDeletedNodes = Integer
 					.parseInt(dataProvider.deleteNode(c, nodeUuid, ui.userId, groupId, userrole).toString());
 			if (nbDeletedNodes == 0) {
@@ -345,14 +343,6 @@ public class RestServicePortfolio {
 			logger.error("Managed error", ex);
 
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		} finally {
-			try {
-				if (c != null) {
-					c.close();
-				}
-			} catch (final SQLException e) {
-				logger.error("Managed error", e);
-			}
 		}
 	}
 

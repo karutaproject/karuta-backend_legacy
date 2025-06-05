@@ -130,10 +130,6 @@ public class Credential {
 	//test pour l'affichage des differentes methodes de Node
 	public NodeRight getNodeRight(Connection c, int userId, int groupId, String node_uuid, String rightType,
 			String userRole) {
-		PreparedStatement st = null;
-		String sql;
-		ResultSet res = null;
-
 		// Public user
 		if (isPublicUser(c, userId)) {
 			// Node has public access
@@ -176,86 +172,81 @@ public class Credential {
 				if (groupId == 0) {
 					// On regarde si la personne à un droit sur ce noeud dans l'un des groupes du portfolio
 					// Pourrait être un casse tête si un noeud est référencé dans plusieurs groupes
-					sql = "SELECT gi.gid, gi.grid, gri.label " +
+					final String sql = "SELECT gi.gid, gi.grid, gri.label " +
 							"FROM node n, group_right_info gri, group_info gi, group_user gu " +
 							"WHERE n.portfolio_id=gri.portfolio_id " +
 							"AND gri.grid=gi.grid " +
 							"AND gi.gid=gu.gid " +
 							"AND gu.userid=? " +
 							"AND n.node_uuid=uuid2bin(?)";
-					st = c.prepareStatement(sql);
-					st.setInt(1, userId);
-					st.setString(2, node_uuid);
-					res = st.executeQuery();
-
-					if (res.next()) {
-						groupId = res.getInt(1); // On prend le premier
-						final int grid = res.getInt(2);
-						final String groupName = res.getString(3);
-						// Spécifie dans quel contexte on lui donne le droit
-						nodeRight.groupId = groupId;
-						nodeRight.rrgId = grid;
-						nodeRight.groupLabel = groupName;
+					try (PreparedStatement st = c.prepareStatement(sql)) {
+						st.setInt(1, userId);
+						st.setString(2, node_uuid);
+						try (ResultSet res = st.executeQuery()) {
+							if (res.next()) {
+								groupId = res.getInt(1); // On prend le premier
+								final int grid = res.getInt(2);
+								final String groupName = res.getString(3);
+								// Spécifie dans quel contexte on lui donne le droit
+								nodeRight.groupId = groupId;
+								nodeRight.rrgId = grid;
+								nodeRight.groupLabel = groupName;
+							}
+						}
 					}
-
-					res.close();
-					st.close();
 				}
 
 				t2 = System.currentTimeMillis();
 
 				/// Sinon on évalue le droit donnée directement
-				sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
+				final String sql1 = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
 						"FROM group_rights gr, group_user gu, group_info gi " +
 						"WHERE gu.gid = gi.gid " +
 						"AND gi.grid = gr.grid AND gu.userid = ? " +
 						"AND gr.id = uuid2bin(?) AND gu.gid = ?";
-				st = c.prepareStatement(sql);
-				st.setInt(1, userId);
-				st.setString(2, node_uuid);
-				st.setInt(3, groupId);
-				res = st.executeQuery();
-				if (res.next()) {
-					nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
-					nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
-					nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
-					nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
+				try (PreparedStatement st = c.prepareStatement(sql1)) {
+					st.setInt(1, userId);
+					st.setString(2, node_uuid);
+					st.setInt(3, groupId);
+					try (ResultSet res = st.executeQuery()) {
+						if (res.next()) {
+							nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
+							nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
+							nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
+							nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
+						}
+					}
 				}
-
-				res.close();
-				st.close();
 
 				t3 = System.currentTimeMillis();
 
 				/// Les droits donné spécifiquement à l'utilisateur
-				sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
+				final String sql2 = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
 						"FROM group_rights " +
 						"WHERE id=uuid2bin(?) " +
 						"AND grid=(SELECT grid " +
 						"FROM credential c, group_right_info gri, node n " +
 						"WHERE c.login=gri.label AND c.userid=? AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?))";
-				st = c.prepareStatement(sql);
-				st.setString(1, node_uuid);
-				st.setInt(2, userId);
-				st.setString(3, node_uuid);
-
-				res = st.executeQuery();
-				if (res.next()) {
-					nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
-					nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
-					nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
-					nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
+				try (PreparedStatement st = c.prepareStatement(sql2)) {
+					st.setString(1, node_uuid);
+					st.setInt(2, userId);
+					st.setString(3, node_uuid);
+					try (ResultSet res = st.executeQuery()) {
+						if (res.next()) {
+							nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
+							nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
+							nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
+							nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
+						}
+					}
 				}
-
-				res.close();
-				st.close();
 
 				t4 = System.currentTimeMillis();
 
 				/// Les droits que l'on a du groupe "all"
 				/// NOTE: Pas de vérification si la personne est dans le groupe 'all'
 				///  Le fonctionnement voulu est différent de ce que j'avais prévu, mais ça marche aussi
-				sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
+				final String sql3 = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
 						"FROM group_rights " +
 						"WHERE id=uuid2bin(?) " +
 						"AND grid=(SELECT gri2.grid " +
@@ -263,19 +254,18 @@ public class Credential {
 						"INNER JOIN group_right_info gri1 ON gi.grid=gri1.grid " +
 						"INNER JOIN group_right_info gri2 ON gri1.portfolio_id=gri2.portfolio_id " +
 						"WHERE gi.gid=? AND gri2.label='all')";
-				st = c.prepareStatement(sql);
-				st.setString(1, node_uuid);
-				st.setInt(2, groupId);
-
-				res = st.executeQuery();
-				if (res.next()) {
-					nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
-					nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
-					nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
-					nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
+				try (PreparedStatement st = c.prepareStatement(sql3)) {
+					st.setString(1, node_uuid);
+					st.setInt(2, groupId);
+					try (ResultSet res = st.executeQuery()) {
+						if (res.next()) {
+							nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
+							nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
+							nodeRight.submit = nodeRight.submit || (res.getInt("SB") == 1);
+							nodeRight.delete = nodeRight.delete || (res.getInt("DL") == 1);
+						}
+					}
 				}
-				res.close();
-				st.close();
 
 				t5 = System.currentTimeMillis();
 			} // fin else
@@ -300,21 +290,6 @@ public class Credential {
 		} catch (final Exception ex) {
 			logger.error(ex.getMessage());
 			ex.printStackTrace();
-		} finally {
-			if (st != null) {
-				try {
-					st.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
-			if (res != null) {
-				try {
-					res.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
 
 		return nodeRight;
