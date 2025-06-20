@@ -1342,7 +1342,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, "");
 		} catch (final SQLException ex) {
 			logger.error("SQLException error", ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");

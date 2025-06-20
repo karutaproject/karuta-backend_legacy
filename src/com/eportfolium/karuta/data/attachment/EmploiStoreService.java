@@ -15,17 +15,25 @@
 
 package com.eportfolium.karuta.data.attachment;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
-import java.util.regex.Matcher;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletConfig;
@@ -33,163 +41,289 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
-import com.eportfolium.karuta.data.utils.ConfigUtils;
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.eportfolium.karuta.data.utils.ConfigUtils;
+
+import jakarta.ws.rs.core.HttpHeaders;
+
 public class EmploiStoreService extends HttpServlet {
-    private static final long serialVersionUID = -5389232495090560087L;
+	public class CacheCleanup {
+		Duration expiration;
+		ScheduledExecutorService scheduler;
 
-    private static final Logger logger = LoggerFactory.getLogger(EmploiStoreService.class);
+		public CacheCleanup(Duration expiration, long cleanupIntervalMinutes) {
+			logger.info("Starting cache cleanup thread");
+			this.expiration = expiration;
+			this.scheduler = Executors.newScheduledThreadPool(1);
+			this.scheduler.scheduleAtFixedRate(this::cleanupCache, cleanupIntervalMinutes, cleanupIntervalMinutes,
+					TimeUnit.MINUTES);
+		}
 
-    public static final Pattern PATTERN_TOKEN = Pattern.compile("access_token\":\"([^\"]*)");
-    public static final String ROME_SERVICE_URL = "ROMEServiceURL";
-    public static final String ROME_CLIENT_ID = "ROMEclientid";
-    public static final String ROME_CLIENT_SECRET = "ROMEclientsecret";
-    public static final String ROME_SCOPE = "ROMEscope";
-    public static final String ROME_REPO_URL = "ROMERepoURL";
+		public void cleanupCache() {
+			final var now = LocalDateTime.now();
+			cache.entrySet().removeIf(entry -> {
+				final var v = entry.getValue().getLastModified();
+				return v != null && now.isAfter(v.plus(expiration));
+			});
+		}
 
-    private String serviceURL;
-    private String clientid;
-    private String clientsecret;
-    private String scopestr;
-    private String repoURL;
+		public void shutdown() {
+			logger.info("Shutting down cache cleanup thread");
+			scheduler.shutdown();
+			try {
+				if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+					scheduler.shutdownNow();
+				}
+			} catch (final InterruptedException e) {
+				scheduler.shutdownNow();
+				Thread.currentThread().interrupt();
+			}
 
-    public void init(ServletConfig config) throws ServletException {
-        super.init(config);
-        try {
-            ConfigUtils.init(getServletContext());
-        } catch (Exception e) {
-            logger.error("Can't init servlet:", e);
-            throw new ServletException(e);
-        }
-    }
+		}
+	}
 
-    private void lazyInitProps() {
-        if (serviceURL == null || clientid == null) {
-            serviceURL = ConfigUtils.getInstance().getRequiredProperty(ROME_SERVICE_URL);
-            clientid = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_ID);
-            clientsecret = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_SECRET);
-            scopestr = ConfigUtils.getInstance().getRequiredProperty(ROME_SCOPE);
-            repoURL = ConfigUtils.getInstance().getRequiredProperty(ROME_REPO_URL);
-        }
-    }
+	/// Service doesn't implement Last-Modified, keep data for 5 min
+	public class CacheEntry {
+		private final String data;
+		private final LocalDateTime lastModified;
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
-        /// Only people from our system can query
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("uid") == null) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            PrintWriter out;
-            try {
-                out = response.getWriter();
-                out.write("403");
-                out.close();
-            } catch (IOException e) {
-                logger.error("Intercepted error", e);
-                //TODO something is missing
-            }
-            return;
-        }
+		public CacheEntry(String data, LocalDateTime lastModified) {
+			this.data = data;
+			this.lastModified = lastModified;
+		}
 
-        //// Login to service
-        try {
-            final String scope = String.format("application_%s%%20%s", clientid, scopestr);
-            final String body = String.format("grant_type=client_credentials&client_id=%s&client_secret=%s&scope=%s", clientid, clientsecret, scope);
+		public String getData() {
+			return data;
+		}
 
-            lazyInitProps();
+		public LocalDateTime getLastModified() {
+			return lastModified;
+		}
+	}
 
-            URL urlConn = new URL(serviceURL);
-            HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
-            connection.setDoOutput(true);
-            connection.setUseCaches(false);
-            connection.setInstanceFollowRedirects(false);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+	private static final long serialVersionUID = -5389232495090560087L;
 
-            /// Send login information
-            ByteArrayInputStream bais = new ByteArrayInputStream(body.getBytes());
-            OutputStream outputData = connection.getOutputStream();
-            int transferred = IOUtils.copy(bais, outputData);
-            if (transferred == body.length())
-                logger.debug("Send: Complete");
-            else
-                logger.error("Send mismatch: " + transferred + " != " + body.length());
+	private static final Logger logger = LoggerFactory.getLogger(EmploiStoreService.class);
+	public static final Pattern PATTERN_TOKEN = Pattern.compile("access_token\":\"([^\"]*)");
+	public static final Pattern PATTERN_EXPIRES = Pattern.compile("expires_in\":([^}]*)");
+	public static final String ROME_SERVICE_URL = "ROMEServiceURL";
+	public static final String ROME_CLIENT_ID = "ROMEclientid";
+	public static final String ROME_CLIENT_SECRET = "ROMEclientsecret";
+	public static final String ROME_DOMAIN = "ROMEdomain";
+	public static final String ROME_SCOPE = "ROMEscope";
+	public static final String ROME_REPO_URL = "ROMERepoURL";
 
-            /// Read answer
-            int code = connection.getResponseCode();
-            String msg = connection.getResponseMessage();
-            if (code != HttpURLConnection.HTTP_OK)
-                logger.error("Couldn't log: {}", msg);
-            else {
-                logger.debug("Code: ({}) msg: {}", code, msg);
-            }
+	private String serviceURL;
+	private String scopestr;
+	private String repoURL;
 
-            StringBuilder logininfo = new StringBuilder();
-            String line;
-            InputStream objReturn = connection.getInputStream();
-            BufferedReader breader = new BufferedReader(new InputStreamReader(objReturn, StandardCharsets.UTF_8));
-            while ((line = breader.readLine()) != null) {
-                logininfo.append(line);
-            }
-            connection.disconnect();
+	private final ReadWriteLock tokenLock = new ReentrantReadWriteLock();
+	private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
+	private final AtomicReference<String> tokenRef = new AtomicReference<>();
+	private LocalDateTime lastlogin;
 
-            /// Can't be bothered to parse json
-            Matcher pmatcher = PATTERN_TOKEN.matcher(logininfo.toString());
-            String access_token = "";
-            if (pmatcher.find()) {
-                access_token = pmatcher.group(1);
-            }
-            logger.info("Current token: {}", access_token);
+	private final int cacheEntryTTL = 5; // Minutes after cache entry can be renewed
+	private final int cacheCleanupDelay = 5; // Keep it this minute more after cache expiring
+	private final int cacheCleanupInterval = 60; // Minutes between running cache cleanup
 
-            ///// Send wanted query
-            String pathinfo = request.getPathInfo();
-            String query = request.getQueryString();
-            if ("/".equals(pathinfo) || pathinfo == null) {
-                pathinfo = "";
-                query = "?" + query;
-            } else
-                query = "";
+	// Cache cleanup
+	CacheCleanup cacheCleanup = null;
 
-            final String queryURL = String.format("%s%s%s", repoURL, pathinfo, query);
-            logger.info("Query to: {}", queryURL);
+	/// Java 11 can't close this, keep it around until code is at Java 21 and use try-with-resource
+	final private HttpClient client = HttpClient.newBuilder().build();
 
-            urlConn = new URL(queryURL);
-            connection = (HttpURLConnection) urlConn.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty("Authorization", String.format("Bearer %s", access_token));
-            // Need some user agent, otherwise return 409
-            connection.setRequestProperty("User-Agent", "Error 409 without user-agent");
-//			connection.connect();
+	@Override
+	public void destroy() {
+		super.destroy();
+		if (cacheCleanup != null) {
+			cacheCleanup.shutdown();
+		}
+	}
 
-            code = connection.getResponseCode();
-            msg = connection.getResponseMessage();
+	public String fetchData(String queryURL) throws URISyntaxException, IOException, InterruptedException {
+		CacheEntry entry = null;
+		if (cache.containsKey(queryURL)) {
+			entry = cache.get(queryURL);
+			final var lastModified = entry.getLastModified();
+			if (!LocalDateTime.now().isAfter(lastModified)) {
+				return entry.getData();
+			}
+			// Need some user agent, otherwise return 409
+			//			getrequest = HttpRequest.newBuilder().uri(new URI(queryURL))
+			//					.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenRef.get())
+			//					.header(HttpHeaders.USER_AGENT, "Error 409 without user-agent")
+			//					.header(HttpHeaders.LAST_MODIFIED, lastModified).GET().build();
+		} else {
+			logger.error("Not in cache");
+		}
 
-            if (code != HttpURLConnection.HTTP_OK) {
-                logger.error("Couldn't get file: " + msg);
-                response.setStatus(code);
-                PrintWriter writer = response.getWriter();
-                writer.write(msg);
-                writer.close();
-            } else {
-                OutputStream output = response.getOutputStream();
-                /// Send data to report daemon
-                InputStream inputData = connection.getInputStream();
-                IOUtils.copy(inputData, output);
-                inputData.close();
-                output.close();
-            }
+		final var getrequest = HttpRequest.newBuilder().uri(new URI(queryURL))
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenRef.get())
+				.header(HttpHeaders.USER_AGENT, "Error 409 without user-agent").GET().build();
+		final HttpResponse<String> getresponse = client.send(getrequest, BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-            connection.disconnect();
-        } catch (IOException | IllegalStateException e) {
-            logger.error("Intercepted error", e);
-            //TODO something is missing
-        }
+		final var code = getresponse.statusCode();
+		//		final var lastModified = getresponse.headers().firstValue(HttpHeaders.LAST_MODIFIED).orElse(null);
+		//		logger.error("Last modified: " + lastModified);
 
-        response.setStatus(HttpServletResponse.SC_OK);
-    }
+		if (code == HttpURLConnection.HTTP_OK) {
+			final var body = getresponse.body();
+			// Will re-request data if it's older than _cacheEntryTTL_ minutes
+			// Might have to put cache delay in property
+			entry = new CacheEntry(body, LocalDateTime.now().plus(cacheEntryTTL, ChronoUnit.MINUTES));
+			cache.put(queryURL, entry);
+		} else if (code == HttpURLConnection.HTTP_NOT_MODIFIED) {
+			// Same content, just cached value
+		}
+		if (entry != null) {
+			return entry.getData();
+		}
+
+		return null;
+	}
+
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			ConfigUtils.init(getServletContext());
+
+			final var apiDomain = config.getInitParameter("domain");
+			scopestr = config.getInitParameter("scope");
+			repoURL = ConfigUtils.getInstance().getRequiredProperty(ROME_REPO_URL) + "/" + apiDomain;
+			serviceURL = ConfigUtils.getInstance().getRequiredProperty(ROME_SERVICE_URL);
+
+			lastlogin = LocalDateTime.now();
+
+			cacheCleanup = new CacheCleanup(Duration.ofMinutes(cacheCleanupDelay), cacheCleanupInterval);
+		} catch (final Exception e) {
+			logger.error("Can't init servlet:", e);
+			throw new ServletException(e);
+		}
+	}
+
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+		/// Only people from our system can query
+		final var session = request.getSession(false);
+		if (session == null || session.getAttribute("uid") == null) {
+			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+			try (var out = response.getWriter();) {
+				out.write("403");
+			} catch (final IOException e) {
+				logger.error("Intercepted error", e);
+				//TODO something is missing
+			}
+			return;
+		}
+
+		refreshTokenIfNeeded();
+
+		///// Send wanted query
+		var pathinfo = request.getPathInfo();
+		var query = request.getQueryString();
+		if ("/".equals(pathinfo) || pathinfo == null) {
+			pathinfo = "";
+		}
+		if (query == null) {
+			query = "";
+		} else {
+			query = "?" + query;
+		}
+
+		final var queryURL = String.format("%s%s%s", repoURL, pathinfo, query);
+		logger.info("Query to: {}", queryURL);
+
+		try {
+			final var data = fetchData(queryURL);
+			response.setHeader(HttpHeaders.CONTENT_TYPE, "application/json; charset=UTF-8");
+			try (final var writer = response.getWriter();) {
+				writer.write(data);
+			}
+		} catch (final Exception e) {
+			logger.error(e.getMessage());
+		}
+		response.setStatus(HttpServletResponse.SC_OK);
+	}
+
+	private int doLogin() {
+		// Only keep id and secret for login
+		final var clientid = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_ID);
+		final var clientsecret = ConfigUtils.getInstance().getRequiredProperty(ROME_CLIENT_SECRET);
+
+		try {
+			final var body = String.format("grant_type=%s&client_id=%s&client_secret=%s&scope=%s", "client_credentials",
+					clientid, clientsecret, scopestr);
+
+			final var request = HttpRequest.newBuilder().uri(new URI(serviceURL))
+					.headers(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded")
+					.POST(HttpRequest.BodyPublishers.ofString(body)).build();
+
+			logger.info("body: {}", body);
+
+			final HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
+
+			/// Read answer
+			final var code = response.statusCode();
+			final var msg = response.body();
+			if (code != HttpURLConnection.HTTP_OK) {
+				logger.error("Couldn't log: {}", msg);
+				return -1;
+			}
+			logger.info("Code: ({}) msg: {}", code, msg);
+
+			/// Can't be bothered to parse json
+			final var pmatcher = PATTERN_TOKEN.matcher(msg.toString());
+			if (pmatcher.find()) {
+				tokenRef.set(pmatcher.group(1));
+			}
+
+			final var pmatcherExpire = PATTERN_EXPIRES.matcher(msg.toString());
+			var expiresSec = 0;
+			if (pmatcherExpire.find()) {
+				// Remove some 2 sec in the off chance token expire just as it is used
+				expiresSec = Integer.parseInt(pmatcherExpire.group(1)) - 2;
+			}
+
+			lastlogin = LocalDateTime.now().plus(expiresSec, ChronoUnit.SECONDS);
+			logger.info("{} -- Current token: {} (expire in {}s)", scopestr, tokenRef.get(), expiresSec);
+		} catch (final Exception e) {
+			logger.error("Intercepted error", e);
+		}
+
+		return 0;
+	}
+
+	/// Ensure token is good to go
+	private void refreshTokenIfNeeded() {
+		//// Login to service if token expired
+		tokenLock.readLock().lock();
+		try {
+			if (LocalDateTime.now().isAfter(lastlogin)) {
+				// Need to refresh
+				tokenLock.readLock().unlock();
+				if (tokenLock.writeLock().tryLock(5, TimeUnit.SECONDS)) {
+					try {
+						if (LocalDateTime.now().isAfter(lastlogin)) {
+							logger.error("Refresh login");
+							doLogin();
+						}
+					} finally {
+						tokenLock.writeLock().unlock();
+					}
+				} else {
+					Thread.sleep(100);
+					refreshTokenIfNeeded(); // Recursive call to retry
+				}
+			} else {
+				tokenLock.readLock().unlock();
+			}
+
+		} catch (final Exception e) {
+		} finally {
+		}
+	}
 }

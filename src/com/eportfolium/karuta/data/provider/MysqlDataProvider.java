@@ -3006,7 +3006,7 @@ public class MysqlDataProvider implements DataProvider {
 		// On recupere d'abord l'uuid du premier noeud trouve correspondant au semantictag
 		final List<HashMap<String, String>> res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semantictag);
 		if (!res.isEmpty()) {
-			nodeUuid = res.getFirst().get("node_uuid");
+			nodeUuid = res.get(0).get("node_uuid");
 		}
 
 		if (!cred.hasNodeRight(c, userId, groupId, nodeUuid, Credential.READ)) {

@@ -186,17 +186,6 @@
 	</servlet-mapping>
 
 	<servlet>
-		<description>Emploi Store ROME service</description>
-		<display-name>Emploi Store ROME</display-name>
-		<servlet-name>EmploiStoreService</servlet-name>
-		<servlet-class>com.eportfolium.karuta.data.attachment.EmploiStoreService</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>EmploiStoreService</servlet-name>
-		<url-pattern>/rome/*</url-pattern>
-	</servlet-mapping>
-
-	<servlet>
 		<description>Logging service</description>
 		<display-name>Logging service</display-name>
 		<servlet-name>LogginService</servlet-name>
