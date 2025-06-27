@@ -1265,7 +1265,7 @@ public class MysqlDataProvider implements DataProvider {
 
 	@Override
 	public String deleteRRGUser(Connection c, int userId, Integer rrgId, Integer user) {
-		if (!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgId)) {
+		if (!cred.isAdmin(c, userId) && !cred.isOwnerRRG(c, userId, rrgId) && !cred.isSharer(c, userId)) {
 			throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 		}
 
