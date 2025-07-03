@@ -26,8 +26,8 @@ public class Manager implements ServletContextListener {
 			// Loading configKaruta.properties
 			ConfigUtils.init(event.getServletContext());
 
-			final var domains = ConfigUtils.getInstance().getRequiredProperty(ROME_DOMAIN);
-			final var scopes = ConfigUtils.getInstance().getRequiredProperty(ROME_SCOPE);
+			final var domains = ConfigUtils.getInstance().getProperty(ROME_DOMAIN);
+			final var scopes = ConfigUtils.getInstance().getProperty(ROME_SCOPE);
 			if (domains != null && scopes != null) {
 				final var domainSplit = domains.split(" ");
 				final var scopeSplit = scopes.split(" ");
