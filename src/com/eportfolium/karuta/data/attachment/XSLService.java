@@ -28,9 +28,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Enumeration;
 import java.util.List;
-import java.util.Map;
 
 import javax.activation.MimeType;
 import javax.servlet.ServletConfig;
@@ -40,20 +38,16 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.sax.SAXResult;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.fileupload.FileItem;
@@ -61,21 +55,16 @@ import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.IOUtils;
-import org.apache.fop.apps.Fop;
 import org.apache.fop.apps.FopFactory;
-import org.apache.fop.apps.MimeConstants;
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -105,31 +94,53 @@ public class XSLService extends HttpServlet {
 	private TransformerFactory transFactory;
 	private FopFactory fopFactory;
 
-	HttpURLConnection CreateConnection(String url, HttpServletRequest request)
-			throws MalformedURLException, IOException {
-		/// Create connection
-		final URL urlConn = new URL(url);
-		final HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
-		connection.setDoOutput(true);
-		connection.setUseCaches(false); /// We don't want to cache data
-		connection.setInstanceFollowRedirects(false); /// Let client follow any redirection
-		final String method = request.getMethod();
-		connection.setRequestMethod(method);
-
-		final String context = request.getContextPath();
-		connection.setRequestProperty("app", context);
-
-		/// Transfer headers
-		String key = "";
-		String value = "";
-		final Enumeration<String> header = request.getHeaderNames();
-		while (header.hasMoreElements()) {
-			key = header.nextElement();
-			value = request.getHeader(key);
-			connection.setRequestProperty(key, value);
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			ConfigUtils.init(getServletContext());
+		} catch (final Exception e) {
+			logger.error("Can't init servlet", e);
+			throw new ServletException(e);
+		}
+		sc = config.getServletContext();
+		servletDir = sc.getRealPath("/");
+		var last = servletDir.lastIndexOf(File.separator);
+		last = servletDir.lastIndexOf(File.separator, last - 1);
+		baseDir = servletDir.substring(0, last);
+		logger.warn("Servlet XSLService initialized with baseDir '{}'", baseDir);
+		server = ConfigUtils.getInstance().getRequiredProperty("backendserver");
+		internalServer = ConfigUtils.getInstance().getProperty("XSLInternal");
+		if (internalServer == null) {
+			internalServer = server;
 		}
 
-		return connection;
+		//Setting up the JAXP TransformerFactory
+		this.transFactory = TransformerFactory.newInstance();
+
+		String filename = null;
+		try /// Try to load the configuration file "fopuserconfig.xml", if there isn't any, ignore
+		{
+			final var userconfig = new File(ConfigUtils.getInstance().getConfigPath() + "fopuserconfig.xml");
+			filename = userconfig.getCanonicalPath();
+			//Setting up the FOP factory
+			this.fopFactory = FopFactory.newInstance(userconfig);
+			logger.info("File '{}' loaded", filename);
+		} catch (final Exception e) {
+			logger.error("No configuration file found at '" + filename + "' using default values", e);
+			throw new ServletException(e);
+		}
+
+		try {
+			final var dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
+			dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+		} catch (final Exception e) {
+			logger.error("Can't init servlet", e);
+			throw new ServletException(e);
+		}
+	}
+
+	public void initialize(HttpServletRequest httpServletRequest) {
 	}
 
 	@Override
@@ -145,15 +156,15 @@ public class XSLService extends HttpServlet {
 		try {
 			c = SqlUtils.getConnection();
 
-			final String origin = request.getRequestURL().toString();
+			final var origin = request.getRequestURL().toString();
 			logger.trace("Is connection null {}", c);
 
 			/// Variable stuff
-			int userId = 0;
-			int groupId = 0;
-			final HttpSession session = request.getSession(true);
+			var userId = 0;
+			var groupId = 0;
+			final var session = request.getSession(true);
 			if (session != null) {
-				Integer val = (Integer) session.getAttribute("uid");
+				var val = (Integer) session.getAttribute("uid");
 				if (val != null) {
 					userId = val;
 				}
@@ -172,7 +183,7 @@ public class XSLService extends HttpServlet {
 			String line;
 			while( (line = rd.readLine()) != null )
 				sb.append(line);
-			
+
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 			DocumentBuilder documentBuilder = null;
 			Document doc=null;
@@ -185,7 +196,7 @@ public class XSLService extends HttpServlet {
 			{
 				e.printStackTrace();
 			}
-			
+
 			/// On lit les paramètres
 			NodeList portfolioNode = doc.getElementsByTagName("portfolioid");
 			NodeList nodeNode = doc.getElementsByTagName("nodeid");
@@ -195,17 +206,17 @@ public class XSLService extends HttpServlet {
 			NodeList parametersNode = doc.getElementsByTagName("parameters");
 			//*/
 			//		String xslfile = xslNode.item(0).getTextContent();
-			final String xslfile = request.getParameter("xsl");
-			final String format = request.getParameter("format");
+			final var xslfile = request.getParameter("xsl");
+			final var format = request.getParameter("format");
 			//		String format = formatNode.item(0).getTextContent();
-			String parameters = request.getParameter("parameters");
-			final String documentid = request.getParameter("documentid");
-			final String portfolios = request.getParameter("portfolioids");
+			var parameters = request.getParameter("parameters");
+			final var documentid = request.getParameter("documentid");
+			final var portfolios = request.getParameter("portfolioids");
 			String[] portfolioid = null;
 			if (portfolios != null) {
 				portfolioid = portfolios.split(";");
 			}
-			final String nodes = request.getParameter("nodeids");
+			final var nodes = request.getParameter("nodeids");
 			String[] nodeid = null;
 			if (nodes != null) {
 				nodeid = nodes.split(";");
@@ -220,18 +231,18 @@ public class XSLService extends HttpServlet {
 			logger.info("nodeids: {}", nodes);
 			logger.info("parameters: {}", parameters);
 
-			boolean redirectDoc = false;
+			var redirectDoc = false;
 			if (documentid != null) {
 				redirectDoc = true;
 				logger.trace("documentid @ {}", documentid);
 			}
 
-			boolean usefop = false;
-			String ext = "";
-			if (MimeConstants.MIME_PDF.equals(format)) {
+			var usefop = false;
+			var ext = "";
+			if (org.apache.xmlgraphics.util.MimeConstants.MIME_PDF.equals(format)) {
 				usefop = true;
 				ext = ".pdf";
-			} else if (MimeConstants.MIME_RTF.equals(format)) {
+			} else if (org.apache.xmlgraphics.util.MimeConstants.MIME_RTF.equals(format)) {
 				usefop = true;
 				ext = ".rtf";
 			}
@@ -239,11 +250,11 @@ public class XSLService extends HttpServlet {
 			//		String uuid = request.getParameter("uuid");
 			//		String xslfile = request.getParameter("xsl");
 
-			final StringBuilder aggregate = new StringBuilder();
+			final var aggregate = new StringBuilder();
 			// On aggrège les données
 			if (portfolioid != null) {
 				for (final String p : portfolioid) {
-					final String portfolioxml = dataProvider
+					final var portfolioxml = dataProvider
 							.getPortfolio(c, new MimeType("text/xml"), p, userId, groupId, "", null, null, 0, null)
 							.toString();
 					aggregate.append(portfolioxml);
@@ -252,15 +263,15 @@ public class XSLService extends HttpServlet {
 
 			if (nodeid != null) {
 				for (final String n : nodeid) {
-					final String nodexml = dataProvider
+					final var nodexml = dataProvider
 							.getNode(c, new MimeType("text/xml"), n, true, userId, groupId, null, "", null).toString();
 					aggregate.append(nodexml);
 				}
 			}
 
 			// Est-ce qu'on a eu besoin d'aggr�ger les donn�es?
-			String input = aggregate.toString();
-			final String pattern = "<\\?xml[^>]*>"; // Purge previous xml declaration
+			var input = aggregate.toString();
+			final var pattern = "<\\?xml[^>]*>"; // Purge previous xml declaration
 
 			input = input.replaceAll(pattern, "");
 
@@ -287,40 +298,40 @@ public class XSLService extends HttpServlet {
 
 			/// Résolution des proxys
 			DocumentBuilder documentBuilder;
-			final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+			final var documentBuilderFactory = DocumentBuilderFactory.newInstance();
 			documentBuilder = documentBuilderFactory.newDocumentBuilder();
 			InputStream is = new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8));
 			//			InputSource is = new InputSource(new StringReader(input));
-			final Document doc = documentBuilder.parse(is);
+			final var doc = documentBuilder.parse(is);
 
 			/// Proxy stuff
-			final XPath xPath = XPathFactory.newInstance().newXPath();
+			final var xPath = XPathFactory.newInstance().newXPath();
 			//			String filterRes = "//asmResource[@xsi_type='Proxy']";
-			final String filterRes = "//*[local-name()='asmResource' and @*[local-name()='xsi_type' and .='Proxy']]";
+			final var filterRes = "//*[local-name()='asmResource' and @*[local-name()='xsi_type' and .='Proxy']]";
 			//			NodeList nodelist = XPathAPI.selectNodeList(doc.getDocumentElement(), filterRes);
 			//			String filterCode = "./code/text()";
-			final String filterCode = "./*[local-name()='code']/text()";
-			final NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+			final var filterCode = "./*[local-name()='code']/text()";
+			final var nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 
-			final XPathExpression codeFilter = xPath.compile(filterCode);
+			final var codeFilter = xPath.compile(filterCode);
 
-			for (int i = 0; i < nodelist.getLength(); ++i) {
-				final Node res = nodelist.item(i);
-				final Node gp = res.getParentNode(); // resource -> context -> container
-				final Node ggp = gp.getParentNode();
+			for (var i = 0; i < nodelist.getLength(); ++i) {
+				final var res = nodelist.item(i);
+				final var gp = res.getParentNode(); // resource -> context -> container
+				final var ggp = gp.getParentNode();
 
-				final Node uuid = (Node) codeFilter.evaluate(res, XPathConstants.NODE);
+				final var uuid = (Node) codeFilter.evaluate(res, XPathConstants.NODE);
 				//				Node uuid = XPathAPI.selectSingleNode(res, filterCode);
 
 				/// Fetch node we want to replace
-				final String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), uuid.getTextContent(),
+				final var returnValue = dataProvider.getNode(c, new MimeType("text/xml"), uuid.getTextContent(),
 						true, userId, groupId, null, "", null).toString();
 				if (returnValue == null) {
 					continue;
 				}
 
 				is = new ByteArrayInputStream(returnValue.getBytes(StandardCharsets.UTF_8));
-				final Document rep = documentBuilder.parse(is);
+				final var rep = documentBuilder.parse(is);
 				//				Element repNode = rep.getDocumentElement();
 				Node proxyNode = rep.getDocumentElement();
 				//				Node proxyNode = repNode.getFirstChild();
@@ -334,11 +345,11 @@ public class XSLService extends HttpServlet {
 			}
 
 			// Convert XML document to string
-			final DOMSource domSource = new DOMSource(doc);
-			final StringWriter writer = new StringWriter();
-			final StreamResult result = new StreamResult(writer);
-			final TransformerFactory tf = TransformerFactory.newInstance();
-			final Transformer transformer = tf.newTransformer();
+			final var domSource = new DOMSource(doc);
+			final var writer = new StringWriter();
+			final var result = new StreamResult(writer);
+			final var tf = TransformerFactory.newInstance();
+			final var transformer = tf.newTransformer();
 			transformer.transform(domSource, result);
 			writer.flush();
 			input = writer.toString();
@@ -346,13 +357,13 @@ public class XSLService extends HttpServlet {
 			logger.trace("INPUT DATA: {}", input);
 
 			// Setup a buffer to obtain the content length
-			final ByteArrayOutputStream stageout = new ByteArrayOutputStream();
-			final ByteArrayOutputStream out = new ByteArrayOutputStream();
+			final var stageout = new ByteArrayOutputStream();
+			final var out = new ByteArrayOutputStream();
 
 			//// Setup Transformer (1st stage)
 			/// Base path
-			final String basepath = xslfile.substring(0, xslfile.indexOf(File.separator));
-			final String firstStage = baseDir +
+			final var basepath = xslfile.substring(0, xslfile.indexOf(File.separator));
+			final var firstStage = baseDir +
 					File.separator +
 					basepath +
 					File.separator +
@@ -363,28 +374,28 @@ public class XSLService extends HttpServlet {
 					"html2xml.xsl";
 			logger.trace("FIRST: " + firstStage);
 			final Source xsltSrc1 = new StreamSource(new File(firstStage));
-			final Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
-			final StreamSource stageSource = new StreamSource(
+			final var transformer1 = transFactory.newTransformer(xsltSrc1);
+			final var stageSource = new StreamSource(
 					new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)));
 			final Result stageRes = new StreamResult(stageout);
 			transformer1.transform(stageSource, stageRes);
 
 			// Setup Transformer (2nd stage)
-			final String secondStage = baseDir + File.separator + xslfile;
+			final var secondStage = baseDir + File.separator + xslfile;
 			final Source xsltSrc2 = new StreamSource(new File(secondStage));
-			final Transformer transformer2 = transFactory.newTransformer(xsltSrc2);
+			final var transformer2 = transFactory.newTransformer(xsltSrc2);
 
 			// Configure parameter from xml
-			final String[] table = parameters.split(";");
+			final var table = parameters.split(";");
 			for (final String line : table) {
-				final int var = line.indexOf(":");
-				final String par = line.substring(0, var);
-				final String val = line.substring(var + 1);
+				final var var = line.indexOf(":");
+				final var par = line.substring(0, var);
+				final var val = line.substring(var + 1);
 				transformer2.setParameter(par, val);
 			}
 
 			// Setup input
-			final StreamSource xmlSource = new StreamSource(new ByteArrayInputStream(
+			final var xmlSource = new StreamSource(new ByteArrayInputStream(
 					stageout.toString(StandardCharsets.UTF_8.toString()).getBytes(StandardCharsets.UTF_8)));
 			//			StreamSource xmlSource = new StreamSource(new File(baseDir+origin, "projectteam.xml") );
 
@@ -394,7 +405,7 @@ public class XSLService extends HttpServlet {
 				//Setup FOP
 				//Make sure the XSL transformation's result is piped through to FOP
 				//				logger.error("Converting with FOP");
-				final Fop fop = fopFactory.newFop(format, out);
+				final var fop = fopFactory.newFop(format, out);
 
 				res = new SAXResult(fop.getDefaultHandler());
 
@@ -410,45 +421,45 @@ public class XSLService extends HttpServlet {
 			if (redirectDoc) {
 
 				// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
-				final String urlTarget = server + "/resources/resource/file/" + documentid;
+				final var urlTarget = server + "/resources/resource/file/" + documentid;
 				logger.trace("Redirect @ {}", urlTarget);
 
-				final HttpClientBuilder clientbuilder = HttpClientBuilder.create();
-				final CloseableHttpClient client = clientbuilder.build();
+				final var clientbuilder = HttpClientBuilder.create();
+				final var client = clientbuilder.build();
 
-				final HttpPost post = new HttpPost(urlTarget);
+				final var post = new HttpPost(urlTarget);
 				post.addHeader("referer", origin);
-				final String sessionid = request.getSession().getId();
+				final var sessionid = request.getSession().getId();
 				logger.info("Session: " + sessionid);
 				post.addHeader("Cookie", "JSESSIONID=" + sessionid);
-				final MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+				final var builder = MultipartEntityBuilder.create();
 				builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
-				final ByteArrayBody body = new ByteArrayBody(out.toByteArray(), "generated" + ext);
+				final var body = new ByteArrayBody(out.toByteArray(), "generated" + ext);
 
 				builder.addPart("uploadfile", body);
 
-				final HttpEntity entity = builder.build();
+				final var entity = builder.build();
 				post.setEntity(entity);
 				final HttpResponse ret = client.execute(post);
-				final String stringret = new BasicResponseHandler().handleResponse(ret);
+				final var stringret = new BasicResponseHandler().handleResponse(ret);
 
-				final int code = ret.getStatusLine().getStatusCode();
+				final var code = ret.getStatusLine().getStatusCode();
 				response.setStatus(code);
-				final ServletOutputStream output = response.getOutputStream();
+				final var output = response.getOutputStream();
 				output.write(stringret.getBytes(StandardCharsets.UTF_8), 0, stringret.length());
 				output.close();
 				client.close();
 
 				/*
 				HttpURLConnection connection = CreateConnection( urlTarget, request );
-				
+
 				/// Helping construct Json
 				connection.setRequestProperty("referer", origin);
-				
+
 				/// Send post data
 				ServletInputStream inputData = request.getInputStream();
 				DataOutputStream writer = new DataOutputStream(connection.getOutputStream());
-				
+
 				byte[] buffer = new byte[1024];
 				int dataSize;
 				while( (dataSize = inputData.read(buffer,0,buffer.length)) != -1 )
@@ -457,7 +468,7 @@ public class XSLService extends HttpServlet {
 				}
 				inputData.close();
 				writer.close();
-				
+
 				RetrieveAnswer(connection, response, origin);
 				//*/
 				logger.trace("Done converting");
@@ -472,7 +483,7 @@ public class XSLService extends HttpServlet {
 			request.getInputStream().close();
 			response.getOutputStream().close();
 		} catch (final Exception e) {
-			final String message = e.getMessage();
+			final var message = e.getMessage();
 			response.setStatus(500);
 			response.getOutputStream().write(message.getBytes(StandardCharsets.UTF_8));
 			response.getOutputStream().close();
@@ -504,10 +515,10 @@ public class XSLService extends HttpServlet {
 		 */
 
 		/// Variable stuff
-		int userId = 0;
-		final HttpSession session = request.getSession(true);
+		var userId = 0;
+		final var session = request.getSession(true);
 		if (session != null) {
-			Integer val = (Integer) session.getAttribute("uid");
+			var val = (Integer) session.getAttribute("uid");
 			if (val != null) {
 				userId = val;
 			}
@@ -518,12 +529,12 @@ public class XSLService extends HttpServlet {
 
 		/// FORM name="data"
 		// Create a factory for disk-based file items
-		final DiskFileItemFactory factory = new DiskFileItemFactory();
+		final var factory = new DiskFileItemFactory();
 		// Create a new file upload handler
-		final ServletFileUpload upload = new ServletFileUpload(factory);
+		final var upload = new ServletFileUpload(factory);
 
 		List<FileItem> items;
-		final StringWriter data = new StringWriter();
+		final var data = new StringWriter();
 		try {
 			items = upload.parseRequest(request);
 			// Process the uploaded items
@@ -540,10 +551,10 @@ public class XSLService extends HttpServlet {
 		}
 
 		//		String xslfile = xslNode.item(0).getTextContent();
-		final String xslfile = request.getParameter("xsl");
-		final String format = request.getParameter("format");
+		final var xslfile = request.getParameter("xsl");
+		final var format = request.getParameter("format");
 		//		String format = formatNode.item(0).getTextContent();
-		String parameters = request.getParameter("parameters");
+		var parameters = request.getParameter("parameters");
 		parameters = parameters + ";urlimage:" + internalServer;
 
 		logger.info("===== POST PARAMETERS: =====");
@@ -552,8 +563,8 @@ public class XSLService extends HttpServlet {
 		logger.info("user: {}", userId);
 		logger.info("parameters: {}", parameters);
 
-		final String pattern = "<\\?xml[^>]*>"; // Purge previous xml declaration
-		String input = data.toString().replaceAll(pattern, "");
+		final var pattern = "<\\?xml[^>]*>"; // Purge previous xml declaration
+		var input = data.toString().replaceAll(pattern, "");
 
 		input = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
 				"<!DOCTYPE xsl:stylesheet [" +
@@ -574,12 +585,12 @@ public class XSLService extends HttpServlet {
 
 		logger.info("INPUT: {}", input);
 
-		boolean usefop = false;
-		String ext = "";
-		if (MimeConstants.MIME_PDF.equals(format)) {
+		var usefop = false;
+		var ext = "";
+		if (org.apache.xmlgraphics.util.MimeConstants.MIME_PDF.equals(format)) {
 			usefop = true;
 			ext = ".pdf";
-		} else if (MimeConstants.MIME_RTF.equals(format)) {
+		} else if (org.apache.xmlgraphics.util.MimeConstants.MIME_RTF.equals(format)) {
 			usefop = true;
 			ext = ".rtf";
 		} else if ("application/csv".equals(format)) {
@@ -588,27 +599,27 @@ public class XSLService extends HttpServlet {
 
 		try {
 			// Setup a buffer to obtain the content length
-			final ByteArrayOutputStream out = new ByteArrayOutputStream(); // Data to send back
+			final var out = new ByteArrayOutputStream(); // Data to send back
 
 			// Setup Transformer (2nd stage)
-			final String secondStage = baseDir + File.separator + xslfile;
+			final var secondStage = baseDir + File.separator + xslfile;
 			final Source xsltSrc2 = new StreamSource(new File(secondStage));
-			final Transformer transformer2 = transFactory.newTransformer(xsltSrc2);
+			final var transformer2 = transFactory.newTransformer(xsltSrc2);
 
 			// Configure parameter from xml
 			if (parameters != null) {
-				final String[] table = parameters.split(";");
+				final var table = parameters.split(";");
 				for (final String line : table) {
-					final int var = line.indexOf(":");
-					final String par = line.substring(0, var);
-					final String val = line.substring(var + 1);
+					final var var = line.indexOf(":");
+					final var par = line.substring(0, var);
+					final var val = line.substring(var + 1);
 					transformer2.setParameter(par, val);
 				}
 			}
 
 			// Setup input
-			final byte[] bytes = data.toString().getBytes(StandardCharsets.UTF_8);
-			final StreamSource xmlSource = new StreamSource(new ByteArrayInputStream(bytes));
+			final var bytes = data.toString().getBytes(StandardCharsets.UTF_8);
+			final var xmlSource = new StreamSource(new ByteArrayInputStream(bytes));
 			//			StreamSource xmlSource = new StreamSource(new File(baseDir+origin, "projectteam.xml") );
 
 			Result res = null;
@@ -616,7 +627,7 @@ public class XSLService extends HttpServlet {
 				/// FIXME: Might need to include the entity for html stuff?
 				//Setup FOP
 				//Make sure the XSL transformation's result is piped through to FOP
-				final Fop fop = fopFactory.newFop(format, out);
+				final var fop = fopFactory.newFop(format, out);
 
 				res = new SAXResult(fop.getDefaultHandler());
 
@@ -637,7 +648,7 @@ public class XSLService extends HttpServlet {
 			response.getOutputStream().flush();
 		} catch (final Exception e) {
 			logger.error("Intercept error", e);
-			final String message = e.getMessage();
+			final var message = e.getMessage();
 			response.setStatus(500);
 			response.getOutputStream().write(message.getBytes(StandardCharsets.UTF_8));
 			response.getOutputStream().close();
@@ -645,53 +656,31 @@ public class XSLService extends HttpServlet {
 		}
 	}
 
-	@Override
-	public void init(ServletConfig config) throws ServletException {
-		super.init(config);
-		try {
-			ConfigUtils.init(getServletContext());
-		} catch (final Exception e) {
-			logger.error("Can't init servlet", e);
-			throw new ServletException(e);
-		}
-		sc = config.getServletContext();
-		servletDir = sc.getRealPath("/");
-		int last = servletDir.lastIndexOf(File.separator);
-		last = servletDir.lastIndexOf(File.separator, last - 1);
-		baseDir = servletDir.substring(0, last);
-		logger.warn("Servlet XSLService initialized with baseDir '{}'", baseDir);
-		server = ConfigUtils.getInstance().getRequiredProperty("backendserver");
-		internalServer = ConfigUtils.getInstance().getProperty("XSLInternal");
-		if (internalServer == null) {
-			internalServer = server;
-		}
+	HttpURLConnection CreateConnection(String url, HttpServletRequest request)
+			throws MalformedURLException, IOException {
+		/// Create connection
+		final var urlConn = new URL(url);
+		final var connection = (HttpURLConnection) urlConn.openConnection();
+		connection.setDoOutput(true);
+		connection.setUseCaches(false); /// We don't want to cache data
+		connection.setInstanceFollowRedirects(false); /// Let client follow any redirection
+		final var method = request.getMethod();
+		connection.setRequestMethod(method);
 
-		//Setting up the JAXP TransformerFactory
-		this.transFactory = TransformerFactory.newInstance();
+		final var context = request.getContextPath();
+		connection.setRequestProperty("app", context);
 
-		String filename = null;
-		try /// Try to load the configuration file "fopuserconfig.xml", if there isn't any, ignore
-		{
-			final File userconfig = new File(ConfigUtils.getInstance().getConfigPath() + "fopuserconfig.xml");
-			filename = userconfig.getCanonicalPath();
-			//Setting up the FOP factory
-			this.fopFactory = FopFactory.newInstance(userconfig);
-			logger.info("File '{}' loaded", filename);
-		} catch (final Exception e) {
-			logger.error("No configuration file found at '" + filename + "' using default values", e);
-			throw new ServletException(e);
+		/// Transfer headers
+		var key = "";
+		var value = "";
+		final var header = request.getHeaderNames();
+		while (header.hasMoreElements()) {
+			key = header.nextElement();
+			value = request.getHeader(key);
+			connection.setRequestProperty(key, value);
 		}
 
-		try {
-			final String dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
-			dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
-		} catch (final Exception e) {
-			logger.error("Can't init servlet", e);
-			throw new ServletException(e);
-		}
-	}
-
-	public void initialize(HttpServletRequest httpServletRequest) {
+		return connection;
 	}
 
 	void RetrieveAnswer(HttpURLConnection connection, HttpServletResponse response, String referer)
@@ -707,8 +696,8 @@ public class XSLService extends HttpServlet {
 
 		String ref = null;
 		if (referer != null) {
-			final int first = referer.indexOf('/', 7);
-			final int last = referer.lastIndexOf('/');
+			final var first = referer.indexOf('/', 7);
+			final var last = referer.lastIndexOf('/');
 			ref = referer.substring(first, last);
 		}
 
@@ -717,20 +706,20 @@ public class XSLService extends HttpServlet {
 		response.setContentLength(connection.getContentLength());
 
 		/// Transfer headers
-		final Map<String, List<String>> headers = connection.getHeaderFields();
-		int size = headers.size();
-		for (int i = 1; i < size; ++i) {
-			final String key = connection.getHeaderFieldKey(i);
-			final String value = connection.getHeaderField(i);
+		final var headers = connection.getHeaderFields();
+		var size = headers.size();
+		for (var i = 1; i < size; ++i) {
+			final var key = connection.getHeaderFieldKey(i);
+			final var value = connection.getHeaderField(i);
 			//	      response.setHeader(key, value);
 			response.addHeader(key, value);
 		}
 
 		/// Deal with correct path with set cookie
-		final List<String> setValues = headers.get("Set-Cookie");
+		final var setValues = headers.get("Set-Cookie");
 		if (setValues != null) {
-			String setVal = setValues.get(0);
-			final int pathPlace = setVal.indexOf("Path=");
+			var setVal = setValues.get(0);
+			final var pathPlace = setVal.indexOf("Path=");
 			if (pathPlace > 0) {
 				setVal = setVal.substring(0, pathPlace + 5); // Some assumption, may break
 				setVal = setVal + ref;
@@ -740,8 +729,8 @@ public class XSLService extends HttpServlet {
 		}
 
 		/// Write back data
-		final DataInputStream stream = new DataInputStream(in);
-		final byte[] buffer = new byte[1024];
+		final var stream = new DataInputStream(in);
+		final var buffer = new byte[1024];
 		//	    int size;
 		ServletOutputStream out = null;
 		try {

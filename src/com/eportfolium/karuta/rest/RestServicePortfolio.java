@@ -44,15 +44,12 @@ import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
@@ -63,17 +60,13 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.Header;
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
 import org.glassfish.jersey.media.multipart.FormDataParam;
-import org.jasig.cas.client.validation.Assertion;
 import org.jasig.cas.client.validation.Cas20ServiceTicketValidator;
 import org.jasig.cas.client.validation.TicketValidationException;
 import org.json.XML;
@@ -81,7 +74,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -209,7 +201,7 @@ public class RestServicePortfolio {
 			casUrlValidation = ConfigUtils.getInstance().getProperty("casUrlValidation");
 			casCreateAccount = BooleanUtils.toBoolean(ConfigUtils.getInstance().getProperty("casCreateAccount"));
 			casUrlsJsonString = ConfigUtils.getInstance().getProperty("casUrlValidationMapping");
-			final Gson gson = new Gson();
+			final var gson = new Gson();
 			casUrlsValidation = gson.fromJson(casUrlsJsonString, Map.class);
 
 			// LDAP
@@ -241,10 +233,10 @@ public class RestServicePortfolio {
 	 * Fetch user session info
 	 **/
 	public UserInfo checkCredential(HttpServletRequest request, String login, String token, String group) {
-		final HttpSession session = request.getSession(true);
+		final var session = request.getSession(true);
 
-		final UserInfo ui = new UserInfo();
-		Integer val = (Integer) session.getAttribute("uid");
+		final var ui = new UserInfo();
+		var val = (Integer) session.getAttribute("uid");
 		if (val == null) {
 			// Non valid userid
 			logger.error("Request {} on '{}' unauthorized for a not logged in user", request.getMethod(),
@@ -275,12 +267,12 @@ public class RestServicePortfolio {
 	public String deleteGroupRights(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("groupRightId") Integer groupRightId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final int nbResourceDeleted = Integer
+			final var nbResourceDeleted = Integer
 					.parseInt(dataProvider.deleteGroupRights(c, groupId, groupRightId, ui.userId).toString());
 			if (nbResourceDeleted == 0) {
 				logger.info("supprimé");
@@ -321,10 +313,10 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 
-		try (Connection c = SqlUtils.getConnection()) {
-			final int nbDeletedNodes = Integer
+		try (var c = SqlUtils.getConnection()) {
+			final var nbDeletedNodes = Integer
 					.parseInt(dataProvider.deleteNode(c, nodeUuid, ui.userId, groupId, userrole).toString());
 			if (nbDeletedNodes == 0) {
 
@@ -362,27 +354,22 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
 			// Get file list in portfolio
-			final HttpSession session = httpServletRequest.getSession(true);
-			final ArrayList<Pair<String, String>> filelist = dataProvider.getPortfolioUniqueFile(c, portfolioUuid,
-					ui.userId);
+			final var session = httpServletRequest.getSession(true);
+			final var filelist = dataProvider.getPortfolioUniqueFile(c, portfolioUuid, ui.userId);
 
 			// Loop through and delete
-			final String sessionval = session.getId();
-			try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
-				final HttpDelete del = new HttpDelete();
+			final var sessionval = session.getId();
+			try (var httpclient = HttpClients.createDefault()) {
+				final var del = new HttpDelete();
 				del.setHeader("Cookie", "JSESSIONID=" + sessionval); // So that the receiving servlet allow us
 				for (final Pair<String, String> item : filelist) {
-					final String url = backend +
-							"/resources/resource/file/" +
-							item.getLeft() +
-							"?lang=" +
-							item.getRight();
+					final var url = backend + "/resources/resource/file/" + item.getLeft() + "?lang=" + item.getRight();
 					del.setURI(new URI(url));
 
 					httpclient.execute(del);
@@ -392,7 +379,7 @@ public class RestServicePortfolio {
 			}
 
 			// Delete portfolio content
-			final int nbPortfolioDeleted = Integer
+			final var nbPortfolioDeleted = Integer
 					.parseInt(dataProvider.deletePortfolio(c, portfolioUuid, ui.userId, groupId).toString());
 			if (nbPortfolioDeleted == 0) {
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
@@ -426,7 +413,7 @@ public class RestServicePortfolio {
 	public String deletePortfolioByPortfolioGroup(@Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @QueryParam("group") int group,
 			@QueryParam("uuid") String uuid) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 		String response;
 		Connection c = null;
 
@@ -463,9 +450,9 @@ public class RestServicePortfolio {
 	public String deletePortfolioRightInfo(String xmlNode, @CookieParam("user") String user,
 			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
-		String returnValue = "";
+		var returnValue = "";
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
@@ -510,12 +497,12 @@ public class RestServicePortfolio {
 			logger.error("isUUID({})  is false", resourceUuid);
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final int nbResourceDeleted = Integer
+			final var nbResourceDeleted = Integer
 					.parseInt(dataProvider.deleteResource(c, resourceUuid, ui.userId, groupId).toString());
 			if (nbResourceDeleted == 0) {
 
@@ -553,7 +540,7 @@ public class RestServicePortfolio {
 	public String deleteRightGroup(String xmlNode, @CookieParam("user") String user,
 			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue;
 		Connection c = null;
@@ -593,7 +580,7 @@ public class RestServicePortfolio {
 			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId,
 			@PathParam("user-id") Integer queryuser) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue;
 		Connection c = null;
@@ -631,7 +618,7 @@ public class RestServicePortfolio {
 	public String deleteUser(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@PathParam("user-id") Integer userid) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		String message;
 
@@ -642,7 +629,7 @@ public class RestServicePortfolio {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 			}
 
-			final int nbResourceDeleted = dataProvider.deleteUsers(c, ui.userId, userid);
+			final var nbResourceDeleted = dataProvider.deleteUsers(c, ui.userId, userid);
 
 			if (nbResourceDeleted > 0) {
 				message = "user " + userid + " deleted";
@@ -677,7 +664,7 @@ public class RestServicePortfolio {
 	public String deleteUsers(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("userId") Integer userId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		String message;
 
@@ -689,7 +676,7 @@ public class RestServicePortfolio {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 			}
 
-			final int nbResourceDeleted = dataProvider.deleteUsers(c, ui.userId, userId);
+			final var nbResourceDeleted = dataProvider.deleteUsers(c, ui.userId, userId);
 
 			if (nbResourceDeleted > 0) {
 				message = "user " + userId + " deleted";
@@ -725,8 +712,8 @@ public class RestServicePortfolio {
 	@DELETE
 	public String deleteUsersByUserGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("group") int group, @QueryParam("user") Integer user) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
-		final String response = "";
+		final var ui = checkCredential(httpServletRequest, null, null, null);
+		final var response = "";
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
@@ -763,7 +750,7 @@ public class RestServicePortfolio {
 	public Response getCredential(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		if (ui.userId == 0) // Non valid userid
@@ -774,10 +761,10 @@ public class RestServicePortfolio {
 		try {
 			c = SqlUtils.getConnection();
 
-			final String xmluser = dataProvider.getInfUser(c, ui.userId, ui.userId);
+			final var xmluser = dataProvider.getInfUser(c, ui.userId, ui.userId);
 
 			/// Add shibboleth info if needed
-			final HttpSession session = httpServletRequest.getSession(false);
+			final var session = httpServletRequest.getSession(false);
 			session.getAttribute("fromshibe");
 
 			return Response.ok(xmluser).build();
@@ -800,13 +787,13 @@ public class RestServicePortfolio {
 	public Response getCredentialFromCas(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir,
 			@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) throws IllegalAccessException {
-		final HttpSession session = httpServletRequest.getSession(true);
+		final var session = httpServletRequest.getSession(true);
 
-		String casUrlVal = casUrlValidation;
+		var casUrlVal = casUrlValidation;
 		if (casUrlsValidation != null && !casUrlsValidation.isEmpty()) {
 			if (!casUrlsValidation.containsKey(redir)) {
-				final String error = String.format("Unauthorized or not configured redirection '%s' with conf '%s'",
-						redir, casUrlsJsonString);
+				final var error = String.format("Unauthorized or not configured redirection '%s' with conf '%s'", redir,
+						casUrlsJsonString);
 				logger.error(error);
 				throw new IllegalAccessException(error);
 			}
@@ -832,11 +819,11 @@ public class RestServicePortfolio {
 				return response;
 			}
 
-			final Cas20ServiceTicketValidator sv = new Cas20ServiceTicketValidator(casUrlVal);
+			final var sv = new Cas20ServiceTicketValidator(casUrlVal);
 
 			/// X-Forwarded-Proto is for certain setup, check config file
 			/// for some more details
-			final String proto = httpServletRequest.getHeader("X-Forwarded-Proto");
+			final var proto = httpServletRequest.getHeader("X-Forwarded-Proto");
 			requestURL = httpServletRequest.getRequestURL();
 			if (proto == null) {
 				if (redir != null) {
@@ -854,7 +841,7 @@ public class RestServicePortfolio {
 			logger.debug("Service: {}", completeURL);
 			logger.debug("Ticket: {}", ticket);
 			//sv.setProxyCallbackUrl(urlOfProxyCallbackServlet);
-			final Assertion assertion = sv.validate(ticket, completeURL);
+			final var assertion = sv.validate(ticket, completeURL);
 
 			if (!assertion.isValid()) {
 				logger.info("CAS response: {}", xmlResponse);
@@ -863,7 +850,7 @@ public class RestServicePortfolio {
 			logger.info("CAS AUTH SHOULD BE FINE: {}", assertion.getPrincipal());
 
 			//<cas:user>vassoilm</cas:user>
-			final String casUserId = assertion.getPrincipal().getName();
+			final var casUserId = assertion.getPrincipal().getName();
 			session.setAttribute("user", casUserId);
 			//			session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
 			c = SqlUtils.getConnection();
@@ -874,22 +861,22 @@ public class RestServicePortfolio {
 				session.setAttribute("uid", Integer.parseInt(userId));
 
 				if (ldapUrl != null) {
-					final ConnexionLdap cldap = new ConnexionLdap();
+					final var cldap = new ConnexionLdap();
 					if (logger.isDebugEnabled()) {
-						final String[] ldapvalues = cldap.getLdapValue(casUserId);
+						final var ldapvalues = cldap.getLdapValue(casUserId);
 						logger.debug("LDAP CONNECTION OK: {}", Arrays.toString(ldapvalues));
 					}
 				}
 			} else if (casCreateAccount) {
 				if (ldapUrl != null) {
-					final ConnexionLdap cldap = new ConnexionLdap();
-					final String[] ldapvalues = cldap.getLdapValue(casUserId);
+					final var cldap = new ConnexionLdap();
+					final var ldapvalues = cldap.getLdapValue(casUserId);
 					if (!(ldapvalues[1] != null | ldapvalues[2] != null | ldapvalues[3] != null)) {
 						return Response.status(400).entity("Login " + casUserId + " don't have access to Karuta")
 								.build();
 					}
 					userId = dataProvider.createUser(c, casUserId, null);
-					final int uid = Integer.parseInt(userId);
+					final var uid = Integer.parseInt(userId);
 					dataProvider.putInfUserInternal(c, uid, uid, ldapvalues[1], ldapvalues[2], ldapvalues[3]);
 					logger.info("USERID: " + casUserId + " " + userId);
 					session.setAttribute("user", casUserId);
@@ -949,10 +936,10 @@ public class RestServicePortfolio {
 		} catch (final Exception ex) {
 			iLimit = 20;
 		}
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		logger.info(ui.User);
 		try {
-			final Elgg elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User,
+			final var elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User,
 					elggDefaultUserPassword);
 			return elgg.getSiteRiverFeed(iLimit);
 		} catch (final Exception ex) {
@@ -970,9 +957,9 @@ public class RestServicePortfolio {
 	public String getElggSiteRiverFeed(String message, @CookieParam("user") String user,
 			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		try {
-			final Elgg elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User,
+			final var elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User,
 					elggDefaultUserPassword);
 			return elgg.postWire(message);
 		} catch (final Exception ex) {
@@ -985,7 +972,7 @@ public class RestServicePortfolio {
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON })
 	public String getFileServerVersion(@Context HttpServletRequest httpServletRequest) {
-		final Gson gson = new Gson();
+		final var gson = new Gson();
 		return gson.toJson(ConfigUtils.getInstance().getFileServerBuildinfo());
 	}
 
@@ -1002,7 +989,7 @@ public class RestServicePortfolio {
 	public String getGroupRights(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -1041,7 +1028,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -1074,7 +1061,7 @@ public class RestServicePortfolio {
 	public String getGroups(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -1112,7 +1099,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 		Connection c = null;
 
 		try {
@@ -1148,7 +1135,7 @@ public class RestServicePortfolio {
 			logger.error("isUUID({})  is false", portfolioUuid);
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -1182,7 +1169,7 @@ public class RestServicePortfolio {
 	public String getGroupsUser(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @PathParam("user-id") int useridCible, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -1215,13 +1202,12 @@ public class RestServicePortfolio {
 	public String getModel(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @PathParam("model-id") Integer modelId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider.getModel(c, new MimeType("text/xml"), modelId, ui.userId)
-					.toString();
+			final var returnValue = dataProvider.getModel(c, new MimeType("text/xml"), modelId, ui.userId).toString();
 			if (returnValue.equals("")) {
 
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + " not found");
@@ -1258,12 +1244,12 @@ public class RestServicePortfolio {
 	public String getModels(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@HeaderParam("Accept") String accept) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider.getModels(c, new MimeType("text/xml"), ui.userId).toString();
+			final var returnValue = dataProvider.getModels(c, new MimeType("text/xml"), ui.userId).toString();
 			if (returnValue.equals("")) {
 
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + " not found");
@@ -1300,7 +1286,7 @@ public class RestServicePortfolio {
 			@Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type) {
 		checkCredential(httpServletRequest, user, token, group);
 
-		final Ning ning = new Ning();
+		final var ning = new Ning();
 		return ning.getXhtmlActivites();
 	}
 
@@ -1322,12 +1308,12 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId,
+			var returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId,
 					userrole, this.label, cutoff).toString();
 			if (returnValue == null) {
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -1383,10 +1369,10 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 
-		try (Connection c = SqlUtils.getConnection()) {
-			final String returnValue = dataProvider.getNodeBySemanticTag(c, new MimeType("text/xml"), portfolioUuid,
+		try (var c = SqlUtils.getConnection()) {
+			final var returnValue = dataProvider.getNodeBySemanticTag(c, new MimeType("text/xml"), portfolioUuid,
 					semantictag, ui.userId, groupId, userrole).toString();
 			if (returnValue.length() != 0) {
 				return returnValue;
@@ -1419,12 +1405,12 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			String returnValue = dataProvider.getNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, true, ui.userId,
+			var returnValue = dataProvider.getNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, true, ui.userId,
 					groupId, userrole, this.label).toString();
 			if (returnValue.length() == 0) {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -1470,7 +1456,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -1481,7 +1467,7 @@ public class RestServicePortfolio {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "No rights");
 			}
 
-			final String returnValue = dataProvider.getNodePortfolioId(c, nodeUuid);
+			final var returnValue = dataProvider.getNodePortfolioId(c, nodeUuid);
 			if (returnValue.length() != 0) {
 				return returnValue;
 			}
@@ -1524,12 +1510,12 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			String returnValue = dataProvider.getNodeRights(c, nodeUuid, ui.userId, groupId);
+			var returnValue = dataProvider.getNodeRights(c, nodeUuid, ui.userId, groupId);
 			if (returnValue.length() == 0) {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 			}
@@ -1577,13 +1563,13 @@ public class RestServicePortfolio {
 			@Context HttpServletRequest httpServletRequest, @QueryParam("portfoliocode") String portfoliocode,
 			@QueryParam("semtag") String semtag, @QueryParam("semtag_parent") String semtag_parent,
 			@QueryParam("code_parent") String code_parent, @QueryParam("level") Integer cutoff) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider.getNodes(c, new MimeType("text/xml"), portfoliocode, semtag,
-					ui.userId, groupId, userrole, semtag_parent, code_parent, cutoff).toString();
+			final var returnValue = dataProvider.getNodes(c, new MimeType("text/xml"), portfoliocode, semtag, ui.userId,
+					groupId, userrole, semtag_parent, code_parent, cutoff).toString();
 
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -1628,12 +1614,12 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.getNodesBySemanticTag(c, new MimeType("text/xml"), ui.userId, groupId, portfolioUuid, semantictag)
 					.toString();
 			if (returnValue.length() != 0) {
@@ -1676,12 +1662,12 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			String returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId,
+			var returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId,
 					userrole, this.label, cutoff).toString();
 			if (returnValue == null) {
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -1731,22 +1717,22 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			// When we need more parameters, arrange this with format "par1:par1val;par2:par2val;..."
-			final String parameters = "lang:" + lang;
+			final var parameters = "lang:" + lang;
 
-			final javax.servlet.http.HttpSession session = httpServletRequest.getSession(true);
-			String ppath = session.getServletContext().getRealPath(File.separator);
+			final var session = httpServletRequest.getSession(true);
+			var ppath = session.getServletContext().getRealPath(File.separator);
 
 			c = SqlUtils.getConnection();
 			/// webapps...
 			ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
 			xslFile = ppath + xslFile;
 
-			String returnValue = dataProvider.getNodeWithXSL(c, new MimeType("text/xml"), nodeUuid, xslFile, parameters,
+			var returnValue = dataProvider.getNodeWithXSL(c, new MimeType("text/xml"), nodeUuid, xslFile, parameters,
 					ui.userId, groupId, userrole).toString();
 			if (returnValue.length() == 0) {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -1806,13 +1792,13 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 
 		Connection c = null;
 		Response response = null;
 		try {
 			c = SqlUtils.getConnection();
-			String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0,
+			var portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId, 0,
 					userrole, resource, "", ui.subId, cutoff).toString();
 
 			if (MysqlDataProvider.DATABASE_FALSE.equals(portfolio)) {
@@ -1821,12 +1807,12 @@ public class RestServicePortfolio {
 
 			if (response == null) {
 				/// Finding back code. Not really pretty
-				final String timeFormat = DT.format(new Date());
-				final Document doc = DomUtils.xmlString2Document(portfolio, new StringBuilder());
-				final NodeList codes = doc.getDocumentElement().getElementsByTagName("code");
+				final var timeFormat = DT.format(new Date());
+				final var doc = DomUtils.xmlString2Document(portfolio, new StringBuilder());
+				final var codes = doc.getDocumentElement().getElementsByTagName("code");
 				// Le premier c'est celui du root
-				final Node codenode = codes.item(0);
-				String code = "";
+				final var codenode = codes.item(0);
+				var code = "";
 				if (codenode != null) {
 					code = codenode.getTextContent();
 				}
@@ -1838,12 +1824,12 @@ public class RestServicePortfolio {
 							"attachment; filename = \"" + code + "-" + timeFormat + ".xml\"").build();
 				} else if (resource != null && files != null) {
 					//// Cas du renvoi d'un ZIP
-					final HttpSession session = httpServletRequest.getSession(true);
-					final File tempZip = getZipFile(portfolioUuid, portfolio, lang, doc, session);
+					final var session = httpServletRequest.getSession(true);
+					final var tempZip = getZipFile(portfolioUuid, portfolio, lang, doc, session);
 
 					/// Return zip file
-					final RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
-					final byte[] b = new byte[(int) f.length()];
+					final var f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
+					final var b = new byte[(int) f.length()];
 					f.read(b);
 					f.close();
 
@@ -1904,16 +1890,16 @@ public class RestServicePortfolio {
 			@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept,
 			@QueryParam("user") Integer userId, @QueryParam("group") Integer group,
 			@QueryParam("userrole") String userrole, @QueryParam("resources") String resources) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
 
 			// Try with world public access
-			final String userid = dataProvider.getUserId(c, "public", null);
-			final int uid = Integer.parseInt(userid);
-			final String portfo = dataProvider
+			final var userid = dataProvider.getUserId(c, "public", null);
+			final var uid = Integer.parseInt(userid);
+			final var portfo = dataProvider
 					.getPortfolioByCode(c, new MimeType("text/xml"), code, uid, -1, userrole, "true", -1).toString();
 
 			if (!"faux".equals(portfo)) {
@@ -1927,7 +1913,7 @@ public class RestServicePortfolio {
 			if (resources == null) {
 				resources = "false";
 			}
-			String returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, ui.userId, groupId,
+			var returnValue = dataProvider.getPortfolioByCode(c, new MimeType("text/xml"), code, ui.userId, groupId,
 					userrole, resources, ui.subId).toString();
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 				logger.error("Code {} not found or user without rights", code);
@@ -1977,14 +1963,14 @@ public class RestServicePortfolio {
 	public String getPortfolioByPortfolioGroup(@Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group,
 			@QueryParam("uuid") String portfolioid, @QueryParam("label") String groupLabel) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
 		String xmlUsers;
 
 		try {
 			c = SqlUtils.getConnection();
 			if (groupLabel != null) {
-				final int groupid = dataProvider.getPortfolioGroupIdFromLabel(c, groupLabel, ui.userId);
+				final var groupid = dataProvider.getPortfolioGroupIdFromLabel(c, groupLabel, ui.userId);
 				if (groupid == -1) {
 					throw new RestWebApplicationException(Status.NOT_FOUND, "");
 				}
@@ -2026,9 +2012,9 @@ public class RestServicePortfolio {
 			logger.error("isUUID({})  is false", portId);
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
-		String returnValue = "";
+		var returnValue = "";
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
@@ -2084,14 +2070,14 @@ public class RestServicePortfolio {
 			@QueryParam("n") String numResult, @QueryParam("level") Integer cutoff,
 			@QueryParam("public") String public_var, @QueryParam("project") String project,
 			@QueryParam("count") String count, @QueryParam("search") String search) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
 
 			if (portfolioUuid != null) {
-				String returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId,
+				var returnValue = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId,
 						groupId, userrole, null, null, ui.subId, cutoff).toString();
 				if (accept.equals(MediaType.APPLICATION_JSON)) {
 					returnValue = XML.toJSONObject(returnValue).toString();
@@ -2142,7 +2128,7 @@ public class RestServicePortfolio {
 						groupId, userrole, null, ui.subId).toString();
 			} else {
 				if (public_var != null) {
-					final int publicid = credential.getMysqlUserUid(c, "public");
+					final var publicid = credential.getMysqlUserUid(c, "public");
 					returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, userrole,
 							portfolioActive, 0, portfolioProject, portfolioProjectId, countOnly, search).toString();
 				} else if (userId != null && credential.isAdmin(c, ui.userId)) {
@@ -2195,13 +2181,13 @@ public class RestServicePortfolio {
 	public Response getPortfolioShared(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@PathParam("userid") int userid) {
-		final UserInfo uinfo = checkCredential(httpServletRequest, user, token, null);
+		final var uinfo = checkCredential(httpServletRequest, user, token, null);
 
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
 			if (credential.isAdmin(c, uinfo.userId)) {
-				final String res = dataProvider.getPortfolioShared(c, uinfo.userId, userid);
+				final var res = dataProvider.getPortfolioShared(c, uinfo.userId, userid);
 				return Response.ok(res).build();
 			}
 			return Response.status(403).build();
@@ -2236,12 +2222,12 @@ public class RestServicePortfolio {
 			@Context HttpServletRequest httpServletRequest, @QueryParam("user") Integer userId,
 			@QueryParam("model") String modelId, @QueryParam("instance") String instance,
 			@QueryParam("lang") String lang, @QueryParam("archive") String archive) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			File archiveFolder = null;
-			boolean doArchive = false;
+			var doArchive = false;
 			if (BooleanUtils.toBoolean(archive)) {
 				/// Check if folder exists
 				archiveFolder = new File(archivePath);
@@ -2251,64 +2237,64 @@ public class RestServicePortfolio {
 				doArchive = true;
 			}
 
-			final HttpSession session = httpServletRequest.getSession(false);
-			final String[] list = portfolioList.split(",");
-			final File[] files = new File[list.length];
+			final var session = httpServletRequest.getSession(false);
+			final var list = portfolioList.split(",");
+			final var files = new File[list.length];
 
 			c = SqlUtils.getConnection();
 
 			/// Suppose the first portfolio has the right name to be used
 
-			String name = "";
+			var name = "";
 
 			/// Create all the zip files
-			for (int i = 0; i < list.length; ++i) {
-				final String portfolioUuid = list[i];
-				final String portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid,
-						ui.userId, 0, this.label, "true", "", ui.subId, null).toString();
+			for (var i = 0; i < list.length; ++i) {
+				final var portfolioUuid = list[i];
+				final var portfolio = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid, ui.userId,
+						0, this.label, "true", "", ui.subId, null).toString();
 
 				// No name yet
 				if ("".equals(name)) {
-					final StringBuilder outTrace = new StringBuilder();
-					final Document doc = DomUtils.xmlString2Document(portfolio, outTrace);
-					final XPath xPath = XPathFactory.newInstance().newXPath();
-					final String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
-					final NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+					final var outTrace = new StringBuilder();
+					final var doc = DomUtils.xmlString2Document(portfolio, outTrace);
+					final var xPath = XPathFactory.newInstance().newXPath();
+					final var filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
+					final var nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 
 					if (nodelist.getLength() > 0) {
 						name = nodelist.item(0).getTextContent();
 					}
 				}
 
-				final Document doc = DomUtils.xmlString2Document(portfolio, new StringBuilder());
+				final var doc = DomUtils.xmlString2Document(portfolio, new StringBuilder());
 
 				files[i] = getZipFile(portfolioUuid, portfolio, lang, doc, session);
 
 			}
 
 			// Make a big zip of it
-			final String timeFormat = DT.format(new Date());
+			final var timeFormat = DT.format(new Date());
 
-			final File tempDir = new File(tempdir);
+			final var tempDir = new File(tempdir);
 			if (!tempDir.isDirectory()) {
 				tempDir.mkdirs();
 			}
-			final File bigZip = File.createTempFile("project_" + timeFormat, ".zip", tempDir);
+			final var bigZip = File.createTempFile("project_" + timeFormat, ".zip", tempDir);
 
 			// Add content to it
-			final FileOutputStream fos = new FileOutputStream(bigZip);
-			final ZipOutputStream zos = new ZipOutputStream(fos);
+			final var fos = new FileOutputStream(bigZip);
+			final var zos = new ZipOutputStream(fos);
 
-			final byte[] buffer = new byte[0x1000];
+			final var buffer = new byte[0x1000];
 
 			for (final File file : files) {
-				final FileInputStream fis = new FileInputStream(file);
-				final String filename = file.getName();
+				final var fis = new FileInputStream(file);
+				final var filename = file.getName();
 
 				/// Write xml file to zip
-				final ZipEntry ze = new ZipEntry(filename + ".zip");
+				final var ze = new ZipEntry(filename + ".zip");
 				zos.putNextEntry(ze);
-				int read = 1;
+				var read = 1;
 				while (read > 0) {
 					read = fis.read(buffer);
 					zos.write(buffer);
@@ -2326,16 +2312,16 @@ public class RestServicePortfolio {
 			Response response;
 			if (doArchive) // Keep bigzip inside archive folder
 			{
-				final String filename = name + "-" + timeFormat + ".zip";
-				final File archiveFile = new File(archiveFolder.getAbsolutePath() + File.separator + filename);
+				final var filename = name + "-" + timeFormat + ".zip";
+				final var archiveFile = new File(archiveFolder.getAbsolutePath() + File.separator + filename);
 				archiveFile.createNewFile();
 				bigZip.renameTo(archiveFile); // Return filename generated
 				response = Response.ok(filename).build();
 			} else // Return to browser
 			{
 				/// Return zip file
-				final RandomAccessFile f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
-				final byte[] b = new byte[(int) f.length()];
+				final var f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
+				final var b = new byte[(int) f.length()];
 				f.read(b);
 				f.close();
 
@@ -2381,13 +2367,13 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			String returnValue = dataProvider
-					.getResource(c, new MimeType("text/xml"), nodeParentUuid, ui.userId, groupId).toString();
+			var returnValue = dataProvider.getResource(c, new MimeType("text/xml"), nodeParentUuid, ui.userId, groupId)
+					.toString();
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -2436,13 +2422,13 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			String returnValue = dataProvider
-					.getResources(c, new MimeType("text/xml"), portfolioUuid, ui.userId, groupId).toString();
+			var returnValue = dataProvider.getResources(c, new MimeType("text/xml"), portfolioUuid, ui.userId, groupId)
+					.toString();
 			if (accept.equals(MediaType.APPLICATION_JSON)) {
 				returnValue = XML.toJSONObject(returnValue).toString();
 			}
@@ -2475,9 +2461,9 @@ public class RestServicePortfolio {
 	public String getRightInfo(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@CookieParam("group") String group, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
-		String returnValue = "";
+		var returnValue = "";
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
@@ -2521,7 +2507,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue;
 		Connection c = null;
@@ -2560,11 +2546,11 @@ public class RestServicePortfolio {
 	public String getRole(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @PathParam("role-id") Integer roleId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @HeaderParam("Accept") String accept) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider.getRole(c, new MimeType("text/xml"), roleId, ui.userId);
+			final var returnValue = dataProvider.getRole(c, new MimeType("text/xml"), roleId, ui.userId);
 			if (returnValue.equals("")) {
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + roleId + " not found");
 			}
@@ -2602,7 +2588,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -2636,7 +2622,7 @@ public class RestServicePortfolio {
 	public String getUser(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @PathParam("user-id") int userid, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
@@ -2676,24 +2662,23 @@ public class RestServicePortfolio {
 		}
 
 		httpServletRequest.getSession(true);
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final String xmlGroups = dataProvider.getUserGroupByPortfolio(c, portfolioUuid, ui.userId);
+			final var xmlGroups = dataProvider.getUserGroupByPortfolio(c, portfolioUuid, ui.userId);
 
-			final DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+			final var documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
 			DocumentBuilder documentBuilder;
 			Document document;
 			documentBuilder = documentBuilderFactory.newDocumentBuilder();
 			document = documentBuilder.newDocument();
 			document.setXmlStandalone(true);
-			final Document doc = documentBuilder
-					.parse(new ByteArrayInputStream(xmlGroups.getBytes(StandardCharsets.UTF_8)));
-			final NodeList groups = doc.getElementsByTagName("group");
+			final var doc = documentBuilder.parse(new ByteArrayInputStream(xmlGroups.getBytes(StandardCharsets.UTF_8)));
+			final var groups = doc.getElementsByTagName("group");
 			if (groups.getLength() == 1) {
-				final Node groupnode = groups.item(0);
+				final var groupnode = groups.item(0);
 				groupnode.getAttributes().getNamedItem("id").getNodeValue();
 			} else if (groups.getLength() == 0) // Pas de groupe, on rend invalide le choix
 			{
@@ -2725,7 +2710,7 @@ public class RestServicePortfolio {
 	public String getUserId(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @PathParam("username") String username, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -2762,7 +2747,7 @@ public class RestServicePortfolio {
 			@QueryParam("lastname") String lastname, @QueryParam("group") int groupId,
 			@QueryParam("email") String email, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		if (ui.userId == 0) {
@@ -2812,7 +2797,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 		Connection c = null;
 
 		try {
@@ -2845,14 +2830,14 @@ public class RestServicePortfolio {
 	public String getUsersByUserGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("group") Integer group, @QueryParam("user") Integer user,
 			@QueryParam("label") String groupLabel) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 
 		Connection c = null;
-		String xmlUsers = "";
+		var xmlUsers = "";
 		try {
 			c = SqlUtils.getConnection();
 			if (groupLabel != null) {
-				final int groupId = dataProvider.getGroupByGroupLabel(c, groupLabel, ui.userId);
+				final var groupId = dataProvider.getGroupByGroupLabel(c, groupLabel, ui.userId);
 				if (groupId < 0) {
 					throw new RestWebApplicationException(Status.NOT_FOUND, "");
 				}
@@ -2896,120 +2881,8 @@ public class RestServicePortfolio {
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON })
 	public String getVersion(@Context HttpServletRequest httpServletRequest) {
-		final Gson gson = new Gson();
+		final var gson = new Gson();
 		return gson.toJson(ConfigUtils.getInstance().getBuildInfo());
-	}
-
-	private File getZipFile(String portfolioUuid, String portfolioContent, String lang, Document doc,
-			HttpSession session) throws IOException, XPathExpressionException {
-		if (!isUUID(portfolioUuid)) {
-			logger.error("isUUID({}) is false", portfolioUuid);
-			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
-		}
-
-		/// Temp file in temp directory
-		final File tempDir = new File(tempdir);
-		if (!tempDir.isDirectory()) {
-			tempDir.mkdirs();
-		}
-		final File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
-
-		final FileOutputStream fos = new FileOutputStream(tempZip);
-		final ZipOutputStream zos = new ZipOutputStream(fos);
-
-		/// Write xml file to zip
-		ZipEntry ze = new ZipEntry(portfolioUuid + ".xml");
-		zos.putNextEntry(ze);
-
-		final byte[] bytes = portfolioContent.getBytes(StandardCharsets.UTF_8);
-		zos.write(bytes);
-
-		zos.closeEntry();
-
-		/// Find all fileid/filename
-		final XPath xPath = XPathFactory.newInstance().newXPath();
-		final String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
-		final NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
-
-		/// Fetch all files
-		for (int i = 0; i < nodelist.getLength(); ++i) {
-			final Node res = nodelist.item(i);
-			/// Check if fileid has a lang
-			final Node langAtt = res.getAttributes().getNamedItem("lang");
-			String filterName;
-			if (langAtt != null) {
-				lang = langAtt.getNodeValue();
-				filterName = ".//*[local-name()='filename' and @lang='" + lang + "' and text()]";
-			} else {
-				filterName = ".//*[local-name()='filename' and @lang and text()]";
-			}
-
-			final Node p = res.getParentNode(); // fileid -> resource
-			final Node gp = p.getParentNode(); // resource -> context
-			final Node uuidNode = gp.getAttributes().getNamedItem("id");
-			final String uuid = uuidNode.getTextContent();
-
-			final NodeList textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
-			String filename = "";
-			if (textList.getLength() != 0) {
-				final Element fileNode = (Element) textList.item(0);
-				filename = fileNode.getTextContent();
-				lang = fileNode.getAttribute("lang"); // In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
-				if ("".equals(lang)) {
-					lang = "fr";
-				}
-			}
-
-			final String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
-			final HttpGet get = new HttpGet(url);
-
-			// Transfer sessionid so that local request still get security checked
-			get.addHeader("Cookie", "JSESSIONID=" + session.getId());
-
-			// Send request
-			final CloseableHttpClient client = HttpClients.createDefault();
-			final CloseableHttpResponse ret = client.execute(get);
-			final HttpEntity entity = ret.getEntity();
-
-			// Put specific name for later recovery
-			if ("".equals(filename)) {
-				continue;
-			}
-			int lastDot = filename.lastIndexOf(".");
-			if (lastDot < 0) {
-				lastDot = 0;
-			}
-			String filenameext = filename; /// find extension
-			final int extindex = filenameext.lastIndexOf(".") + 1;
-			filenameext = uuid + "_" + lang + "." + filenameext.substring(extindex);
-
-			// Save it to zip file
-			final InputStream content = entity.getContent();
-			ze = new ZipEntry(filenameext);
-			try {
-				int totalread = 0;
-				zos.putNextEntry(ze);
-				int inByte;
-				final byte[] buf = new byte[4096];
-				while ((inByte = content.read(buf)) != -1) {
-					totalread += inByte;
-					zos.write(buf, 0, inByte);
-				}
-				logger.info("FILE: {} -> {}", filenameext, totalread);
-				content.close();
-				zos.closeEntry();
-			} catch (final Exception e) {
-				logger.error("Managed error", e);
-			}
-			EntityUtils.consume(entity);
-			ret.close();
-			client.close();
-		}
-
-		zos.close();
-		fos.close();
-
-		return tempZip;
 	}
 
 	public boolean isUUID(String uuidstr) {
@@ -3029,7 +2902,7 @@ public class RestServicePortfolio {
 	@GET
 	public Response logoutGET(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("redir") String redir) {
-		final HttpSession session = httpServletRequest.getSession(false);
+		final var session = httpServletRequest.getSession(false);
 		//TODO: odd logic between 2 properties and a default location to redirect
 		if (session == null) {
 			// If value is set, this redirection takes priority
@@ -3061,7 +2934,7 @@ public class RestServicePortfolio {
 	@Path("/credential/logout")
 	@POST
 	public Response logoutPOST(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
-		final HttpSession session = httpServletRequest.getSession(false);
+		final var session = httpServletRequest.getSession(false);
 		if (session != null) {
 			session.invalidate();
 		}
@@ -3086,12 +2959,12 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider.postMacroOnNode(c, ui.userId, nodeId, macro);
+			final var returnValue = dataProvider.postMacroOnNode(c, ui.userId, nodeId, macro);
 
 			if ("erreur".equals(returnValue)) {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -3131,7 +3004,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 
 		/*
 		KEvent event = new KEvent();
@@ -3144,7 +3017,7 @@ public class RestServicePortfolio {
 
 		try {
 			c = SqlUtils.getConnection();
-			final boolean returnValue = dataProvider.postChangeNodeParent(c, ui.userId, nodeId, parentId);
+			final var returnValue = dataProvider.postChangeNodeParent(c, ui.userId, nodeId, parentId);
 
 			Response response;
 			if (!returnValue) {
@@ -3179,9 +3052,9 @@ public class RestServicePortfolio {
 	@Produces(MediaType.APPLICATION_XML)
 	public String postChangeRights(String xmlNode, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 
-		final String returnValue = "";
+		final var returnValue = "";
 		Connection c = null;
 		try {
 			/*
@@ -3209,31 +3082,30 @@ public class RestServicePortfolio {
 			 * </portfoliogroup>
 			 **/
 
-			final DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
-			final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			final Document doc = documentBuilder
-					.parse(new ByteArrayInputStream(xmlNode.getBytes(StandardCharsets.UTF_8)));
+			final var documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+			final var documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			final var doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes(StandardCharsets.UTF_8)));
 
-			final XPath xPath = XPathFactory.newInstance().newXPath();
-			final ArrayList<String> portfolio = new ArrayList<>();
+			final var xPath = XPathFactory.newInstance().newXPath();
+			final var portfolio = new ArrayList<String>();
 			//			String xpathRole = "//role";
-			final String xpathRole = "//*[local-name()='role']";
-			final XPathExpression findRole = xPath.compile(xpathRole);
+			final var xpathRole = "//*[local-name()='role']";
+			final var findRole = xPath.compile(xpathRole);
 			//			String xpathNodeFilter = "//xpath";
-			final String xpathNodeFilter = "//*[local-name()='xpath']";
-			final XPathExpression findXpath = xPath.compile(xpathNodeFilter);
+			final var xpathNodeFilter = "//*[local-name()='xpath']";
+			final var findXpath = xPath.compile(xpathNodeFilter);
 			String nodefilter;
 			NodeList roles = null;
 
 			/// Fetch portfolio(s)
 			//			String portfolioNode = "//portfoliogroup";
-			String portfolioNode = "//*[local-name()='portfoliogroup']";
+			var portfolioNode = "//*[local-name()='portfoliogroup']";
 			XPathExpression xpathFilter = null;
-			final Node portgroupnode = (Node) xPath.compile(portfolioNode).evaluate(doc, XPathConstants.NODE);
+			final var portgroupnode = (Node) xPath.compile(portfolioNode).evaluate(doc, XPathConstants.NODE);
 			if (portgroupnode != null) {
 				portgroupnode.getAttributes().getNamedItem("name").getNodeValue();
 
-				final Node xpathNode = (Node) findXpath.evaluate(portgroupnode, XPathConstants.NODE);
+				final var xpathNode = (Node) findXpath.evaluate(portgroupnode, XPathConstants.NODE);
 				nodefilter = xpathNode.getNodeValue();
 				xpathFilter = xPath.compile(nodefilter);
 				roles = (NodeList) findRole.evaluate(portgroupnode, XPathConstants.NODESET);
@@ -3241,11 +3113,11 @@ public class RestServicePortfolio {
 				// Or add the single one
 				//				portfolioNode = "//portfolio[@uuid]";
 				portfolioNode = "//*[local-name()='portfolio'] and @*[local-name()='uuid']";
-				final Node portnode = (Node) xPath.compile(portfolioNode).evaluate(doc, XPathConstants.NODE);
+				final var portnode = (Node) xPath.compile(portfolioNode).evaluate(doc, XPathConstants.NODE);
 				if (portnode != null) {
 					portfolio.add(portnode.getNodeValue());
 
-					final Node xpathNode = (Node) findXpath.evaluate(portnode, XPathConstants.NODE);
+					final var xpathNode = (Node) findXpath.evaluate(portnode, XPathConstants.NODE);
 					nodefilter = xpathNode.getNodeValue();
 					xpathFilter = xPath.compile(nodefilter);
 					roles = (NodeList) findRole.evaluate(portnode, XPathConstants.NODESET);
@@ -3253,19 +3125,19 @@ public class RestServicePortfolio {
 			}
 
 			c = SqlUtils.getConnection();
-			final ArrayList<String> nodes = new ArrayList<>();
+			final var nodes = new ArrayList<String>();
 			// For all portfolio
 			for (final String portfolioUuid : portfolio) {
-				final String portfolioStr = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid,
+				final var portfolioStr = dataProvider.getPortfolio(c, new MimeType("text/xml"), portfolioUuid,
 						ui.userId, 0, this.label, null, null, ui.subId, null).toString();
-				final Document docPort = documentBuilder
+				final var docPort = documentBuilder
 						.parse(new ByteArrayInputStream(portfolioStr.getBytes(StandardCharsets.UTF_8)));
 
 				/// Fetch nodes inside those portfolios
-				final NodeList portNodes = (NodeList) xpathFilter.evaluate(docPort, XPathConstants.NODESET);
-				for (int j = 0; j < portNodes.getLength(); ++j) {
-					final Node node = portNodes.item(j);
-					final String nodeuuid = node.getAttributes().getNamedItem("id").getNodeValue();
+				final var portNodes = (NodeList) xpathFilter.evaluate(docPort, XPathConstants.NODESET);
+				for (var j = 0; j < portNodes.getLength(); ++j) {
+					final var node = portNodes.item(j);
+					final var nodeuuid = node.getAttributes().getNamedItem("id").getNodeValue();
 
 					nodes.add(nodeuuid); // Keep those we have to change rights
 				}
@@ -3274,18 +3146,18 @@ public class RestServicePortfolio {
 			/// Fetching single node
 			if (nodes.isEmpty()) {
 				//				String singleNode = "//node";
-				final String singleNode = "//*[local-name()='node']";
-				final Node sNode = (Node) xPath.compile(singleNode).evaluate(doc, XPathConstants.NODE);
-				final String uuid = sNode.getAttributes().getNamedItem("uuid").getNodeValue();
+				final var singleNode = "//*[local-name()='node']";
+				final var sNode = (Node) xPath.compile(singleNode).evaluate(doc, XPathConstants.NODE);
+				final var uuid = sNode.getAttributes().getNamedItem("uuid").getNodeValue();
 				nodes.add(uuid);
 				roles = (NodeList) findRole.evaluate(sNode, XPathConstants.NODESET);
 			}
 
 			/// For all roles we have to change
-			for (int i = 0; i < roles.getLength(); ++i) {
-				final Node rolenode = roles.item(i);
-				final String rolename = rolenode.getAttributes().getNamedItem("name").getNodeValue();
-				Node right = rolenode.getFirstChild();
+			for (var i = 0; i < roles.getLength(); ++i) {
+				final var rolenode = roles.item(i);
+				final var rolename = rolenode.getAttributes().getNamedItem("name").getNodeValue();
+				var right = rolenode.getFirstChild();
 
 				if ("#text".equals(right.getNodeName())) {
 					right = right.getNextSibling();
@@ -3293,11 +3165,11 @@ public class RestServicePortfolio {
 
 				if ("right".equals(right.getNodeName())) // Changing node rights
 				{
-					final NamedNodeMap rights = right.getAttributes();
+					final var rights = right.getAttributes();
 
-					final NodeRight noderight = new NodeRight(null, null, null, null, null, null);
+					final var noderight = new NodeRight(null, null, null, null, null, null);
 
-					String val = rights.getNamedItem("RD").getNodeValue();
+					var val = rights.getNamedItem("RD").getNodeValue();
 					if (val != null) {
 						noderight.read = Boolean.parseBoolean(val);
 					}
@@ -3366,7 +3238,7 @@ public class RestServicePortfolio {
 		}
 		//*/
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		//// TODO: IF user is creator and has parameter owner -> change ownership
@@ -3377,7 +3249,7 @@ public class RestServicePortfolio {
 			}
 
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.postCopyNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId)
 					.toString();
 
@@ -3426,7 +3298,7 @@ public class RestServicePortfolio {
 		}
 		//*/
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 
 		//// TODO: IF user is creator and has parameter owner -> change ownership
 		Connection c = null;
@@ -3437,15 +3309,15 @@ public class RestServicePortfolio {
 			}
 
 			/// Check if code exist, find a suitable one otherwise. Eh.
-			final String newcode = tgtcode;
+			final var newcode = tgtcode;
 			if (dataProvider.isCodeExist(c, newcode, null)) {
 				return Response.status(Status.CONFLICT).entity("code exist").build();
 			}
 
-			final boolean setOwner = Boolean.parseBoolean(setowner);
+			final var setOwner = Boolean.parseBoolean(setowner);
 			tgtcode = newcode;
 
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.postCopyPortfolio(c, new MimeType("text/xml"), portfolioId, srccode, tgtcode, ui.userId, setOwner)
 					.toString();
 
@@ -3489,22 +3361,22 @@ public class RestServicePortfolio {
 			@CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
 
-		final HttpSession session = httpServletRequest.getSession(true);
-		final KEvent event = new KEvent();
+		final var session = httpServletRequest.getSession(true);
+		final var event = new KEvent();
 		event.eventType = KEvent.EventType.LOGIN;
 		event.inputData = xmlCredential;
-		String retVal = "";
+		var retVal = "";
 		int status;
 		Connection c = null;
 
 		try {
-			final Document doc = DomUtils.xmlString2Document(xmlCredential, new StringBuilder());
-			final Element credentialElement = doc.getDocumentElement();
-			String login = "";
-			String password = "";
+			final var doc = DomUtils.xmlString2Document(xmlCredential, new StringBuilder());
+			final var credentialElement = doc.getDocumentElement();
+			var login = "";
+			var password = "";
 			String substit = null;
 			if (credentialElement.getNodeName().equals("credential")) {
-				final String[] templogin = DomUtils.getInnerXml(doc.getElementsByTagName("login").item(0)).split("#");
+				final var templogin = DomUtils.getInnerXml(doc.getElementsByTagName("login").item(0)).split("#");
 				password = DomUtils.getInnerXml(doc.getElementsByTagName("password").item(0));
 
 				if (templogin.length > 1) {
@@ -3521,13 +3393,13 @@ public class RestServicePortfolio {
 			//			ConnexionLdap cldap = new ConnexionLdap();
 			//			cldap.getLdapConnexion();
 
-			final int dummy = 0;
+			final var dummy = 0;
 			c = SqlUtils.getConnection();
-			final String[] resultCredential = dataProvider.postCredentialFromXml(c, dummy, login, password, substit);
+			final var resultCredential = dataProvider.postCredentialFromXml(c, dummy, login, password, substit);
 			// 0: xml de retour
 			// 1,2: username, uid
 			// 3,4: substitute name, substitute id
-			final String timeFormat = DT2.format(new Date());
+			final var timeFormat = DT2.format(new Date());
 			if (resultCredential == null) {
 				event.status = 403;
 				retVal = "invalid credential";
@@ -3537,8 +3409,8 @@ public class RestServicePortfolio {
 				//				String tokenID = resultCredential[2];
 
 				if (substit != null && !"0".equals(resultCredential[4])) {
-					final int uid = Integer.parseInt(resultCredential[2]);
-					final int subid = Integer.parseInt(resultCredential[4]);
+					final var uid = Integer.parseInt(resultCredential[2]);
+					final var subid = Integer.parseInt(resultCredential[4]);
 
 					session.setAttribute("user", resultCredential[3]);
 					session.setAttribute("uid", subid);
@@ -3548,8 +3420,8 @@ public class RestServicePortfolio {
 					authLog.info(String.format("Authentication success for user '%s' date '%s' (Substitution)\n", login,
 							timeFormat));
 				} else {
-					final String login1 = resultCredential[1];
-					final int userId = Integer.parseInt(resultCredential[2]);
+					final var login1 = resultCredential[1];
+					final var userId = Integer.parseInt(resultCredential[2]);
 
 					session.setAttribute("user", login1);
 					session.setAttribute("uid", userId);
@@ -3657,19 +3529,19 @@ public class RestServicePortfolio {
 	public Response postForgotCredential(String xml, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
 		httpServletRequest.getSession(true);
-		int retVal = 404;
-		String retText = "";
+		var retVal = 404;
+		var retText = "";
 		Connection c = null;
 
 		if (resetPWEnable) {
 			try {
-				final Document doc = DomUtils.xmlString2Document(xml, new StringBuilder());
-				final Element infUser = doc.getDocumentElement();
+				final var doc = DomUtils.xmlString2Document(xml, new StringBuilder());
+				final var infUser = doc.getDocumentElement();
 
-				String username = "";
+				var username = "";
 				if (infUser.getNodeName().equals("credential")) {
-					final NodeList children2 = infUser.getChildNodes();
-					for (int y = 0; y < children2.getLength(); y++) {
+					final var children2 = infUser.getChildNodes();
+					for (var y = 0; y < children2.getLength(); y++) {
 						if (children2.item(y).getNodeName().equals("login")) {
 							username = DomUtils.getInnerXml(children2.item(y));
 							break;
@@ -3679,23 +3551,23 @@ public class RestServicePortfolio {
 
 				c = SqlUtils.getConnection();
 				// Check if we have that email somewhere
-				final String email = dataProvider.emailFromLogin(c, username);
+				final var email = dataProvider.emailFromLogin(c, username);
 				if (email != null && !"".equals(email)) {
 					// Generate password
-					final long base = System.currentTimeMillis();
-					final MessageDigest md = MessageDigest.getInstance("SHA-1");
-					final byte[] output = md.digest(Long.toString(base).getBytes());
-					String password = String.format("%032X", new BigInteger(1, output));
+					final var base = System.currentTimeMillis();
+					final var md = MessageDigest.getInstance("SHA-1");
+					final var output = md.digest(Long.toString(base).getBytes());
+					var password = String.format("%032X", new BigInteger(1, output));
 					password = password.substring(0, 9);
 
 					// Write change
-					final boolean result = dataProvider.changePassword(c, username, password);
-					final String content = emailResetMessage + password + "<br>\n";
+					final var result = dataProvider.changePassword(c, username, password);
+					final var content = emailResetMessage + password + "<br>\n";
 					httpServletRequest.getHeader("referer");
 
 					if (result) {
 						if (securityLog != null) {
-							final String ip = httpServletRequest.getRemoteAddr();
+							final var ip = httpServletRequest.getRemoteAddr();
 							securityLog.info("[{}] [{}] asked to reset password", ip, username);
 						}
 						// Send email
@@ -3755,7 +3627,7 @@ public class RestServicePortfolio {
 	public String postGroup(String xmlgroup, @CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -3790,7 +3662,7 @@ public class RestServicePortfolio {
 	public String postGroupsUsers(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("userId") int userId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -3838,7 +3710,7 @@ public class RestServicePortfolio {
 		}
 		//*/
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -3847,7 +3719,7 @@ public class RestServicePortfolio {
 			}
 
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.postImportNode(c, new MimeType("text/xml"), parentId, semtag, code, srcuuid, ui.userId, groupId)
 					.toString();
 
@@ -3901,7 +3773,7 @@ public class RestServicePortfolio {
 		}
 		//*/
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 
 		//// TODO: IF user is creator and has parameter owner -> change ownership
 		Connection c = null;
@@ -3912,18 +3784,18 @@ public class RestServicePortfolio {
 				return Response.status(Status.FORBIDDEN).entity("403").build();
 			}
 
-			final boolean setOwner = BooleanUtils.toBoolean(setowner);
-			final boolean copyshared = BooleanUtils.toBoolean(copy);
+			final var setOwner = BooleanUtils.toBoolean(setowner);
+			final var copyshared = BooleanUtils.toBoolean(copy);
 
 			/// Check if code exist, find a suitable one otherwise. Eh.
-			String newcode = tgtcode;
-			int num = 0;
+			var newcode = tgtcode;
+			var num = 0;
 			while (dataProvider.isCodeExist(c, newcode, null)) {
 				newcode = tgtcode + " (" + num++ + ")";
 			}
 			tgtcode = newcode;
 
-			final String returnValue = dataProvider.postInstanciatePortfolio(c, new MimeType("text/xml"), portfolioId,
+			final var returnValue = dataProvider.postInstanciatePortfolio(c, new MimeType("text/xml"), portfolioId,
 					srccode, tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
 
 			if (returnValue.startsWith("no rights")) {
@@ -3971,7 +3843,7 @@ public class RestServicePortfolio {
 			logger.error("isUUID({})  is false", uuid);
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue;
 		Connection c = null;
@@ -4017,12 +3889,12 @@ public class RestServicePortfolio {
 	public String postModel(String xmlModel, @CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@HeaderParam("Accept") String accept) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider.postModels(c, new MimeType("text/xml"), xmlModel, ui.userId)
+			final var returnValue = dataProvider.postModels(c, new MimeType("text/xml"), xmlModel, ui.userId)
 					.toString();
 			if (returnValue.equals("")) {
 
@@ -4064,7 +3936,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 
 		/*
 		KEvent event = new KEvent();
@@ -4081,7 +3953,7 @@ public class RestServicePortfolio {
 				response = Response.status(400).entity("Missing uuid").build();
 			} else {
 				c = SqlUtils.getConnection();
-				final int returnValue = dataProvider.postMoveNodeUp(c, ui.userId, nodeId);
+				final var returnValue = dataProvider.postMoveNodeUp(c, ui.userId, nodeId);
 
 				if (returnValue == -1) {
 					response = Response.status(404).entity("Non-existing node").build();
@@ -4128,9 +4000,9 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 
-		final KEvent event = new KEvent();
+		final var event = new KEvent();
 		event.requestType = KEvent.RequestType.POST;
 		event.eventType = KEvent.EventType.NODE;
 		event.uuid = parentId;
@@ -4142,7 +4014,7 @@ public class RestServicePortfolio {
 			if (ui.userId == 0) {
 				return Response.status(403).entity("Not logged in").build();
 			}
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.postNode(c, new MimeType("text/xml"), parentId, xmlNode, ui.userId, groupId, false).toString();
 
 			Response response;
@@ -4191,13 +4063,13 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider.postNodeFromModelBySemanticTag(c, new MimeType("text/xml"),
-					nodeUuid, semantictag, ui.userId, groupId, userrole).toString();
+			final var returnValue = dataProvider.postNodeFromModelBySemanticTag(c, new MimeType("text/xml"), nodeUuid,
+					semantictag, ui.userId, groupId, userrole).toString();
 
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
@@ -4243,28 +4115,27 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
-			final DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
-			final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			final Document doc = documentBuilder
-					.parse(new ByteArrayInputStream(xmlNode.getBytes(StandardCharsets.UTF_8)));
+			final var documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+			final var documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			final var doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes(StandardCharsets.UTF_8)));
 
-			final XPath xPath = XPathFactory.newInstance().newXPath();
+			final var xPath = XPathFactory.newInstance().newXPath();
 			//			String xpathRole = "//role";
-			final String xpathRole = "//*[local-name()='role']";
-			final XPathExpression findRole = xPath.compile(xpathRole);
-			final NodeList roles = (NodeList) findRole.evaluate(doc, XPathConstants.NODESET);
+			final var xpathRole = "//*[local-name()='role']";
+			final var findRole = xPath.compile(xpathRole);
+			final var roles = (NodeList) findRole.evaluate(doc, XPathConstants.NODESET);
 
 			c = SqlUtils.getConnection();
 
 			/// For all roles we have to change
-			for (int i = 0; i < roles.getLength(); ++i) {
-				final Node rolenode = roles.item(i);
-				final String rolename = rolenode.getAttributes().getNamedItem("name").getNodeValue();
-				Node right = rolenode.getFirstChild();
+			for (var i = 0; i < roles.getLength(); ++i) {
+				final var rolenode = roles.item(i);
+				final var rolename = rolenode.getAttributes().getNamedItem("name").getNodeValue();
+				var right = rolenode.getFirstChild();
 
 				//
 				/// username as role
@@ -4275,11 +4146,11 @@ public class RestServicePortfolio {
 
 				if ("right".equals(right.getNodeName())) // Changing node rights
 				{
-					final NamedNodeMap rights = right.getAttributes();
+					final var rights = right.getAttributes();
 
-					final NodeRight noderight = new NodeRight(null, null, null, null, null, null);
+					final var noderight = new NodeRight(null, null, null, null, null, null);
 
-					String val = rights.getNamedItem("RD").getNodeValue();
+					var val = rights.getNamedItem("RD").getNodeValue();
 					if (val != null) {
 						noderight.read = "Y".equals(val);
 					}
@@ -4337,7 +4208,7 @@ public class RestServicePortfolio {
 	@POST
 	public Response postPortfolio(@PathParam("portfolio-id") String portfolioUuid, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
 
 		try {
@@ -4383,15 +4254,15 @@ public class RestServicePortfolio {
 			@QueryParam("model") String modelId, @QueryParam("srce") String srceType,
 			@QueryParam("srceurl") String srceUrl, @QueryParam("xsl") String xsl,
 			@QueryParam("instance") String instance, @QueryParam("project") String projectName) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 
 		if ("sakai".equals(srceType)) {
 			/// Session Sakai
-			final HttpSession session = httpServletRequest.getSession(false);
+			final var session = httpServletRequest.getSession(false);
 			if (session != null) {
-				final String sakai_session = (String) session.getAttribute("sakai_session");
-				final String sakai_server = (String) session.getAttribute("sakai_server"); // Base server http://localhost:9090
-				final String url = sakai_server + "/" + srceUrl;
+				final var sakai_session = (String) session.getAttribute("sakai_session");
+				final var sakai_server = (String) session.getAttribute("sakai_server"); // Base server http://localhost:9090
+				final var url = sakai_server + "/" + srceUrl;
 				final Header header = new BasicHeader("JSESSIONID", sakai_session);
 				final Set<Header> headers = new HashSet<>();
 				headers.add(header);
@@ -4400,18 +4271,18 @@ public class RestServicePortfolio {
 				if (response != null) {
 					// Retrieve data
 					try {
-						final InputStream retrieve = response.getEntity().getContent();
-						final String sakaiData = IOUtils.toString(retrieve, StandardCharsets.UTF_8);
+						final var retrieve = response.getEntity().getContent();
+						final var sakaiData = IOUtils.toString(retrieve, StandardCharsets.UTF_8);
 
 						//// Convert it via XSL
 						/// Path to XSL
-						final String servletDir = sc.getServletContext().getRealPath("/");
-						int last = servletDir.lastIndexOf(File.separator);
+						final var servletDir = sc.getServletContext().getRealPath("/");
+						var last = servletDir.lastIndexOf(File.separator);
 						last = servletDir.lastIndexOf(File.separator, last - 1);
-						final String baseDir = servletDir.substring(0, last);
+						final var baseDir = servletDir.substring(0, last);
 
-						final String basepath = xsl.substring(0, xsl.indexOf(File.separator));
-						final String firstStage = baseDir +
+						final var basepath = xsl.substring(0, xsl.indexOf(File.separator));
+						final var firstStage = baseDir +
 								File.separator +
 								basepath +
 								File.separator +
@@ -4424,14 +4295,13 @@ public class RestServicePortfolio {
 						logger.info("FIRST: {}", firstStage);
 
 						/// Storing transformed data
-						final StringWriter dataTransformed = new StringWriter();
+						final var dataTransformed = new StringWriter();
 
 						/// Apply change
 						final Source xsltSrc1 = new StreamSource(new File(firstStage));
-						final TransformerFactory transFactory = TransformerFactory.newInstance();
-						final Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
-						final StreamSource stageSource = new StreamSource(
-								new ByteArrayInputStream(sakaiData.getBytes()));
+						final var transFactory = TransformerFactory.newInstance();
+						final var transformer1 = transFactory.newTransformer(xsltSrc1);
+						final var stageSource = new StreamSource(new ByteArrayInputStream(sakaiData.getBytes()));
 						final Result stageRes = new StreamResult(dataTransformed);
 						transformer1.transform(stageSource, stageRes);
 
@@ -4446,7 +4316,7 @@ public class RestServicePortfolio {
 
 		Connection c = null;
 		try {
-			final boolean instantiate = BooleanUtils.toBoolean(instance);
+			final var instantiate = BooleanUtils.toBoolean(instance);
 
 			c = SqlUtils.getConnection();
 
@@ -4483,12 +4353,12 @@ public class RestServicePortfolio {
 			@QueryParam("user") Integer userId, @QueryParam("model") String modelId,
 			@FormDataParam("uploadfile") InputStream uploadedInputStream, @FormDataParam("instance") String instance,
 			@FormDataParam("project") String projectName) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
-		String returnValue = "";
+		final var ui = checkCredential(httpServletRequest, user, token, null);
+		var returnValue = "";
 		Connection c = null;
 
 		try {
-			final boolean instantiate = Boolean.parseBoolean(instance);
+			final var instantiate = Boolean.parseBoolean(instance);
 
 			c = SqlUtils.getConnection();
 			returnValue = dataProvider
@@ -4532,8 +4402,8 @@ public class RestServicePortfolio {
 	public Response postPortfolioGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("label") String groupname, @QueryParam("type") String type,
 			@QueryParam("parent") Integer parent) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
-		int response = -1;
+		final var ui = checkCredential(httpServletRequest, null, null, null);
+		var response = -1;
 		Connection c = null;
 
 		// Check type value
@@ -4572,11 +4442,11 @@ public class RestServicePortfolio {
 			@FormDataParam("fileupload") InputStream fileInputStream, @QueryParam("user") Integer userId,
 			@QueryParam("model") String modelId, @FormDataParam("instance") String instance,
 			@FormDataParam("project") String projectName) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
-			final boolean instantiate = Boolean.parseBoolean(instance);
+			final var instantiate = Boolean.parseBoolean(instance);
 			c = SqlUtils.getConnection();
 			return dataProvider
 					.postPortfolioZip(c, new MimeType("text/xml"), new MimeType("text/xml"), httpServletRequest,
@@ -4608,13 +4478,13 @@ public class RestServicePortfolio {
 			@CookieParam("credential") String token, @QueryParam("group") int groupId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type,
 			@QueryParam("resource") String resource, @QueryParam("user") Integer userId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			//TODO userId
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.postResource(c, new MimeType("text/xml"), resource, xmlResource, ui.userId, groupId).toString();
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
@@ -4656,13 +4526,13 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			//TODO userId
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.postResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId)
 					.toString();
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
@@ -4699,7 +4569,7 @@ public class RestServicePortfolio {
 	public Response postRightGroup(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("groupRightId") int groupRightId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -4744,7 +4614,7 @@ public class RestServicePortfolio {
 			logger.error("isUUID({})  is false", portfolio);
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
 		/*
 		 * <node>LABEL</node>
@@ -4787,7 +4657,7 @@ public class RestServicePortfolio {
 	public String postRightGroupUser(String xmlNode, @CookieParam("user") String user,
 			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 		String returnValue;
 		Connection c = null;
 		try {
@@ -4826,7 +4696,7 @@ public class RestServicePortfolio {
 			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId,
 			@PathParam("user-id") Integer queryuser) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
 		String returnValue;
 		Connection c = null;
@@ -4863,13 +4733,13 @@ public class RestServicePortfolio {
 	public String postRoleUser(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("grid") int grid, @QueryParam("user-id") Integer userid) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			//TODO userId
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider.postRoleUser(c, ui.userId, grid, userid);
+			final var returnValue = dataProvider.postRoleUser(c, ui.userId, grid, userid);
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -4896,16 +4766,6 @@ public class RestServicePortfolio {
 		}
 	}
 
-	/*
-	 * ##   ##   ###     ###   #####     ###
-	 * ### ### ##   ## ##   ## ##   ## ##   ##
-	 * ## # ## ##   ## ##      ##   ## ##   ##
-	 * ##   ## ####### ##      #####   ##   ##
-	 * ##   ## ##   ## ##      ##   ## ##   ##
-	 * ##   ## ##   ## ##   ## ##   ## ##   ##
-	 * ##   ## ##   ##   ###   ##   ##   ###
-	 /** Partie utilisation des macro-commandes et gestion **/
-
 	/**
 	 * Add a user POST /rest/api/users parameters: content: <users> <user id="uid">
 	 * <username></username> <firstname></firstname> <lastname></lastname>
@@ -4921,12 +4781,12 @@ public class RestServicePortfolio {
 	public Response postUser(String xmluser, @CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			final String xmlUser = dataProvider.postUsers(c, xmluser, ui.userId);
+			final var xmlUser = dataProvider.postUsers(c, xmluser, ui.userId);
 			if (xmlUser == null) {
 				return Response.status(Status.CONFLICT).entity("Existing user or invalid input").build();
 			}
@@ -4948,14 +4808,14 @@ public class RestServicePortfolio {
 	}
 
 	/*
-	 * ######  #######   ###   ##   ## #######  #####
-	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
-	 * ##   ##    #    ##      ##   ##    #    ##
-	 * ######     #    ##  ### #######    #     #####
-	 * ##   ##    #    ##   ## ##   ##    #         ##
-	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
-	 * ##   ## #######   ###   ##   ##    #     #####
-	 /** Partie groupe de droits et utilisateurs            **/
+	 * ##   ##   ###     ###   #####     ###
+	 * ### ### ##   ## ##   ## ##   ## ##   ##
+	 * ## # ## ##   ## ##      ##   ## ##   ##
+	 * ##   ## ####### ##      #####   ##   ##
+	 * ##   ## ##   ## ##      ##   ## ##   ##
+	 * ##   ## ##   ## ##   ## ##   ## ##   ##
+	 * ##   ## ##   ##   ###   ##   ##   ###
+	 /** Partie utilisation des macro-commandes et gestion **/
 
 	/*
 	 * ##   ##  #####  ####### #####     ###   ######
@@ -4974,8 +4834,8 @@ public class RestServicePortfolio {
 	@POST
 	public String postUserGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("label") String groupname) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
-		int response = -1;
+		final var ui = checkCredential(httpServletRequest, null, null, null);
+		var response = -1;
 		Connection c = null;
 
 		try {
@@ -5003,6 +4863,16 @@ public class RestServicePortfolio {
 
 		return Integer.toString(response);
 	}
+
+	/*
+	 * ######  #######   ###   ##   ## #######  #####
+	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
+	 * ##   ##    #    ##      ##   ##    #    ##
+	 * ######     #    ##  ### #######    #     #####
+	 * ##   ##    #    ##   ## ##   ##    #         ##
+	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
+	 * ##   ## #######   ###   ##   ##    #     #####
+	 /** Partie groupe de droits et utilisateurs            **/
 
 	/**
 	 * Send login information PUT /rest/api/credential/login parameters: return:
@@ -5032,14 +4902,14 @@ public class RestServicePortfolio {
 		}
 
 		//		long t_startRest = System.nanoTime();
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		//		long t_checkCred = System.nanoTime();
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.putNode(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
 			if (returnValue.equals(MysqlDataProvider.DATABASE_FALSE)) {
@@ -5083,19 +4953,19 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
-		final Date time = new Date();
-		final SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
-		final String timeFormat = dt.format(time);
-		String logformat = logFormat;
+		final var time = new Date();
+		final var dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
+		final var timeFormat = dt.format(time);
+		var logformat = logFormat;
 		if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info))) {
 			logformat = logFormatShort;
 		}
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.putNodeMetadata(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
@@ -5144,17 +5014,17 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
-		final String timeFormat = DT.format(new Date());
-		String logformat = logFormat;
+		final var timeFormat = DT.format(new Date());
+		var logformat = logFormat;
 		if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info))) {
 			logformat = logFormatShort;
 		}
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.putNodeMetadataEpm(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 				errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat,
@@ -5213,17 +5083,17 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
-		final String timeFormat = DT.format(new Date());
-		String logformat = logFormat;
+		final var timeFormat = DT.format(new Date());
+		var logformat = logFormat;
 		if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info))) {
 			logformat = logFormatShort;
 		}
 
 		try {
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.putNodeMetadataWad(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 				errorLog.error(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat,
@@ -5274,10 +5144,10 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
-		final String timeFormat = DT.format(new Date());
-		String logformat = logFormat;
+		final var timeFormat = DT.format(new Date());
+		var logformat = logFormat;
 		if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info))) {
 			logformat = logFormatShort;
 		}
@@ -5290,7 +5160,7 @@ public class RestServicePortfolio {
 				groupId = credential.getGroupid(c, userrole, nodeUuid);
 			}
 
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.putNodeNodeContext(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 				errorLog.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat,
@@ -5341,10 +5211,10 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
-		final String timeFormat = DT.format(new Date());
-		String logformat = logFormat;
+		final var timeFormat = DT.format(new Date());
+		var logformat = logFormat;
 		if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info))) {
 			logformat = logFormatShort;
 		}
@@ -5361,7 +5231,7 @@ public class RestServicePortfolio {
 				groupId = credential.getGroupid(c, userrole, nodeUuid);
 			}
 
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.putNodeNodeResource(c, new MimeType("text/xml"), nodeUuid, xmlNode, ui.userId, groupId).toString();
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 				errorLog.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat,
@@ -5412,11 +5282,11 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
-			final boolean portfolioActive = BooleanUtils.isNotFalse(BooleanUtils.toBooleanObject(active));
+			final var portfolioActive = BooleanUtils.isNotFalse(BooleanUtils.toBooleanObject(active));
 
 			c = SqlUtils.getConnection();
 			dataProvider.putPortfolio(c, new MimeType("text/xml"), new MimeType("text/xml"), xmlPortfolio,
@@ -5456,7 +5326,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -5489,12 +5359,12 @@ public class RestServicePortfolio {
 	public Response putPortfolioInPortfolioGroup(@Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @QueryParam("group") Integer group,
 			@QueryParam("uuid") String uuid, @QueryParam("label") String label) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
 
 		try {
 			c = SqlUtils.getConnection();
-			int response = -1;
+			var response = -1;
 			response = dataProvider.putPortfolioInGroup(c, uuid, group, label, ui.userId);
 			return Response.ok(Integer.toString(response)).build();
 		} catch (final Exception ex) {
@@ -5524,9 +5394,9 @@ public class RestServicePortfolio {
 			@CookieParam("credential") String token, @PathParam("portfolio-id") String portfolioUuid,
 			@PathParam("newOwnerId") int newOwner, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
-		boolean retval = false;
+		var retval = false;
 
 		try {
 			c = SqlUtils.getConnection();
@@ -5569,7 +5439,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 
 		/*
 		KEvent event = new KEvent();
@@ -5579,8 +5449,8 @@ public class RestServicePortfolio {
 		event.inputData = xmlResource;
 		//*/
 		Connection c = null;
-		final String timeFormat = DT.format(new Date());
-		String logformat = logFormat;
+		final var timeFormat = DT.format(new Date());
+		var logformat = logFormat;
 		if (BooleanUtils.isFalse(BooleanUtils.toBooleanObject(info))) {
 			logformat = logFormatShort;
 		}
@@ -5592,7 +5462,7 @@ public class RestServicePortfolio {
 				groupId = credential.getGroupid(c, userrole, nodeParentUuid);
 			}
 
-			final String returnValue = dataProvider
+			final var returnValue = dataProvider
 					.putResource(c, new MimeType("text/xml"), nodeParentUuid, xmlResource, ui.userId, groupId)
 					.toString();
 
@@ -5646,9 +5516,9 @@ public class RestServicePortfolio {
 	public String putRightInfo(String xmlNode, @CookieParam("user") String user,
 			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Integer rrgId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+		final var ui = checkCredential(httpServletRequest, user, token, group);
 
-		String returnValue = "";
+		var returnValue = "";
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
@@ -5686,13 +5556,13 @@ public class RestServicePortfolio {
 	public String putRole(String xmlRole, @CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@PathParam("role-id") int roleId) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
 			//TODO userId
 			c = SqlUtils.getConnection();
-			final String returnValue = dataProvider.putRole(c, xmlRole, ui.userId, roleId).toString();
+			final var returnValue = dataProvider.putRole(c, xmlRole, ui.userId, roleId).toString();
 			if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
@@ -5737,7 +5607,7 @@ public class RestServicePortfolio {
 	public String putUser(String xmlInfUser, @CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @PathParam("user-id") int userid, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		final UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+		final var ui = checkCredential(httpServletRequest, user, token, null);
 		Connection c = null;
 
 		try {
@@ -5751,7 +5621,7 @@ public class RestServicePortfolio {
 				}
 			} else if (ui.userId == userid) /// Changing self
 			{
-				final String ip = httpServletRequest.getRemoteAddr();
+				final var ip = httpServletRequest.getRemoteAddr();
 				securityLog.info("[{}] self change info '{}'}", ip, userid);
 				queryuser = dataProvider.UserChangeInfo(c, ui.userId, userid, xmlInfUser);
 			} else { /// Changing self
@@ -5784,11 +5654,11 @@ public class RestServicePortfolio {
 	@PUT
 	public Response putUserInUserGroup(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
 			@QueryParam("group") Integer group, @QueryParam("user") Integer user, @QueryParam("label") String label) {
-		final UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		final var ui = checkCredential(httpServletRequest, null, null, null);
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
-			boolean isOK = false;
+			var isOK = false;
 			if (label != null) {
 				// Rename group
 				isOK = dataProvider.putUserGroupLabel(c, user, group, label);
@@ -5813,6 +5683,118 @@ public class RestServicePortfolio {
 				logger.error("Managed error", e);
 			}
 		}
+	}
+
+	private File getZipFile(String portfolioUuid, String portfolioContent, String lang, Document doc,
+			HttpSession session) throws IOException, XPathExpressionException {
+		if (!isUUID(portfolioUuid)) {
+			logger.error("isUUID({}) is false", portfolioUuid);
+			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+		}
+
+		/// Temp file in temp directory
+		final var tempDir = new File(tempdir);
+		if (!tempDir.isDirectory()) {
+			tempDir.mkdirs();
+		}
+		final var tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
+
+		final var fos = new FileOutputStream(tempZip);
+		final var zos = new ZipOutputStream(fos);
+
+		/// Write xml file to zip
+		var ze = new ZipEntry(portfolioUuid + ".xml");
+		zos.putNextEntry(ze);
+
+		final var bytes = portfolioContent.getBytes(StandardCharsets.UTF_8);
+		zos.write(bytes);
+
+		zos.closeEntry();
+
+		/// Find all fileid/filename
+		final var xPath = XPathFactory.newInstance().newXPath();
+		final var filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
+		final var nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+
+		/// Fetch all files
+		for (var i = 0; i < nodelist.getLength(); ++i) {
+			final var res = nodelist.item(i);
+			/// Check if fileid has a lang
+			final var langAtt = res.getAttributes().getNamedItem("lang");
+			String filterName;
+			if (langAtt != null) {
+				lang = langAtt.getNodeValue();
+				filterName = ".//*[local-name()='filename' and @lang='" + lang + "' and text()]";
+			} else {
+				filterName = ".//*[local-name()='filename' and @lang and text()]";
+			}
+
+			final var p = res.getParentNode(); // fileid -> resource
+			final var gp = p.getParentNode(); // resource -> context
+			final var uuidNode = gp.getAttributes().getNamedItem("id");
+			final var uuid = uuidNode.getTextContent();
+
+			final var textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
+			var filename = "";
+			if (textList.getLength() != 0) {
+				final var fileNode = (Element) textList.item(0);
+				filename = fileNode.getTextContent();
+				lang = fileNode.getAttribute("lang"); // In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
+				if ("".equals(lang)) {
+					lang = "fr";
+				}
+			}
+
+			final var url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
+			final var get = new HttpGet(url);
+
+			// Transfer sessionid so that local request still get security checked
+			get.addHeader("Cookie", "JSESSIONID=" + session.getId());
+
+			// Send request
+			final var client = HttpClients.createDefault();
+			final var ret = client.execute(get);
+			final var entity = ret.getEntity();
+
+			// Put specific name for later recovery
+			if ("".equals(filename)) {
+				continue;
+			}
+			var lastDot = filename.lastIndexOf(".");
+			if (lastDot < 0) {
+				lastDot = 0;
+			}
+			var filenameext = filename; /// find extension
+			final var extindex = filenameext.lastIndexOf(".") + 1;
+			filenameext = uuid + "_" + lang + "." + filenameext.substring(extindex);
+
+			// Save it to zip file
+			final var content = entity.getContent();
+			ze = new ZipEntry(filenameext);
+			try {
+				var totalread = 0;
+				zos.putNextEntry(ze);
+				int inByte;
+				final var buf = new byte[4096];
+				while ((inByte = content.read(buf)) != -1) {
+					totalread += inByte;
+					zos.write(buf, 0, inByte);
+				}
+				logger.info("FILE: {} -> {}", filenameext, totalread);
+				content.close();
+				zos.closeEntry();
+			} catch (final Exception e) {
+				logger.error("Managed error", e);
+			}
+			EntityUtils.consume(entity);
+			ret.close();
+			client.close();
+		}
+
+		zos.close();
+		fos.close();
+
+		return tempZip;
 	}
 
 }

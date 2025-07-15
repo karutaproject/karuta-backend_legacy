@@ -147,9 +147,6 @@ public interface DataProvider {
 	public Object getNodes(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId,
 			int groupId, String userRole, String semtag_parent, String code_parent, Integer cutoff) throws SQLException;
 
-	Object getNodesBySemanticTag(Connection c, MimeType outMimeType, int userId, int groupId, String portfolioUuid,
-			String semanticTag) throws SQLException;
-
 	@Deprecated
 	public Object getNodesParent(Connection c, MimeType mimeType, String portfoliocode, String semtag, int userId,
 			int groupId, String semtag_parent, String code_parent) throws Exception;
@@ -207,8 +204,6 @@ public interface DataProvider {
 			throws Exception;
 
 	public String getRessource(Connection c, String nodeUuid, int userId, int groupId, String type) throws SQLException;
-
-	String getRole(Connection c, MimeType mimeType, int grid, int userId) throws SQLException;
 
 	public Integer getRoleByNode(Connection c, int userId, String nodeUuid, String role);
 
@@ -300,8 +295,6 @@ public interface DataProvider {
 
 	public Object postNodeFromModelBySemanticTag(Connection c, MimeType mimeType, String nodeUuid, String semantictag,
 			int userId, int groupId, String userRole) throws Exception;
-
-	boolean postNodeRight(int userId, String nodeUuid) throws Exception;
 
 	public boolean postNotifyRoles(Connection c, int userId, String portfolio, String uuid, String notify);
 
@@ -396,4 +389,11 @@ public interface DataProvider {
 
 	public void writeLog(Connection c, String url, String method, String headers, String inBody, String outBody,
 			int code);
+
+	Object getNodesBySemanticTag(Connection c, MimeType outMimeType, int userId, int groupId, String portfolioUuid,
+			String semanticTag) throws SQLException;
+
+	String getRole(Connection c, MimeType mimeType, int grid, int userId) throws SQLException;
+
+	boolean postNodeRight(int userId, String nodeUuid) throws Exception;
 }
