@@ -26,8 +26,6 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 import javax.activation.MimeType;
@@ -152,9 +150,7 @@ public class XSLService extends HttpServlet {
 		 * <xsl>{répertoire}{fichier}</xsl> <format>[pdf rtf xml ...]</format>
 		 * <parameters> <maVar1>lala</maVar1> ... </parameters> </convert>
 		 */
-		Connection c = null;
-		try {
-			c = SqlUtils.getConnection();
+		try (var c = SqlUtils.getConnection()) {
 
 			final var origin = request.getRequestURL().toString();
 			logger.trace("Is connection null {}", c);
@@ -183,7 +179,7 @@ public class XSLService extends HttpServlet {
 			String line;
 			while( (line = rd.readLine()) != null )
 				sb.append(line);
-
+			
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 			DocumentBuilder documentBuilder = null;
 			Document doc=null;
@@ -196,7 +192,7 @@ public class XSLService extends HttpServlet {
 			{
 				e.printStackTrace();
 			}
-
+			
 			/// On lit les paramètres
 			NodeList portfolioNode = doc.getElementsByTagName("portfolioid");
 			NodeList nodeNode = doc.getElementsByTagName("nodeid");
@@ -452,14 +448,14 @@ public class XSLService extends HttpServlet {
 
 				/*
 				HttpURLConnection connection = CreateConnection( urlTarget, request );
-
+				
 				/// Helping construct Json
 				connection.setRequestProperty("referer", origin);
-
+				
 				/// Send post data
 				ServletInputStream inputData = request.getInputStream();
 				DataOutputStream writer = new DataOutputStream(connection.getOutputStream());
-
+				
 				byte[] buffer = new byte[1024];
 				int dataSize;
 				while( (dataSize = inputData.read(buffer,0,buffer.length)) != -1 )
@@ -468,7 +464,7 @@ public class XSLService extends HttpServlet {
 				}
 				inputData.close();
 				writer.close();
-
+				
 				RetrieveAnswer(connection, response, origin);
 				//*/
 				logger.trace("Done converting");
@@ -491,16 +487,6 @@ public class XSLService extends HttpServlet {
 
 			logger.error("Intercept error", e);
 			//TODO managing error
-		} finally {
-			try {
-				if (c != null) {
-					c.close();
-				}
-			} catch (final SQLException e) {
-				logger.error("Intercept error", e);
-				//TODO managing error
-			}
-			//			dataProvider.disconnect();
 		}
 	}
 

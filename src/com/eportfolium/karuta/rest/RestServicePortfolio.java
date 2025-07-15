@@ -1309,10 +1309,8 @@ public class RestServicePortfolio {
 		}
 
 		final var ui = checkCredential(httpServletRequest, user, token, null);
-		Connection c = null;
 
-		try {
-			c = SqlUtils.getConnection();
+		try (var c = SqlUtils.getConnection();) {
 			var node = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId, userrole,
 					this.label, cutoff);
 			if (node == null) {
@@ -1341,14 +1339,6 @@ public class RestServicePortfolio {
 			logger.error("Managed error", ex);
 
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		} finally {
-			try {
-				if (c != null) {
-					c.close();
-				}
-			} catch (final SQLException e) {
-				logger.error("Managed error", e);
-			}
 		}
 	}
 
@@ -1665,10 +1655,8 @@ public class RestServicePortfolio {
 		}
 
 		final var ui = checkCredential(httpServletRequest, user, token, null);
-		Connection c = null;
 
-		try {
-			c = SqlUtils.getConnection();
+		try (var c = SqlUtils.getConnection();) {
 			var node = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId, userrole,
 					this.label, cutoff).toString();
 			if (node == null) {
@@ -1693,14 +1681,6 @@ public class RestServicePortfolio {
 			logger.error("Managed error", ex);
 
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		} finally {
-			try {
-				if (c != null) {
-					c.close();
-				}
-			} catch (final SQLException e) {
-				logger.error("Managed error", e);
-			}
 		}
 	}
 

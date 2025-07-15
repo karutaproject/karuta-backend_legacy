@@ -356,15 +356,11 @@ public class DirectURLService extends HttpServlet {
 		final var type = request.getParameter("type");
 		final var sharerole = request.getParameter("sharerole");
 		final var showtorole = request.getParameter("showtorole");
-		Connection c = null;
 		Document doc = null;
 
 		/// Fetching data to be checked upon
-		var nodedata = "";
-		try {
-			c = SqlUtils.getConnection();
-			final var retdata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, null, "",
-					1);
+		try (var c = SqlUtils.getConnection()) {
+			final var retdata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, null, "", 1);
 			if (retdata == null) {
 				response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 				final var writer = response.getWriter();
@@ -373,7 +369,7 @@ public class DirectURLService extends HttpServlet {
 				request.getInputStream().close();
 				return;
 			}
-			nodedata = retdata.toString();
+			var nodedata = retdata.toString();
 
 			logger.debug("DIRECT FETCH NODE: {}", nodedata);
 			final var documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
@@ -382,16 +378,8 @@ public class DirectURLService extends HttpServlet {
 		} catch (final Exception e) {
 			logger.error("Intercepted error:", e);
 			//TODO something is missing
-		} finally {
-			if (c != null) {
-				try {
-					c.close();
-				} catch (final SQLException e) {
-					logger.error("Intercepted error:", e);
-					//TODO something is missing
-				}
-			}
 		}
+
 		final var metadata = doc.getElementsByTagName("metadata-wad");
 		String[] values = null;
 		if (metadata.getLength() > 0) {
