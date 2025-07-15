@@ -288,14 +288,14 @@ public class DirectURLService extends HttpServlet {
 				/// Prevent sharing with another personal account after being evaluated.
 				/// Since the specific group will be the username (specific rights),
 				/// we can also know if student tried sharing it with self first
-				
+
 				///// Check if this user is not giving rights to self (existing user account)
-				
+
 				///// Check if user has some access to this uuid
 				/// Prevent somebody else to share another student node
-				
+
 				///// Check if user has right to share
-				
+
 				//// Put person in specified group
 				//*/
 
@@ -363,7 +363,8 @@ public class DirectURLService extends HttpServlet {
 		var nodedata = "";
 		try {
 			c = SqlUtils.getConnection();
-			final Object retdata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, null, "", 1);
+			final var retdata = dataProvider.getNode(c, new MimeType("text/xml"), uuid, false, 1, 0, null, "",
+					1);
 			if (retdata == null) {
 				response.setStatus(HttpServletResponse.SC_NOT_FOUND);
 				final var writer = response.getWriter();

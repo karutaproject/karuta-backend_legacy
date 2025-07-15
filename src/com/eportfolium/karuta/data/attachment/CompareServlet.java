@@ -183,9 +183,9 @@ public class CompareServlet extends HttpServlet {
 		Connection c;
 
 		String lbl = null;
-		Object ingt = "g";
-		Object ingtREP = "";
-		Object ingtSOL = "";
+		var ingt = new StringBuilder("g");
+		var ingtREP = new StringBuilder("");
+		var ingtSOL = new StringBuilder("");
 		try {
 			provider = SqlUtils.initProvider();
 			c = SqlUtils.getConnection();

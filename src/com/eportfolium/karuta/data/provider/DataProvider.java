@@ -117,7 +117,7 @@ public interface DataProvider {
 	public String getMysqlUserUid(Connection c, String login) throws Exception;
 
 	/// Relatif aux noeuds
-	public Object getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId,
+	public StringBuilder getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId,
 			int groupId, String userRole, String label, Integer cutoff) throws Exception;
 
 	public Object getNodeBySemanticTag(Connection c, MimeType mimeType, String portfolioUuid, String semantictag,
@@ -160,7 +160,7 @@ public interface DataProvider {
 	public String[] getPorfolioGroup(int userId, String groupName);
 
 	/// Relatif aux portfolios
-	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId,
+	public String getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId,
 			String userrole, String resource, String files, int substid, Integer cutoff) throws Exception;
 
 	public Object getPortfolioByCode(Connection c, MimeType mimeType, String portfolioCode, int userId, int groupId,

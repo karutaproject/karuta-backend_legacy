@@ -260,7 +260,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId,
+	public StringBuilder getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId,
 			int groupId, String userRole, String label, Integer cutoff) throws Exception {
 		// TODO Auto-generated method stub
 		return null;
@@ -341,7 +341,7 @@ public class MongoDBDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId,
+	public String getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId,
 			String label, String resource, String files, int substid, Integer cutoff) throws Exception {
 		// TODO Auto-generated method stub
 		return null;

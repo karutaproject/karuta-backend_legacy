@@ -263,8 +263,9 @@ public class XSLService extends HttpServlet {
 
 			if (nodeid != null) {
 				for (final String n : nodeid) {
-					final var nodexml = dataProvider
-							.getNode(c, new MimeType("text/xml"), n, true, userId, groupId, null, "", null).toString();
+					final var node = dataProvider.getNode(c, new MimeType("text/xml"), n, true, userId, groupId, null,
+							"", null);
+					final var nodexml = node == null ? "" : node.toString();
 					aggregate.append(nodexml);
 				}
 			}
@@ -324,13 +325,13 @@ public class XSLService extends HttpServlet {
 				//				Node uuid = XPathAPI.selectSingleNode(res, filterCode);
 
 				/// Fetch node we want to replace
-				final var returnValue = dataProvider.getNode(c, new MimeType("text/xml"), uuid.getTextContent(),
-						true, userId, groupId, null, "", null).toString();
+				final var returnValue = dataProvider.getNode(c, new MimeType("text/xml"), uuid.getTextContent(), true,
+						userId, groupId, null, "", null);
 				if (returnValue == null) {
 					continue;
 				}
-
-				is = new ByteArrayInputStream(returnValue.getBytes(StandardCharsets.UTF_8));
+				final var returnString = returnValue.toString();
+				is = new ByteArrayInputStream(returnString.getBytes(StandardCharsets.UTF_8));
 				final var rep = documentBuilder.parse(is);
 				//				Element repNode = rep.getDocumentElement();
 				Node proxyNode = rep.getDocumentElement();
@@ -375,8 +376,7 @@ public class XSLService extends HttpServlet {
 			logger.trace("FIRST: " + firstStage);
 			final Source xsltSrc1 = new StreamSource(new File(firstStage));
 			final var transformer1 = transFactory.newTransformer(xsltSrc1);
-			final var stageSource = new StreamSource(
-					new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)));
+			final var stageSource = new StreamSource(new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)));
 			final Result stageRes = new StreamResult(stageout);
 			transformer1.transform(stageSource, stageRes);
 

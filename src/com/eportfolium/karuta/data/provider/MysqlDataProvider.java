@@ -2106,7 +2106,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId,
+	public StringBuilder getNode(Connection c, MimeType outMimeType, String nodeUuid, boolean withChildren, int userId,
 			int groupId, String userRole, String label, Integer cutoff)
 			throws SQLException, TransformerFactoryConfigurationError, ParserConfigurationException, DOMException,
 			SAXException, IOException, TransformerException {
@@ -2181,9 +2181,9 @@ public class MysqlDataProvider implements DataProvider {
 			return nodexml;
 		}
 		if (outMimeType.getSubType().equals("json")) {
-			return "{" +
-					getNodeJsonOutput(c, nodeUuid, withChildren, null, userId, groupId, userRole, label, true) +
-					"}";
+			var jsonBuilder = new StringBuilder();
+			var nodeJson = getNodeJsonOutput(c, nodeUuid, withChildren, null, userId, groupId, userRole, label, true);
+			return jsonBuilder.append("{").append(nodeJson).append("}");
 		}
 		return null;
 	}
@@ -2850,7 +2850,6 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object getNodeWithXSL(Connection c, MimeType mimeType, String nodeUuid, String xslFile, String parameters,
 			int userId, int groupId, String userRole) {
-		String xml;
 		try {
 			/// Preparing parameters for future need, format: "par1:par1val;par2:par2val;..."
 			final var table = parameters.split(";");
@@ -2865,12 +2864,12 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// TODO: Test this more, should use getNode rather than having another output
-			xml = getNode(c, new MimeType("text/xml"), nodeUuid, true, userId, groupId, userRole, null, null)
-					.toString();
-			if (xml == null) {
+			var node = getNode(c, new MimeType("text/xml"), nodeUuid, true, userId, groupId, userRole, null, null);
+			if (node == null) {
 				return null;
 			}
 
+			final var xml = node.toString();
 			//			xml = getNodeXmlOutput(nodeUuid,true,null,userId, groupId, null,true).toString();
 			return DomUtils.processXSLTfile2String(DomUtils.xmlString2Document(xml, new StringBuilder()), xslFile,
 					param, paramVal, new StringBuilder());
@@ -2955,7 +2954,7 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	@Override
-	public Object getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId,
+	public String getPortfolio(Connection c, MimeType outMimeType, String portfolioUuid, int userId, int groupId,
 			String userrole, String resource, String files, int substid, Integer cutoff) throws Exception {
 		System.currentTimeMillis();
 
@@ -3053,8 +3052,9 @@ public class MysqlDataProvider implements DataProvider {
 			footer = "}}";
 		}
 
-		return header + getNode(c, outMimeType, rootNodeUuid, true, userId, groupId, userrole, null, cutoff).toString()
-				+ footer;
+		var node = getNode(c, outMimeType, rootNodeUuid, true, userId, groupId, userrole, null, cutoff);
+		var nodeString = node == null ? "" : node.toString();
+		return header + nodeString + footer;
 	}
 
 	@Override
@@ -7278,7 +7278,7 @@ public class MysqlDataProvider implements DataProvider {
 						doc = documentBuilder.parse(is);
 						attribNode = doc.getDocumentElement();
 						attribMap = attribNode.getAttributes();
-						
+
 						try
 						{
 							Node publicatt = attribMap.getNamedItem("public");

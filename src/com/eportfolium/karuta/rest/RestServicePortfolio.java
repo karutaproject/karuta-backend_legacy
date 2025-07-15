@@ -1313,13 +1313,15 @@ public class RestServicePortfolio {
 
 		try {
 			c = SqlUtils.getConnection();
-			var returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId,
-					userrole, this.label, cutoff).toString();
-			if (returnValue == null) {
+			var node = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId, userrole,
+					this.label, cutoff);
+			if (node == null) {
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
 			}
+			var returnValue = node.toString();
 			if (returnValue.length() == 0) {
-				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
+				throw new RestWebApplicationException(Status.FORBIDDEN,
+						"Vous n'avez pas les droits necessaires: " + nodeUuid + " (" + ui.userId + ")");
 			}
 			if (accept.equals(MediaType.APPLICATION_JSON)) {
 				returnValue = XML.toJSONObject(returnValue).toString();
@@ -1327,8 +1329,8 @@ public class RestServicePortfolio {
 
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
-			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, "");
+			logger.info("Managed error: " + ex.getCustomMessage());
+			throw ex;
 		} catch (final SQLException ex) {
 			logger.error("SQLException error", ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -1667,21 +1669,23 @@ public class RestServicePortfolio {
 
 		try {
 			c = SqlUtils.getConnection();
-			var returnValue = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId,
-					userrole, this.label, cutoff).toString();
-			if (returnValue == null) {
+			var node = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId, userrole,
+					this.label, cutoff).toString();
+			if (node == null) {
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
 			}
+			var returnValue = node.toString();
 			if (returnValue.length() == 0) {
-				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
+				throw new RestWebApplicationException(Status.FORBIDDEN,
+						"Vous n'avez pas les droits necessaires: " + nodeUuid + " (" + ui.userId + ")");
 			}
 			if (accept.equals(MediaType.APPLICATION_JSON)) {
 				returnValue = XML.toJSONObject(returnValue).toString();
 			}
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
-			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			logger.error("Managed error: " + ex.getCustomMessage());
+			throw ex;
 		} catch (final SQLException ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
