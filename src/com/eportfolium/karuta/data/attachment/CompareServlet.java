@@ -174,21 +174,25 @@ public class CompareServlet extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws IOException, ServletException {
-		var uuidsNds = request.getPathInfo().substring(1);
+		var pathInfo = request.getPathInfo();
+		if (pathInfo == null || pathInfo.length() < 72) {
+			try (var writer = response.getWriter();) {
+				writer.write("");
+				return;
+			}
+		}
+		var uuidsNds = pathInfo.substring(1);
 
 		var uuidREP = uuidsNds.substring(0, 36);
 		var uuidSOL = uuidsNds.substring(36, 72);
 		var uuidNd = uuidsNds.substring(72);
 
-		Connection c;
-
 		String lbl = null;
 		var ingt = new StringBuilder("g");
 		var ingtREP = new StringBuilder("");
 		var ingtSOL = new StringBuilder("");
-		try {
+		try (var c = SqlUtils.getConnection()) {
 			provider = SqlUtils.initProvider();
-			c = SqlUtils.getConnection();
 			ingt = provider.getNode(c, new MimeType("text/xml"), uuidNd, true, 1, groupId, null, lbl, null); //pour test remplacer uuidNd par strNoeud
 			ingtREP = provider.getNode(c, new MimeType("text/xml"), uuidREP, true, 1, groupId, null, lbl, null);
 			ingtSOL = provider.getNode(c, new MimeType("text/xml"), uuidSOL, true, 1, groupId, null, lbl, null);
@@ -228,10 +232,9 @@ public class CompareServlet extends HttpServlet {
 		var rootREP = docREP.getDocumentElement();
 		var rootSOL = docSOL.getDocumentElement();
 
-		try {
-			c = SqlUtils.getConnection();
+		try (var c = SqlUtils.getConnection(); var writer = response.getWriter();) {
 			var aRenvoyer = comparaisonVraiFaux(rootREP, rootSOL, c);
-			response.getWriter().print(aRenvoyer);
+			writer.print(aRenvoyer);
 		} catch (Exception e) {
 			logger.error("Intercepted error", e);
 			//TODO something is missing
