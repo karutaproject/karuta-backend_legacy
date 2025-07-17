@@ -25,11 +25,11 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
 
 public class LogUtils {
 	private static final Logger logger = LoggerFactory.getLogger(LogUtils.class);
@@ -40,25 +40,25 @@ public class LogUtils {
 
 	public static String getCurrentDate() {
 		final DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-		final Date date = new Date();
+		final var date = new Date();
 		return dateFormat.format(date);
 	}
 
 	public static BufferedWriter getLog(String filename) throws IOException {
 		// Ensure directory exists
-		final File dir = new File(filePath);
+		final var dir = new File(filePath);
 		if (!dir.exists()) {
 			dir.mkdirs();
 		}
 		// Ensure file exists
-		final File file = new File(filePath + filename);
+		final var file = new File(filePath + filename);
 		if (!file.exists()) {
 			file.createNewFile();
 		}
 
-		final FileOutputStream fos = new FileOutputStream(file, true);
-		final OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
-		final BufferedWriter bwrite = new BufferedWriter(osw);
+		final var fos = new FileOutputStream(file, true);
+		final var osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
+		final var bwrite = new BufferedWriter(osw);
 
 		return bwrite;
 	}
@@ -69,14 +69,14 @@ public class LogUtils {
 			return;
 		}
 		/// Preparing logfile for direct access
-		final String servName = context.getContextPath();
+		final var servName = context.getContextPath();
 		//Default value
-		String reportFolder = System.getProperty("catalina.base") + "/logs/" + servName + "_logs";
+		var reportFolder = System.getProperty("catalina.base") + "/logs/" + servName + "_logs";
 
-		final String reportEnvDir = System.getenv(KARUTA_ENV_REPORT_FOLDER);
-		final String reportPropDir = System.getProperty(KARUTA_PROP_REPORT_FOLDER);
+		final var reportEnvDir = System.getenv(KARUTA_ENV_REPORT_FOLDER);
+		final var reportPropDir = System.getProperty(KARUTA_PROP_REPORT_FOLDER);
 
-		final String reportDir = (reportPropDir != null && !reportPropDir.trim().isEmpty()) ? reportPropDir
+		final var reportDir = (reportPropDir != null && !reportPropDir.trim().isEmpty()) ? reportPropDir
 				: reportEnvDir;
 
 		if (reportDir != null && !reportDir.trim().isEmpty()) {
@@ -85,7 +85,7 @@ public class LogUtils {
 
 		try {
 			/// Check if folder exists
-			final File logFolder = new File(reportFolder);
+			final var logFolder = new File(reportFolder);
 			if (logFolder.mkdirs()) {
 				logger.info("Log folder {} was created", logFolder.getCanonicalPath());
 			}

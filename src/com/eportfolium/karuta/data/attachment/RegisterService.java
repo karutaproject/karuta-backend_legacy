@@ -16,7 +16,6 @@
 package com.eportfolium.karuta.data.attachment;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -24,15 +23,7 @@ import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -40,8 +31,6 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -50,6 +39,13 @@ import com.eportfolium.karuta.data.utils.ConfigUtils;
 import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.MailUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
+
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 public class RegisterService extends HttpServlet {
 
@@ -72,6 +68,25 @@ public class RegisterService extends HttpServlet {
 	DataProvider dataProvider = null;
 
 	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			ConfigUtils.init(getServletContext());
+			dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
+			dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
+			final var sc = config.getServletContext();
+			sc.getRealPath("/");
+		} catch (final Exception e) {
+			logger.error("Can't init servlet", e);
+			throw new ServletException(e);
+		}
+	}
+
+	public DataProvider initialize(HttpServletRequest httpServletRequest) {
+		return dataProvider;
+	}
+
+	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		//		DataProvider dataProvider = initialize(request);
 		Connection connection = null;
@@ -82,26 +97,26 @@ public class RegisterService extends HttpServlet {
 		}
 
 		response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
-		final StringWriter inputdata = new StringWriter();
+		final var inputdata = new StringWriter();
 		IOUtils.copy(request.getInputStream(), inputdata, StandardCharsets.UTF_8);
 
 		try {
-			final Document doc = DomUtils.xmlString2Document(inputdata.toString(), new StringBuilder());
-			final Element credentialElement = doc.getDocumentElement();
-			String username = "";
-			String password = "";
-			String mail = "";
-			final String mailcc = "";
-			boolean hasChanged = false;
+			final var doc = DomUtils.xmlString2Document(inputdata.toString(), new StringBuilder());
+			final var credentialElement = doc.getDocumentElement();
+			var username = "";
+			var password = "";
+			var mail = "";
+			final var mailcc = "";
+			var hasChanged = false;
 
-			String converted = "";
+			var converted = "";
 			if (credentialElement.getNodeName().equals("users")) {
-				final NodeList children = credentialElement.getChildNodes();
-				for (int i = 0; i < children.getLength(); i++) {
+				final var children = credentialElement.getChildNodes();
+				for (var i = 0; i < children.getLength(); i++) {
 					if (children.item(i).getNodeName().equals("user")) {
 						NodeList children2 = null;
 						children2 = children.item(i).getChildNodes();
-						for (int y = 0; y < children2.getLength(); y++) {
+						for (var y = 0; y < children2.getLength(); y++) {
 							if (children2.item(y).getNodeName().equals("username")) {
 								username = DomUtils.getInnerXml(children2.item(y));
 							}
@@ -111,9 +126,9 @@ public class RegisterService extends HttpServlet {
 						}
 
 						/// Generate password
-						final long base = System.currentTimeMillis();
-						final MessageDigest md = MessageDigest.getInstance("SHA-1");
-						final byte[] output = md.digest(Long.toString(base).getBytes());
+						final var base = System.currentTimeMillis();
+						final var md = MessageDigest.getInstance("SHA-1");
+						final var output = md.digest(Long.toString(base).getBytes());
 						password = String.format("%032X", new BigInteger(1, output));
 						password = password.substring(0, 9);
 
@@ -126,10 +141,10 @@ public class RegisterService extends HttpServlet {
 						children.item(i).appendChild(designerNode);
 
 						/// Change it back to string
-						final TransformerFactory tf = TransformerFactory.newInstance();
-						final Transformer transformer = tf.newTransformer();
+						final var tf = TransformerFactory.newInstance();
+						final var transformer = tf.newTransformer();
 						transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-						final StringWriter writer = new StringWriter();
+						final var writer = new StringWriter();
 						transformer.transform(new DOMSource(doc), new StreamResult(writer));
 						converted = writer.getBuffer().toString().replaceAll("((\n)|(\r))", "");
 
@@ -139,7 +154,7 @@ public class RegisterService extends HttpServlet {
 			}
 
 			if (!"".equals(username)) {
-				final String val = dataProvider.postUsers(connection, converted, 1);
+				final var val = dataProvider.postUsers(connection, converted, 1);
 				if (!"".equals(val)) {
 					logger.debug("Account create: " + val);
 					hasChanged = true;
@@ -152,18 +167,18 @@ public class RegisterService extends HttpServlet {
 			if (hasChanged) {
 				response.setStatus(200);
 				// Send email
-				final String content = "Your account with username: " +
+				final var content = "Your account with username: " +
 						username +
 						" has been created with the password: " +
 						password;
 				MailUtils.postMail(getServletConfig(), mail, mailcc, "Account created for Karuta: " + username, content,
 						logger);
-				final PrintWriter output = response.getWriter();
+				final var output = response.getWriter();
 				output.write("created");
 				output.close();
 			} else {
 				response.setStatus(400);
-				final PrintWriter output = response.getWriter();
+				final var output = response.getWriter();
 				output.write("username exists");
 				output.close();
 				request.getInputStream().close();
@@ -181,24 +196,5 @@ public class RegisterService extends HttpServlet {
 				//TODO something is missing
 			}
 		}
-	}
-
-	@Override
-	public void init(ServletConfig config) throws ServletException {
-		super.init(config);
-		try {
-			ConfigUtils.init(getServletContext());
-			dataProviderName = ConfigUtils.getInstance().getRequiredProperty("dataProviderClass");
-			dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
-			final ServletContext sc = config.getServletContext();
-			sc.getRealPath("/");
-		} catch (final Exception e) {
-			logger.error("Can't init servlet", e);
-			throw new ServletException(e);
-		}
-	}
-
-	public DataProvider initialize(HttpServletRequest httpServletRequest) {
-		return dataProvider;
 	}
 }

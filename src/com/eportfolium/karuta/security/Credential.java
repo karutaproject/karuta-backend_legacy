@@ -21,13 +21,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import javax.servlet.http.HttpServlet;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.provider.MysqlDataProvider;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
+
+import jakarta.servlet.http.HttpServlet;
 
 /**
  * Servlet implementation class Credential
@@ -60,8 +60,8 @@ public class Credential {
 		PreparedStatement st;
 		String sql;
 		ResultSet res;
-		int grid = 0;
-		final String label = "all";
+		var grid = 0;
+		final var label = "all";
 
 		try {
 			{
@@ -88,15 +88,15 @@ public class Credential {
 			return -1;
 		}
 
-		final String query = "SELECT gri.grid " +
+		final var query = "SELECT gri.grid " +
 				"FROM group_info gi, group_right_info gri, node n " +
 				"WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND gri.grid=gi.grid " +
 				"AND gi.label=?;";
 
-		try (PreparedStatement stmt = c.prepareStatement(query)) {
+		try (var stmt = c.prepareStatement(query)) {
 			stmt.setString(1, nodeUuid);
 			stmt.setString(2, role);
-			try (ResultSet rs = stmt.executeQuery()) {
+			try (var rs = stmt.executeQuery()) {
 				if (rs.next()) {
 					return rs.getInt(1);
 				}
@@ -111,7 +111,7 @@ public class Credential {
 		PreparedStatement st;
 		String sql;
 		ResultSet res;
-		int uid = 0;
+		var uid = 0;
 
 		try {
 			sql = "SELECT userid FROM credential WHERE login = ?";
@@ -140,10 +140,10 @@ public class Credential {
 		}
 
 		// On initialise les droits à false : par defaut accès à rien
-		final NodeRight nodeRight = new NodeRight(false, false, false, false, false, false);
+		final var nodeRight = new NodeRight(false, false, false, false, false, false);
 
 		// If userrole specified, use it if something is found
-		final int groupid = getGroupid(c, userRole, node_uuid);
+		final var groupid = getGroupid(c, userRole, node_uuid);
 		if (groupid != -1) {
 			groupId = groupid;
 			nodeRight.groupId = groupId;
@@ -153,7 +153,7 @@ public class Credential {
 
 		try {
 			long t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0, t6 = 0;
-			final long t0 = System.currentTimeMillis();
+			final var t0 = System.currentTimeMillis();
 			//			if( getPortfolioAdmin(c, userId, node_uuid) || isAdmin(c, userId) )
 			if (isAdmin(c, userId)) {
 				nodeRight.read = true;
@@ -172,21 +172,21 @@ public class Credential {
 				if (groupId == 0) {
 					// On regarde si la personne à un droit sur ce noeud dans l'un des groupes du portfolio
 					// Pourrait être un casse tête si un noeud est référencé dans plusieurs groupes
-					final String sql = "SELECT gi.gid, gi.grid, gri.label " +
+					final var sql = "SELECT gi.gid, gi.grid, gri.label " +
 							"FROM node n, group_right_info gri, group_info gi, group_user gu " +
 							"WHERE n.portfolio_id=gri.portfolio_id " +
 							"AND gri.grid=gi.grid " +
 							"AND gi.gid=gu.gid " +
 							"AND gu.userid=? " +
 							"AND n.node_uuid=uuid2bin(?)";
-					try (PreparedStatement st = c.prepareStatement(sql)) {
+					try (var st = c.prepareStatement(sql)) {
 						st.setInt(1, userId);
 						st.setString(2, node_uuid);
-						try (ResultSet res = st.executeQuery()) {
+						try (var res = st.executeQuery()) {
 							if (res.next()) {
 								groupId = res.getInt(1); // On prend le premier
-								final int grid = res.getInt(2);
-								final String groupName = res.getString(3);
+								final var grid = res.getInt(2);
+								final var groupName = res.getString(3);
 								// Spécifie dans quel contexte on lui donne le droit
 								nodeRight.groupId = groupId;
 								nodeRight.rrgId = grid;
@@ -199,16 +199,16 @@ public class Credential {
 				t2 = System.currentTimeMillis();
 
 				/// Sinon on évalue le droit donnée directement
-				final String sql1 = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
+				final var sql1 = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
 						"FROM group_rights gr, group_user gu, group_info gi " +
 						"WHERE gu.gid = gi.gid " +
 						"AND gi.grid = gr.grid AND gu.userid = ? " +
 						"AND gr.id = uuid2bin(?) AND gu.gid = ?";
-				try (PreparedStatement st = c.prepareStatement(sql1)) {
+				try (var st = c.prepareStatement(sql1)) {
 					st.setInt(1, userId);
 					st.setString(2, node_uuid);
 					st.setInt(3, groupId);
-					try (ResultSet res = st.executeQuery()) {
+					try (var res = st.executeQuery()) {
 						if (res.next()) {
 							nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
 							nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
@@ -221,17 +221,17 @@ public class Credential {
 				t3 = System.currentTimeMillis();
 
 				/// Les droits donné spécifiquement à l'utilisateur
-				final String sql2 = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
+				final var sql2 = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
 						"FROM group_rights " +
 						"WHERE id=uuid2bin(?) " +
 						"AND grid=(SELECT grid " +
 						"FROM credential c, group_right_info gri, node n " +
 						"WHERE c.login=gri.label AND c.userid=? AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?))";
-				try (PreparedStatement st = c.prepareStatement(sql2)) {
+				try (var st = c.prepareStatement(sql2)) {
 					st.setString(1, node_uuid);
 					st.setInt(2, userId);
 					st.setString(3, node_uuid);
-					try (ResultSet res = st.executeQuery()) {
+					try (var res = st.executeQuery()) {
 						if (res.next()) {
 							nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
 							nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
@@ -246,7 +246,7 @@ public class Credential {
 				/// Les droits que l'on a du groupe "all"
 				/// NOTE: Pas de vérification si la personne est dans le groupe 'all'
 				///  Le fonctionnement voulu est différent de ce que j'avais prévu, mais ça marche aussi
-				final String sql3 = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
+				final var sql3 = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
 						"FROM group_rights " +
 						"WHERE id=uuid2bin(?) " +
 						"AND grid=(SELECT gri2.grid " +
@@ -254,10 +254,10 @@ public class Credential {
 						"INNER JOIN group_right_info gri1 ON gi.grid=gri1.grid " +
 						"INNER JOIN group_right_info gri2 ON gri1.portfolio_id=gri2.portfolio_id " +
 						"WHERE gi.gid=? AND gri2.label='all')";
-				try (PreparedStatement st = c.prepareStatement(sql3)) {
+				try (var st = c.prepareStatement(sql3)) {
 					st.setString(1, node_uuid);
 					st.setInt(2, groupId);
-					try (ResultSet res = st.executeQuery()) {
+					try (var res = st.executeQuery()) {
 						if (res.next()) {
 							nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
 							nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
@@ -277,12 +277,12 @@ public class Credential {
 			t6 = System.currentTimeMillis();
 
 			if (logger.isTraceEnabled()) {
-				final long checkSysInfo = t1 - t0;
-				final long groupSelect = t2 - t1;
-				final long rightFromGroup = t3 - t2;
-				final long rightSpecificUser = t4 - t3;
-				final long rightFromAll = t5 - t4;
-				final long checkPublic = t6 - t5;
+				final var checkSysInfo = t1 - t0;
+				final var groupSelect = t2 - t1;
+				final var rightFromGroup = t3 - t2;
+				final var rightSpecificUser = t4 - t3;
+				final var rightFromAll = t5 - t4;
+				final var checkPublic = t6 - t5;
 				logger.trace(
 						"=====Check Rights=====\nCheck sys info: {}\nGroup selection: {}\nRight from group: {}\nRight for user: {}\nRight from all: {}\nCheck public: {}\n",
 						checkSysInfo, groupSelect, rightFromGroup, rightSpecificUser, rightFromAll, checkPublic);
@@ -297,10 +297,10 @@ public class Credential {
 	}
 
 	public int getOwner(Connection c, Integer userId, String portfolio) {
-		final String query = "SELECT modif_user_id FROM portfolio WHERE portfolio_id=uuid2bin(?)";
-		try (PreparedStatement stmt = c.prepareStatement(query)) {
+		final var query = "SELECT modif_user_id FROM portfolio WHERE portfolio_id=uuid2bin(?)";
+		try (var stmt = c.prepareStatement(query)) {
 			stmt.setString(1, portfolio);
-			try (ResultSet rs = stmt.executeQuery()) {
+			try (var rs = stmt.executeQuery()) {
 
 				if (rs.next()) {
 					return rs.getInt(1);
@@ -343,7 +343,7 @@ public class Credential {
 		PreparedStatement st = null;
 		String sql;
 		ResultSet res = null;
-		boolean reponse = false;
+		var reponse = false;
 
 		try {
 			sql = "SELECT user_id " +
@@ -383,16 +383,16 @@ public class Credential {
 	//test pour l'affichage du getPortfolio
 	public NodeRight getPortfolioRight(Connection c, int userId, int groupId, String portfolioUuid, String droit,
 			String userRole) {
-		final String sql = "SELECT user_id, modif_user_id, bin2uuid(root_node_uuid) as root_node_uuid FROM portfolio " +
+		final var sql = "SELECT user_id, modif_user_id, bin2uuid(root_node_uuid) as root_node_uuid FROM portfolio " +
 				"WHERE portfolio_id = uuid2bin(?)";
 		//		boolean reponse = false;
-		NodeRight reponse = new NodeRight(false, false, false, false, false, false);
+		var reponse = new NodeRight(false, false, false, false, false, false);
 
-		try (PreparedStatement st = c.prepareStatement(sql)) {
+		try (var st = c.prepareStatement(sql)) {
 			/// modif_user_id => current owner
 			//sql = "SELECT distinct portfolio_id FROM GroupRights gr, group_user gu, group_info gi, node n WHERE gu.gid = gi.gid AND gi.grid = gr.grid and gr.id = n.node_uuid AND gu.userid = ? and gr.grid =  '26'";
 			st.setString(1, portfolioUuid);
-			try (ResultSet res = st.executeQuery()) {
+			try (var res = st.executeQuery()) {
 				if (res.next()) {
 					if (res.getInt("modif_user_id") == userId) { // Is the owner
 						reponse.add = reponse.delete = reponse.read = reponse.write = true;
@@ -410,7 +410,7 @@ public class Credential {
 	}
 
 	public NodeRight getPublicRight(Connection c, int userId, int groupId, String node_uuid, String label) {
-		final String sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
+		final var sql = "SELECT bin2uuid(id) as id, RD, WR, DL, SB, AD " +
 				"FROM group_rights gr " +
 				"LEFT JOIN group_right_info gri ON gr.grid=gri.grid " +
 				"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
@@ -418,17 +418,17 @@ public class Credential {
 				"WHERE id=uuid2bin(?) " +
 				"AND gri.label='all' " +
 				"AND gu.userid=?";
-		final NodeRight nodeRight = new NodeRight(false, false, false, false, false, false);
+		final var nodeRight = new NodeRight(false, false, false, false, false, false);
 
 		/// userId doit être celui de publique, pire cas c'est un autre utilisateur
 		/// mais si cette personne n'as pas de droits, il n'y aura rien en retour
-		try (PreparedStatement st = c.prepareStatement(sql)) {
+		try (var st = c.prepareStatement(sql)) {
 			/// A partir du moment ou c'est publique, peu importe le groupe d'appartenance
 			/// le noeud est accessible
 			st.setString(1, node_uuid);
 			st.setInt(2, userId);
 
-			try (ResultSet res = st.executeQuery()) {
+			try (var res = st.executeQuery()) {
 				if (res.next()) {
 					nodeRight.read = nodeRight.read || (res.getInt("RD") == 1);
 					nodeRight.write = nodeRight.write || (res.getInt("WR") == 1);
@@ -445,10 +445,10 @@ public class Credential {
 
 	public int getPublicUid(Connection c) {
 		// Fetching 'sys_public' userid
-		final String sql = "SELECT userid FROM credential WHERE login='sys_public'";
-		int publicid = 0;
+		final var sql = "SELECT userid FROM credential WHERE login='sys_public'";
+		var publicid = 0;
 
-		try (PreparedStatement st = c.prepareStatement(sql); ResultSet res = st.executeQuery()) {
+		try (var st = c.prepareStatement(sql); var res = st.executeQuery()) {
 			if (res.next()) {
 				publicid = res.getInt(1);
 			}
@@ -467,7 +467,7 @@ public class Credential {
 		ResultSet rs = null;
 		PreparedStatement stmt = null;
 		try {
-			final String query = "SELECT login FROM credential WHERE userid=?;";
+			final var query = "SELECT login FROM credential WHERE userid=?;";
 			stmt = c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			rs = stmt.executeQuery();
@@ -483,7 +483,7 @@ public class Credential {
 	}
 
 	public boolean hasNodeRight(Connection c, int userId, int groupId, String node_uuid, String droit) {
-		final NodeRight nodeRight = getNodeRight(c, userId, groupId, node_uuid, null, null);
+		final var nodeRight = getNodeRight(c, userId, groupId, node_uuid, null, null);
 		if (droit.equals(READ)) {
 			return nodeRight.read;
 		}
@@ -507,7 +507,7 @@ public class Credential {
 		ResultSet rs = null;
 		PreparedStatement stmt = null;
 		try {
-			final String query = "SELECT gri.grid " +
+			final var query = "SELECT gri.grid " +
 					"FROM group_user gu, group_info gi, group_right_info gri, node n " +
 					"WHERE gu.userid=? AND gu.gid=gi.gid AND gri.grid=gi.grid AND " +
 					"gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?);";
@@ -532,7 +532,7 @@ public class Credential {
 		PreparedStatement st = null;
 		String sql;
 		ResultSet res = null;
-		boolean hasSomeRight = false;
+		var hasSomeRight = false;
 
 		try {
 			/// Evaluate ownership
@@ -584,15 +584,15 @@ public class Credential {
 	}
 
 	public boolean isAdmin(Connection c, Integer userId) {
-		boolean status = false;
+		var status = false;
 		if (userId == null) {
 			return status;
 		}
 
-		final String query = "SELECT userid FROM credential WHERE userid=?  AND is_admin=1 ";
-		try (PreparedStatement stmt = c.prepareStatement(query)) {
+		final var query = "SELECT userid FROM credential WHERE userid=?  AND is_admin=1 ";
+		try (var stmt = c.prepareStatement(query)) {
 			stmt.setInt(1, userId);
-			try (ResultSet rs = stmt.executeQuery()) {
+			try (var rs = stmt.executeQuery()) {
 				if (rs.next()) {
 					status = true;
 				}
@@ -607,7 +607,7 @@ public class Credential {
 
 	// System-wide designer
 	public boolean isCreator(Connection c, Integer userId) {
-		boolean status = false;
+		var status = false;
 		if (userId == null) {
 			return status;
 		}
@@ -615,7 +615,7 @@ public class Credential {
 		ResultSet rs = null;
 		PreparedStatement stmt = null;
 		try {
-			final String query = "SELECT c.userid FROM credential c WHERE c.userid=? AND c.is_designer=1";
+			final var query = "SELECT c.userid FROM credential c WHERE c.userid=? AND c.is_designer=1";
 			stmt = c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			rs = stmt.executeQuery();
@@ -647,23 +647,23 @@ public class Credential {
 
 	/// Specific portfolio designer
 	public boolean isDesigner(Connection c, Integer userId, String nodeId) {
-		boolean status = false;
+		var status = false;
 		if (userId == null) {
 			return status;
 		}
 
 		// FIXME
-		final String query = "SELECT gu.userid " +
+		final var query = "SELECT gu.userid " +
 				"FROM node n " +
 				"LEFT JOIN group_right_info gri ON n.portfolio_id=gri.portfolio_id " +
 				"LEFT JOIN group_info gi ON gri.grid=gi.grid " +
 				"LEFT JOIN group_user gu ON gi.gid=gu.gid " +
 				"WHERE gu.userid=? AND n.node_uuid=uuid2bin(?) AND gri.label='designer' ";
 
-		try (PreparedStatement stmt = c.prepareStatement(query)) {
+		try (var stmt = c.prepareStatement(query)) {
 			stmt.setInt(1, userId);
 			stmt.setString(2, nodeId);
-			try (ResultSet rs = stmt.executeQuery()) {
+			try (var rs = stmt.executeQuery()) {
 				if (rs.next()) {
 					status = true;
 				}
@@ -684,7 +684,7 @@ public class Credential {
 		ResultSet rs = null;
 		PreparedStatement stmt = null;
 		try {
-			final String query = "SELECT modif_user_id FROM node WHERE modif_user_id=? AND node_uuid=uuid2bin(?)";
+			final var query = "SELECT modif_user_id FROM node WHERE modif_user_id=? AND node_uuid=uuid2bin(?)";
 			stmt = c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			stmt.setString(2, nodeuuid);
@@ -705,11 +705,11 @@ public class Credential {
 			return false;
 		}
 
-		final String query = "SELECT modif_user_id FROM node WHERE asm_type='asmRoot' AND modif_user_id=? AND portfolio_id=uuid2bin(?)";
-		try (PreparedStatement stmt = c.prepareStatement(query)) {
+		final var query = "SELECT modif_user_id FROM node WHERE asm_type='asmRoot' AND modif_user_id=? AND portfolio_id=uuid2bin(?)";
+		try (var stmt = c.prepareStatement(query)) {
 			stmt.setInt(1, userId);
 			stmt.setString(2, portfolio);
-			try (ResultSet rs = stmt.executeQuery()) {
+			try (var rs = stmt.executeQuery()) {
 				if (rs.next()) {
 					return true;
 				}
@@ -730,7 +730,7 @@ public class Credential {
 		ResultSet rs = null;
 		PreparedStatement stmt = null;
 		try {
-			final String query = "SELECT modif_user_id " +
+			final var query = "SELECT modif_user_id " +
 					"FROM node " +
 					"WHERE asm_type='asmRoot' AND modif_user_id=? " +
 					"AND portfolio_id=(SELECT portfolio_id FROM node WHERE node_uuid=uuid2bin(?))";
@@ -773,7 +773,7 @@ public class Credential {
 		ResultSet rs = null;
 		PreparedStatement stmt = null;
 		try {
-			final String query = "SELECT p.modif_user_id " +
+			final var query = "SELECT p.modif_user_id " +
 					"FROM group_right_info gri " +
 					"LEFT JOIN portfolio p ON gri.portfolio_id=p.portfolio_id " +
 					"WHERE p.modif_user_id=? AND gri.grid=?";
@@ -798,7 +798,7 @@ public class Credential {
 	{
 		if( userId == null )
 			return false;
-	
+
 		ResultSet rs=null;
 		PreparedStatement stmt=null;
 		try
@@ -807,7 +807,7 @@ public class Credential {
 			stmt=connection.prepareStatement(query);
 			stmt.setInt(1, userId);
 			rs = stmt.executeQuery();
-	
+
 			if( rs.next() )
 				return true;
 		}
@@ -823,33 +823,33 @@ public class Credential {
 	/// From node, check if portoflio has user 'sys_public' in group 'all'
 	/// To differentiate between 'public' to the world, and 'public' to people with an account
 	public boolean isPublic(Connection c, String node_uuid, String portfolio_uuid) {
-		boolean val = false;
+		var val = false;
 		try {
 			if (node_uuid != null) {
-				final String sql = "SELECT gu.userid " +
+				final var sql = "SELECT gu.userid " +
 						"FROM node n, group_right_info gri, group_info gi, group_user gu, credential c " +
 						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
 						"n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id " +
 						"AND gri.label='all' " +
 						"AND c.login='sys_public'";
-				try (PreparedStatement st = c.prepareStatement(sql)) {
+				try (var st = c.prepareStatement(sql)) {
 					st.setString(1, node_uuid);
-					try (ResultSet res = st.executeQuery()) {
+					try (var res = st.executeQuery()) {
 						if (res.next()) {
 							val = true;
 						}
 					}
 				}
 			} else {
-				final String sql = "SELECT gu.userid " +
+				final var sql = "SELECT gu.userid " +
 						"FROM group_right_info gri, group_info gi, group_user gu, credential c " +
 						"WHERE gri.grid=gi.grid AND gu.gid=gi.gid AND gu.userid=c.userid AND " +
 						"gri.portfolio_id=uuid2bin(?) " +
 						"AND gri.label='all' " +
 						"AND c.login='sys_public'";
-				try (PreparedStatement st = c.prepareStatement(sql)) {
+				try (var st = c.prepareStatement(sql)) {
 					st.setString(1, portfolio_uuid);
-					try (ResultSet res = st.executeQuery()) {
+					try (var res = st.executeQuery()) {
 						if (res.next()) {
 							val = true;
 						}
@@ -863,26 +863,8 @@ public class Credential {
 		return val;
 	}
 
-	private boolean isPublicUser(Connection c, int userId) {
-		// Fetching 'sys_public' userid
-		final String sql = "SELECT userid FROM credential WHERE (login='sys_public' OR login='public') AND userid=?";
-		try (PreparedStatement st = c.prepareStatement(sql)) {
-			st.setInt(1, userId);
-			try (ResultSet res = st.executeQuery()) {
-				if (res.next()) {
-					return true;
-				}
-			}
-			return false;
-		} catch (final Exception e) {
-			e.printStackTrace();
-		}
-
-		return false;
-	}
-
 	public boolean isSharer(Connection c, Integer userId) {
-		boolean status = false;
+		var status = false;
 		if (userId == null) {
 			return status;
 		}
@@ -890,7 +872,7 @@ public class Credential {
 		ResultSet rs = null;
 		PreparedStatement stmt = null;
 		try {
-			final String query = "SELECT is_sharer FROM credential WHERE userid=? AND is_sharer=1";
+			final var query = "SELECT is_sharer FROM credential WHERE userid=? AND is_sharer=1";
 			stmt = c.prepareStatement(query);
 			stmt.setInt(1, userId);
 			rs = stmt.executeQuery();
@@ -922,7 +904,7 @@ public class Credential {
 	}
 
 	public boolean isUserMemberOfGroup(Connection c, int userId, int groupId) {
-		boolean status = false;
+		var status = false;
 		PreparedStatement st = null;
 		String sql;
 		ResultSet res = null;
@@ -964,7 +946,7 @@ public class Credential {
 	}
 
 	public boolean isUserMemberOfRole(Connection c, int userId, int roleId) {
-		boolean status = false;
+		var status = false;
 		PreparedStatement st = null;
 		String sql;
 		ResultSet res = null;
@@ -1014,13 +996,13 @@ public class Credential {
 		String sqlInsert;
 		ResultSet res = null;
 		ResultSet res2 = null;
-		int RD = 0;
-		int WR = 0;
-		int DL = 0;
-		int SB = 0;
-		int AD = 0;
-		int grid = -1;
-		boolean reponse = false;
+		var RD = 0;
+		var WR = 0;
+		var DL = 0;
+		var SB = 0;
+		var AD = 0;
+		var grid = -1;
+		var reponse = false;
 
 		try {
 
@@ -1073,7 +1055,7 @@ public class Credential {
 						st1.setString(3, portfolioUuid);
 						st1.executeUpdate();
 
-						final ResultSet keys = st1.getGeneratedKeys();
+						final var keys = st1.getGeneratedKeys();
 						keys.next();
 						grid = keys.getInt(1);
 						st1.close();
@@ -1295,7 +1277,7 @@ public class Credential {
 		ResultSet generatedKeys;
 		ResultSet res = null;
 		ResultSet res2 = null;
-		int grid = -1;
+		var grid = -1;
 		try {
 			if (role != null && !role.trim().equals("") && rights != null) {
 				if ("user".equals(role)) // Si le nom de group est 'user'. Le remplacer par le role de l'utilisateur (voir pour juste le nom plus tard)
@@ -1472,11 +1454,11 @@ public class Credential {
 	/// Change portfolio owner
 	public boolean putPortfolioOwner(Connection c, String portfolioId, int ownerId) throws Exception {
 		PreparedStatement st;
-		boolean retval = false;
+		var retval = false;
 
 		try {
 			c.setAutoCommit(false);
-			String sql = "UPDATE node SET modif_user_id=? WHERE node_uuid = " +
+			var sql = "UPDATE node SET modif_user_id=? WHERE node_uuid = " +
 					"(SELECT root_node_uuid FROM portfolio WHERE portfolio_id=uuid2bin(?))";
 			st = c.prepareStatement(sql);
 			st.setInt(1, ownerId);
@@ -1487,7 +1469,7 @@ public class Credential {
 			st = c.prepareStatement(sql);
 			st.setInt(1, ownerId);
 			st.setString(2, portfolioId);
-			final int numMatch = st.executeUpdate();
+			final var numMatch = st.executeUpdate();
 			if (numMatch > 0) {
 				retval = true;
 			}
@@ -1503,6 +1485,24 @@ public class Credential {
 			c.setAutoCommit(true);
 		}
 		return retval;
+	}
+
+	private boolean isPublicUser(Connection c, int userId) {
+		// Fetching 'sys_public' userid
+		final var sql = "SELECT userid FROM credential WHERE (login='sys_public' OR login='public') AND userid=?";
+		try (var st = c.prepareStatement(sql)) {
+			st.setInt(1, userId);
+			try (var res = st.executeQuery()) {
+				if (res.next()) {
+					return true;
+				}
+			}
+			return false;
+		} catch (final Exception e) {
+			e.printStackTrace();
+		}
+
+		return false;
 	}
 
 }

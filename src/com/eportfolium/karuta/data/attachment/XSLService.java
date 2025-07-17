@@ -28,14 +28,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import javax.activation.MimeType;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
@@ -48,10 +40,10 @@ import javax.xml.transform.stream.StreamSource;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload2.core.DiskFileItemFactory;
+import org.apache.commons.fileupload2.core.FileItem;
+import org.apache.commons.fileupload2.core.FileUploadException;
+import org.apache.commons.fileupload2.jakarta.servlet6.JakartaServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.apache.fop.apps.FopFactory;
 import org.apache.http.HttpResponse;
@@ -69,6 +61,15 @@ import org.w3c.dom.NodeList;
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
+
+import jakarta.activation.MimeType;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class XSLService extends HttpServlet {
 
@@ -515,9 +516,9 @@ public class XSLService extends HttpServlet {
 
 		/// FORM name="data"
 		// Create a factory for disk-based file items
-		final var factory = new DiskFileItemFactory();
+		final var factory = DiskFileItemFactory.builder().get();
 		// Create a new file upload handler
-		final var upload = new ServletFileUpload(factory);
+		final var upload = new JakartaServletFileUpload(factory);
 
 		List<FileItem> items;
 		final var data = new StringWriter();

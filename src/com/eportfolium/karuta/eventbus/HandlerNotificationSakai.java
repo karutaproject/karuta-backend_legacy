@@ -25,223 +25,232 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.util.Iterator;
-import java.util.Set;
 
-import javax.activation.MimeType;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
+import jakarta.activation.MimeType;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 public class HandlerNotificationSakai implements KEventHandler {
 	private static final Logger logger = LoggerFactory.getLogger(HandlerNotificationSakai.class);
-    HttpServletRequest httpServletRequest;
-    HttpSession session;
-    int userId;
-    int groupId;
-    String username;
-    DataProvider dataProvider;
-    String ticket;
-    String sessionCookie;
-    Connection connection;
+	HttpServletRequest httpServletRequest;
+	HttpSession session;
+	int userId;
+	int groupId;
+	String username;
+	DataProvider dataProvider;
+	String ticket;
+	String sessionCookie;
+	Connection connection;
 
-    public HandlerNotificationSakai(HttpServletRequest request, DataProvider provider) {
-        httpServletRequest = request;
-        dataProvider = provider;
-        try {
-            connection = SqlUtils.getConnection();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+	public HandlerNotificationSakai(HttpServletRequest request, DataProvider provider) {
+		httpServletRequest = request;
+		dataProvider = provider;
+		try {
+			connection = SqlUtils.getConnection();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-        this.session = request.getSession(true);
-        Integer val = (Integer) session.getAttribute("uid");
-        if (val != null)
-            this.userId = val;
-        val = (Integer) session.getAttribute("gid");
-        if (val != null)
-            this.groupId = val;
-        this.username = (String) session.getAttribute("user");
-    }
+		this.session = request.getSession(true);
+		var val = (Integer) session.getAttribute("uid");
+		if (val != null) {
+			this.userId = val;
+		}
+		val = (Integer) session.getAttribute("gid");
+		if (val != null) {
+			this.groupId = val;
+		}
+		this.username = (String) session.getAttribute("user");
+	}
 
-    @Override
-    public boolean processEvent(KEvent event) {
-        if (event == null || event.requestType == null) return false;
-        try {
-            switch (event.requestType) {
-                case POST:
-                case PUT:
-                    if (event.eventType == KEvent.EventType.NODE) {/// Récupère la liste des roles à notifier
-                        Set<String[]> notif = dataProvider.getNotificationUserList(connection, userId, groupId, event.uuid);
+	@Override
+	public boolean processEvent(KEvent event) {
+		if (event == null || event.requestType == null) {
+			return false;
+		}
+		try {
+			switch (event.requestType) {
+			case POST:
+			case PUT:
+				if (event.eventType == KEvent.EventType.NODE) {/// Récupère la liste des roles à notifier
+					var notif = dataProvider.getNotificationUserList(connection, userId, groupId, event.uuid);
 
-                        if (notif.isEmpty())
-                            return false;
+					if (notif.isEmpty()) {
+						return false;
+					}
 
-                        String context = dataProvider.getNode(connection, new MimeType("text/xml"), event.uuid, true, this.userId, this.groupId, null, null, null).toString();
-                        Document docContext = parseString(context);
-                        NodeList res = docContext.getElementsByTagName("asmResource");
-                        String blah = "";
-                        for (int i = 0; i < res.getLength(); ++i) {
-                            Node r = res.item(i);
-                            String type = r.getAttributes().getNamedItem("xsi_type").getNodeValue();
-                            if ("nodeRes".equals(type)) {
-                                NodeList childs = r.getChildNodes();
-                                for (int j = 0; j < childs.getLength(); ++j) {
-                                    Node c = childs.item(j);
-                                    String cname = c.getNodeName();
-                                    if ("label".equals(cname)) {
-                                        String lang = c.getAttributes().getNamedItem("lang").getNodeValue();
-                                        if ("fr".equals(lang)) {
-                                            blah = c.getTextContent();
-                                            break;
-                                        }
-                                    }
-                                }
-                                break;
-                            }
-                        }
+					var context = dataProvider.getNode(connection, new MimeType("text/xml"), event.uuid, true,
+							this.userId, this.groupId, null, null, null).toString();
+					var docContext = parseString(context);
+					var res = docContext.getElementsByTagName("asmResource");
+					var blah = "";
+					for (var i = 0; i < res.getLength(); ++i) {
+						var r = res.item(i);
+						var type = r.getAttributes().getNamedItem("xsi_type").getNodeValue();
+						if ("nodeRes".equals(type)) {
+							var childs = r.getChildNodes();
+							for (var j = 0; j < childs.getLength(); ++j) {
+								var c = childs.item(j);
+								var cname = c.getNodeName();
+								if ("label".equals(cname)) {
+									var lang = c.getAttributes().getNamedItem("lang").getNodeValue();
+									if ("fr".equals(lang)) {
+										blah = c.getTextContent();
+										break;
+									}
+								}
+							}
+							break;
+						}
+					}
 
-                        Iterator<String[]> userIter = notif.iterator();
+					var doc = parseString(event.inputData);
+					doc.getElementsByTagName("");
+					var type = "";
 
-                        Document doc = parseString(event.inputData);
-                        doc.getElementsByTagName("");
-                        String type = "";
+					var portfolio = dataProvider.getPortfolioUuidByNodeUuid(connection, event.uuid);
 
-                        String portfolio = dataProvider.getPortfolioUuidByNodeUuid(connection, event.uuid);
+					getSakaiTicket();
 
-                        getSakaiTicket();
+					var log = new StringBuilder("ticket:" + ticket + ";");
+					for (String[] val : notif) {
+						var user = val[0];
+						var lastname = val[1];
+						var status = sendMessage(user,
+								lastname +
+										", user: " +
+										username +
+										" edited '" +
+										blah +
+										"' @ " +
+										event.uuid +
+										" in portfolio " +
+										portfolio);
+						log.append(user).append(":").append(status).append(";");
+					}
 
-                        StringBuilder log = new StringBuilder("ticket:" + ticket + ";");
-                        while (userIter.hasNext()) {
-                            String[] val = userIter.next();
-                            String user = val[0];
-                            String lastname = val[1];
-                            int status = sendMessage(user, lastname + ", user: " + username + " edited '" + blah + "' @ " + event.uuid + " in portfolio " + portfolio);
-                            log.append(user).append(":").append(status).append(";");
-                        }
+					logger.debug("Sakai ticket {}", log);
+				}
+				break;
 
-                        logger.debug("Sakai ticket {}", log);
-                    }
-                    break;
-
-                default:
-                    break;
-            }
-        } catch (Exception ex) {
-            logger.error("Intercept error", ex);
+			default:
+				break;
+			}
+		} catch (Exception ex) {
+			logger.error("Intercept error", ex);
 			//TODO missing management
-//			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
-//			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
-        return true;
-    }
+			//			logRestRequest(httpServletRequest, "", ex.getMessage()+"\n\n"+javaUtils.getCompleteStackTrace(ex), Status.INTERNAL_SERVER_ERROR.getStatusCode());
+			//			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+		}
+		return true;
+	}
 
-    int sendMessage(String user, String message) {
-        int ret = 500;
+	boolean getSakaiTicket() {
+		var ret = true;
+		try {
+			/// Configurable?
+			var urlParameters = "_username=testadmin&_password=testadmin";
 
-        try {
-            String urlParameters = "notification=\"" + message + "\"&_sessionId=" + ticket;
+			/// Will have to use some context config
+			var urlTicker = new URL("http://osp2.threecanoes.com/direct/session");
 
-            /// Send for this user
-            URL urlTicker = new URL("http://osp2.threecanoes.com/direct/notify/post/" + user);
+			var connect = (HttpURLConnection) urlTicker.openConnection();
+			connect.setDoOutput(true);
+			connect.setDoInput(true);
+			connect.setInstanceFollowRedirects(false);
+			connect.setRequestMethod("POST");
+			connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			connect.setRequestProperty("charset", "utf-8");
+			connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
+			connect.setUseCaches(false);
+			connect.connect();
 
-            HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
-            connect.setDoOutput(true);
-            connect.setDoInput(true);
-            connect.setInstanceFollowRedirects(false);
-            connect.setRequestMethod("POST");
-            connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connect.setRequestProperty("charset", "utf-8");
-            connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
-            connect.setUseCaches(false);
-            connect.setRequestProperty("Cookie", sessionCookie);
-            connect.connect();
+			var wr = new DataOutputStream(connect.getOutputStream());
+			wr.writeBytes(urlParameters);
+			wr.flush();
+			wr.close();
 
-            DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
-            wr.writeBytes(urlParameters);
-            wr.flush();
-            wr.close();
+			var readTicket = new StringBuilder();
+			var rd = new BufferedReader(
+					new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
+			var buffer = new char[1024];
+			var offset = 0;
+			var read = 0;
+			do {
+				read = rd.read(buffer, offset, 1024);
+				offset += read;
+				readTicket.append(buffer);
+			} while (read == 1024);
+			rd.close();
 
-            ret = connect.getResponseCode();
+			sessionCookie = connect.getHeaderField("Set-Cookie");
 
-            logger.debug("Notification: {}", ret);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+			connect.disconnect();
 
-        return ret;
-    }
+			ticket = readTicket.toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+			ret = false;
+		}
 
-    boolean getSakaiTicket() {
-        boolean ret = true;
-        try {
-            /// Configurable?
-            String urlParameters = "_username=testadmin&_password=testadmin";
+		return ret;
+	}
 
-            /// Will have to use some context config
-            URL urlTicker = new URL("http://osp2.threecanoes.com/direct/session");
+	Document parseString(String data)
+			throws UnsupportedEncodingException, SAXException, IOException, ParserConfigurationException {
+		var documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+		var documentBuilder = documentBuilderFactory.newDocumentBuilder();
+		var doc = documentBuilder.parse(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)));
+		doc.setXmlStandalone(true);
 
-            HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
-            connect.setDoOutput(true);
-            connect.setDoInput(true);
-            connect.setInstanceFollowRedirects(false);
-            connect.setRequestMethod("POST");
-            connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connect.setRequestProperty("charset", "utf-8");
-            connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
-            connect.setUseCaches(false);
-            connect.connect();
+		return doc;
+	}
 
-            DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
-            wr.writeBytes(urlParameters);
-            wr.flush();
-            wr.close();
+	int sendMessage(String user, String message) {
+		var ret = 500;
 
-            StringBuilder readTicket = new StringBuilder();
-            BufferedReader rd = new BufferedReader(new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
-            char[] buffer = new char[1024];
-            int offset = 0;
-            int read = 0;
-            do {
-                read = rd.read(buffer, offset, 1024);
-                offset += read;
-                readTicket.append(buffer);
-            } while (read == 1024);
-            rd.close();
+		try {
+			var urlParameters = "notification=\"" + message + "\"&_sessionId=" + ticket;
 
-            sessionCookie = connect.getHeaderField("Set-Cookie");
+			/// Send for this user
+			var urlTicker = new URL("http://osp2.threecanoes.com/direct/notify/post/" + user);
 
-            connect.disconnect();
+			var connect = (HttpURLConnection) urlTicker.openConnection();
+			connect.setDoOutput(true);
+			connect.setDoInput(true);
+			connect.setInstanceFollowRedirects(false);
+			connect.setRequestMethod("POST");
+			connect.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			connect.setRequestProperty("charset", "utf-8");
+			connect.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
+			connect.setUseCaches(false);
+			connect.setRequestProperty("Cookie", sessionCookie);
+			connect.connect();
 
-            ticket = readTicket.toString();
-        } catch (Exception e) {
-            e.printStackTrace();
-            ret = false;
-        }
+			var wr = new DataOutputStream(connect.getOutputStream());
+			wr.writeBytes(urlParameters);
+			wr.flush();
+			wr.close();
 
-        return ret;
-    }
+			ret = connect.getResponseCode();
 
-    Document parseString(String data) throws UnsupportedEncodingException, SAXException, IOException, ParserConfigurationException {
-        DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
-        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-        Document doc = documentBuilder.parse(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)));
-        doc.setXmlStandalone(true);
+			logger.debug("Notification: {}", ret);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-        return doc;
-    }
+		return ret;
+	}
 
 }

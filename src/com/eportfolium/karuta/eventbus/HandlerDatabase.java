@@ -21,11 +21,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 
-import javax.activation.MimeType;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.slf4j.Logger;
@@ -39,6 +34,9 @@ import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
 import com.eportfolium.karuta.rest.RestWebApplicationException;
 
+import jakarta.activation.MimeType;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.core.Response.Status;
 
 public class HandlerDatabase implements KEventHandler {
@@ -60,7 +58,7 @@ public class HandlerDatabase implements KEventHandler {
 		}
 
 		this.session = request.getSession(true);
-		Integer val = (Integer) session.getAttribute("uid");
+		var val = (Integer) session.getAttribute("uid");
 		if (val != null) {
 			this.userId = val;
 		}
@@ -70,16 +68,6 @@ public class HandlerDatabase implements KEventHandler {
 		}
 	}
 
-	Document parseString(String data)
-			throws UnsupportedEncodingException, SAXException, IOException, ParserConfigurationException {
-		final DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
-		final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		final Document doc = documentBuilder.parse(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)));
-		doc.setXmlStandalone(true);
-
-		return doc;
-	}
-
 	@Override
 	public boolean processEvent(KEvent event) {
 
@@ -87,14 +75,14 @@ public class HandlerDatabase implements KEventHandler {
 		try {
 			switch (event.eventType) {
 			case LOGIN:
-				final String[] resultCredential = dataProvider.postCredentialFromXml(connection, this.userId,
+				final var resultCredential = dataProvider.postCredentialFromXml(connection, this.userId,
 						event.inputData, "", null);
 				if (resultCredential == null) {
 					throw new RestWebApplicationException(Status.FORBIDDEN,
 							"invalid credential or invalid group member");
 				}
-				final String login1 = resultCredential[0];
-				final String tokenID = resultCredential[1];
+				final var login1 = resultCredential[0];
+				final var tokenID = resultCredential[1];
 
 				if (tokenID == null) {
 					throw new RestWebApplicationException(Status.FORBIDDEN,
@@ -117,7 +105,7 @@ public class HandlerDatabase implements KEventHandler {
 
 			case NODE:
 				if (event.requestType == KEvent.RequestType.POST) {
-					final String returnValue = dataProvider.postNode(connection, new MimeType("text/xml"), event.uuid,
+					final var returnValue = dataProvider.postNode(connection, new MimeType("text/xml"), event.uuid,
 							event.inputData, this.userId, this.groupId, true).toString();
 					if (MysqlDataProvider.DATABASE_FALSE.equals(returnValue)) {
 						event.message = "Vous n'avez pas les droits d'acces";
@@ -148,6 +136,16 @@ public class HandlerDatabase implements KEventHandler {
 		}
 
 		return true;
+	}
+
+	Document parseString(String data)
+			throws UnsupportedEncodingException, SAXException, IOException, ParserConfigurationException {
+		final var documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+		final var documentBuilder = documentBuilderFactory.newDocumentBuilder();
+		final var doc = documentBuilder.parse(new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)));
+		doc.setXmlStandalone(true);
+
+		return doc;
 	}
 
 }

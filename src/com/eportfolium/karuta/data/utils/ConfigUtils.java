@@ -19,20 +19,15 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringJoiner;
-import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
-import javax.servlet.ServletContext;
-
 import org.apache.http.Header;
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
@@ -40,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 
+import jakarta.servlet.ServletContext;
 import jakarta.ws.rs.core.MediaType;
 
 public class ConfigUtils {
@@ -76,27 +72,12 @@ public class ConfigUtils {
 	// Singleton pattern
 	private static ConfigUtils INSTANCE;
 
-	public static ConfigUtils getInstance() {
-		if (INSTANCE == null) {
-			throw new AssertionError("The init wasn't done !");
-		}
-		return INSTANCE;
-	}
-
-	public synchronized static ConfigUtils init(final ServletContext context) throws Exception {
-		if (INSTANCE == null) {
-			INSTANCE = new ConfigUtils(context);
-		}
-
-		return INSTANCE;
-	}
-
 	private boolean hasLoaded = false;
+
 	private final Properties properties = new Properties();
+
 	private String filePath;
-
 	private String configPath;
-
 	private String karutaHome;
 
 	private String servletName;
@@ -114,7 +95,7 @@ public class ConfigUtils {
 
 			filePath = configPath + "configKaruta.properties";
 			// loading properties
-			final FileInputStream fileProps = new FileInputStream(filePath);
+			final var fileProps = new FileInputStream(filePath);
 			properties.load(fileProps);
 			fileProps.close();
 
@@ -126,6 +107,21 @@ public class ConfigUtils {
 			logger.error("Can't load file :" + filePath, e);
 			throw e;
 		}
+	}
+
+	public static ConfigUtils getInstance() {
+		if (INSTANCE == null) {
+			throw new AssertionError("The init wasn't done !");
+		}
+		return INSTANCE;
+	}
+
+	public synchronized static ConfigUtils init(final ServletContext context) throws Exception {
+		if (INSTANCE == null) {
+			INSTANCE = new ConfigUtils(context);
+		}
+
+		return INSTANCE;
 	}
 
 	public BuildInfo getBuildInfo() {
@@ -152,7 +148,7 @@ public class ConfigUtils {
 	}
 
 	public String getProperty(final String key, final String defaultValue) {
-		final String value = properties.getProperty(key);
+		final var value = properties.getProperty(key);
 		if (value == null) {
 			return defaultValue;
 		}
@@ -160,7 +156,7 @@ public class ConfigUtils {
 	}
 
 	public String getRequiredProperty(final String key) throws IllegalStateException {
-		final String value = properties.getProperty(key);
+		final var value = properties.getProperty(key);
 		if (value == null) {
 			logger.error("Required property key '" + key + "' not found");
 			throw new IllegalStateException("Required key '" + key + "' not found");
@@ -173,7 +169,7 @@ public class ConfigUtils {
 	}
 
 	private void loadBuildedInfo(final ServletContext context) {
-		final InputStream inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
+		final var inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
 		Manifest manifest = null;
 		try {
 			manifest = new Manifest(inputStream);
@@ -181,9 +177,9 @@ public class ConfigUtils {
 			logger.error("The war have a build problem in generating Manifest.mf file !");
 			return;
 		}
-		final Attributes attr = manifest.getMainAttributes();
+		final var attr = manifest.getMainAttributes();
 
-		final BuildInfo bi = new BuildInfo();
+		final var bi = new BuildInfo();
 		bi.version = attr.getValue("Implementation-Version");
 		bi.buildTime = attr.getValue("Build-Time");
 		bi.builtBy = attr.getValue("Built-By");
@@ -192,14 +188,14 @@ public class ConfigUtils {
 	}
 
 	private void loadConfigDirectory(final ServletContext context) throws IOException, InternalError {
-		final String configEnvDir = System.getenv(KARUTA_ENV_HOME);
-		final String configPropDir = System.getProperty(KARUTA_PROP_HOME);
+		final var configEnvDir = System.getenv(KARUTA_ENV_HOME);
+		final var configPropDir = System.getProperty(KARUTA_PROP_HOME);
 		// The jvm property override the environment property if set
-		final String configDir = (configPropDir != null && !configPropDir.trim().isEmpty()) ? configPropDir
+		final var configDir = (configPropDir != null && !configPropDir.trim().isEmpty()) ? configPropDir
 				: configEnvDir;
 		servletName = context.getContextPath();
 		if (configDir != null && !configDir.trim().isEmpty()) {
-			final File base = new File(configDir.trim());
+			final var base = new File(configDir.trim());
 			if (!base.exists() || !base.isDirectory() || !base.canWrite()) {
 				logger.error("The environment variable '" +
 						KARUTA_ENV_HOME +
@@ -222,7 +218,7 @@ public class ConfigUtils {
 			}
 			setConfigFolder(base);
 		} else {
-			final String defaultDir = System.getProperty("catalina.base");
+			final var defaultDir = System.getProperty("catalina.base");
 			logger.warn("The environment variable '" +
 					KARUTA_ENV_HOME +
 					"' or the jvm property '" +
@@ -232,7 +228,7 @@ public class ConfigUtils {
 					" Fallback on default folder '" +
 					defaultDir +
 					"'.");
-			final File base = new File(defaultDir);
+			final var base = new File(defaultDir);
 			if (!base.exists() || !base.isDirectory() || !base.canWrite()) {
 				logger.error("The folder '" +
 						defaultDir +
@@ -247,7 +243,7 @@ public class ConfigUtils {
 	}
 
 	private void loadFileserverBuildedInfo() {
-		String url = ConfigUtils.getInstance().getProperty("fileserver");
+		var url = ConfigUtils.getInstance().getProperty("fileserver");
 		url = url.endsWith("/") ? url + "rest/api/version" : url + "/rest/api/version";
 
 		final Set<Header> headers = new HashSet<>();
@@ -256,13 +252,13 @@ public class ConfigUtils {
 		headers.add(new BasicHeader("Accept-Charset", StandardCharsets.UTF_8.name()));
 		final HttpResponse response = HttpClientUtils.goGet(headers, url);
 		if (response != null) {
-			final HttpEntity httpentity = response.getEntity();
+			final var httpentity = response.getEntity();
 			try {
-				final InputStream inputStream = httpentity.getContent();
+				final var inputStream = httpentity.getContent();
 
-				final BufferedReader reader = new BufferedReader(
+				final var reader = new BufferedReader(
 						new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8);
-				final StringBuilder sb = new StringBuilder();
+				final var sb = new StringBuilder();
 				String line = null;
 
 				while ((line = reader.readLine()) != null) {
@@ -270,7 +266,7 @@ public class ConfigUtils {
 				}
 				inputStream.close();
 
-				final Gson gson = new Gson();
+				final var gson = new Gson();
 				fileServerBuildinfo = gson.fromJson(sb.toString(), BuildInfo.class);
 
 			} catch (final IOException e) {

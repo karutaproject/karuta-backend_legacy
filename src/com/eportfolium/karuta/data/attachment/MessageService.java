@@ -22,17 +22,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 import com.eportfolium.karuta.data.utils.MailUtils;
+
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 public class MessageService extends HttpServlet {
 
@@ -54,10 +53,19 @@ public class MessageService extends HttpServlet {
 	private String sakaiPassword;
 	private String sakaiDirectSessionURL;
 
+	public void initialize(HttpServletRequest httpServletRequest) throws Exception {
+		ConfigUtils.init(getServletContext());
+		notification = ConfigUtils.getInstance().getProperty("notification");
+		sakaiInterfaceURL = ConfigUtils.getInstance().getRequiredProperty("sakaiInterface");
+		sakaiUsername = ConfigUtils.getInstance().getRequiredProperty("sakaiUsername");
+		sakaiPassword = ConfigUtils.getInstance().getRequiredProperty("sakaiPassword");
+		sakaiDirectSessionURL = ConfigUtils.getInstance().getRequiredProperty("sakaiDirectSessionUrl");
+	}
+
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) {
 		/// Check if user has an account
-		final HttpSession session = request.getSession(false);
+		final var session = request.getSession(false);
 		if (session == null) {
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
@@ -71,16 +79,16 @@ public class MessageService extends HttpServlet {
 
 		/// From
 		/// Recipient
-		final String recipient = request.getParameter("recipient");
+		final var recipient = request.getParameter("recipient");
 		/// CC
-		final String recipient_cc = request.getParameter("recipient_cc");
+		final var recipient_cc = request.getParameter("recipient_cc");
 		request.getParameter("recipient_bcc");
 		/// Subject
-		final String subject = request.getParameter("subject");
+		final var subject = request.getParameter("subject");
 		/// Message
-		final String message = request.getParameter("message");
+		final var message = request.getParameter("message");
 
-		final ServletConfig config = getServletConfig();
+		final var config = getServletConfig();
 		logger.debug("Message to '{}'", notification);
 		switch (notification) {
 		case "email":
@@ -93,11 +101,11 @@ public class MessageService extends HttpServlet {
 			break;
 		case "sakai":
 			/// Recipient is username list rather than email address
-			final String[] recip = recipient.split(",");
-			final String[] var = getSakaiTicket();
+			final var recip = recipient.split(",");
+			final var var = getSakaiTicket();
 
 			for (final String user : recip) {
-				final int status = sendMessage(var, user, message);
+				final var status = sendMessage(var, user, message);
 				logger.debug("Message sent to '{}' -> '{}' ", user, status);
 			}
 			break;
@@ -120,12 +128,12 @@ public class MessageService extends HttpServlet {
 		try {
 			/// Configurable?
 
-			final String urlParameters = "_username=" + sakaiUsername + "&_password=" + sakaiPassword;
+			final var urlParameters = "_username=" + sakaiUsername + "&_password=" + sakaiPassword;
 
 			/// Will have to use some context config
-			final URL urlTicker = new URL(sakaiDirectSessionURL);
+			final var urlTicker = new URL(sakaiDirectSessionURL);
 
-			final HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
+			final var connect = (HttpURLConnection) urlTicker.openConnection();
 			connect.setDoOutput(true);
 			connect.setDoInput(true);
 			connect.setInstanceFollowRedirects(false);
@@ -136,17 +144,17 @@ public class MessageService extends HttpServlet {
 			connect.setUseCaches(false);
 			connect.connect();
 
-			final DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
+			final var wr = new DataOutputStream(connect.getOutputStream());
 			wr.writeBytes(urlParameters);
 			wr.flush();
 			wr.close();
 
-			final StringBuilder readTicket = new StringBuilder();
-			final BufferedReader rd = new BufferedReader(
+			final var readTicket = new StringBuilder();
+			final var rd = new BufferedReader(
 					new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
-			final char[] buffer = new char[1024];
-			int offset = 0;
-			int read = 0;
+			final var buffer = new char[1024];
+			var offset = 0;
+			var read = 0;
 			do {
 				read = rd.read(buffer, offset, 1024);
 				offset += read;
@@ -167,25 +175,16 @@ public class MessageService extends HttpServlet {
 		return ret;
 	}
 
-	public void initialize(HttpServletRequest httpServletRequest) throws Exception {
-		ConfigUtils.init(getServletContext());
-		notification = ConfigUtils.getInstance().getProperty("notification");
-		sakaiInterfaceURL = ConfigUtils.getInstance().getRequiredProperty("sakaiInterface");
-		sakaiUsername = ConfigUtils.getInstance().getRequiredProperty("sakaiUsername");
-		sakaiPassword = ConfigUtils.getInstance().getRequiredProperty("sakaiPassword");
-		sakaiDirectSessionURL = ConfigUtils.getInstance().getRequiredProperty("sakaiDirectSessionUrl");
-	}
-
 	int sendMessage(String[] auth, String user, String message) {
-		int ret = 500;
+		var ret = 500;
 
 		try {
-			final String urlParameters = "notification=\"" + message + "\"&_sessionId=" + auth[0];
+			final var urlParameters = "notification=\"" + message + "\"&_sessionId=" + auth[0];
 
 			/// Send for this user
-			final URL urlTicker = new URL(sakaiInterfaceURL + user);
+			final var urlTicker = new URL(sakaiInterfaceURL + user);
 
-			final HttpURLConnection connect = (HttpURLConnection) urlTicker.openConnection();
+			final var connect = (HttpURLConnection) urlTicker.openConnection();
 			connect.setDoOutput(true);
 			connect.setDoInput(true);
 			connect.setInstanceFollowRedirects(false);
@@ -197,7 +196,7 @@ public class MessageService extends HttpServlet {
 			connect.setRequestProperty("Cookie", auth[1]);
 			connect.connect();
 
-			final DataOutputStream wr = new DataOutputStream(connect.getOutputStream());
+			final var wr = new DataOutputStream(connect.getOutputStream());
 			wr.writeBytes(urlParameters);
 			wr.flush();
 			wr.close();

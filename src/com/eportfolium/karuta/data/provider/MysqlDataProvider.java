@@ -54,9 +54,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import javax.activation.MimeType;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -70,8 +67,6 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.HttpResponse;
@@ -98,6 +93,9 @@ import com.eportfolium.karuta.rest.RestWebApplicationException;
 import com.eportfolium.karuta.security.Credential;
 import com.eportfolium.karuta.security.NodeRight;
 
+import jakarta.activation.MimeType;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.core.Response.Status;
 
 /**
@@ -7278,7 +7276,7 @@ public class MysqlDataProvider implements DataProvider {
 						doc = documentBuilder.parse(is);
 						attribNode = doc.getDocumentElement();
 						attribMap = attribNode.getAttributes();
-
+						
 						try
 						{
 							Node publicatt = attribMap.getNamedItem("public");
@@ -9638,19 +9636,14 @@ public class MysqlDataProvider implements DataProvider {
 
 		//		boolean isMultipart = ServletFileUpload.isMultipartContent(httpServletRequest);
 		// Create a factory for disk-based file items
-		final var factory = new DiskFileItemFactory();
-
 		httpServletRequest.getSession().getServletContext();
 		final var repository = new File(System.getProperty("java.io.tmpdir", null));
-		factory.setRepository(repository);
 
 		if (projectName == null) {
 			projectName = "";
 		} else {
 			projectName = projectName.trim();
 		}
-
-		new ServletFileUpload(factory);
 
 		final var inZip = new DataInputStream(inputStream);
 		// Parse the request

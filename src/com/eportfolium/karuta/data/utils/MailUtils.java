@@ -17,30 +17,32 @@ package com.eportfolium.karuta.data.utils;
 
 import java.util.Properties;
 
-import javax.mail.Message;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
-import javax.servlet.ServletConfig;
-
 import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
 
+import jakarta.mail.Authenticator;
+import jakarta.mail.Message;
+import jakarta.mail.PasswordAuthentication;
+import jakarta.mail.Session;
+import jakarta.mail.Transport;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
+import jakarta.servlet.ServletConfig;
+
 public class MailUtils {
 	//===============================================================
-	private static class SMTPAuthenticator extends javax.mail.Authenticator {
+	private static class SMTPAuthenticator extends Authenticator {
 		//===============================================================
-		private final javax.mail.PasswordAuthentication authentication;
+		private final PasswordAuthentication authentication;
 
 		public SMTPAuthenticator(String login, String password) {
-			authentication = new javax.mail.PasswordAuthentication(login, password);
+			authentication = new jakarta.mail.PasswordAuthentication(login, password);
 		}
 
 		@Override
-		protected javax.mail.PasswordAuthentication getPasswordAuthentication() {
+		protected PasswordAuthentication getPasswordAuthentication() {
 			return authentication;
 		}
 	}
@@ -53,28 +55,28 @@ public class MailUtils {
 			return -1;
 		}
 
-		final boolean debug = false;
+		final var debug = false;
 		logger.debug("<br>postMail --in");
 
-		final String[] recip = recipients_to.split(",");
+		final var recip = recipients_to.split(",");
 		String[] recip_cc = null;
 		if (recipients_cc != null && !"".equals(recipients_cc)) {
 			recip_cc = recipients_cc.split(",");
 		}
 
 		try {
-			final String mail_login = ConfigUtils.getInstance().getRequiredProperty("mail_login");
-			String mail_sender = ConfigUtils.getInstance().getProperty("mail_sender");
-			final String mail_password = ConfigUtils.getInstance().getProperty("mail_password");
+			final var mail_login = ConfigUtils.getInstance().getRequiredProperty("mail_login");
+			var mail_sender = ConfigUtils.getInstance().getProperty("mail_sender");
+			final var mail_password = ConfigUtils.getInstance().getProperty("mail_password");
 
 			if (mail_sender == null) {
 				mail_sender = mail_login;
 			}
 
 			//Set the host smtp address
-			final Properties props = new Properties();
+			final var props = new Properties();
 
-			final boolean useAuth = BooleanUtils
+			final var useAuth = BooleanUtils
 					.toBoolean(ConfigUtils.getInstance().getRequiredProperty("smtp.useauth"));
 
 			props.put("mail.smtp.host", ConfigUtils.getInstance().getRequiredProperty("smtp.server"));
@@ -87,7 +89,7 @@ public class MailUtils {
 
 			Session session;
 			if (useAuth) {
-				final javax.mail.Authenticator auth = new SMTPAuthenticator(mail_login, mail_password);
+				final Authenticator auth = new SMTPAuthenticator(mail_login, mail_password);
 				session = Session.getInstance(props, auth);
 			} else {
 				session = Session.getInstance(props);
@@ -99,28 +101,28 @@ public class MailUtils {
 			final Message msg = new MimeMessage(session);
 
 			// set the from and to address
-			final InternetAddress addressFrom = new InternetAddress(mail_sender);
+			final var addressFrom = new InternetAddress(mail_sender);
 			msg.setFrom(addressFrom);
 			logger.debug("<br>addressFrom: {}", addressFrom);
 
-			final InternetAddress[] addressTo = new InternetAddress[recip.length];
-			for (int i = 0; i < recip.length; i++) {
+			final var addressTo = new InternetAddress[recip.length];
+			for (var i = 0; i < recip.length; i++) {
 				addressTo[i] = new InternetAddress(recip[i]);
 				logger.debug("<br>addressTo: {}", addressTo[i]);
 			}
 			if (recip_cc != null) {
-				final InternetAddress[] addressCC = new InternetAddress[recip_cc.length];
-				for (int i = 0; i < recip_cc.length; i++) {
+				final var addressCC = new InternetAddress[recip_cc.length];
+				for (var i = 0; i < recip_cc.length; i++) {
 					addressCC[i] = new InternetAddress(recip_cc[i]);
 					logger.debug("<br>addressTo: {}", addressCC[i]);
 				}
 				msg.setRecipients(Message.RecipientType.CC, addressCC);
 			}
 			msg.setRecipients(Message.RecipientType.TO, addressTo);
-			final MimeMultipart multipart = new MimeMultipart("related");
+			final var multipart = new MimeMultipart("related");
 
 			// first part  (the html)
-			final MimeBodyPart messageBodyPart = new MimeBodyPart();
+			final var messageBodyPart = new MimeBodyPart();
 			messageBodyPart.setHeader("Content-Type", "text/html; charset=\"utf-8\"");
 			messageBodyPart.setContent(content, "text/html; charset=utf-8");
 
@@ -160,7 +162,7 @@ public class MailUtils {
 			}
 		}
 		fichierSrce.close();
-	
+
 		return config;
 	}
 	//*/

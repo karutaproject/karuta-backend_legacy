@@ -1,12 +1,12 @@
 package com.eportfolium.karuta.data.utils;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.attachment.EmploiStoreService;
+
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 
 public class Manager implements ServletContextListener {
 	private final static Logger logger = LoggerFactory.getLogger(Manager.class);

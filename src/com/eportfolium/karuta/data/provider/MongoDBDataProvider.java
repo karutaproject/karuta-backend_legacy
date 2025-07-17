@@ -22,13 +22,13 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Set;
 
-import javax.activation.MimeType;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.eportfolium.karuta.security.NodeRight;
+
+import jakarta.activation.MimeType;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
 
 public class MongoDBDataProvider implements DataProvider {
 
@@ -36,9 +36,9 @@ public class MongoDBDataProvider implements DataProvider {
 	@Override
 	public void connect(Properties connectionProperties) throws Exception {
 		// TODO Auto-generated method stub
-	
+
 	}
-	
+
 	@Override
 	public Credential getCredential()
 	{
@@ -227,8 +227,8 @@ public class MongoDBDataProvider implements DataProvider {
 	/*
 	@Override
 	public void disconnect(){
-	
-	
+
+
 	}
 	//*/
 

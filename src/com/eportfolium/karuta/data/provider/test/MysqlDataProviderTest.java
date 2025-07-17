@@ -15,10 +15,7 @@
 
 package com.eportfolium.karuta.data.provider.test;
 
-import java.sql.Connection;
 import java.util.Properties;
-
-import javax.activation.MimeType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +24,8 @@ import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
 import com.eportfolium.karuta.security.Credential;
+
+import jakarta.activation.MimeType;
 
 public class MysqlDataProviderTest {
 
@@ -38,32 +37,32 @@ public class MysqlDataProviderTest {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		final String dataProviderName = "com.eportfolium.karuta.data.provider.MysqlDataProvider";
-		final Properties connectionProperties = new Properties();
+		final var dataProviderName = "com.eportfolium.karuta.data.provider.MysqlDataProvider";
+		final var connectionProperties = new Properties();
 		connectionProperties.setProperty("url", "jdbc:mysql://localhost/portfolio");
 		connectionProperties.setProperty("login", "root");
 		connectionProperties.setProperty("password", "");
 
 		try {
-			final MimeType xmlMimeType = new MimeType("text/xml");
-			final DataProvider dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor()
+			final var xmlMimeType = new MimeType("text/xml");
+			final var dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor()
 					.newInstance();
-			final Connection connection = SqlUtils.getConnection();
+			final var connection = SqlUtils.getConnection();
 			new Credential();
 
-			final String portfolioUuid = "aaaa-bbbb-cccc";
+			final var portfolioUuid = "aaaa-bbbb-cccc";
 			Integer userId = 2;
-			final int groupId = 26;
-			final String rolename = "student";
+			final var groupId = 26;
+			final var rolename = "student";
 
 			// putPortfolio
-			final String xml = DomUtils.file2String("c:\\temp\\iut2.xml", new StringBuilder());
+			final var xml = DomUtils.file2String("c:\\temp\\iut2.xml", new StringBuilder());
 			logger.debug("--- putPortfolio() ------");
 			dataProvider.putPortfolio(connection, xmlMimeType, xmlMimeType, xml, portfolioUuid, userId, true, groupId,
 					null);
 
 			// getNode
-			final String uuid = "43020565-b650-4655-b466-af2c69b0c714";
+			final var uuid = "43020565-b650-4655-b466-af2c69b0c714";
 			logger.debug("--- getNode(" + uuid + ") ------");
 			logger.debug("Node {}",
 					dataProvider.getNode(connection, xmlMimeType, uuid, false, userId, groupId, rolename, null, null));
@@ -73,13 +72,13 @@ public class MysqlDataProviderTest {
 					dataProvider.getNode(connection, xmlMimeType, uuid, true, userId, groupId, rolename, null, null));
 
 			// putNode
-			final String parent_uuid_putnode = "82af4eae-0119-4055-b422-e37cece57e0f";
+			final var parent_uuid_putnode = "82af4eae-0119-4055-b422-e37cece57e0f";
 			logger.debug("--- putNode(" + parent_uuid_putnode + ") ------");
-			final String xml_putnode = DomUtils.file2String("c:\\temp\\putnode.xml", new StringBuilder());
+			final var xml_putnode = DomUtils.file2String("c:\\temp\\putnode.xml", new StringBuilder());
 			logger.debug("Node {}",
 					dataProvider.putNode(connection, xmlMimeType, parent_uuid_putnode, xml_putnode, userId, groupId));
 
-			final String uuid_deletenode = "b6b20bf7-3732-4256-ae16-171f42030207";
+			final var uuid_deletenode = "b6b20bf7-3732-4256-ae16-171f42030207";
 			logger.debug("--- deleteNode(" + uuid_deletenode + ") ------");
 			logger.debug("Result {}", dataProvider.deleteNode(connection, uuid_deletenode, userId, groupId, rolename));
 
@@ -97,7 +96,7 @@ public class MysqlDataProviderTest {
 					true, 0, null, null, false, null));
 
 			//getNodes
-			final String uuid_getnodes = "43020565-b650-4655-b466-af2c69b0c714";
+			final var uuid_getnodes = "43020565-b650-4655-b466-af2c69b0c714";
 			logger.debug("--- getNodes(" + uuid_getnodes + ") ------");
 			logger.debug("Result {}", dataProvider.getNodes(connection, xmlMimeType, null, userId, groupId, rolename,
 					null, uuid_getnodes, null, null, null, null));

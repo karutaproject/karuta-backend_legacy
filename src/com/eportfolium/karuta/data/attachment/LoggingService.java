@@ -21,23 +21,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
 import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
@@ -45,6 +35,12 @@ import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.LogUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
 import com.eportfolium.karuta.security.Credential;
+
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class LoggingService extends HttpServlet {
 	private static final Logger logger = LoggerFactory.getLogger(LoggingService.class);
@@ -56,9 +52,24 @@ public class LoggingService extends HttpServlet {
 	DataProvider dataProvider = null;
 
 	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			ConfigUtils.init(getServletContext());
+			LogUtils.initDirectory(getServletContext());
+
+			dataProvider = SqlUtils.initProvider();
+		} catch (final Exception e) {
+			logger.error("Can't init servlet", e);
+			throw new ServletException(e);
+		}
+
+	}
+
+	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) {
 		/// Check if user is logged in
-		final HttpSession session = request.getSession(false);
+		final var session = request.getSession(false);
 		if (session == null) {
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
@@ -69,33 +80,33 @@ public class LoggingService extends HttpServlet {
 			return;
 		}
 
-		final Credential credential = new Credential();
+		final var credential = new Credential();
 		/// Check if user is admin
 		Connection c;
 		try {
 			c = SqlUtils.getConnection();
 			if (credential.isAdmin(c, uid)) {
 				/// Logfile name
-				final String loggingLine = request.getParameter("n");
-				final String filename = ConfigUtils.getInstance().getProperty("logfile_" + loggingLine);
+				final var loggingLine = request.getParameter("n");
+				final var filename = ConfigUtils.getInstance().getProperty("logfile_" + loggingLine);
 
 				if (filename == null) // Wanting an undefined logfile
 				{
 					response.setStatus(400);
-					final PrintWriter writer = response.getWriter();
+					final var writer = response.getWriter();
 					writer.append("Undefined log file");
 					writer.close();
 					return;
 				}
 
-				final FileReader fr = new FileReader(filename);
-				final BufferedReader bread = new BufferedReader(fr);
-				final OutputStreamWriter osw = new OutputStreamWriter(response.getOutputStream());
-				final BufferedWriter bwrite = new BufferedWriter(osw);
+				final var fr = new FileReader(filename);
+				final var bread = new BufferedReader(fr);
+				final var osw = new OutputStreamWriter(response.getOutputStream());
+				final var bwrite = new BufferedWriter(osw);
 
-				final char[] buffer = new char[1024];
-				int offset = 0;
-				int read = 1;
+				final var buffer = new char[1024];
+				var offset = 0;
+				var read = 1;
 
 				while (read > 0) {
 					read = bread.read(buffer, offset, 1024);
@@ -125,7 +136,7 @@ public class LoggingService extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) {
 		/// Check if user is logged in
-		final HttpSession session = request.getSession(false);
+		final var session = request.getSession(false);
 		if (session == null) {
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
@@ -138,9 +149,9 @@ public class LoggingService extends HttpServlet {
 		}
 
 		Connection c = null;
-		boolean raw = false;
+		var raw = false;
 		try {
-			final Integer val = (Integer) session.getAttribute("uid");
+			final var val = (Integer) session.getAttribute("uid");
 			/// Basic check if user is logged on
 			if (val == null) {
 				response.setStatus(403);
@@ -148,42 +159,42 @@ public class LoggingService extends HttpServlet {
 			}
 
 			/// Logfile name
-			final String loggingLine = request.getParameter("n");
-			final String filename = ConfigUtils.getInstance().getProperty("logfile_" + loggingLine);
+			final var loggingLine = request.getParameter("n");
+			final var filename = ConfigUtils.getInstance().getProperty("logfile_" + loggingLine);
 
 			if (filename == null) // Wanting an undefined logfile
 			{
 				response.setStatus(400);
-				final PrintWriter writer = response.getWriter();
+				final var writer = response.getWriter();
 				writer.append("Undefined log file");
 				writer.close();
 				return;
 			}
 
-			final String context = request.getContextPath();
-			String username = "";
-			final String showuser = request.getParameter("user");
-			final String rawparam = request.getParameter("raw");
+			final var context = request.getContextPath();
+			var username = "";
+			final var showuser = request.getParameter("user");
+			final var rawparam = request.getParameter("raw");
 			if (BooleanUtils.toBoolean(rawparam)) {
 				raw = true;
 			}
 
 			if (BooleanUtils.toBoolean(showuser)) {
 				c = SqlUtils.getConnection();
-				final String userinfo = dataProvider.getInfUser(c, 1, val);
-				final Document doc = DomUtils.xmlString2Document(userinfo, null);
-				final NodeList usernameNodes = doc.getElementsByTagName("username");
+				final var userinfo = dataProvider.getInfUser(c, 1, val);
+				final var doc = DomUtils.xmlString2Document(userinfo, null);
+				final var usernameNodes = doc.getElementsByTagName("username");
 				username = usernameNodes.item(0).getTextContent();
 				//				dataProvider.disconnect();
 			}
 
 			/// Complete path
-			final InputStreamReader bis = new InputStreamReader(request.getInputStream(), StandardCharsets.UTF_8);
-			final BufferedReader bread = new BufferedReader(bis);
+			final var bis = new InputStreamReader(request.getInputStream(), StandardCharsets.UTF_8);
+			final var bread = new BufferedReader(bis);
 
-			final BufferedWriter bwrite = LogUtils.getLog(filename);
+			final var bwrite = LogUtils.getLog(filename);
 			if (!raw) {
-				final String outputformat = "%s : %s - '%s' -- ";
+				final var outputformat = "%s : %s - '%s' -- ";
 				bwrite.write(String.format(outputformat, LogUtils.getCurrentDate(), context, username));
 			}
 			String s;
@@ -207,21 +218,6 @@ public class LoggingService extends HttpServlet {
 				logger.error("Intercept error", e);
 				//TODO managing error
 			}
-		}
-
-	}
-
-	@Override
-	public void init(ServletConfig config) throws ServletException {
-		super.init(config);
-		try {
-			ConfigUtils.init(getServletContext());
-			LogUtils.initDirectory(getServletContext());
-
-			dataProvider = SqlUtils.initProvider();
-		} catch (final Exception e) {
-			logger.error("Can't init servlet", e);
-			throw new ServletException(e);
 		}
 
 	}
