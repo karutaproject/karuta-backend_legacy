@@ -28,48 +28,12 @@ import org.slf4j.LoggerFactory;
 /**
  * This class will create a log entry containing the LMS system's user ID, user EID,
  * the WAD system's user ID, along with the LTI consumer key
- * @author Chris Maurer<maurercw@gmail.com>
+ * @author Chris Maurer {@literal <maurercw@gmail.com>}
  *
  */
 public class LTIUserLog {
 
 	public static final Logger logger = LoggerFactory.getLogger(LTIUserLog.class);
-
-	/**
-	 * Get the id for a log entry with a matching user IDs and consumer_key
-	 * @param connexion Connection Object to use for database communication
-	 * @param lms_user_id User ID from the LMS to be used as a lookup value
-	 * @param lms_user_eid User EID from the LMS to be used as a lookup value
-	 * @param wad_user_id	User ID from WAD to be used as a lookup value
-	 * @param consumer_key Consumer key to be used as a lookup value
-	 * @param outTrace For debug logging
-	 * @return The id of the lti_user_log record
-	 * @throws Exception
-	 */
-	public static String getLogEntryId(Connection connexion,String lms_user_id,String lms_user_eid,String wad_user_id, String consumer_key, StringBuffer outTrace) throws Exception {
-		String id="0";
-		PreparedStatement ps = null;
-		ResultSet rs = null;
-		String reqSQL = null;
-
-		try{
-			reqSQL = "SELECT id FROM lti_user_log WHERE lms_user_id=? and lms_user_eid=? and wad_user_id=? and consumer_key=?";
-			ps = connexion.prepareStatement(reqSQL);
-			ps.setString(1,lms_user_id);
-			ps.setString(2,lms_user_eid);
-			ps.setString(3,wad_user_id);
-			ps.setString(4,consumer_key);
-			rs = ps.executeQuery();
-			if (rs.next()) {
-				id = rs.getString("id");
-			}
-		}	catch(Exception e){
-			logger.error("Error getting lti_user_log id for lms_user_id: '{}' and consumer_key: '{}'", lms_user_id, consumer_key);
-		}	finally {
-			cleanup(rs, ps);
-		}
-		return id;
-	}
 
 	/**
 	 * Write a new record to the lti_user_log table
@@ -82,37 +46,76 @@ public class LTIUserLog {
 	 * @return An XML element containing the lti_user_log id
 	 * @throws Exception
 	 */
-	public static StringBuffer createUserLogEntry(Connection connexion,String lms_user_id,String lms_user_eid,String wad_user_id,String consumer_key, StringBuffer outTrace) throws Exception {
+	public static StringBuffer createUserLogEntry(Connection connexion, String lms_user_id, String lms_user_eid,
+			String wad_user_id, String consumer_key, StringBuffer outTrace) throws Exception {
 		PreparedStatement ps = null;
 		ResultSet rs = null;
-		StringBuffer result = new StringBuffer();
+		final var result = new StringBuffer();
 		outTrace.append("\ncreateUserLogEntry ===");
-		try{
-			String sqlStatement = "INSERT INTO lti_user_log(lms_user_id,lms_user_eid,wad_user_id,creationtime,consumer_key) VALUES (?,?,?,?,?)";
+		try {
+			final var sqlStatement = "INSERT INTO lti_user_log(lms_user_id,lms_user_eid,wad_user_id,creationtime,consumer_key) VALUES (?,?,?,?,?)";
 			ps = connexion.prepareStatement(sqlStatement);
-			ps.setString(1,lms_user_id);
-			ps.setString(2,lms_user_eid);
-			ps.setString(3,wad_user_id);
-			ps.setTimestamp(4,new Timestamp(new Date().getTime()));
-			ps.setString(5,consumer_key);
+			ps.setString(1, lms_user_id);
+			ps.setString(2, lms_user_eid);
+			ps.setString(3, wad_user_id);
+			ps.setTimestamp(4, new Timestamp(new Date().getTime()));
+			ps.setString(5, consumer_key);
 			ps.executeUpdate();
 
-			String id ="";
+			var id = "";
 			rs = ps.getGeneratedKeys();
 			if (rs.next()) {
 				id = rs.getString(1);
 			}
 			rs.close();
 
-			result.append("\n<lti_user_log id='"+id+"'/>");
+			result.append("\n<lti_user_log id='" + id + "'/>");
 
-		}	catch(Exception e){
+		} catch (final Exception e) {
 			logger.error("Erreur dans createUserLogEntry:", e);
-		}	finally {
+		} finally {
 			cleanup(rs, ps);
 		}
 
 		return result;
+	}
+
+	/**
+	 * Get the id for a log entry with a matching user IDs and consumer_key
+	 * @param connexion Connection Object to use for database communication
+	 * @param lms_user_id User ID from the LMS to be used as a lookup value
+	 * @param lms_user_eid User EID from the LMS to be used as a lookup value
+	 * @param wad_user_id	User ID from WAD to be used as a lookup value
+	 * @param consumer_key Consumer key to be used as a lookup value
+	 * @param outTrace For debug logging
+	 * @return The id of the lti_user_log record
+	 * @throws Exception
+	 */
+	public static String getLogEntryId(Connection connexion, String lms_user_id, String lms_user_eid,
+			String wad_user_id, String consumer_key, StringBuffer outTrace) throws Exception {
+		var id = "0";
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		String reqSQL = null;
+
+		try {
+			reqSQL = "SELECT id FROM lti_user_log WHERE lms_user_id=? and lms_user_eid=? and wad_user_id=? and consumer_key=?";
+			ps = connexion.prepareStatement(reqSQL);
+			ps.setString(1, lms_user_id);
+			ps.setString(2, lms_user_eid);
+			ps.setString(3, wad_user_id);
+			ps.setString(4, consumer_key);
+			rs = ps.executeQuery();
+			if (rs.next()) {
+				id = rs.getString("id");
+			}
+		} catch (final Exception e) {
+			logger.error("Error getting lti_user_log id for lms_user_id: '{}' and consumer_key: '{}'", lms_user_id,
+					consumer_key);
+		} finally {
+			cleanup(rs, ps);
+		}
+		return id;
 	}
 
 	/**
@@ -124,15 +127,13 @@ public class LTIUserLog {
 		if (rs != null) {
 			try {
 				rs.close();
-			}
-			catch (SQLException e) {
+			} catch (final SQLException e) {
 			}
 		}
 		if (ps != null) {
 			try {
 				ps.close();
-			}
-			catch (SQLException e) {
+			} catch (final SQLException e) {
 			}
 		}
 	}

@@ -320,7 +320,9 @@ public class OAuth {
 		return map;
 	}
 
-	/** Construct a &-separated list of the given values, percentEncoded. */
+	/**
+	 * {@literal Construct a &-separated list of the given values, percentEncoded.}
+	 */
 	public static String percentEncode(Iterable<?> values) {
 		final var p = new StringBuilder();
 		for (final Object v : values) {
