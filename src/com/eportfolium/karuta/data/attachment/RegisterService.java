@@ -29,8 +29,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -52,7 +52,7 @@ public class RegisterService extends HttpServlet {
 	/**
 	 *
 	 */
-	private static final Logger logger = LoggerFactory.getLogger(RegisterService.class);
+	private static final Logger logger = LogManager.getLogger(RegisterService.class);
 	private static final long serialVersionUID = 9188067506635747901L;
 
 	//	DataProvider dataProvider;

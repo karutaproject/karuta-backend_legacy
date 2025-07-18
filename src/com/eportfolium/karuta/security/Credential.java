@@ -21,8 +21,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.eportfolium.karuta.data.provider.MysqlDataProvider;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
@@ -33,7 +33,7 @@ import jakarta.servlet.http.HttpServlet;
  * Servlet implementation class Credential
  */
 public class Credential {
-	private final static Logger logger = LoggerFactory.getLogger(Credential.class);
+	private final static Logger logger = LogManager.getLogger(Credential.class);
 
 	//	private final Connection connection;
 	public static final String NONE = "none";

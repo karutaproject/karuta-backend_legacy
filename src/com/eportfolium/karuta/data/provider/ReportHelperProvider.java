@@ -17,7 +17,6 @@ package com.eportfolium.karuta.data.provider;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.MessageFormat;
@@ -25,20 +24,18 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import javax.sql.DataSource;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.eportfolium.karuta.security.Credential;
 
 public class ReportHelperProvider {
 
-	final Logger logger = LoggerFactory.getLogger(ReportHelperProvider.class);
+	final Logger logger = LogManager.getLogger(ReportHelperProvider.class);
 
 	final private Credential cred = new Credential();
 
@@ -49,18 +46,18 @@ public class ReportHelperProvider {
 
 	/// Because can't make UNIQUE key on all column. Size is too big
 	public int checkVector(Connection c, ArrayList<String> cols, ArrayList<String> vals) throws SQLException {
-		String col = String.join("=? AND ", cols);
+		var col = String.join("=? AND ", cols);
 		col += "=?";
-		final String sql = String.format("SELECT COUNT(*) FROM vector_table WHERE %s;", col);
+		final var sql = String.format("SELECT COUNT(*) FROM vector_table WHERE %s;", col);
 		logger.debug("SQL: " + sql);
-		final PreparedStatement st = c.prepareStatement(sql);
+		final var st = c.prepareStatement(sql);
 
-		for (int i = 0; i < vals.size(); i++) {
+		for (var i = 0; i < vals.size(); i++) {
 			st.setString(i + 1, vals.get(i));
 		}
-		final ResultSet rs = st.executeQuery();
+		final var rs = st.executeQuery();
 
-		int count = 0;
+		var count = 0;
 		if (rs != null && (rs.next())) {
 			count = rs.getInt(1);
 		}
@@ -74,9 +71,9 @@ public class ReportHelperProvider {
 	}
 
 	public int deleteVector(Connection c, HashMap<String, String> map) throws SQLException {
-		final ArrayList<String> cols = new ArrayList<String>();
-		final ArrayList<String> vals = new ArrayList<String>();
-		int userid = 0;
+		final var cols = new ArrayList<String>();
+		final var vals = new ArrayList<String>();
+		var userid = 0;
 		for (final Entry<String, String> entry : map.entrySet()) {
 			if ("date".equals(entry.getKey())) {
 				cols.add("v." + entry.getKey() + "<?");
@@ -89,21 +86,21 @@ public class ReportHelperProvider {
 			vals.add(entry.getValue());
 		}
 
-		String addRight = "AND (v.userid=? OR u.userid=?) AND r.DL=1";
+		var addRight = "AND (v.userid=? OR u.userid=?) AND r.DL=1";
 
 		if (cred.isAdmin(c, userid)) {
 			addRight = null;
 		}
 
 		/// Check entries that have a right to delete
-		final String sqlCheck = String.format("SELECT v.lineid " +
+		final var sqlCheck = String.format("SELECT v.lineid " +
 				"FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
 				"LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
 				"WHERE %s %s;", String.join(" AND ", cols), addRight != null ? addRight : "");
 		logger.debug("SQL: {}", sqlCheck);
 
-		final PreparedStatement stCheck = c.prepareStatement(sqlCheck);
-		for (int i = 0; i < vals.size(); i++) {
+		final var stCheck = c.prepareStatement(sqlCheck);
+		for (var i = 0; i < vals.size(); i++) {
 			logger.debug("PARAMS {} VAL: {}", i + 1, vals.get(i));
 			stCheck.setString(i + 1, vals.get(i));
 		}
@@ -111,8 +108,8 @@ public class ReportHelperProvider {
 			stCheck.setInt(vals.size() + 1, userid);
 			stCheck.setInt(vals.size() + 2, userid);
 		}
-		final ResultSet rsCheck = stCheck.executeQuery();
-		final HashSet<Integer> entries = new HashSet<Integer>();
+		final var rsCheck = stCheck.executeQuery();
+		final var entries = new HashSet<Integer>();
 		while (rsCheck.next()) {
 			entries.add(rsCheck.getInt(1));
 		}
@@ -120,11 +117,11 @@ public class ReportHelperProvider {
 
 		/// Delete related lines if there is a right on it
 		if (!entries.isEmpty()) {
-			final String sql = "DELETE v, u, r " +
+			final var sql = "DELETE v, u, r " +
 					"FROM vector_table v LEFT JOIN vector_usergroup u ON v.lineid=u.lineid " +
 					"LEFT JOIN vector_rights r ON u.groupid=r.groupid " +
 					"WHERE v.lineid=?;";
-			final PreparedStatement st = c.prepareStatement(sql);
+			final var st = c.prepareStatement(sql);
 			for (final Integer entry : entries) {
 				st.setInt(1, entry);
 				st.executeUpdate();
@@ -139,46 +136,43 @@ public class ReportHelperProvider {
 		PreparedStatement st;
 		String sql;
 
-		final Set<Entry<String, String>> values = map.entrySet();
-		final ArrayList<String> cols = new ArrayList<String>();
-		final ArrayList<String> vals = new ArrayList<String>();
-		final Iterator<Entry<String, String>> iterval = values.iterator();
-
+		final var values = map.entrySet();
+		final var cols = new ArrayList<String>();
+		final var vals = new ArrayList<String>();
 		if (!cred.isAdmin(c, userId)) {
 			// If user is not admin, check if read access is defined
 			cols.add("a1=?");
-			final String user = cred.getUsername(c, userId);
+			final var user = cred.getUsername(c, userId);
 			vals.add(user);
 		}
 
-		while (iterval.hasNext()) {
-			final Entry<String, String> entry = iterval.next();
+		for (final Entry<String, String> entry : values) {
 			cols.add(entry.getKey() + "=?");
 			vals.add(entry.getValue());
 		}
 
-		final String col = String.join(" AND ", cols);
+		final var col = String.join(" AND ", cols);
 		sql = String.format("SELECT * FROM vector_table WHERE %s;", col);
 		logger.debug("SQL: " + sql);
 		st = c.prepareStatement(sql);
 
-		for (int i = 0; i < vals.size(); i++) {
+		for (var i = 0; i < vals.size(); i++) {
 			st.setString(i + 1, vals.get(i));
 			logger.debug("PARAMS " + (i + 1) + " VAL: " + vals.get(i));
 		}
-		final ResultSet rs = st.executeQuery();
-		final StringBuilder output = new StringBuilder();
+		final var rs = st.executeQuery();
+		final var output = new StringBuilder();
 		output.append("<vectors>");
 		if (rs != null) {
 			while (rs.next()) {
-				final int userid = rs.getInt("userid");
+				final var userid = rs.getInt("userid");
 				final Date date = rs.getDate("date");
 				output.append(MessageFormat.format(
 						"<vector uid=''{0,number,integer}'' date=''{1,date,short} {1,time,medium}''>", userid, date));
 
-				for (int i = 1; i <= 10; i++) {
-					final String a_n = "a" + i;
-					final String a_val = rs.getString(a_n);
+				for (var i = 1; i <= 10; i++) {
+					final var a_n = "a" + i;
+					final var a_val = rs.getString(a_n);
 					if (!"".equals(a_val)) {
 						output.append(String.format("<%s>%s</%s>", a_n, a_val, a_n));
 					}
@@ -200,20 +194,18 @@ public class ReportHelperProvider {
 		PreparedStatement st;
 		String sql;
 
-		final Set<Entry<String, String>> values = map.entrySet();
-		final ArrayList<String> holder = new ArrayList<String>();
-		final ArrayList<String> cols = new ArrayList<String>();
-		final ArrayList<String> vals = new ArrayList<String>();
-		final Iterator<Entry<String, String>> iterval = values.iterator();
-		while (iterval.hasNext()) {
-			final Entry<String, String> entry = iterval.next();
+		final var values = map.entrySet();
+		final var holder = new ArrayList<String>();
+		final var cols = new ArrayList<String>();
+		final var vals = new ArrayList<String>();
+		for (final Entry<String, String> entry : values) {
 			holder.add("?");
 			cols.add(entry.getKey());
 			vals.add(entry.getValue());
 		}
 
 		// Check if previous vector exist
-		final int count = checkVector(c, cols, vals);
+		final var count = checkVector(c, cols, vals);
 		if (count > 0) {
 			return -1;
 		}
@@ -224,15 +216,15 @@ public class ReportHelperProvider {
 
 		logger.debug("SQL: " + sql);
 
-		for (int i = 0; i < vals.size(); i++) {
+		for (var i = 0; i < vals.size(); i++) {
 			st.setString(i + 1, vals.get(i));
 			logger.debug("PARAMS " + (i + 1) + " VAL: " + vals.get(i));
 		}
 		st.executeUpdate();
 
 		/// Get lineid
-		int lineid = 0;
-		ResultSet rs = st.getGeneratedKeys();
+		var lineid = 0;
+		var rs = st.getGeneratedKeys();
 		if (rs.next()) {
 			lineid = rs.getInt(1);
 		}
@@ -257,7 +249,7 @@ public class ReportHelperProvider {
 
 			st.executeUpdate();
 			rs = st.getGeneratedKeys();
-			int groupid = 0;
+			var groupid = 0;
 			if (rs.next()) {
 				groupid = rs.getInt(1);
 			}
@@ -265,8 +257,8 @@ public class ReportHelperProvider {
 
 			// Write rights
 			if (groupid != 0) {
-				final HashSet<String> r = gr.getValue();
-				final String sqlrights = "INSERT INTO vector_rights(groupid, RD, WR, DL) VALUES(?, ?, ?, ?);";
+				final var r = gr.getValue();
+				final var sqlrights = "INSERT INTO vector_rights(groupid, RD, WR, DL) VALUES(?, ?, ?, ?);";
 				st = c.prepareStatement(sqlrights);
 				st.setInt(1, groupid);
 				st.setBoolean(2, r.contains("r"));

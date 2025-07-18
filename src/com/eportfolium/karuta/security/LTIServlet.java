@@ -29,9 +29,9 @@ import java.util.Map;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.sakaiproject.basiclti.util.BlowFish;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tsugi.basiclti.BasicLTIConstants;
 import org.tsugi.basiclti.BasicLTIUtil;
 
@@ -81,7 +81,7 @@ public class LTIServlet extends HttpServlet {
 	private static final long serialVersionUID = -5793392467087229614L;
 	private static final String OAUTH_MESSAGE = "oauth_message";
 
-	final Logger logger = LoggerFactory.getLogger(LTIServlet.class);
+	final Logger logger = LogManager.getLogger(LTIServlet.class);
 	ServletConfig sc;
 
 	DataProvider dataProvider;
@@ -214,11 +214,11 @@ public class LTIServlet extends HttpServlet {
 			/*
 			boolean isInSiteGroup = dataProvider.isUserInGroup( userId, siteGroupId );
 			boolean isInSiteRoleGroup = dataProvider.isUserInGroup( userId, siteRoleGroupId );
-			
+
 			if (!isInSiteGroup) {
 			  dataProvider.putUserGroup(siteGroupId, userId);
 			}
-			
+
 			if (!isInSiteRoleGroup) {
 			  dataProvider.putUserGroup(siteRoleGroupId, userId);
 			}
@@ -231,11 +231,11 @@ public class LTIServlet extends HttpServlet {
 			//			String topGroupId = wadbackend.WadUtilities.getAttribute(topGroup, "id");
 			boolean isSiteInTopGroup = wadbackend.WadGroup.isGroupInGroup(connexion, topGroup, siteGroupId, outTrace);
 			boolean isSiteRoleInSiteGroup = wadbackend.WadGroup.isGroupInGroup(connexion, siteGroupId, siteRoleGroupId, outTrace);
-			
+
 			if (!isSiteInTopGroup) {
 				wadbackend.WadGroup.relGroup_Parent(connexion, topGroup, siteGroupId, "add", outTrace);
 			}
-			
+
 			if (!isSiteRoleInSiteGroup) {
 				wadbackend.WadGroup.relGroup_Parent(connexion, siteGroupId, siteRoleGroupId, "add", outTrace);
 			}

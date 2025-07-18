@@ -18,7 +18,7 @@ package com.eportfolium.karuta.data.utils;
 import java.util.Properties;
 
 import org.apache.commons.lang3.BooleanUtils;
-import org.slf4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
@@ -76,8 +76,7 @@ public class MailUtils {
 			//Set the host smtp address
 			final var props = new Properties();
 
-			final var useAuth = BooleanUtils
-					.toBoolean(ConfigUtils.getInstance().getRequiredProperty("smtp.useauth"));
+			final var useAuth = BooleanUtils.toBoolean(ConfigUtils.getInstance().getRequiredProperty("smtp.useauth"));
 
 			props.put("mail.smtp.host", ConfigUtils.getInstance().getRequiredProperty("smtp.server"));
 			props.put("mail.smtp.auth", useAuth ? "true" : "false");
@@ -162,7 +161,7 @@ public class MailUtils {
 			}
 		}
 		fichierSrce.close();
-
+	
 		return config;
 	}
 	//*/

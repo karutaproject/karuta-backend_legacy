@@ -1,7 +1,7 @@
 package com.eportfolium.karuta.data.utils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.eportfolium.karuta.data.attachment.EmploiStoreService;
 
@@ -9,7 +9,7 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 
 public class Manager implements ServletContextListener {
-	private final static Logger logger = LoggerFactory.getLogger(Manager.class);
+	private final static Logger logger = LogManager.getLogger(Manager.class);
 
 	public static final String ROME_DOMAIN = "ROMEdomain";
 	public static final String ROME_SCOPE = "ROMEscope";

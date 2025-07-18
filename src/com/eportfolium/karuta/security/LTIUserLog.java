@@ -22,8 +22,8 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * This class will create a log entry containing the LMS system's user ID, user EID,
@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
  */
 public class LTIUserLog {
 
-	public static final Logger logger = LoggerFactory.getLogger(LTIUserLog.class);
+	public static final Logger logger = LogManager.getLogger(LTIUserLog.class);
 
 	/**
 	 * Write a new record to the lti_user_log table

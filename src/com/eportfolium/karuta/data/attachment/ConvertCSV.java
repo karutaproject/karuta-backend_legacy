@@ -26,10 +26,10 @@ import org.apache.commons.fileupload2.core.DiskFileItemFactory;
 import org.apache.commons.fileupload2.core.FileItem;
 import org.apache.commons.fileupload2.jakarta.servlet6.JakartaServletFileUpload;
 import org.apache.commons.io.IOUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 
@@ -47,7 +47,7 @@ public class ConvertCSV extends HttpServlet {
 	 */
 	private static final long serialVersionUID = 9188067506635747901L;
 
-	private static final Logger logger = LoggerFactory.getLogger(ConvertCSV.class);
+	private static final Logger logger = LogManager.getLogger(ConvertCSV.class);
 
 	boolean hasNodeReadRight = false;
 	boolean hasNodeWriteRight = false;

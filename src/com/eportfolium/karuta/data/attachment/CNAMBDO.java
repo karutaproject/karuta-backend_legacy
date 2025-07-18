@@ -27,8 +27,8 @@ import java.net.URL;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 
@@ -41,7 +41,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class CNAMBDO extends HttpServlet {
 	private static final long serialVersionUID = -5389232495090560087L;
 
-	static final Logger logger = LoggerFactory.getLogger(CNAMBDO.class);
+	static final Logger logger = LogManager.getLogger(CNAMBDO.class);
 	/**
 	 *
 	 */

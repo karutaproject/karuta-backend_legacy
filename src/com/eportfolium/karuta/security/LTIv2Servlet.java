@@ -39,12 +39,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tsugi.basiclti.Base64;
 import org.tsugi.basiclti.BasicLTIConstants;
 import org.tsugi.json.IMSJSONRequest;
@@ -58,7 +58,7 @@ public class LTIv2Servlet extends HttpServlet {
 
 	private static final long serialVersionUID = -2442074091303775050L;
 
-	private static final Logger logger = LoggerFactory.getLogger(LTIv2Servlet.class);
+	private static final Logger logger = LogManager.getLogger(LTIv2Servlet.class);
 
 	private static final String LTI_MESSAGE_TYPE_TOOLPROXYREGISTRATIONREQUEST = "ToolProxyRegistrationRequest";
 	private static final String LTI_MESSAGE_TYPE_TOOLPROXY_RE_REGISTRATIONREQUEST = "ToolProxyReregistrationRequest";

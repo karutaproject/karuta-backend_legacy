@@ -17,8 +17,8 @@ package com.eportfolium.karuta.data.provider.test;
 
 import java.util.Properties;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.DomUtils;
@@ -29,7 +29,7 @@ import jakarta.activation.MimeType;
 
 public class MysqlDataProviderTest {
 
-	private static final Logger logger = LoggerFactory.getLogger(MysqlDataProviderTest.class);
+	private static final Logger logger = LogManager.getLogger(MysqlDataProviderTest.class);
 
 	/**
 	 * @param args
@@ -45,8 +45,7 @@ public class MysqlDataProviderTest {
 
 		try {
 			final var xmlMimeType = new MimeType("text/xml");
-			final var dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor()
-					.newInstance();
+			final var dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
 			final var connection = SqlUtils.getConnection();
 			new Credential();
 
@@ -84,7 +83,7 @@ public class MysqlDataProviderTest {
 
 			// getPortfolio
 			logger.debug("--- getPortfolio() ------");
-			final String xml_out = dataProvider
+			final var xml_out = dataProvider
 					.getPortfolio(connection, xmlMimeType, portfolioUuid, userId, groupId, null, null, null, 0, null)
 					.toString();
 			DomUtils.saveString(xml_out, "c:\\temp\\out2.xml");

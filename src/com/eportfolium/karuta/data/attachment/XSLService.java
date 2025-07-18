@@ -53,8 +53,8 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ByteArrayBody;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -77,7 +77,7 @@ public class XSLService extends HttpServlet {
 	 *
 	 */
 	private static final long serialVersionUID = 9188067506635747901L;
-	private static final Logger logger = LoggerFactory.getLogger(XSLService.class);
+	private static final Logger logger = LogManager.getLogger(XSLService.class);
 
 	DataProvider dataProvider;
 	boolean hasNodeReadRight = false;
@@ -180,7 +180,7 @@ public class XSLService extends HttpServlet {
 			String line;
 			while( (line = rd.readLine()) != null )
 				sb.append(line);
-			
+
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 			DocumentBuilder documentBuilder = null;
 			Document doc=null;
@@ -193,7 +193,7 @@ public class XSLService extends HttpServlet {
 			{
 				e.printStackTrace();
 			}
-			
+
 			/// On lit les paramètres
 			NodeList portfolioNode = doc.getElementsByTagName("portfolioid");
 			NodeList nodeNode = doc.getElementsByTagName("nodeid");
@@ -449,14 +449,14 @@ public class XSLService extends HttpServlet {
 
 				/*
 				HttpURLConnection connection = CreateConnection( urlTarget, request );
-				
+
 				/// Helping construct Json
 				connection.setRequestProperty("referer", origin);
-				
+
 				/// Send post data
 				ServletInputStream inputData = request.getInputStream();
 				DataOutputStream writer = new DataOutputStream(connection.getOutputStream());
-				
+
 				byte[] buffer = new byte[1024];
 				int dataSize;
 				while( (dataSize = inputData.read(buffer,0,buffer.length)) != -1 )
@@ -465,7 +465,7 @@ public class XSLService extends HttpServlet {
 				}
 				inputData.close();
 				writer.close();
-				
+
 				RetrieveAnswer(connection, response, origin);
 				//*/
 				logger.trace("Done converting");

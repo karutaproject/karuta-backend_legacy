@@ -23,151 +23,179 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class FileUtils {
-    public static final Logger logger = LoggerFactory.getLogger(FileUtils.class);
+	public static final Logger logger = LogManager.getLogger(FileUtils.class);
 
-    public static String getMimeType(String fileUrl)
-            throws java.io.IOException, MalformedURLException {
-        String type = null;
-        URL u = new URL(fileUrl);
-        URLConnection uc = null;
-        uc = u.openConnection();
-        type = uc.getContentType();
-        return type;
-    }
+	public static String getHTTPQuery(String urlToRead) {
+		URL url;
+		HttpURLConnection conn;
+		BufferedReader rd;
+		String line;
+		final var result = new StringBuilder();
+		try {
+			url = new URL(urlToRead);
+			conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("GET");
+			rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+			while ((line = rd.readLine()) != null) {
+				result.append(line);
+			}
+			rd.close();
+		} catch (final Exception e) {
+			e.printStackTrace();
+		}
+		return result.toString();
+	}
 
-    public static String getMimeTypeFromExtension(String extension) {
-        String contentType = null;
+	public static String getMimeType(String fileUrl) throws java.io.IOException, MalformedURLException {
+		String type = null;
+		final var u = new URL(fileUrl);
+		URLConnection uc = null;
+		uc = u.openConnection();
+		type = uc.getContentType();
+		return type;
+	}
 
-        if (extension.equals("au"))
-            contentType = "audio/basic";
-        if (extension.equals("avi"))
-            contentType = "video/x-msvideo";
-        if (extension.equals("bmp"))
-            contentType = "image/bmp";
-        if (extension.equals("css"))
-            contentType = "text/css";
-        if (extension.equals("doc") || extension.equals("dot"))
-            contentType = "application/msword";
-        if (extension.equals("docx"))
-            contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-        if (extension.equals("eps"))
-            contentType = "application/postscript";
-        if (extension.equals("gif"))
-            contentType = "image/gif";
-        if (extension.equals("html") || extension.equals("htm"))
-            contentType = "text/html";
-        if (extension.equals("jpg") || extension.equals("jpeg"))
-            contentType = "image/jpeg";
-        if (extension.equals("js"))
-            contentType = "application/x-javascript";
-        if (extension.equals("mov") || extension.equals("qt"))
-            contentType = "video/quicktime";
-        if (extension.equals("mp3"))
-            contentType = "audio/mpeg3";
-        if (extension.equals("mpeg") || extension.equals("mpg"))
-            contentType = "video/mpeg";
-        if (extension.equals("mpp"))
-            contentType = "application/vnd.ms-project";
-        if (extension.equals("mtw"))
-            contentType = "application/octet-stream";
-        if (extension.equals("pdf"))
-            contentType = "application/pdf";
-        if (extension.equals("png"))
-            contentType = "image/png";
-        if (extension.equals("ppt") || extension.equals("pot") || extension.equals("pps"))
-            contentType = "application/vnd.ms-powerpoint";
-        if (extension.equals("pptx"))
-            contentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-        if (extension.equals("ps"))
-            contentType = "application/postscript";
-        if (extension.equals("ra"))
-            contentType = "audio/x-realaudio";
-        if (extension.equals("ram") || extension.equals("rm"))
-            contentType = "audio/x-pn-realaudio";
-        if (extension.equals("sql"))
-            contentType = "text/plain";
-        if (extension.equals("swf"))
-            contentType = "application/x-shockwave-flash";
-        if (extension.equals("tif"))
-            contentType = "image/tiff";
-        if (extension.equals("txt") || extension.equals("text"))
-            contentType = "text/plain";
-        if (extension.equals("vsd"))
-            contentType = "application/x-visio";
-        if (extension.equals("wav"))
-            contentType = "audio/x-wav";
-        if (extension.equals("xls"))
-            contentType = "application/vnd.ms-excel";
-        if (extension.equals("xml"))
-            contentType = "application/xml";
-        if (extension.equals("zip"))
-            contentType = "application/x-zip-compressed";
-        if (extension.equals("java"))
-            contentType = "text/plain";
+	public static String getMimeTypeFromExtension(String extension) {
+		String contentType = null;
 
-        return contentType;
-    }
+		if (extension.equals("au")) {
+			contentType = "audio/basic";
+		}
+		if (extension.equals("avi")) {
+			contentType = "video/x-msvideo";
+		}
+		if (extension.equals("bmp")) {
+			contentType = "image/bmp";
+		}
+		if (extension.equals("css")) {
+			contentType = "text/css";
+		}
+		if (extension.equals("doc") || extension.equals("dot")) {
+			contentType = "application/msword";
+		}
+		if (extension.equals("docx")) {
+			contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+		}
+		if (extension.equals("eps")) {
+			contentType = "application/postscript";
+		}
+		if (extension.equals("gif")) {
+			contentType = "image/gif";
+		}
+		if (extension.equals("html") || extension.equals("htm")) {
+			contentType = "text/html";
+		}
+		if (extension.equals("jpg") || extension.equals("jpeg")) {
+			contentType = "image/jpeg";
+		}
+		if (extension.equals("js")) {
+			contentType = "application/x-javascript";
+		}
+		if (extension.equals("mov") || extension.equals("qt")) {
+			contentType = "video/quicktime";
+		}
+		if (extension.equals("mp3")) {
+			contentType = "audio/mpeg3";
+		}
+		if (extension.equals("mpeg") || extension.equals("mpg")) {
+			contentType = "video/mpeg";
+		}
+		if (extension.equals("mpp")) {
+			contentType = "application/vnd.ms-project";
+		}
+		if (extension.equals("mtw")) {
+			contentType = "application/octet-stream";
+		}
+		if (extension.equals("pdf")) {
+			contentType = "application/pdf";
+		}
+		if (extension.equals("png")) {
+			contentType = "image/png";
+		}
+		if (extension.equals("ppt") || extension.equals("pot") || extension.equals("pps")) {
+			contentType = "application/vnd.ms-powerpoint";
+		}
+		if (extension.equals("pptx")) {
+			contentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+		}
+		if (extension.equals("ps")) {
+			contentType = "application/postscript";
+		}
+		if (extension.equals("ra")) {
+			contentType = "audio/x-realaudio";
+		}
+		if (extension.equals("ram") || extension.equals("rm")) {
+			contentType = "audio/x-pn-realaudio";
+		}
+		if (extension.equals("sql")) {
+			contentType = "text/plain";
+		}
+		if (extension.equals("swf")) {
+			contentType = "application/x-shockwave-flash";
+		}
+		if (extension.equals("tif")) {
+			contentType = "image/tiff";
+		}
+		if (extension.equals("txt") || extension.equals("text")) {
+			contentType = "text/plain";
+		}
+		if (extension.equals("vsd")) {
+			contentType = "application/x-visio";
+		}
+		if (extension.equals("wav")) {
+			contentType = "audio/x-wav";
+		}
+		if (extension.equals("xls")) {
+			contentType = "application/vnd.ms-excel";
+		}
+		if (extension.equals("xml")) {
+			contentType = "application/xml";
+		}
+		if (extension.equals("zip")) {
+			contentType = "application/x-zip-compressed";
+		}
+		if (extension.equals("java")) {
+			contentType = "text/plain";
+		}
 
+		return contentType;
+	}
 
-    public static String getHTTPQuery(String urlToRead) {
-        URL url;
-        HttpURLConnection conn;
-        BufferedReader rd;
-        String line;
-        StringBuilder result = new StringBuilder();
-        try {
-            url = new URL(urlToRead);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            while ((line = rd.readLine()) != null) {
-                result.append(line);
-            }
-            rd.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return result.toString();
-    }
+	public static String postHTTPQuery(String url, String urlParameters) throws Exception {
 
-    public static String postHTTPQuery(String url, String urlParameters) throws Exception {
+		final var obj = new URL(url);
+		final var con = (HttpURLConnection) obj.openConnection();
 
-        URL obj = new URL(url);
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+		//add reuqest header
 
-        //add reuqest header
+		// Send post request
+		con.setDoOutput(true);
+		final var wr = new DataOutputStream(con.getOutputStream());
+		wr.writeBytes(urlParameters);
+		wr.flush();
+		wr.close();
 
+		final var responseCode = con.getResponseCode();
+		logger.info("Sending 'POST' request to URL : {}", url);
+		logger.info("Post parameters: {}", urlParameters);
+		logger.info("Response Code: {}", responseCode);
 
-        // Send post request
-        con.setDoOutput(true);
-        DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-        wr.writeBytes(urlParameters);
-        wr.flush();
-        wr.close();
+		final var in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+		String inputLine;
+		final var response = new StringBuffer();
 
-        int responseCode = con.getResponseCode();
-        logger.info("Sending 'POST' request to URL : {}", url);
-        logger.info("Post parameters: {}", urlParameters);
-        logger.info("Response Code: {}", responseCode);
+		while ((inputLine = in.readLine()) != null) {
+			response.append(inputLine);
+		}
+		in.close();
 
-        BufferedReader in = new BufferedReader(
-                new InputStreamReader(con.getInputStream()));
-        String inputLine;
-        StringBuffer response = new StringBuffer();
+		//print result
+		return response.toString();
 
-        while ((inputLine = in.readLine()) != null) {
-            response.append(inputLine);
-        }
-        in.close();
-
-        //print result
-        return response.toString();
-
-    }
-
+	}
 
 }

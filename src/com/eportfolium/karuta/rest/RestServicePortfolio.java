@@ -62,12 +62,12 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.jasig.cas.client.validation.Cas20ServiceTicketValidator;
 import org.jasig.cas.client.validation.TicketValidationException;
 import org.json.XML;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -140,12 +140,12 @@ public class RestServicePortfolio {
 	private static final SimpleDateFormat DT = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 	private static final SimpleDateFormat DT2 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
-	private static final Logger logger = LoggerFactory.getLogger(RestServicePortfolio.class);
-	private static final Logger securityLog = LoggerFactory.getLogger("securityLogger");
-	private static final Logger authLog = LoggerFactory.getLogger("authLogger");
-	private static final Logger errorLog = LoggerFactory.getLogger("errorLogger");
+	private static final Logger logger = LogManager.getLogger(RestServicePortfolio.class);
+	private static final Logger securityLog = LogManager.getLogger("securityLogger");
+	private static final Logger authLog = LogManager.getLogger("authLogger");
+	private static final Logger errorLog = LogManager.getLogger("errorLogger");
 
-	private static final Logger editLog = LoggerFactory.getLogger("editLogger");
+	private static final Logger editLog = LogManager.getLogger("editLogger");
 	private static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
 
 	private static final String logFormatShort = "%7$s\n";

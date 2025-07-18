@@ -28,8 +28,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.entity.ContentType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.eportfolium.karuta.data.provider.ReportHelperProvider;
 import com.eportfolium.karuta.data.utils.DomUtils;
@@ -48,7 +48,7 @@ public class ReportHelper extends HttpServlet {
 	 */
 	private static final long serialVersionUID = 7885746223793374448L;
 
-	static final Logger logger = LoggerFactory.getLogger(ReportHelper.class);
+	static final Logger logger = LogManager.getLogger(ReportHelper.class);
 	ReportHelperProvider dataProvider = null;
 
 	final String header;

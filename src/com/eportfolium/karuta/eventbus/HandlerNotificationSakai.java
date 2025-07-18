@@ -28,8 +28,8 @@ import java.sql.Connection;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -42,7 +42,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 public class HandlerNotificationSakai implements KEventHandler {
-	private static final Logger logger = LoggerFactory.getLogger(HandlerNotificationSakai.class);
+	private static final Logger logger = LogManager.getLogger(HandlerNotificationSakai.class);
 	HttpServletRequest httpServletRequest;
 	HttpSession session;
 	int userId;
@@ -182,8 +182,7 @@ public class HandlerNotificationSakai implements KEventHandler {
 			wr.close();
 
 			var readTicket = new StringBuilder();
-			var rd = new BufferedReader(
-					new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
+			var rd = new BufferedReader(new InputStreamReader(connect.getInputStream(), StandardCharsets.UTF_8));
 			var buffer = new char[1024];
 			var offset = 0;
 			var read = 0;
