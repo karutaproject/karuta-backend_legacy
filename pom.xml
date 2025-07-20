@@ -54,7 +54,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<JACKSON_VER>1.9.13</JACKSON_VER>
-		<JERSEY_VER>4.0.0-M2</JERSEY_VER>
+		<JERSEY_VER>3.1.10</JERSEY_VER>
 		<CAS_VER>3.6.4</CAS_VER>
 		<xmlgraphics.version>2.11</xmlgraphics.version>
 	</properties>
