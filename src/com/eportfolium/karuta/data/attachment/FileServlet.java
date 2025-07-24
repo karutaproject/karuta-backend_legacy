@@ -289,6 +289,8 @@ public class FileServlet extends HttpServlet {
 			request.getContextPath();
 			final var url = request.getPathInfo();
 
+			final var isRaw = request.getParameter("raw") != null ? true : false;
+
 			final var session = request.getSession(true);
 			if (session != null) {
 				var val = (Integer) session.getAttribute("uid");
@@ -462,7 +464,9 @@ public class FileServlet extends HttpServlet {
 
 			response.setContentLength(completeSize);
 			response.setContentType(type);
-			response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+			if (!isRaw) {
+				response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+			}
 			final var output = response.getOutputStream();
 
 			final var buffer = new byte[0x100000];
