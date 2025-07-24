@@ -280,17 +280,9 @@ public class FileServlet extends HttpServlet {
 			throws ServletException, IOException {
 		initialize(request);
 
-		Connection c = null;
-		try {
-			c = SqlUtils.getConnection();
-
+		try (var c = SqlUtils.getConnection();) {
 			var userId = 0;
 			var groupId = 0;
-			request.getContextPath();
-			final var url = request.getPathInfo();
-
-			final var isRaw = request.getParameter("raw") != null ? true : false;
-
 			final var session = request.getSession(true);
 			if (session != null) {
 				var val = (Integer) session.getAttribute("uid");
@@ -302,6 +294,9 @@ public class FileServlet extends HttpServlet {
 					groupId = val;
 				}
 			}
+
+			final var url = request.getPathInfo();
+			final var isRaw = request.getParameter("raw") != null ? true : false;
 
 			/*
 			Credential credential = null;
@@ -490,15 +485,6 @@ public class FileServlet extends HttpServlet {
 			//TODO something is missing
 		} //wadbackend.WadUtilities.appendlogfile(logFName, "GETfile: error"+e);
 		finally {
-			try {
-				if (c != null) {
-					c.close();
-				}
-			} catch (final Exception e) {
-				final var out = response.getOutputStream();
-				out.println("Erreur dans doGet: " + e);
-				out.close();
-			}
 			//				dataProvider.disconnect();
 			request.getInputStream().close();
 			response.getOutputStream().close();
