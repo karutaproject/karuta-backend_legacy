@@ -18,13 +18,10 @@ package com.eportfolium.karuta.data.attachment;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.URL;
@@ -34,9 +31,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.ServletConfig;
@@ -46,10 +40,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
@@ -62,11 +53,9 @@ import org.apache.http.HttpResponse;
 import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.ls.DOMImplementationLS;
-import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
@@ -91,31 +80,45 @@ public class FileServlet extends HttpServlet {
 	private String server;
 	private DataProvider dataProvider;
 
-	HttpURLConnection CreateConnection(String url, HttpServletRequest request)
-			throws MalformedURLException, IOException {
-		/// Create connection
-		final URL urlConn = new URL(url);
-		final HttpURLConnection connection = (HttpURLConnection) urlConn.openConnection();
-		connection.setDoOutput(true);
-		connection.setUseCaches(false); /// We don't want to cache data
-		connection.setInstanceFollowRedirects(false); /// Let client follow any redirection
-		final String method = request.getMethod();
-		connection.setRequestMethod(method);
+	@Override
+	public void init(ServletConfig config) throws ServletException {
 
-		final String context = request.getContextPath();
-		connection.setRequestProperty("app", context);
+		try {
+			super.init(config);
 
-		/// Transfer headers
-		String key = "";
-		String value = "";
-		final Enumeration<String> header = request.getHeaderNames();
-		while (header.hasMoreElements()) {
-			key = header.nextElement();
-			value = request.getHeader(key);
-			connection.setRequestProperty(key, value);
+			ConfigUtils.init(config.getServletContext());
+
+			dataProvider = SqlUtils.initProvider();
+			/// List possible local address
+			final var interfaces = NetworkInterface.getNetworkInterfaces();
+			while (interfaces.hasMoreElements()) {
+				final var current = interfaces.nextElement();
+				if (!current.isUp()) {
+					continue;
+				}
+				final var addresses = current.getInetAddresses();
+				while (addresses.hasMoreElements()) {
+					final var current_addr = addresses.nextElement();
+					if (current_addr instanceof Inet4Address) {
+						final var ip = current_addr.getHostAddress();
+						logger.debug("USED IP: {}", ip);
+						ourIPs.add(ip);
+					}
+				}
+			}
+			// Force localhost ip to be set, sometime it isn't listed
+			//			ourIPs.add("127.0.0.1");
+
+			server = ConfigUtils.getInstance().getRequiredProperty(PROP_FILESERVER);
+		} catch (final Exception e) {
+			logger.error("Unable to init the servlet", e);
+			throw new ServletException("Unable to init the servlet", e);
 		}
 
-		return connection;
+	}
+
+	public void initialize(HttpServletRequest httpServletRequest) {
+		//		  checkCredential(httpServletRequest);
 	}
 
 	@Override
@@ -127,14 +130,14 @@ public class FileServlet extends HttpServlet {
 		try {
 			c = SqlUtils.getConnection();
 
-			int userId = 0;
-			int groupId = 0;
+			var userId = 0;
+			var groupId = 0;
 			request.getContextPath();
-			final String url = request.getPathInfo();
+			final var url = request.getPathInfo();
 
-			final HttpSession session = request.getSession(true);
+			final var session = request.getSession(true);
 			if (session != null) {
-				Integer val = (Integer) session.getAttribute("uid");
+				var val = (Integer) session.getAttribute("uid");
 				if (val != null) {
 					userId = val;
 				}
@@ -152,17 +155,17 @@ public class FileServlet extends HttpServlet {
 			// ====== URI : /resources/file[/{lang}]/{context-id}
 			// ====== PathInfo: /resources/file[/{uuid}?lang={fr|en}&size={S|L}] pathInfo
 			//			String uri = request.getRequestURI();
-			final String[] token = url.split("/");
+			final var token = url.split("/");
 			if (token.length < 2) {
 				response.setStatus(404);
 				response.getOutputStream().close();
 				return;
 			}
-			final String uuid = token[1];
+			final var uuid = token[1];
 			//wadbackend.WadUtilities.appendlogfile(logFName, "GETfile:"+request.getRemoteAddr()+":"+uri);
 
 			/// FIXME: Passe la sécurité si la source provient de localhost, il faudrait un échange afin de s'assurer que n'importe quel servlet ne puisse y accéder
-			final String sourceip = request.getRemoteAddr();
+			final var sourceip = request.getRemoteAddr();
 
 			/// Vérification des droits d'accés
 			// TODO: Might be something special with proxy and export/PDF, to investigate
@@ -184,19 +187,19 @@ public class FileServlet extends HttpServlet {
 			}
 
 			/// On récupère le noeud de la ressource pour retrouver le lien
-			final String data = dataProvider.getResNode(c, uuid, userId, groupId);
+			final var data = dataProvider.getResNode(c, uuid, userId, groupId);
 
 			//			javax.servlet.http.HttpSession session = request.getSession(true);
 			//====================================================
 			//String ppath = session.getServletContext().getRealPath("/");
 			//logFName = ppath +"logs/logNode.txt";
 			//====================================================
-			String size = request.getParameter("size");
+			var size = request.getParameter("size");
 			if (size == null) {
 				size = "";
 			}
 
-			String lang = request.getParameter("lang");
+			var lang = request.getParameter("lang");
 			if (lang == null) {
 				lang = "fr";
 			}
@@ -204,24 +207,24 @@ public class FileServlet extends HttpServlet {
 			request.getHeader("referer");
 
 			/// Parse les données
-			final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			final InputSource is = new InputSource(new StringReader("<node>" + data + "</node>"));
-			final Document doc = documentBuilder.parse(is);
-			final DOMImplementationLS impl = (DOMImplementationLS) doc.getImplementation().getFeature("LS", "3.0");
-			final LSSerializer serial = impl.createLSSerializer();
+			final var documentBuilderFactory = DocumentBuilderFactory.newInstance();
+			final var documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			final var is = new InputSource(new StringReader("<node>" + data + "</node>"));
+			final var doc = documentBuilder.parse(is);
+			final var impl = (DOMImplementationLS) doc.getImplementation().getFeature("LS", "3.0");
+			final var serial = impl.createLSSerializer();
 			serial.getDomConfig().setParameter("xml-declaration", false);
 
 			/// Trouve le bon noeud
-			final XPath xPath = XPathFactory.newInstance().newXPath();
+			final var xPath = XPathFactory.newInstance().newXPath();
 
 			/// Either we have a fileid per language
 			//			String filterRes = "//fileid[@lang='"+lang+"']";
-			final String filterRes = "//*[local-name()='fileid' and @lang='" + lang + "']";
-			final NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
-			String resolve = "";
+			final var filterRes = "//*[local-name()='fileid' and @lang='" + lang + "']";
+			final var nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+			var resolve = "";
 			if (nodelist.getLength() != 0) {
-				final Element fileNode = (Element) nodelist.item(0);
+				final var fileNode = (Element) nodelist.item(0);
 				resolve = fileNode.getTextContent();
 			}
 
@@ -237,17 +240,17 @@ public class FileServlet extends HttpServlet {
 			/// Envoie de la requête au servlet de fichiers
 			// http://localhost:8080/MiniRestFileServer/user/claudecoulombe/file/a8e0f07f-671c-4f6a-be6c-9dba12c519cf/ptype/sql
 			/// TODO: Ne plus avoir besoin du switch
-			String urlTarget = server + "/" + resolve;
+			var urlTarget = server + "/" + resolve;
 
 			if ("T".equals(size)) {
 				urlTarget = urlTarget + "/thumb";
 				//			String urlTarget = "http://"+ server + "/user/" + resolve +"/"+ lang + "/ptype/fs";
 			}
 
-			final HttpURLConnection connection = CreateConnection(urlTarget, request);
+			final var connection = CreateConnection(urlTarget, request);
 			connection.connect();
 
-			final int responseCode = connection.getResponseCode();
+			final var responseCode = connection.getResponseCode();
 			response.setStatus(responseCode);
 
 			connection.disconnect();
@@ -261,7 +264,7 @@ public class FileServlet extends HttpServlet {
 					c.close();
 				}
 			} catch (final Exception e) {
-				final ServletOutputStream out = response.getOutputStream();
+				final var out = response.getOutputStream();
 				out.println("Erreur dans doDelete: " + e);
 				out.close();
 			}
@@ -281,14 +284,14 @@ public class FileServlet extends HttpServlet {
 		try {
 			c = SqlUtils.getConnection();
 
-			int userId = 0;
-			int groupId = 0;
+			var userId = 0;
+			var groupId = 0;
 			request.getContextPath();
-			final String url = request.getPathInfo();
+			final var url = request.getPathInfo();
 
-			final HttpSession session = request.getSession(true);
+			final var session = request.getSession(true);
 			if (session != null) {
-				Integer val = (Integer) session.getAttribute("uid");
+				var val = (Integer) session.getAttribute("uid");
 				if (val != null) {
 					userId = val;
 				}
@@ -323,17 +326,17 @@ public class FileServlet extends HttpServlet {
 			// ====== URI : /resources/file[/{lang}]/{context-id}
 			// ====== PathInfo: /resources/file[/{uuid}?lang={fr|en}&size={S|L}] pathInfo
 			//			String uri = request.getRequestURI();
-			final String[] token = url.split("/");
+			final var token = url.split("/");
 			if (token.length < 2) {
 				response.setStatus(404);
 				response.getOutputStream().close();
 				return;
 			}
-			final String uuid = token[1];
+			final var uuid = token[1];
 			//wadbackend.WadUtilities.appendlogfile(logFName, "GETfile:"+request.getRemoteAddr()+":"+uri);
 
 			/// FIXME: Passe la sécurité si la source provient de localhost, il faudrait un échange afin de s'assurer que n'importe quel servlet ne puisse y accéder
-			final String sourceip = request.getRemoteAddr();
+			final var sourceip = request.getRemoteAddr();
 
 			/// Vérification des droits d'accés
 			// TODO: Might be something special with proxy and export/PDF, to investigate
@@ -355,19 +358,19 @@ public class FileServlet extends HttpServlet {
 			}
 
 			/// On récupère le noeud de la ressource pour retrouver le lien
-			final String data = dataProvider.getResNode(c, uuid, userId, groupId);
+			final var data = dataProvider.getResNode(c, uuid, userId, groupId);
 
 			//			javax.servlet.http.HttpSession session = request.getSession(true);
 			//====================================================
 			//String ppath = session.getServletContext().getRealPath("/");
 			//logFName = ppath +"logs/logNode.txt";
 			//====================================================
-			String size = request.getParameter("size");
+			var size = request.getParameter("size");
 			if (size == null) {
 				size = "";
 			}
 
-			String lang = request.getParameter("lang");
+			var lang = request.getParameter("lang");
 			if (lang == null) {
 				lang = "fr";
 			}
@@ -382,24 +385,24 @@ public class FileServlet extends HttpServlet {
 			request.getHeader("referer");
 
 			/// Parse les données
-			final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			final InputSource is = new InputSource(new StringReader("<node>" + data + "</node>"));
-			final Document doc = documentBuilder.parse(is);
-			final DOMImplementationLS impl = (DOMImplementationLS) doc.getImplementation().getFeature("LS", "3.0");
-			final LSSerializer serial = impl.createLSSerializer();
+			final var documentBuilderFactory = DocumentBuilderFactory.newInstance();
+			final var documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			final var is = new InputSource(new StringReader("<node>" + data + "</node>"));
+			final var doc = documentBuilder.parse(is);
+			final var impl = (DOMImplementationLS) doc.getImplementation().getFeature("LS", "3.0");
+			final var serial = impl.createLSSerializer();
 			serial.getDomConfig().setParameter("xml-declaration", false);
 
 			/// Trouve le bon noeud
-			final XPath xPath = XPathFactory.newInstance().newXPath();
+			final var xPath = XPathFactory.newInstance().newXPath();
 
 			/// Either we have a fileid per language
 			//			String filterRes = "//fileid[@lang='"+lang+"']";
-			final String filterRes = "//*[local-name()='fileid' and @lang='" + lang + "']";
-			final NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
-			String resolve = "";
+			final var filterRes = "//*[local-name()='fileid' and @lang='" + lang + "']";
+			final var nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+			var resolve = "";
 			if (nodelist.getLength() != 0) {
-				final Element fileNode = (Element) nodelist.item(0);
+				final var fileNode = (Element) nodelist.item(0);
 				resolve = fileNode.getTextContent();
 			}
 
@@ -411,20 +414,20 @@ public class FileServlet extends HttpServlet {
 			}
 
 			//			String filterName = "//filename[@lang='"+lang+"']";
-			final String filterName = "//*[local-name()='filename' and @lang='" + lang + "']";
-			NodeList textList = (NodeList) xPath.compile(filterName).evaluate(doc, XPathConstants.NODESET);
-			String filename = "";
+			final var filterName = "//*[local-name()='filename' and @lang='" + lang + "']";
+			var textList = (NodeList) xPath.compile(filterName).evaluate(doc, XPathConstants.NODESET);
+			var filename = "";
 			if (textList.getLength() != 0) {
-				final Element fileNode = (Element) textList.item(0);
+				final var fileNode = (Element) textList.item(0);
 				filename = fileNode.getTextContent();
 			}
 
 			//			String filterType = "//type[@lang='"+lang+"']";
-			final String filterType = "//*[local-name()='type' and @lang='" + lang + "']";
+			final var filterType = "//*[local-name()='type' and @lang='" + lang + "']";
 			textList = (NodeList) xPath.compile(filterType).evaluate(doc, XPathConstants.NODESET);
-			String type = "";
+			var type = "";
 			if (textList.getLength() != 0) {
-				final Element fileNode = (Element) textList.item(0);
+				final var fileNode = (Element) textList.item(0);
 				type = fileNode.getTextContent();
 			}
 
@@ -444,27 +447,27 @@ public class FileServlet extends HttpServlet {
 			/// Envoie de la requête au servlet de fichiers
 			// http://localhost:8080/MiniRestFileServer/user/claudecoulombe/file/a8e0f07f-671c-4f6a-be6c-9dba12c519cf/ptype/sql
 			/// TODO: Ne plus avoir besoin du switch
-			String urlTarget = server + "/" + resolve;
+			var urlTarget = server + "/" + resolve;
 
 			if ("T".equals(size)) {
 				urlTarget = urlTarget + "/thumb";
 				//			String urlTarget = "http://"+ server + "/user/" + resolve +"/"+ lang + "/ptype/fs";
 			}
 
-			final HttpURLConnection connection = CreateConnection(urlTarget, request);
+			final var connection = CreateConnection(urlTarget, request);
 			connection.connect();
-			final InputStream input = connection.getInputStream();
-			final String sizeComplete = connection.getHeaderField("Content-Length");
-			final int completeSize = Integer.parseInt(sizeComplete);
+			final var input = connection.getInputStream();
+			final var sizeComplete = connection.getHeaderField("Content-Length");
+			final var completeSize = Integer.parseInt(sizeComplete);
 
 			response.setContentLength(completeSize);
 			response.setContentType(type);
 			response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-			final ServletOutputStream output = response.getOutputStream();
+			final var output = response.getOutputStream();
 
-			final byte[] buffer = new byte[0x100000];
-			int totalRead = 0;
-			int bytesRead = -1;
+			final var buffer = new byte[0x100000];
+			var totalRead = 0;
+			var bytesRead = -1;
 
 			while ((bytesRead = input.read(buffer, 0, 0x100000)) != -1 || totalRead < completeSize) {
 				output.write(buffer, 0, bytesRead);
@@ -488,7 +491,7 @@ public class FileServlet extends HttpServlet {
 					c.close();
 				}
 			} catch (final Exception e) {
-				final ServletOutputStream out = response.getOutputStream();
+				final var out = response.getOutputStream();
 				out.println("Erreur dans doGet: " + e);
 				out.close();
 			}
@@ -505,35 +508,35 @@ public class FileServlet extends HttpServlet {
 		// =====================================================================================
 		initialize(request);
 
-		final String useragent = request.getHeader("User-Agent");
+		final var useragent = request.getHeader("User-Agent");
 		logger.info("Agent: " + useragent);
 
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
 
-			int userId = 0;
-			int groupId = 0;
-			boolean fromSakai = false;
+			var userId = 0;
+			var groupId = 0;
+			var fromSakai = false;
 
-			String doCopy = request.getParameter("copy");
+			var doCopy = request.getParameter("copy");
 			if (doCopy != null) {
 				doCopy = "?copy";
 			} else {
 				doCopy = "";
 			}
 
-			final HttpSession session = request.getSession(false);
+			final var session = request.getSession(false);
 			if (session == null) {
 				response.sendError(HttpServletResponse.SC_FORBIDDEN);
 				return;
 			}
-			final String srceType = request.getParameter("srce");
+			final var srceType = request.getParameter("srce");
 			if ("sakai".equals(srceType)) {
 				fromSakai = true;
 			}
 
-			Integer val = (Integer) session.getAttribute("uid");
+			var val = (Integer) session.getAttribute("uid");
 			if (val != null) {
 				userId = val;
 			}
@@ -545,19 +548,19 @@ public class FileServlet extends HttpServlet {
 			/// uuid: celui de la ressource
 			/// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
 
-			final String origin = request.getRequestURL().toString();
+			final var origin = request.getRequestURL().toString();
 
 			/// Récupération des paramétres
-			final String url = request.getPathInfo();
-			final String[] token = url.split("/");
-			final String uuid = token[1];
+			final var url = request.getPathInfo();
+			final var token = url.split("/");
+			final var uuid = token[1];
 
-			String size = request.getParameter("size");
+			var size = request.getParameter("size");
 			if (size == null) {
 				size = "S";
 			}
 
-			String lang = request.getParameter("lang");
+			var lang = request.getParameter("lang");
 			if (lang == null) {
 				lang = "fr";
 			}
@@ -570,52 +573,52 @@ public class FileServlet extends HttpServlet {
 			}
 
 			String data;
-			String fileid = "";
+			var fileid = "";
 
 			data = dataProvider.getResNode(c, uuid, userId, groupId);
 
 			/// Parse les données
-			final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			final InputSource is = new InputSource(new StringReader("<node>" + data + "</node>"));
-			final Document doc = documentBuilder.parse(is);
-			final DOMImplementationLS impl = (DOMImplementationLS) doc.getImplementation().getFeature("LS", "3.0");
-			final LSSerializer serial = impl.createLSSerializer();
+			final var documentBuilderFactory = DocumentBuilderFactory.newInstance();
+			final var documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			final var is = new InputSource(new StringReader("<node>" + data + "</node>"));
+			final var doc = documentBuilder.parse(is);
+			final var impl = (DOMImplementationLS) doc.getImplementation().getFeature("LS", "3.0");
+			final var serial = impl.createLSSerializer();
 			serial.getDomConfig().setParameter("xml-declaration", false);
 
 			/// Cherche si on a déjà envoyé quelque chose
-			final XPath xPath = XPathFactory.newInstance().newXPath();
+			final var xPath = XPathFactory.newInstance().newXPath();
 			//			String filterRes = "//filename[@lang=\""+lang+"\"]";
-			final String filterRes = "//*[local-name()='filename' and @lang='" + lang + "']";
-			final NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+			final var filterRes = "//*[local-name()='filename' and @lang='" + lang + "']";
+			final var nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 
 			if (nodelist.getLength() > 0) {
 				nodelist.item(0).getTextContent();
 			}
 
 			/// écriture des données
-			final String urlTarget = server + "/" + fileid + doCopy;
+			final var urlTarget = server + "/" + fileid + doCopy;
 			//		String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
 
 			// Unpack form, fetch binary data and send
 			// Create a factory for disk-based file items
-			final DiskFileItemFactory factory = new DiskFileItemFactory();
+			final var factory = new DiskFileItemFactory();
 
 			// Create a new file upload handler
-			final ServletFileUpload upload = new ServletFileUpload(factory);
+			final var upload = new ServletFileUpload(factory);
 
-			String json = "";
+			var json = "";
 			HttpURLConnection connection = null;
 			// Parse the request
 			InputStream inputData = null;
-			String fileName = "";
-			long filesize = 0;
-			String contentType = "";
+			var fileName = "";
+			var filesize = 0L;
+			var contentType = "";
 
 			if (fromSakai) {
-				final String sakai_session = (String) session.getAttribute("sakai_session");
-				final String sakai_server = (String) session.getAttribute("sakai_server"); // Base server http://localhost:9090
-				final String srceUrl = request.getParameter("srceurl");
+				final var sakai_session = (String) session.getAttribute("sakai_session");
+				final var sakai_server = (String) session.getAttribute("sakai_server"); // Base server http://localhost:9090
+				final var srceUrl = request.getParameter("srceurl");
 				final Header header = new BasicHeader("JSESSIONID", sakai_session);
 				final Set<Header> headers = new HashSet<>();
 				headers.add(header);
@@ -625,9 +628,9 @@ public class FileServlet extends HttpServlet {
 					// Retrieve data
 					inputData = get.getEntity().getContent();
 					// File detail
-					final Header nameHeader = get.getHeaders("Content-Disposition")[0];
-					final Header sizeHeader = get.getHeaders("Content-Length")[0];
-					final Header typeHeader = get.getHeaders("Content-Type")[0];
+					final var nameHeader = get.getHeaders("Content-Disposition")[0];
+					final var sizeHeader = get.getHeaders("Content-Length")[0];
+					final var typeHeader = get.getHeaders("Content-Type")[0];
 
 					filesize = Integer.parseInt(sizeHeader.getValue());
 					contentType = typeHeader.getValue();
@@ -638,12 +641,8 @@ public class FileServlet extends HttpServlet {
 				}
 			} else //				if( ServletFileUpload.isMultipartContent(request) )
 			if (true) {
-				final List<FileItem> items = upload.parseRequest(request);
-				// Process the uploaded items
-				final Iterator<FileItem> iter = items.iterator();
-				while (iter.hasNext()) {
-					final FileItem item = iter.next();
-
+				final var items = upload.parseRequest(request);
+				for (FileItem item : items) {
 					if ("uploadfile".equals(item.getFieldName())) {
 						// Send raw data
 						inputData = item.getInputStream();
@@ -659,7 +658,7 @@ public class FileServlet extends HttpServlet {
 				// List headers
 				final Enumeration attributes = request.getAttributeNames();
 				while (attributes.hasMoreElements()) {
-					final Object elem = attributes.nextElement();
+					final var elem = attributes.nextElement();
 					logger.error("Object: " + elem.toString());
 				}
 				logger.error("Not multipart");
@@ -674,12 +673,12 @@ public class FileServlet extends HttpServlet {
 				connection.connect();
 
 				/// Send data to fileserver
-				final OutputStream outputData = connection.getOutputStream();
+				final var outputData = connection.getOutputStream();
 				IOUtils.copy(inputData, outputData);
 
 				/// Those 2 lines are needed, otherwise, no request sent
-				final int code = connection.getResponseCode();
-				final String msg = connection.getResponseMessage();
+				final var code = connection.getResponseCode();
+				final var msg = connection.getResponseMessage();
 
 				if (code != HttpURLConnection.HTTP_OK) {
 					logger.error("Couldn't send file: " + msg);
@@ -688,16 +687,16 @@ public class FileServlet extends HttpServlet {
 				}
 
 				/// Retrieving info
-				final InputStream objReturn = connection.getInputStream();
-				final StringWriter idResponse = new StringWriter();
+				final var objReturn = connection.getInputStream();
+				final var idResponse = new StringWriter();
 				IOUtils.copy(objReturn, idResponse, StandardCharsets.UTF_8);
 				fileid = idResponse.toString();
 
 				connection.disconnect();
 
 				/// Construct Json
-				final StringWriter StringOutput = new StringWriter();
-				final JsonWriter writer = new JsonWriter(StringOutput);
+				final var StringOutput = new StringWriter();
+				final var writer = new JsonWriter(StringOutput);
 				writer.beginObject();
 				writer.name("files");
 				writer.beginArray();
@@ -727,7 +726,7 @@ public class FileServlet extends HttpServlet {
 			} else {
 				response.setContentType("application/json");
 			}
-			final PrintWriter respWriter = response.getWriter();
+			final var respWriter = response.getWriter();
 			respWriter.write(json);
 
 			//		RetrieveAnswer(connection, response, ref);
@@ -753,36 +752,36 @@ public class FileServlet extends HttpServlet {
 		// =====================================================================================
 		initialize(request);
 
-		final String useragent = request.getHeader("User-Agent");
+		final var useragent = request.getHeader("User-Agent");
 		logger.info("Agent: " + useragent);
 
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
 
-			int userId = 0;
-			int groupId = 0;
-			boolean fromSakai = false;
+			var userId = 0;
+			var groupId = 0;
+			var fromSakai = false;
 
-			String doCopy = request.getParameter("copy");
+			var doCopy = request.getParameter("copy");
 			if (doCopy != null) {
 				doCopy = "?copy";
 			} else {
 				doCopy = "";
 			}
 
-			final HttpSession session = request.getSession(false);
+			final var session = request.getSession(false);
 			if (session == null) {
 				logger.error("User is not authenticated");
 				response.sendError(HttpServletResponse.SC_FORBIDDEN);
 				return;
 			}
-			final String srceType = request.getParameter("srce");
+			final var srceType = request.getParameter("srce");
 			if ("sakai".equals(srceType)) {
 				fromSakai = true;
 			}
 
-			Integer val = (Integer) session.getAttribute("uid");
+			var val = (Integer) session.getAttribute("uid");
 			if (val != null) {
 				userId = val;
 			}
@@ -794,19 +793,19 @@ public class FileServlet extends HttpServlet {
 			/// uuid: celui de la ressource
 			/// /resources/resource/file/{uuid}[?size=[S|L]&lang=[fr|en]]
 
-			final String origin = request.getRequestURL().toString();
+			final var origin = request.getRequestURL().toString();
 
 			/// Récupération des paramètres
-			final String url = request.getPathInfo();
-			final String[] token = url.split("/");
-			final String uuid = token[1];
+			final var url = request.getPathInfo();
+			final var token = url.split("/");
+			final var uuid = token[1];
 
-			String size = request.getParameter("size");
+			var size = request.getParameter("size");
 			if (size == null) {
 				size = "S";
 			}
 
-			String lang = request.getParameter("lang");
+			var lang = request.getParameter("lang");
 			if (lang == null) {
 				lang = "fr";
 			}
@@ -820,26 +819,26 @@ public class FileServlet extends HttpServlet {
 			}
 
 			String data;
-			String fileid = "";
+			var fileid = "";
 
 			data = dataProvider.getResNode(c, uuid, userId, groupId);
 
 			/// Parse les données
-			final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			final InputSource is = new InputSource(new StringReader("<node>" + data + "</node>"));
-			final Document doc = documentBuilder.parse(is);
-			final DOMImplementationLS impl = (DOMImplementationLS) doc.getImplementation().getFeature("LS", "3.0");
-			final LSSerializer serial = impl.createLSSerializer();
+			final var documentBuilderFactory = DocumentBuilderFactory.newInstance();
+			final var documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			final var is = new InputSource(new StringReader("<node>" + data + "</node>"));
+			final var doc = documentBuilder.parse(is);
+			final var impl = (DOMImplementationLS) doc.getImplementation().getFeature("LS", "3.0");
+			final var serial = impl.createLSSerializer();
 			serial.getDomConfig().setParameter("xml-declaration", false);
 
 			/// Cherche si on a déjà envoyé quelque chose
-			final XPath xPath = XPathFactory.newInstance().newXPath();
+			final var xPath = XPathFactory.newInstance().newXPath();
 			//			String filterRes = "//filename[@lang=\""+lang+"\"]";
-			final String filterRes = "//*[local-name()='filename' and @lang='" + lang + "']";
-			final NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+			final var filterRes = "//*[local-name()='filename' and @lang='" + lang + "']";
+			final var nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 
-			String filename = "";
+			var filename = "";
 			if (nodelist.getLength() > 0) {
 				filename = nodelist.item(0).getTextContent();
 			}
@@ -849,15 +848,15 @@ public class FileServlet extends HttpServlet {
 			if (!"".equals(filename)) {
 				/// Already have one, per language
 				//				String filterId = "//fileid[@lang='"+lang+"']";
-				final String filterId = "//*[local-name()='fileid' and @lang='" + lang + "']";
-				final NodeList idlist = (NodeList) xPath.compile(filterId).evaluate(doc, XPathConstants.NODESET);
+				final var filterId = "//*[local-name()='fileid' and @lang='" + lang + "']";
+				final var idlist = (NodeList) xPath.compile(filterId).evaluate(doc, XPathConstants.NODESET);
 				if (idlist.getLength() != 0) {
-					final Element fileNode = (Element) idlist.item(0);
+					final var fileNode = (Element) idlist.item(0);
 					fileid = fileNode.getTextContent();
 				}
 			}
 
-			int last = fileid.lastIndexOf("/") + 1; // FIXME temp patch
+			var last = fileid.lastIndexOf("/") + 1; // FIXME temp patch
 			if (last < 0) {
 				last = 0;
 			}
@@ -865,28 +864,28 @@ public class FileServlet extends HttpServlet {
 			//*/
 
 			/// écriture des données
-			final String urlTarget = server + "/" + fileid + doCopy;
+			final var urlTarget = server + "/" + fileid + doCopy;
 			//		String urlTarget = "http://"+ server + "/user/" + user +"/file/" + uuid +"/"+ lang+ "/ptype/fs";
 
 			// Unpack form, fetch binary data and send
 			// Create a factory for disk-based file items
-			final DiskFileItemFactory factory = new DiskFileItemFactory();
+			final var factory = new DiskFileItemFactory();
 
 			// Create a new file upload handler
-			final ServletFileUpload upload = new ServletFileUpload(factory);
+			final var upload = new ServletFileUpload(factory);
 
-			String json = "";
+			var json = "";
 			HttpURLConnection connection = null;
 			// Parse the request
 			InputStream inputData = null;
-			String fileName = "";
-			long filesize = 0;
-			String contentType = "";
+			var fileName = "";
+			var filesize = 0L;
+			var contentType = "";
 
 			if (fromSakai) {
-				final String sakai_session = (String) session.getAttribute("sakai_session");
-				final String sakai_server = (String) session.getAttribute("sakai_server"); // Base server http://localhost:9090
-				final String srceUrl = request.getParameter("srceurl");
+				final var sakai_session = (String) session.getAttribute("sakai_session");
+				final var sakai_server = (String) session.getAttribute("sakai_server"); // Base server http://localhost:9090
+				final var srceUrl = request.getParameter("srceurl");
 				final Header header = new BasicHeader("JSESSIONID", sakai_session);
 				final Set<Header> headers = new HashSet<>();
 				headers.add(header);
@@ -896,9 +895,9 @@ public class FileServlet extends HttpServlet {
 					// Retrieve data
 					inputData = get.getEntity().getContent();
 					// File detail
-					final Header nameHeader = get.getHeaders("Content-Disposition")[0];
-					final Header sizeHeader = get.getHeaders("Content-Length")[0];
-					final Header typeHeader = get.getHeaders("Content-Type")[0];
+					final var nameHeader = get.getHeaders("Content-Disposition")[0];
+					final var sizeHeader = get.getHeaders("Content-Length")[0];
+					final var typeHeader = get.getHeaders("Content-Type")[0];
 
 					filesize = Integer.parseInt(sizeHeader.getValue());
 					contentType = typeHeader.getValue();
@@ -910,7 +909,7 @@ public class FileServlet extends HttpServlet {
 			} else //				if( ServletFileUpload.isMultipartContent(request) )
 			// TODO review this part, something should be removed or modified
 			if (true) {
-				final List<FileItem> items = upload.parseRequest(request);
+				final var items = upload.parseRequest(request);
 				// Process the uploaded items
 				for (final FileItem item : items) {
 					if ("uploadfile".equals(item.getFieldName())) {
@@ -928,7 +927,7 @@ public class FileServlet extends HttpServlet {
 				// List headers
 				final Enumeration attributes = request.getAttributeNames();
 				while (attributes.hasMoreElements()) {
-					final Object elem = attributes.nextElement();
+					final var elem = attributes.nextElement();
 					logger.error("Object: " + elem.toString());
 					//TODO something is missing
 				}
@@ -944,23 +943,23 @@ public class FileServlet extends HttpServlet {
 				connection.connect();
 
 				/// Send data to fileserver
-				final OutputStream outputData = connection.getOutputStream();
+				final var outputData = connection.getOutputStream();
 				IOUtils.copy(inputData, outputData);
 
 				connection.getResponseCode();
 				connection.getResponseMessage();
 
 				/// Retrieving info
-				final InputStream objReturn = connection.getInputStream();
-				final StringWriter idResponse = new StringWriter();
+				final var objReturn = connection.getInputStream();
+				final var idResponse = new StringWriter();
 				IOUtils.copy(objReturn, idResponse, StandardCharsets.UTF_8);
 				fileid = idResponse.toString();
 
 				connection.disconnect();
 
 				/// Construct Json
-				final StringWriter StringOutput = new StringWriter();
-				final JsonWriter writer = new JsonWriter(StringOutput);
+				final var StringOutput = new StringWriter();
+				final var writer = new JsonWriter(StringOutput);
 				writer.beginObject();
 				writer.name("files");
 				writer.beginArray();
@@ -990,7 +989,7 @@ public class FileServlet extends HttpServlet {
 			} else {
 				response.setContentType("application/json");
 			}
-			final PrintWriter respWriter = response.getWriter();
+			final var respWriter = response.getWriter();
 			respWriter.write(json);
 
 			//		RetrieveAnswer(connection, response, ref);
@@ -1010,49 +1009,39 @@ public class FileServlet extends HttpServlet {
 		}
 	}
 
-	@Override
-	public void init(ServletConfig config) throws ServletException {
+	HttpURLConnection CreateConnection(String url, HttpServletRequest request)
+			throws MalformedURLException, IOException {
+		/// Create connection
+		final var urlConn = new URL(url);
+		final var connection = (HttpURLConnection) urlConn.openConnection();
+		connection.setDoOutput(true);
+		connection.setUseCaches(false); /// We don't want to cache data
+		connection.setInstanceFollowRedirects(false); /// Let client follow any redirection
+		final var method = request.getMethod();
+		connection.setRequestMethod(method);
 
-		try {
-			super.init(config);
+		final var context = request.getContextPath();
+		connection.setRequestProperty("app", context);
 
-			ConfigUtils.init(config.getServletContext());
-
-			dataProvider = SqlUtils.initProvider();
-			/// List possible local address
-			final Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-			while (interfaces.hasMoreElements()) {
-				final NetworkInterface current = interfaces.nextElement();
-				if (!current.isUp()) {
-					continue;
-				}
-				final Enumeration<InetAddress> addresses = current.getInetAddresses();
-				while (addresses.hasMoreElements()) {
-					final InetAddress current_addr = addresses.nextElement();
-					if (current_addr instanceof Inet4Address) {
-						final String ip = current_addr.getHostAddress();
-						logger.debug("USED IP: {}", ip);
-						ourIPs.add(ip);
-					}
-				}
-			}
-			// Force localhost ip to be set, sometime it isn't listed
-			//			ourIPs.add("127.0.0.1");
-
-			server = ConfigUtils.getInstance().getRequiredProperty(PROP_FILESERVER);
-		} catch (final Exception e) {
-			logger.error("Unable to init the servlet", e);
-			throw new ServletException("Unable to init the servlet", e);
+		/// Transfer headers
+		var key = "";
+		var value = "";
+		final var header = request.getHeaderNames();
+		while (header.hasMoreElements()) {
+			key = header.nextElement();
+			value = request.getHeader(key);
+			connection.setRequestProperty(key, value);
 		}
 
+		return connection;
 	}
 
 	void InitAnswer(HttpURLConnection connection, HttpServletResponse response, String referer)
 			throws MalformedURLException, IOException {
 		String ref = null;
 		if (referer != null) {
-			final int first = referer.indexOf('/', 7);
-			final int last = referer.lastIndexOf('/');
+			final var first = referer.indexOf('/', 7);
+			final var last = referer.lastIndexOf('/');
 			ref = referer.substring(first, last);
 		}
 
@@ -1061,20 +1050,20 @@ public class FileServlet extends HttpServlet {
 		response.setContentLength(connection.getContentLength());
 
 		/// Transfer headers
-		final Map<String, List<String>> headers = connection.getHeaderFields();
-		final int size = headers.size();
-		for (int i = 1; i < size; ++i) {
-			final String key = connection.getHeaderFieldKey(i);
-			final String value = connection.getHeaderField(i);
+		final var headers = connection.getHeaderFields();
+		final var size = headers.size();
+		for (var i = 1; i < size; ++i) {
+			final var key = connection.getHeaderFieldKey(i);
+			final var value = connection.getHeaderField(i);
 			//	      response.setHeader(key, value);
 			response.addHeader(key, value);
 		}
 
 		/// Deal with correct path with set cookie
-		final List<String> setValues = headers.get("Set-Cookie");
+		final var setValues = headers.get("Set-Cookie");
 		if (setValues != null) {
-			String setVal = setValues.get(0);
-			final int pathPlace = setVal.indexOf("Path=");
+			var setVal = setValues.get(0);
+			final var pathPlace = setVal.indexOf("Path=");
 			if (pathPlace > 0) {
 				setVal = setVal.substring(0, pathPlace + 5); // Some assumption, may break
 				setVal = setVal + ref;
@@ -1082,10 +1071,6 @@ public class FileServlet extends HttpServlet {
 				response.setHeader("Set-Cookie", setVal);
 			}
 		}
-	}
-
-	public void initialize(HttpServletRequest httpServletRequest) {
-		//		  checkCredential(httpServletRequest);
 	}
 
 	// [username, ?]
@@ -1097,7 +1082,7 @@ public class FileServlet extends HttpServlet {
 		}
 
 		for (final Cookie cookie : cookies) {
-			final String name = cookie.getName();
+			final var name = cookie.getName();
 			if ("user".equals(name) || "useridentifier".equals(name)) {
 				login = cookie.getValue();
 			}
@@ -1122,8 +1107,8 @@ public class FileServlet extends HttpServlet {
 		InitAnswer(connection, response, referer);
 
 		/// Write back data
-		final DataInputStream stream = new DataInputStream(in);
-		final byte[] buffer = new byte[1024];
+		final var stream = new DataInputStream(in);
+		final var buffer = new byte[1024];
 		int size;
 		ServletOutputStream out = null;
 		try {
