@@ -77,6 +77,7 @@ public class DirectURLService extends HttpServlet {
 	ArrayList<String> ourIPs = new ArrayList<>();
 
 	private String secretkey;
+	private boolean capDuration;
 
 	public static String hexToString(byte[] bytes) {
 		final var hexchars = new StringBuilder(bytes.length * 2);
@@ -118,6 +119,8 @@ public class DirectURLService extends HttpServlet {
 				}
 			}
 			secretkey = ConfigUtils.getInstance().getRequiredProperty("directkey");
+			// Cap at 720 hours if set
+			capDuration = ConfigUtils.getInstance().getBooleanProperty("Cap_Direct_Duration");
 		} catch (final Exception e) {
 			logger.error("Can't init servlet", e);
 			throw new ServletException(e);
@@ -484,7 +487,7 @@ public class DirectURLService extends HttpServlet {
 			var durationInt = Integer.parseInt(duration);
 			if (durationInt < 1) {
 				durationInt = 1;
-			} else if (durationInt > 24 * 30) { // 720 hours, 30 days
+			} else if (capDuration && durationInt > 24 * 30) { // 720 hours, 30 days
 				durationInt = 24 * 30;
 			}
 			final var current = new Date();

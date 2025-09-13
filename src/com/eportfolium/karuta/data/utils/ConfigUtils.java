@@ -124,6 +124,14 @@ public class ConfigUtils {
 		return INSTANCE;
 	}
 
+	public boolean getBooleanProperty(final String key) {
+		final var value = properties.getProperty(key);
+		if (value == null) {
+			return false;
+		}
+		return "Y".equals(value.toUpperCase());
+	}
+
 	public BuildInfo getBuildInfo() {
 		return buildInfo;
 	}
