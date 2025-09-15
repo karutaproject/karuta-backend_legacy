@@ -26,8 +26,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import org.apache.commons.lang3.BooleanUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
@@ -43,7 +43,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class LoggingService extends HttpServlet {
-	private static final Logger logger = LogManager.getLogger(LoggingService.class);
+	private static final Logger logger = LoggerFactory.getLogger(LoggingService.class);
 	private static final long serialVersionUID = -1464636556529383111L;
 	/**
 	 *

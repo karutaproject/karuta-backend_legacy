@@ -23,8 +23,8 @@ import java.sql.Connection;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -37,7 +37,7 @@ import jakarta.servlet.http.HttpSession;
 
 public class HandlerLogging implements KEventHandler {
 
-	private static final Logger logger = LogManager.getLogger(HandlerLogging.class);
+	private static final Logger logger = LoggerFactory.getLogger(HandlerLogging.class);
 	HttpServletRequest httpServletRequest;
 	HttpSession session;
 	int userId;

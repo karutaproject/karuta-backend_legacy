@@ -14,14 +14,14 @@ import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 
 import org.apache.commons.lang3.BooleanUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 
 public class ConnexionLdap {
 
-	private static final Logger logger = LogManager.getLogger(ConnexionLdap.class);
+	private static final Logger logger = LoggerFactory.getLogger(ConnexionLdap.class);
 
 	private Hashtable<String, String> env;
 	private ArrayList<Attribute> attr;

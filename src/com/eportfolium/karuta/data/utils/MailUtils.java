@@ -18,7 +18,7 @@ package com.eportfolium.karuta.data.utils;
 import java.util.Properties;
 
 import org.apache.commons.lang3.BooleanUtils;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
@@ -161,7 +161,7 @@ public class MailUtils {
 			}
 		}
 		fichierSrce.close();
-	
+
 		return config;
 	}
 	//*/

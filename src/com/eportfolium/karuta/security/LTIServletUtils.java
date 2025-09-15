@@ -31,8 +31,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tsugi.basiclti.BasicLTIConstants;
 import org.tsugi.basiclti.BasicLTIUtil;
 import org.tsugi.json.IMSJSONRequest;
@@ -58,7 +58,7 @@ public class LTIServletUtils {
 		}
 	}
 
-	public final static Logger logger = LogManager.getLogger(LTIServletUtils.class);
+	public final static Logger logger = LoggerFactory.getLogger(LTIServletUtils.class);
 	protected static final String OAUTH_MESSAGE = "oauth_message";
 	protected static final String OAUTH_CONSUMER_KEY = "oauth_consumer_key";
 
@@ -264,11 +264,11 @@ public class LTIServletUtils {
 			//		String topGroupId = wadbackend.WadUtilities.getAttribute(topGroup, "id");
 			boolean isSiteInTopGroup = wadbackend.WadGroup.isGroupInGroup(connexion, topGroup, siteGroupId, outTrace);
 			boolean isSiteRoleInSiteGroup = wadbackend.WadGroup.isGroupInGroup(connexion, siteGroupId, siteRoleGroupId, outTrace);
-
+			
 			if (!isSiteInTopGroup) {
 				wadbackend.WadGroup.relGroup_Parent(connexion, topGroup, siteGroupId, "add", outTrace);
 			}
-
+			
 			if (!isSiteRoleInSiteGroup) {
 				wadbackend.WadGroup.relGroup_Parent(connexion, siteGroupId, siteRoleGroupId, "add", outTrace);
 			}

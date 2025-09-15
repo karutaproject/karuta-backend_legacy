@@ -46,8 +46,8 @@ import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -77,7 +77,7 @@ import org.xml.sax.InputSource;
 //  ==================================================================================
 
 public class DomUtils {
-	final static Logger logger = LogManager.getLogger(DomUtils.class);
+	final static Logger logger = LoggerFactory.getLogger(DomUtils.class);
 	final static String ACCESS_EXTERNAL_DTD = "http://javax.xml.XMLConstants/property/accessExternalDTD";
 	final static String ACCESS_EXTERNAL_STYLESHEET = "http://javax.xml.XMLConstants/property/accessExternalStylesheet";
 
@@ -88,7 +88,7 @@ public class DomUtils {
 	public static String cleanXMLData(String data) throws UnsupportedEncodingException {
 		// data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"+data;
 
-		final Tidy tidy = new Tidy();
+		final var tidy = new Tidy();
 		tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
 		tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
 		tidy.setWraplen(Integer.MAX_VALUE);
@@ -130,7 +130,7 @@ public class DomUtils {
 		//	html = "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN' 'http://www.w3.org/TR/html4/loose.dtd'><head><title></title></head><body>" +html+"</body>";
 		final var in = new StringReader(xml);
 		final var out = new StringWriter();
-		final Tidy tidy = new Tidy();
+		final var tidy = new Tidy();
 		tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
 		tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
 		tidy.setWraplen(Integer.MAX_VALUE);
@@ -167,8 +167,7 @@ public class DomUtils {
 		final var result = new StringBuilder();
 		try {
 			final var fichierSrce = new FileInputStream(fileName);
-			final var readerSrce = new BufferedReader(
-					new InputStreamReader(fichierSrce, StandardCharsets.UTF_8));
+			final var readerSrce = new BufferedReader(new InputStreamReader(fichierSrce, StandardCharsets.UTF_8));
 			String line;
 			while ((line = readerSrce.readLine()) != null) {
 				result.append(line);
@@ -207,8 +206,7 @@ public class DomUtils {
 	}
 
 	public static String getInnerXml(Node node) {
-		final var lsImpl = (DOMImplementationLS) node.getOwnerDocument().getImplementation()
-				.getFeature("LS", "3.0");
+		final var lsImpl = (DOMImplementationLS) node.getOwnerDocument().getImplementation().getFeature("LS", "3.0");
 		final var lsSerializer = lsImpl.createLSSerializer();
 		final var childNodes = node.getChildNodes();
 		final var sb = new StringBuilder();
@@ -311,20 +309,20 @@ public class DomUtils {
 	int result=1;
 	FopFactory fopFactory = FopFactory.newInstance();
 	FOUserAgent foUserAgent = fopFactory.newFOUserAgent();
-
+	
 	FileOutputStream fos =null;
-
+	
 	try {
-
+	
 		//Cree des flux de lecture/ecriture sur les fichiers XSL, XML et outputName.
 		File stylesheet = new File(xslFName);
 		File outfile = new File(pdfFName);
-
+	
 		//Cree un objet Transformer a partir du XSL
 		TransformerFactory tFactory = TransformerFactory.newInstance();
 		StreamSource stylesource = new StreamSource(stylesheet);
 		Transformer transformer = tFactory.newTransformer(stylesource);
-
+	
 		String s = System.getProperty("file.separator");
 		String ppathImg = ppath;
 		if (!s.equals("/")){
@@ -336,13 +334,13 @@ public class DomUtils {
 			transformer.setParameter(param[i], paramVal[i]);
 			outTrace.append("<br>"+param[i]+":"+paramVal[i]);
 		}
-
+	
 		//Creation du flux d'entree du Transformer (document XML)
 		DOMSource source = new DOMSource(xmldoc);
 		//Creation du flux de sortie du Transformer (Flux de sortie vers outfile)
 		fos = new FileOutputStream(outfile, false);
 		Fop fop = fopFactory.newFop(MimeConstants.MIME_PDF, foUserAgent, fos);
-
+	
 		Result resultpdf = new SAXResult(fop.getDefaultHandler());
 		transformer.transform(source, resultpdf);
 		fos.close();
@@ -411,8 +409,7 @@ public class DomUtils {
 		//  =======================================
 		logger.debug("<br>-->processXSLTfile2String-" + xslFile);
 		outTrace.append("<br>-->processXSLTfile2String-").append(xslFile);
-		final var transformer = newSecureTransformerFactory()
-				.newTransformer(new StreamSource(new File(xslFile)));
+		final var transformer = newSecureTransformerFactory().newTransformer(new StreamSource(new File(xslFile)));
 		outTrace.append(".1");
 		final var result = new StreamResult(new StringWriter());
 		outTrace.append(".2");

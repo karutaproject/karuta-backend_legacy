@@ -36,8 +36,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 
@@ -105,7 +105,7 @@ public class EmploiStoreService extends HttpServlet {
 
 	private static final long serialVersionUID = -5389232495090560087L;
 
-	private static final Logger logger = LogManager.getLogger(EmploiStoreService.class);
+	private static final Logger logger = LoggerFactory.getLogger(EmploiStoreService.class);
 	public static final Pattern PATTERN_TOKEN = Pattern.compile("access_token\":\"([^\"]*)");
 	public static final Pattern PATTERN_EXPIRES = Pattern.compile("expires_in\":([^}]*)");
 	public static final String ROME_SERVICE_URL = "ROMEServiceURL";

@@ -23,11 +23,11 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileUtils {
-	public static final Logger logger = LogManager.getLogger(FileUtils.class);
+	public static final Logger logger = LoggerFactory.getLogger(FileUtils.class);
 
 	public static String getHTTPQuery(String urlToRead) {
 		URL url;

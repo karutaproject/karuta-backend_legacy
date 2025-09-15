@@ -17,8 +17,8 @@ package com.eportfolium.karuta.socialnetwork;
 
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.ning.api.client.NingClient;
 import com.ning.api.client.access.NingConnection;
@@ -30,7 +30,7 @@ import com.ning.api.client.item.Token;
 
 public class Ning {
 
-	public final static Logger logger = LogManager.getLogger(Ning.class);
+	public final static Logger logger = LoggerFactory.getLogger(Ning.class);
 
 	public final static String DEFAULT_XAPI_HOST = "external.ningapis.com";
 
@@ -51,8 +51,8 @@ public class Ning {
 	public Ning() {
 
 		final var consumerAuth = new ConsumerKey(CONSUMER_KEY, CONSUMER_SECRET);
-		final var ningClient = new NingClient(DEFAULT_NETWORK, consumerAuth, DEFAULT_XAPI_HOST,
-				DEFAULT_HTTP_PORT, DEFAULT_HTTPS_PORT);
+		final var ningClient = new NingClient(DEFAULT_NETWORK, consumerAuth, DEFAULT_XAPI_HOST, DEFAULT_HTTP_PORT,
+				DEFAULT_HTTPS_PORT);
 		try {
 
 			token = ningClient.createToken("marc.vassoille@iut2.upmf-grenoble.fr", "marguerite38");
@@ -64,12 +64,7 @@ public class Ning {
 	}
 
 	static String toString(Activity act) {
-		var base = "activity of type " +
-				act.getType() +
-				", title '" +
-				act.getTitle() +
-				"', author: " +
-				act.getAuthor();
+		var base = "activity of type " + act.getType() + ", title '" + act.getTitle() + "', author: " + act.getAuthor();
 		final var auth = act.getAttachedToAuthorResource();
 		if (auth == null) {
 			base += ", author info UNKNOWN";
@@ -88,9 +83,9 @@ public class Ning {
 	public PagedList<Activity> getActivites() {
 		final var a = ningConnection.activities();
 
-		final var lister = a.listerForRecent(ActivityField.title, ActivityField.type,
-				ActivityField.author, ActivityField.attachedTo, ActivityField.attachedToAuthor,
-				ActivityField.attachedToAuthor_fullName, ActivityField.image_url, ActivityField.description
+		final var lister = a.listerForRecent(ActivityField.title, ActivityField.type, ActivityField.author,
+				ActivityField.attachedTo, ActivityField.attachedToAuthor, ActivityField.attachedToAuthor_fullName,
+				ActivityField.image_url, ActivityField.description
 
 		);
 

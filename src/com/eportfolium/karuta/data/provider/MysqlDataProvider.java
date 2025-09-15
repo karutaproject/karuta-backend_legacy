@@ -71,9 +71,9 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.json.simple.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -120,8 +120,8 @@ public class MysqlDataProvider implements DataProvider {
 	public static final String ONLYUSER = "(?<![-=+])(user)(?![-=+])";
 
 	public static final Pattern PATTERN_ONLYUSER = Pattern.compile(ONLYUSER);
-	private static final Logger logger = LogManager.getLogger(MysqlDataProvider.class);
-	private static final Logger securityLog = LogManager.getLogger("securityLogger");
+	private static final Logger logger = LoggerFactory.getLogger(MysqlDataProvider.class);
+	private static final Logger securityLog = LoggerFactory.getLogger("securityLogger");
 	public static final String DATABASE_FALSE = "faux";
 	public static final String DB_YES = "Y";
 	public static final String DB_NO = "N";
@@ -7276,7 +7276,7 @@ public class MysqlDataProvider implements DataProvider {
 						doc = documentBuilder.parse(is);
 						attribNode = doc.getDocumentElement();
 						attribMap = attribNode.getAttributes();
-
+						
 						try
 						{
 							Node publicatt = attribMap.getNamedItem("public");

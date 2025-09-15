@@ -33,8 +33,8 @@ import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
@@ -54,8 +54,8 @@ public class DirectURLService extends HttpServlet {
 
 	public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
-	private static final Logger logger = LogManager.getLogger(DirectURLService.class);
-	private static final Logger accessLog = LogManager.getLogger("directAccess");
+	private static final Logger logger = LoggerFactory.getLogger(DirectURLService.class);
+	private static final Logger accessLog = LoggerFactory.getLogger("directAccess");
 	private static final long serialVersionUID = 9188067506635747901L;
 
 	final protected static char[] resolveHex = "0123456789ABCDEF".toCharArray();

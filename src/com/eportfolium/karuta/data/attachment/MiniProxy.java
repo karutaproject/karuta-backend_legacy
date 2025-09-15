@@ -22,8 +22,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -34,7 +34,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class MiniProxy extends HttpServlet {
 	private static final long serialVersionUID = -5389232495090560087L;
 
-	private static final Logger logger = LogManager.getLogger(MiniProxy.class);
+	private static final Logger logger = LoggerFactory.getLogger(MiniProxy.class);
 	/**
 	 *
 	 */

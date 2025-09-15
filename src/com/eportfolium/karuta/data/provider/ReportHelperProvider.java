@@ -28,14 +28,14 @@ import java.util.Map.Entry;
 
 import javax.sql.DataSource;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.security.Credential;
 
 public class ReportHelperProvider {
 
-	final Logger logger = LogManager.getLogger(ReportHelperProvider.class);
+	final Logger logger = LoggerFactory.getLogger(ReportHelperProvider.class);
 
 	final private Credential cred = new Credential();
 

@@ -17,8 +17,8 @@ package com.eportfolium.karuta.data.provider.test;
 
 import java.util.Properties;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.DomUtils;
@@ -29,7 +29,7 @@ import jakarta.activation.MimeType;
 
 public class MysqlDataProviderTest {
 
-	private static final Logger logger = LogManager.getLogger(MysqlDataProviderTest.class);
+	private static final Logger logger = LoggerFactory.getLogger(MysqlDataProviderTest.class);
 
 	/**
 	 * @param args

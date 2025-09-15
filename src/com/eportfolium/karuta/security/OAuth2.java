@@ -32,14 +32,14 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jose4j.jwa.AlgorithmConstraints;
 import org.jose4j.jwa.AlgorithmConstraints.ConstraintType;
 import org.jose4j.jwk.HttpsJwks;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jwt.consumer.JwtConsumerBuilder;
 import org.jose4j.keys.resolvers.JwksVerificationKeyResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
@@ -59,7 +59,7 @@ public class OAuth2 extends HttpServlet {
 	public static final Pattern PATTERN_TOKEN = Pattern.compile("id_token\":\"([^\"]*)");
 	private static final long serialVersionUID = -5793392467087229614L;
 
-	private static final Logger logger = LogManager.getLogger(OAuth2.class);
+	private static final Logger logger = LoggerFactory.getLogger(OAuth2.class);
 
 	ServletConfig sc;
 	DataProvider dataProvider;

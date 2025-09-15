@@ -26,8 +26,8 @@ import javax.sql.DataSource;
 
 import org.apache.commons.dbcp2.cpdsadapter.DriverAdapterCPDS;
 import org.apache.commons.dbcp2.datasources.SharedPoolDataSource;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.provider.ReportHelperProvider;
@@ -35,7 +35,7 @@ import com.eportfolium.karuta.data.provider.ReportHelperProvider;
 public class SqlUtils {
 	public static final String PROP_DATA_PROVIDER_CLASS = "dataProviderClass";
 
-	static final Logger logger = LogManager.getLogger(SqlUtils.class);
+	static final Logger logger = LoggerFactory.getLogger(SqlUtils.class);
 
 	static boolean loaded = false;
 	static InitialContext ctx = null;
