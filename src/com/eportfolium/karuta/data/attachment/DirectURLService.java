@@ -77,7 +77,7 @@ public class DirectURLService extends HttpServlet {
 	ArrayList<String> ourIPs = new ArrayList<>();
 
 	private String secretkey;
-	private boolean capDuration;
+	private boolean checkTimeLimit;
 
 	public static String hexToString(byte[] bytes) {
 		final var hexchars = new StringBuilder(bytes.length * 2);
@@ -119,8 +119,8 @@ public class DirectURLService extends HttpServlet {
 				}
 			}
 			secretkey = ConfigUtils.getInstance().getRequiredProperty("directkey");
-			// Cap at 720 hours if set
-			capDuration = ConfigUtils.getInstance().getBooleanProperty("Cap_Direct_Duration");
+			// Check time limit
+			checkTimeLimit = "N".equals(ConfigUtils.getInstance().getProperty("check_direct_time")) ? false : true;
 		} catch (final Exception e) {
 			logger.error("Can't init servlet", e);
 			throw new ServletException(e);
@@ -186,7 +186,11 @@ public class DirectURLService extends HttpServlet {
 
 			/// Check if link is still valid
 			final var currtime = date.getTime() / 1000;
-			if (currtime > endtime) {
+			if (!checkTimeLimit) {
+				accessLog.info(
+						"[{}] (Skipped check) Direct link access by: {} ({}) for uuid: {} level: {} duration: {} ends at: {}",
+						datestring, email, role, uuid, level, duration, endtime);
+			} else if (currtime > endtime) {
 				accessLog.info("[{}] Old link access by: {} ({}) for uuid: {} level: {} duration: {} ends at: {}",
 						datestring, email, role, uuid, level, duration, endtime);
 				response.setStatus(403);
@@ -292,14 +296,14 @@ public class DirectURLService extends HttpServlet {
 				/// Prevent sharing with another personal account after being evaluated.
 				/// Since the specific group will be the username (specific rights),
 				/// we can also know if student tried sharing it with self first
-				
+
 				///// Check if this user is not giving rights to self (existing user account)
-				
+
 				///// Check if user has some access to this uuid
 				/// Prevent somebody else to share another student node
-				
+
 				///// Check if user has right to share
-				
+
 				//// Put person in specified group
 				//*/
 
@@ -485,10 +489,9 @@ public class DirectURLService extends HttpServlet {
 			endtimeString = duration;
 		} else {
 			var durationInt = Integer.parseInt(duration);
+			// Minimum 1h
 			if (durationInt < 1) {
 				durationInt = 1;
-			} else if (capDuration && durationInt > 24 * 30) { // 720 hours, 30 days
-				durationInt = 24 * 30;
 			}
 			final var current = new Date();
 			final var endtime = current.getTime() / 1000 + durationInt * 3600; // Number of seconds
