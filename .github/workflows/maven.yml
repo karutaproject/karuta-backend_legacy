@@ -33,6 +33,7 @@ jobs:
           echo "Setting variables for tomcat 10"
           echo "JDK=17" >> "$GITHUB_ENV"
           echo "TARGET=10" >> "$GITHUB_ENV"
+        fi
 
     - name: Set up JDK ${{ env.JDK }}
       uses: actions/setup-java@v4
