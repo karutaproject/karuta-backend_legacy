@@ -33,10 +33,10 @@ jobs:
         JDK: 11
     - name: Set variables if tomcat 10
       if: ${{ github.ref }} == 'ref/head/tomcat10'
-      run: echo "Setting variables for tomcat 10"
-      env:
-        TARGET: 10
-        JDK: 17
+      run: |
+        echo "Setting variables for tomcat 10"
+        echo "JDK=11" >> "$GITHUB_ENV"
+        echo "TARGET=9" >> "$GITHUB_ENV"
 
     - name: Set up JDK $JDK
       uses: actions/setup-java@v4
