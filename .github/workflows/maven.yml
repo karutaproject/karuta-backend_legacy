@@ -19,24 +19,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set variables if test
-      if: ${{ github.ref == 'refs/heads/test' }}
+    - name: Set variables
       run: |
-        echo "Setting variables for tomcat 9"
-        echo "JDK=11" >> "$GITHUB_ENV"
-        echo "TARGET=9" >> "$GITHUB_ENV"
-    - name: Set variables if tomcat 9
-      if: ${{ github.ref  == 'refs/heads/master' }}
-      run: |
-        echo "Setting variables for tomcat 9"
-        echo "JDK=11" >> "$GITHUB_ENV"
-        echo "TARGET=9" >> "$GITHUB_ENV"
-    - name: Set variables if tomcat 10
-      if: ${{ github.ref == 'refs/heads/tomcat10' }}
-      run: |
-        echo "Setting variables for tomcat 10"
-        echo "JDK=17" >> "$GITHUB_ENV"
-        echo "TARGET=10" >> "$GITHUB_ENV"
+        if [[ ${{ github.ref }} == 'refs/heads/master' ]]; then
+          echo "Setting variables for tomcat 9"
+          echo "JDK=11" >> "$GITHUB_ENV"
+          echo "TARGET=9" >> "$GITHUB_ENV"
+        elif [[ ${{ github.ref }} == 'refs/heads/test' ]]; then
+          echo "Setting variables for tomcat Test"
+          echo "JDK=11" >> "$GITHUB_ENV"
+          echo "TARGET=10" >> "$GITHUB_ENV"
+        elif [[ ${{ github.ref }} == 'refs/heads/tomcat10' ]]; then
+          echo "Setting variables for tomcat 10"
+          echo "JDK=17" >> "$GITHUB_ENV"
+          echo "TARGET=10" >> "$GITHUB_ENV"
 
     - name: Set up JDK ${{ env.JDK }}
       uses: actions/setup-java@v4
