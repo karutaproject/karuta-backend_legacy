@@ -27,16 +27,16 @@ jobs:
         echo "TARGET=9" >> "$GITHUB_ENV"
     - name: Set variables if tomcat 9
       if: ${{ github.ref  == 'ref/head/master' }}
-      run: echo "Setting variables for tomcat 9"
-      env:
-        TARGET: 9
-        JDK: 11
-    - name: Set variables if tomcat 10
-      if: ${{ github.ref }} == 'ref/head/tomcat10'
       run: |
-        echo "Setting variables for tomcat 10"
+        echo "Setting variables for tomcat 9"
         echo "JDK=11" >> "$GITHUB_ENV"
         echo "TARGET=9" >> "$GITHUB_ENV"
+    - name: Set variables if tomcat 10
+      if: ${{ github.ref == 'ref/head/tomcat10' }}
+      run: |
+        echo "Setting variables for tomcat 10"
+        echo "JDK=17" >> "$GITHUB_ENV"
+        echo "TARGET=10" >> "$GITHUB_ENV"
 
     - name: Set up JDK ${{ env.JDK }}
       uses: actions/setup-java@v4
@@ -54,10 +54,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref_name }}-$TARGET
-        release_name: Draft Release for ${{ github.ref_name }}-$TARGET
+        tag_name: ${{ github.ref_name }}-${{ env.TARGET }}
+        release_name: Draft Release for ${{ github.ref_name }}-${{ env.TARGET }}
         body: |
-          Draft release for branch  ${{ github.ref_name }}-$TARGET
+          Draft release for branch  ${{ github.ref_name }}-${{ env.TARGET }}
           Commit: ${{ github.sha }}
         draft: true
         prerelease: false
@@ -69,6 +69,6 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./target/karuta-backend.war
-        asset_name: karuta-backend-$TARGET.war
+        asset_name: karuta-backend-${{ env.TARGET }}.war
         asset_content_type: application/java-archive
 
