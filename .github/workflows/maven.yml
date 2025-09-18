@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - master
-      - test
       - tomcat10
   pull_request:
     branches:
@@ -25,10 +24,6 @@ jobs:
           echo "Setting variables for tomcat 9"
           echo "JDK=11" >> "$GITHUB_ENV"
           echo "TARGET=9" >> "$GITHUB_ENV"
-        elif [[ ${{ github.ref }} == 'refs/heads/test' ]]; then
-          echo "Setting variables for tomcat Test"
-          echo "JDK=11" >> "$GITHUB_ENV"
-          echo "TARGET=10" >> "$GITHUB_ENV"
         elif [[ ${{ github.ref }} == 'refs/heads/tomcat10' ]]; then
           echo "Setting variables for tomcat 10"
           echo "JDK=17" >> "$GITHUB_ENV"
