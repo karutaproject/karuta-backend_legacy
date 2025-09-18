@@ -21,11 +21,13 @@ jobs:
 
     - name: Set variables if tomcat 9
       if: ${{ github.ref  == 'ref/head/master' || github.ref == 'ref/head/test' }}
+      run: echo "Setting variables for tomcat 9"
       env:
         TARGET: 9
         JDK: 11
     - name: Set variables if tomcat 10
       if: ${{ github.ref }} == 'ref/head/tomcat10'
+      run: echo "Setting variables for tomcat 10"
       env:
         TARGET: 10
         JDK: 17
