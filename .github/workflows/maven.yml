@@ -38,10 +38,10 @@ jobs:
         echo "JDK=11" >> "$GITHUB_ENV"
         echo "TARGET=9" >> "$GITHUB_ENV"
 
-    - name: Set up JDK $JDK
+    - name: Set up JDK ${{ env.JDK }}
       uses: actions/setup-java@v4
       with:
-        java-version: $JDK
+        java-version: ${{ env.JDK }}
         distribution: 'temurin'
         cache: maven
         
