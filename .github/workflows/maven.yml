@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - master
-      - devel
+      - test
       - tomcat10
   pull_request:
     branches:
@@ -19,26 +19,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set variables
-      id: vars
-      run: |
-        if [[ ${{ github.ref }} == 'ref/head/master' ]]; then
-          echo "TARGET=9" >> $GITHUB_OUTPUT
-          echo "JDK=11" >> $GITHUB_OUTPUT
-        elif [[ ${{ github.ref }} == 'ref/head/devel' ]]; then
-          echo "TARGET=9" >> $GITHUB_OUTPUT
-          echo "JDK=11" >> $GITHUB_OUTPUT
-        elif [[ ${{ github.ref }} == 'ref/head/tomcat10' ]]; then
-          echo "TARGET=10" >> $GITHUB_OUTPUT
-          echo "JDK=17" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Set env variables
-      run: echo "${{ steps.vars.outputs.TARGET }} ${{ steps.vars.outputs.JDK }}"
+    - name: Set variables if tomcat 9
+      if: ${{ github.ref  == 'ref/head/master' || github.ref == 'ref/head/test' }}
       env:
-        TARGET: ${{ steps.vars.outputs.TARGET }}
-        JDK: ${{ steps.vars.outputs.JDK }}
-    
+        TARGET: 9
+        JDK: 11
+    - name: Set variables if tomcat 10
+      if: ${{ github.ref }} == 'ref/head/tomcat10'
+      env:
+        TARGET: 10
+        JDK: 17
+
     - name: Set up JDK ${JDK}
       uses: actions/setup-java@v4
       with:
