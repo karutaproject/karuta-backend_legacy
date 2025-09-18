@@ -38,7 +38,7 @@ jobs:
         cache: maven
         
     - name: Build with Maven
-      run: mvn -B package -Ptomcat$TARGET --file pom.xml
+      run: mvn -B package -Ptomcat${{ env.TARGET }} --file pom.xml
 
     - name: Create Draft Release
       id: create_release
