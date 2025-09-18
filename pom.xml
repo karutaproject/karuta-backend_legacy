@@ -30,6 +30,120 @@
 		</developer>
 	</developers>
 
+	<profiles>
+		<profile>
+			<id>tomcat9</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<JERSEY_VER>3.0.0-M1</JERSEY_VER>
+				<JDK_VER>11</JDK_VER>
+			</properties>
+			<dependencies>
+				<dependency>
+					<groupId>javax.servlet</groupId>
+					<artifactId>javax.servlet-api</artifactId>
+					<version>4.0.1</version>
+				</dependency>
+				<dependency>
+					<groupId>jakarta.ws.rs</groupId>
+					<artifactId>jakarta.ws.rs-api</artifactId>
+					<version>3.1.0</version>
+				</dependency>
+				<dependency>
+					<groupId>javax.activation</groupId>
+					<artifactId>activation</artifactId>
+					<version>1.1.1</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.commons</groupId>
+					<artifactId>commons-lang3</artifactId>
+					<version>3.17.0</version>
+				</dependency>
+				<dependency>
+					<groupId>commons-fileupload</groupId>
+					<artifactId>commons-fileupload</artifactId>
+					<version>1.6.0</version>
+				</dependency>
+				<dependency>
+					<groupId>net.oauth.core</groupId>
+					<artifactId>oauth</artifactId>
+					<version>20100527</version>
+				</dependency>
+				<dependency>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+					<version>2.0.10</version>
+				</dependency>
+				<dependency>
+					<groupId>com.mysql</groupId>
+					<artifactId>mysql-connector-j</artifactId>
+					<version>8.0.33</version>
+				</dependency>
+				<dependency>
+					<groupId>org.mariadb.jdbc</groupId>
+					<artifactId>mariadb-java-client</artifactId>
+					<version>3.5.3</version>
+				</dependency>
+				<dependency>
+					<groupId>com.sun.mail</groupId>
+					<artifactId>javax.mail</artifactId>
+					<version>1.6.2</version>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>tomcat10</id>
+			<properties>
+				<JERSEY_VER>3.1.10</JERSEY_VER>
+				<JDK_VER>17</JDK_VER>
+			</properties>
+			<dependencies>
+				<dependency>
+					<groupId>javax.servlet</groupId>
+					<artifactId>javax.servlet-api</artifactId>
+					<version>6.1.0</version>
+				</dependency>
+				<dependency>
+					<groupId>jakarta.ws.rs</groupId>
+					<artifactId>jakarta.ws.rs-api</artifactId>
+					<version>4.0.0</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.commons</groupId>
+					<artifactId>commons-lang3</artifactId>
+					<version>3.18.0</version>
+				</dependency>
+				<dependency>
+					<groupId>org.apache.commons</groupId>
+					<artifactId>commons-fileupload2-jakarta-servlet6</artifactId>
+					<version>2.0.0-M4</version>
+				</dependency>
+				<dependency>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+					<version>2.0.17</version>
+				</dependency>
+				<dependency>
+					<groupId>com.mysql</groupId>
+					<artifactId>mysql-connector-j</artifactId>
+					<version>9.3.0</version>
+				</dependency>
+				<dependency>
+					<groupId>org.mariadb.jdbc</groupId>
+					<artifactId>mariadb-java-client</artifactId>
+					<version>3.5.4</version>
+				</dependency>
+				<dependency>
+					<groupId>jakarta.mail</groupId>
+					<artifactId>jakarta.mail</artifactId>
+					<version>2.1.3</version>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
+
 	<scm>
 		<connection>
 			scm:git:ssh://git@github.com/karutaproject/karuta-backend_legacy.git</connection>
@@ -54,33 +168,15 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<JACKSON_VER>1.9.13</JACKSON_VER>
-		<JERSEY_VER>3.1.10</JERSEY_VER>
 		<CAS_VER>3.6.4</CAS_VER>
 		<xmlgraphics.version>2.11</xmlgraphics.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
-			<groupId>jakarta.servlet</groupId>
-			<artifactId>jakarta.servlet-api</artifactId>
-			<version>6.1.0</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>jakarta.ws.rs</groupId>
-			<artifactId>jakarta.ws.rs-api</artifactId>
-			<version>4.0.0</version>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpcore</artifactId>
 			<version>4.4.16</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-lang3</artifactId>
-			<version>3.18.0</version>
 		</dependency>
 		<dependency>
 			<groupId>jakarta.activation</groupId>
@@ -146,11 +242,6 @@
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
 			<version>1.18.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-fileupload2-jakarta-servlet6</artifactId>
-			<version>2.0.0-M4</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
@@ -239,6 +330,7 @@
 			<artifactId>json-simple</artifactId>
 			<version>1.1.1</version>
 		</dependency>
+
 		<dependency>
 			<groupId>net.sf.jtidy</groupId>
 			<artifactId>jtidy</artifactId>
@@ -250,31 +342,11 @@
 			<artifactId>logback-classic</artifactId>
 			<version>1.5.18</version>
 		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>2.0.17</version>
-		</dependency>
 
-		<dependency>
-			<groupId>com.mysql</groupId>
-			<artifactId>mysql-connector-j</artifactId>
-			<version>9.3.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.mariadb.jdbc</groupId>
-			<artifactId>mariadb-java-client</artifactId>
-			<version>3.5.4</version>
-		</dependency>
 		<dependency>
 			<groupId>com.ning</groupId>
 			<artifactId>ning-api-java</artifactId>
 			<version>0.5.1</version>
-		</dependency>
-		<dependency>
-			<groupId>jakarta.mail</groupId>
-			<artifactId>jakarta.mail-api</artifactId>
-			<version>2.1.3</version>
 		</dependency>
 		<!-- filename must match systemPath -->
 		<!--
@@ -362,6 +434,22 @@
 				<version>3.6.1</version>
 				<executions>
 					<execution>
+						<id>enforce-one-profile</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireActiveProfile>
+									<profiles>tomcat9,tomcat10</profiles>
+									<message>You must activate either 'tomcat9' or 'tomcat10'</message>
+									<all>false</all>
+								</requireActiveProfile>
+							</rules>
+							<fail>true</fail>
+						</configuration>
+					</execution>
+					<execution>
 						<id>enforce-maven</id>
 						<goals>
 							<goal>enforce</goal>
@@ -410,7 +498,7 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.14.0</version>
 				<configuration>
-					<release>11</release>
+					<release>${JDK_VER}</release>
 					<encoding>UTF-8</encoding>
 				</configuration>
 			</plugin>
