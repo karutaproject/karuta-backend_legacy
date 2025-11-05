@@ -49,7 +49,7 @@ jobs:
         tag_name: ${{ github.ref_name }}-${{ env.TARGET }}
         release_name: Draft Release for ${{ github.ref_name }}-${{ env.TARGET }}
         body: |
-          Draft release for branch  ${{ github.ref_name }}-${{ env.TARGET }}
+          Draft release for branch  ${{ github.ref_name }}
           Commit: ${{ github.sha }}
         draft: true
         prerelease: false
