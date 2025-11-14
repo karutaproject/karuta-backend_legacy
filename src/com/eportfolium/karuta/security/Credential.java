@@ -612,36 +612,19 @@ public class Credential {
 			return status;
 		}
 
-		ResultSet rs = null;
-		PreparedStatement stmt = null;
-		try {
-			final var query = "SELECT c.userid FROM credential c WHERE c.userid=? AND c.is_designer=1";
-			stmt = c.prepareStatement(query);
+		final var query = "SELECT c.userid FROM credential c WHERE c.userid=? AND c.is_designer=1";
+		try (var stmt = c.prepareStatement(query)) {
 			stmt.setInt(1, userId);
-			rs = stmt.executeQuery();
-
-			if (rs.next()) {
-				status = true;
+			try (var rs = stmt.executeQuery()) {
+				if (rs.next()) {
+					status = true;
+				}
 			}
 		} catch (final SQLException e) {
 			e.printStackTrace();
 			status = false;
-		} finally {
-			if (stmt != null) {
-				try {
-					stmt.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
-			if (rs != null) {
-				try {
-					rs.close();
-				} catch (final SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
+
 		return status;
 	}
 
