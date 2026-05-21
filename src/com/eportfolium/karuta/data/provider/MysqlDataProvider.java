@@ -10716,7 +10716,7 @@ public class MysqlDataProvider implements DataProvider {
 		String is_designer = null;
 		String is_sharer = null;
 		String hasSubstitute = null;
-		var other = "";
+		String other = null;
 
 		//On prepare les requetes SQL
 		PreparedStatement st;
