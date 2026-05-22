@@ -86,7 +86,6 @@ import com.eportfolium.karuta.security.ConnexionLdap;
 import com.eportfolium.karuta.security.Credential;
 import com.eportfolium.karuta.security.NodeRight;
 import com.eportfolium.karuta.socialnetwork.Elgg;
-import com.eportfolium.karuta.socialnetwork.Ning;
 import com.google.gson.Gson;
 
 import jakarta.activation.MimeType;
@@ -1349,8 +1348,7 @@ public class RestServicePortfolio {
 			@Context HttpServletRequest httpServletRequest, @QueryParam("type") Integer type) {
 		checkCredential(httpServletRequest, user, token, group);
 
-		final var ning = new Ning();
-		return ning.getXhtmlActivites();
+		return "Need re-implementation if ever used. Code was a simple http client wrapper.";
 	}
 
 	/**
@@ -1378,8 +1376,8 @@ public class RestServicePortfolio {
 		final var ui = checkCredential(httpServletRequest, user, token, null);
 
 		try (var c = SqlUtils.getConnection();) {
-			var node = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId, userrole,
-					this.label, cutoff);
+			final var node = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, false, ui.userId, groupId,
+					userrole, this.label, cutoff);
 			if (node == null) {
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
 			}
@@ -1742,8 +1740,8 @@ public class RestServicePortfolio {
 		final var ui = checkCredential(httpServletRequest, user, token, null);
 
 		try (var c = SqlUtils.getConnection();) {
-			var node = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId, userrole,
-					this.label, cutoff).toString();
+			final var node = dataProvider.getNode(c, new MimeType("text/xml"), nodeUuid, true, ui.userId, groupId,
+					userrole, this.label, cutoff).toString();
 			if (node == null) {
 				throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
 			}

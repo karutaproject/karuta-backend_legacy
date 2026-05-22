@@ -2179,8 +2179,8 @@ public class MysqlDataProvider implements DataProvider {
 			return nodexml;
 		}
 		if (outMimeType.getSubType().equals("json")) {
-			var jsonBuilder = new StringBuilder();
-			var nodeJson = getNodeJsonOutput(c, nodeUuid, withChildren, null, userId, groupId, userRole, label, true);
+			final var jsonBuilder = new StringBuilder();
+			final var nodeJson = getNodeJsonOutput(c, nodeUuid, withChildren, null, userId, groupId, userRole, label, true);
 			return jsonBuilder.append("{").append(nodeJson).append("}");
 		}
 		return null;
@@ -2862,7 +2862,7 @@ public class MysqlDataProvider implements DataProvider {
 			}
 
 			/// TODO: Test this more, should use getNode rather than having another output
-			var node = getNode(c, new MimeType("text/xml"), nodeUuid, true, userId, groupId, userRole, null, null);
+			final var node = getNode(c, new MimeType("text/xml"), nodeUuid, true, userId, groupId, userRole, null, null);
 			if (node == null) {
 				return null;
 			}
@@ -3050,8 +3050,8 @@ public class MysqlDataProvider implements DataProvider {
 			footer = "}}";
 		}
 
-		var node = getNode(c, outMimeType, rootNodeUuid, true, userId, groupId, userrole, null, cutoff);
-		var nodeString = node == null ? "" : node.toString();
+		final var node = getNode(c, outMimeType, rootNodeUuid, true, userId, groupId, userrole, null, cutoff);
+		final var nodeString = node == null ? "" : node.toString();
 		return header + nodeString + footer;
 	}
 
@@ -8264,7 +8264,7 @@ public class MysqlDataProvider implements DataProvider {
 				st = c.prepareStatement(gri, new String[] { "grid" });
 			}
 
-			for (String label : resolve.groups.keySet()) {
+			for (final String label : resolve.groups.keySet()) {
 				st.setInt(1, 1);
 				st.setString(2, label);
 				st.setInt(3, 0);
@@ -9533,7 +9533,7 @@ public class MysqlDataProvider implements DataProvider {
 				st = c.prepareStatement(gri, new String[] { "grid" });
 			}
 
-			for (String label : resolve.groups.keySet()) {
+			for (final String label : resolve.groups.keySet()) {
 				st.setInt(1, 1);
 				st.setString(2, label);
 				st.setInt(3, 0);
@@ -10709,7 +10709,7 @@ public class MysqlDataProvider implements DataProvider {
 		String is_designer = null;
 		String is_sharer = null;
 		String hasSubstitute = null;
-		var other = "";
+		String other = null;
 
 		//On prepare les requetes SQL
 		PreparedStatement st;
