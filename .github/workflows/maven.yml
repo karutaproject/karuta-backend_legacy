@@ -48,14 +48,12 @@ jobs:
       with:
         tag_name: ${{ github.ref_name }}-${{ env.TARGET }}
         name: Draft Release for ${{ github.ref_name }}-${{ env.TARGET }}
-        body: |
-          Draft release for branch  ${{ github.ref_name }}
-          Commit: ${{ github.sha }}
         draft: true
         prerelease: false
+        generate_release_notes: true
 
     - name: Upload Release Asset
-      uses: softprops/action-gh-release@v3
+      uses: shogo82148/actions-upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
