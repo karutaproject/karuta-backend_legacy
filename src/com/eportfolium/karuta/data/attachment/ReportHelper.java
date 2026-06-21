@@ -18,33 +18,22 @@ package com.eportfolium.karuta.data.attachment;
 import java.io.ByteArrayInputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.entity.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import com.eportfolium.karuta.data.provider.ReportHelperProvider;
 import com.eportfolium.karuta.data.utils.DomUtils;
@@ -70,11 +59,26 @@ public class ReportHelper extends HttpServlet {
 				"]>%s";
 	}
 
+	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			LogUtils.initDirectory(getServletContext());
+
+			dataProvider = SqlUtils.initProviderHelper();
+			final var sc = config.getServletContext();
+			servletDir = sc.getRealPath("/");
+		} catch (final Exception e) {
+			e.printStackTrace();
+			logger.error(e.getMessage());
+		}
+	}
+
 	/// Delete specific vector
 	@Override
 	protected void doDelete(HttpServletRequest request, HttpServletResponse response) {
 		/// Check if user is logged in
-		final HttpSession session = request.getSession(false);
+		final var session = request.getSession(false);
 		if (session == null || session.getAttribute("uid") == null) {
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
@@ -86,61 +90,47 @@ public class ReportHelper extends HttpServlet {
 			return;
 		}
 
-		Connection c = null;
-		try {
-			final HashMap<String, String> map = new HashMap<>();
+		try (var c = SqlUtils.getConnection()) {
+			final var map = new HashMap<String, String>();
 
 			//// Process input
 			// If there's a userid
-			final String date = request.getParameter("date");
+			final var date = request.getParameter("date");
 			if (date != null) {
 				final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-				final java.util.Date d = dateFormat.parse(date);
+				final var d = dateFormat.parse(date);
 				map.put("date", dateFormat.format(d));
 			}
 			// Column parameters
-			for (int i = 1; i <= 10; i++) {
-				final String key = "a" + i;
-				final String value = request.getParameter(key);
+			for (var i = 1; i <= 10; i++) {
+				final var key = "a" + i;
+				final var value = request.getParameter(key);
 				if (value != null) {
 					map.put(key, value);
 				}
 			}
 
 			/// Query
-			c = SqlUtils.getConnection();
 			map.put("userid", Integer.toString(uid));
 
-			final int value = dataProvider.deleteVector(c, map);
+			final var value = dataProvider.deleteVector(c, map);
 
 			// Send result
-			final OutputStream output = response.getOutputStream();
-			output.write(Integer.toString(value).getBytes());
-			output.close();
+			try (final OutputStream output = response.getOutputStream()) {
+				output.write(Integer.toString(value).getBytes());
+			}
 
 		} catch (final Exception e) {
 			e.printStackTrace();
 			response.setStatus(500);
-		} finally {
-			/// Close connections
-			try {
-				if (c != null) {
-					c.close();
-					//				request.getReader().close();
-					//				response.getWriter().close();
-				}
-			} catch (final Exception e) {
-				e.printStackTrace();
-			}
 		}
-
 	}
 
 	// Searching
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) {
 		/// Check if user is logged in
-		final HttpSession session = request.getSession(false);
+		final var session = request.getSession(false);
 		if (session == null || session.getAttribute("uid") == null) {
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			return;
@@ -152,61 +142,47 @@ public class ReportHelper extends HttpServlet {
 			return;
 		}
 
-		Connection c = null;
-		try {
-			final HashMap<String, String> map = new HashMap<>();
+		try (var c = SqlUtils.getConnection()) {
+			final var map = new HashMap<String, String>();
 
 			//// Process input
 			// If there's a userid
-			final String requested_uid_str = request.getParameter("userid");
+			final var requested_uid_str = request.getParameter("userid");
 			if (requested_uid_str != null) {
-				final int requested_uid = Integer.parseInt(requested_uid_str);
+				final var requested_uid = Integer.parseInt(requested_uid_str);
 				if (requested_uid > 0) {
 					map.put("userid", requested_uid_str);
 				}
 			}
 			// Column parameters
-			for (int i = 1; i <= 10; i++) {
-				final String key = "a" + i;
-				final String value = request.getParameter(key);
+			for (var i = 1; i <= 10; i++) {
+				final var key = "a" + i;
+				final var value = request.getParameter(key);
 				if (value != null) {
 					map.put(key, value);
 				}
 			}
 			/// Query
-			c = SqlUtils.getConnection();
-			final String vectorValue = dataProvider.getVector(c, uid, map);
+			final var vectorValue = dataProvider.getVector(c, uid, map);
 
 			// Send result
 			response.setContentType(ContentType.APPLICATION_XML.getMimeType());
 			response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
-			final OutputStream output = response.getOutputStream();
-			output.write(vectorValue.getBytes(StandardCharsets.UTF_8));
-			output.close();
+			try (final OutputStream output = response.getOutputStream()) {
+				output.write(vectorValue.getBytes(StandardCharsets.UTF_8));
+			}
 
 		} catch (final Exception e) {
 			e.printStackTrace();
 			response.setStatus(500);
-		} finally {
-			/// Close connections
-			try {
-				if (c != null) {
-					c.close();
-					//			request.getReader().close();
-					//			response.getWriter().close();
-				}
-			} catch (final Exception e) {
-				e.printStackTrace();
-			}
 		}
-
 	}
 
 	// Write vector
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) {
 		/// Check if user is logged in
-		final HttpSession session = request.getSession(false);
+		final var session = request.getSession(false);
 		//		/*
 		if (session == null) {
 			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -220,30 +196,29 @@ public class ReportHelper extends HttpServlet {
 		}
 		//*/
 
-		Connection c = null;
-		try {
-			final DocumentBuilderFactory documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
+		try (var c = SqlUtils.getConnection()) {
+			final var documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
 			documentBuilderFactory.setAttribute("http://apache.org/xml/features/disallow-doctype-decl", false);
-			final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			final var documentBuilder = documentBuilderFactory.newDocumentBuilder();
 
-			final String sanitizedXml = String.format(header,
+			final var sanitizedXml = String.format(header,
 					IOUtils.toString(request.getInputStream(), StandardCharsets.UTF_8));
 
 			logger.error(sanitizedXml);
 
-			final Document doc = documentBuilder.parse(new ByteArrayInputStream(sanitizedXml.getBytes()));
-			final NodeList vectorNode = doc.getElementsByTagName("vector");
-			final HashMap<String, String> map = new HashMap<>();
+			final var doc = documentBuilder.parse(new ByteArrayInputStream(sanitizedXml.getBytes()));
+			final var vectorNode = doc.getElementsByTagName("vector");
+			final var map = new HashMap<String, String>();
 			map.put("userid", Integer.toString(uid));
 			if (vectorNode.getLength() == 1) {
-				final String nodename = "a1?\\d";
-				final Pattern namePat = Pattern.compile(nodename);
+				final var nodename = "a1?\\d";
+				final var namePat = Pattern.compile(nodename);
 
-				Node a_node = vectorNode.item(0).getFirstChild();
+				var a_node = vectorNode.item(0).getFirstChild();
 				while (a_node != null) {
-					final String name = a_node.getNodeName();
-					final String val = a_node.getTextContent();
-					final Matcher nameMatcher = namePat.matcher(name);
+					final var name = a_node.getNodeName();
+					final var val = a_node.getTextContent();
+					final var nameMatcher = namePat.matcher(name);
 					if (nameMatcher.find()) {
 						map.put(name, val);
 					}
@@ -252,24 +227,24 @@ public class ReportHelper extends HttpServlet {
 			}
 
 			// Inverse rights to create groups
-			final NodeList nList = doc.getElementsByTagName("rights");
-			final HashMap<String, HashSet<String>> groups = new HashMap<String, HashSet<String>>();
+			final var nList = doc.getElementsByTagName("rights");
+			final var groups = new HashMap<String, HashSet<String>>();
 			final String[] attribName = { "w", "r", "d" };
-			final Node nRight = nList.item(0);
+			final var nRight = nList.item(0);
 			if (nRight != null) {
-				final NamedNodeMap attribs = nRight.getAttributes();
+				final var attribs = nRight.getAttributes();
 				for (final String att : attribName) {
-					final Node value = attribs.getNamedItem(att);
+					final var value = attribs.getNamedItem(att);
 					if (value == null) {
 						continue;
 					}
-					final String names = value.getTextContent();
-					final String[] split = names.split(",");
+					final var names = value.getTextContent();
+					final var split = names.split(",");
 					for (String s : split) {
 						s = s.trim();
-						HashSet<String> right = groups.get(s);
+						var right = groups.get(s);
 						if (right == null) {
-							right = new HashSet<String>();
+							right = new HashSet<>();
 							groups.put(s, right);
 						}
 						right.add(att);
@@ -278,55 +253,26 @@ public class ReportHelper extends HttpServlet {
 			}
 
 			/// Send query
-			c = SqlUtils.getConnection();
 			c.setAutoCommit(false);
-			final int retValue = dataProvider.writeVector(c, uid, map, groups);
+			try {
+				final var retValue = dataProvider.writeVector(c, uid, map, groups);
 
-			// Send result
-			final OutputStream output = response.getOutputStream();
-			String text = "OK";
-			if (retValue < 0) {
-				response.setStatus(304);
-				text = "Not modified";
+				// Send result
+				var text = "OK";
+				if (retValue < 0) {
+					response.setStatus(304);
+					text = "Not modified";
+				}
+				try (final OutputStream output = response.getOutputStream()) {
+					output.write(text.getBytes());
+				}
+			} catch (final Exception e) {
+				c.rollback();
+				throw e;
 			}
-			output.write(text.getBytes());
-			output.close();
-
 		} catch (final Exception e) {
 			logger.error("Exception", e);
-			try {
-				if (c != null) {
-					c.rollback();
-				}
-			} catch (final SQLException e1) {
-				logger.error("SQLException", e1);
-			}
 			response.setStatus(500);
-		} finally {
-			try {
-				if (c != null) {
-					c.commit();
-					c.close();
-				}
-			} catch (final SQLException e) {
-				logger.error("SQLException", e);
-			}
 		}
-	}
-
-	@Override
-	public void init(ServletConfig config) throws ServletException {
-		super.init(config);
-		try {
-			LogUtils.initDirectory(getServletContext());
-
-			dataProvider = SqlUtils.initProviderHelper();
-			final ServletContext sc = config.getServletContext();
-			servletDir = sc.getRealPath("/");
-		} catch (final Exception e) {
-			e.printStackTrace();
-			logger.error(e.getMessage());
-		}
-
 	}
 }
