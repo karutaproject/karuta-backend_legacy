@@ -146,7 +146,7 @@ public class ReportHelperProvider {
 
 		if (!cred.isAdmin(c, userId)) {
 			// If user is not admin, check if read access is defined
-			cols.add("a1=?");
+			cols.add("(a1=? OR a1='all')");
 			final String user = cred.getUsername(c, userId);
 			vals.add(user);
 		}
