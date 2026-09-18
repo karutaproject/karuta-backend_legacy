@@ -37,7 +37,7 @@ public class ReportHelperProvider {
 
 	final Logger logger = LoggerFactory.getLogger(ReportHelperProvider.class);
 
-	final private Credential cred = new Credential();
+	final private Credential cred = Credential.getInstance();
 
 	DataSource ds = null;
 

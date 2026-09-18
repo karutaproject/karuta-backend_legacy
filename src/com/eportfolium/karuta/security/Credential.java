@@ -35,6 +35,8 @@ import jakarta.servlet.http.HttpServlet;
 public class Credential {
 	private final static Logger logger = LoggerFactory.getLogger(Credential.class);
 
+	private static Credential INSTANCE;
+
 	//	private final Connection connection;
 	public static final String NONE = "none";
 	public static final String ADD = "add";
@@ -50,10 +52,17 @@ public class Credential {
 	/**
 	 * @see HttpServlet#HttpServlet()
 	 */
-	public Credential() {
+	private Credential() {
 		super();
 		dbserveur = ConfigUtils.getInstance().getProperty("serverType");
 		//		this.connection = connection;
+	}
+
+	public static Credential getInstance() {
+		if (INSTANCE == null) {
+			INSTANCE = new Credential();
+		}
+		return INSTANCE;
 	}
 
 	public int getAllGroupRightId(Connection c, String portfolio_id) {

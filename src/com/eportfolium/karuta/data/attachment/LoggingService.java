@@ -80,7 +80,7 @@ public class LoggingService extends HttpServlet {
 			return;
 		}
 
-		final var credential = new Credential();
+		final var credential = Credential.getInstance();
 		/// Check if user is admin
 		Connection c;
 		try {

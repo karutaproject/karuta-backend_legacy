@@ -153,7 +153,6 @@ public class RestServicePortfolio {
 
 	//	DataSource ds;
 	private DataProvider dataProvider;
-	private final Credential credential = new Credential();
 
 	// Options
 	private boolean activelogin;
@@ -626,7 +625,7 @@ public class RestServicePortfolio {
 		try {
 			c = SqlUtils.getConnection();
 			// Not (admin or self)
-			if (!credential.isAdmin(c, ui.userId) && ui.userId != userid) {
+			if (!Credential.getInstance().isAdmin(c, ui.userId) && ui.userId != userid) {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 			}
 
@@ -676,7 +675,7 @@ public class RestServicePortfolio {
 			c = SqlUtils.getConnection();
 
 			// Not (admin or self)
-			if (!credential.isAdmin(c, ui.userId) && ui.userId != userId) {
+			if (!Credential.getInstance().isAdmin(c, ui.userId) && ui.userId != userId) {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
 			}
 
@@ -1524,8 +1523,8 @@ public class RestServicePortfolio {
 		try {
 			c = SqlUtils.getConnection();
 			// Admin, or if user has a right to read can fetch this information
-			if (!credential.isAdmin(c, ui.userId)
-					&& !credential.hasNodeRight(c, ui.userId, 0, nodeUuid, Credential.READ)) {
+			if (!Credential.getInstance().isAdmin(c, ui.userId)
+					&& !Credential.getInstance().hasNodeRight(c, ui.userId, 0, nodeUuid, Credential.READ)) {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "No rights");
 			}
 
@@ -2244,10 +2243,10 @@ public class RestServicePortfolio {
 						groupId, userrole, null, ui.subId).toString();
 			} else {
 				if (public_var != null) {
-					final var publicid = credential.getMysqlUserUid(c, "public");
+					final var publicid = Credential.getInstance().getMysqlUserUid(c, "public");
 					returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), publicid, groupId, userrole,
 							portfolioActive, 0, portfolioProject, portfolioProjectId, countOnly, search).toString();
-				} else if (userId != null && credential.isAdmin(c, ui.userId)) {
+				} else if (userId != null && Credential.getInstance().isAdmin(c, ui.userId)) {
 					returnValue = dataProvider.getPortfolios(c, new MimeType("text/xml"), userId, groupId, userrole,
 							portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search)
 							.toString();
@@ -2304,7 +2303,7 @@ public class RestServicePortfolio {
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
-			if (credential.isAdmin(c, uinfo.userId)) {
+			if (Credential.getInstance().isAdmin(c, uinfo.userId)) {
 				final var res = dataProvider.getPortfolioShared(c, uinfo.userId, userid);
 				return Response.ok(res).build();
 			}
@@ -2935,7 +2934,7 @@ public class RestServicePortfolio {
 			c = SqlUtils.getConnection();
 
 			String xmlGroups;
-			if (credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId)) {
+			if (Credential.getInstance().isAdmin(c, ui.userId) || Credential.getInstance().isCreator(c, ui.userId)) {
 				xmlGroups = dataProvider.getListUsers(c, ui.userId, username, firstname, lastname, email);
 			} else if (ui.userId != 0) {
 				xmlGroups = dataProvider.getInfUser(c, ui.userId, ui.userId);
@@ -3506,7 +3505,7 @@ public class RestServicePortfolio {
 		Connection c = null;
 		try {
 			c = SqlUtils.getConnection();
-			if (!credential.isAdmin(c, ui.userId) && !credential.isCreator(c, ui.userId)) {
+			if (!Credential.getInstance().isAdmin(c, ui.userId) && !Credential.getInstance().isCreator(c, ui.userId)) {
 				return Response.status(Status.FORBIDDEN).entity("403").build();
 			}
 
@@ -4007,7 +4006,7 @@ public class RestServicePortfolio {
 
 		try {
 			c = SqlUtils.getConnection();
-			if (!credential.isAdmin(c, ui.userId) && !credential.isCreator(c, ui.userId)) {
+			if (!Credential.getInstance().isAdmin(c, ui.userId) && !Credential.getInstance().isCreator(c, ui.userId)) {
 				return Response.status(Status.FORBIDDEN).entity("403").build();
 			}
 
@@ -4466,7 +4465,7 @@ public class RestServicePortfolio {
 
 		try {
 			c = SqlUtils.getConnection();
-			if (!credential.isAdmin(c, ui.userId)) {
+			if (!Credential.getInstance().isAdmin(c, ui.userId)) {
 				return Response.status(Status.FORBIDDEN).build();
 			}
 
@@ -5454,7 +5453,7 @@ public class RestServicePortfolio {
 
 			/// If no groupId was specified, but a role was sent
 			if (groupId == 0 && userrole != null) {
-				groupId = credential.getGroupid(c, userrole, nodeUuid);
+				groupId = Credential.getInstance().getGroupid(c, userrole, nodeUuid);
 			}
 
 			final var returnValue = dataProvider
@@ -5527,7 +5526,7 @@ public class RestServicePortfolio {
 
 			/// If no groupId was specified, but a role was sent
 			if (groupId == 0 && userrole != null) {
-				groupId = credential.getGroupid(c, userrole, nodeUuid);
+				groupId = Credential.getInstance().getGroupid(c, userrole, nodeUuid);
 			}
 
 			final var returnValue = dataProvider
@@ -5715,8 +5714,9 @@ public class RestServicePortfolio {
 		try {
 			c = SqlUtils.getConnection();
 			// Check if logged user is either admin, or owner of the current portfolio
-			if (credential.isAdmin(c, ui.userId) || credential.isOwner(c, ui.userId, portfolioUuid)) {
-				retval = credential.putPortfolioOwner(c, portfolioUuid, newOwner);
+			if (Credential.getInstance().isAdmin(c, ui.userId)
+					|| Credential.getInstance().isOwner(c, ui.userId, portfolioUuid)) {
+				retval = Credential.getInstance().putPortfolioOwner(c, portfolioUuid, newOwner);
 
 			}
 		} catch (final Exception ex) {
@@ -5775,7 +5775,7 @@ public class RestServicePortfolio {
 
 			/// If no groupId was specified, but a role was sent
 			if (groupId == 0 && userrole != null) {
-				groupId = credential.getGroupid(c, userrole, nodeParentUuid);
+				groupId = Credential.getInstance().getGroupid(c, userrole, nodeParentUuid);
 			}
 
 			final var returnValue = dataProvider
@@ -5951,7 +5951,7 @@ public class RestServicePortfolio {
 			c = SqlUtils.getConnection();
 
 			String queryuser;
-			if (credential.isAdmin(c, ui.userId) || credential.isCreator(c, ui.userId)) {
+			if (Credential.getInstance().isAdmin(c, ui.userId) || Credential.getInstance().isCreator(c, ui.userId)) {
 				queryuser = dataProvider.putInfUser(c, ui.userId, userid, xmlInfUser);
 				if (queryuser == null) {
 					throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");

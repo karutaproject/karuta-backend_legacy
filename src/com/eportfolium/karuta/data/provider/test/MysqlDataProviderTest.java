@@ -47,7 +47,7 @@ public class MysqlDataProviderTest {
 			final var xmlMimeType = new MimeType("text/xml");
 			final var dataProvider = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
 			final var connection = SqlUtils.getConnection();
-			new Credential();
+			final var credential = Credential.getInstance();
 
 			final var portfolioUuid = "aaaa-bbbb-cccc";
 			Integer userId = 2;

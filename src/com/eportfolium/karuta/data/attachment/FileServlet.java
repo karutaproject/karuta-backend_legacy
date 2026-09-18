@@ -76,7 +76,6 @@ public class FileServlet extends HttpServlet {
 
 	private static final Logger logger = LoggerFactory.getLogger(FileServlet.class);
 
-	private final Credential credential = new Credential();
 	private final ArrayList<String> ourIPs = new ArrayList<>();
 	private String server;
 	private DataProvider dataProvider;
@@ -177,7 +176,7 @@ public class FileServlet extends HttpServlet {
 					throw new RestWebApplicationException(Status.FORBIDDEN, "");
 				}
 
-				if (!credential.hasNodeRight(c, userId, groupId, uuid, Credential.READ)) {
+				if (!Credential.getInstance().hasNodeRight(c, userId, groupId, uuid, Credential.READ)) {
 					logger.error("Forbidden access: no rights");
 					response.sendError(HttpServletResponse.SC_FORBIDDEN);
 					//throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit READ sur le noeud "+nodeUuid);
@@ -345,7 +344,7 @@ public class FileServlet extends HttpServlet {
 					throw new RestWebApplicationException(Status.FORBIDDEN, "");
 				}
 
-				if (!credential.hasNodeRight(c, userId, groupId, uuid, Credential.READ)) {
+				if (!Credential.getInstance().hasNodeRight(c, userId, groupId, uuid, Credential.READ)) {
 					logger.error("Forbidden access: no rights");
 					response.sendError(HttpServletResponse.SC_FORBIDDEN);
 					//throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit READ sur le noeud "+nodeUuid);
@@ -557,7 +556,7 @@ public class FileServlet extends HttpServlet {
 			}
 
 			/// Vérification des droits d'accés
-			if (!credential.hasNodeRight(c, userId, groupId, uuid, Credential.WRITE)) {
+			if (!Credential.getInstance().hasNodeRight(c, userId, groupId, uuid, Credential.WRITE)) {
 				response.sendError(HttpServletResponse.SC_FORBIDDEN);
 				return;
 				//throw new Exception("L'utilisateur userId="+userId+" n'a pas le droit WRITE sur le noeud "+nodeUuid);
@@ -633,7 +632,7 @@ public class FileServlet extends HttpServlet {
 			} else //				if( ServletFileUpload.isMultipartContent(request) )
 			if (true) {
 				final List<FileItem> items = upload.parseRequest(request);
-				for (FileItem item : items) {
+				for (final FileItem item : items) {
 					if ("uploadfile".equals(item.getFieldName())) {
 						// Send raw data
 						inputData = item.getInputStream();
@@ -802,7 +801,7 @@ public class FileServlet extends HttpServlet {
 			}
 
 			/// Vérification des droits d'accés
-			if (!credential.hasNodeRight(c, userId, groupId, uuid, Credential.WRITE)) {
+			if (!Credential.getInstance().hasNodeRight(c, userId, groupId, uuid, Credential.WRITE)) {
 				logger.error("User is not authorized - userId: {}, groupId: {}, uuid: {}, WRITE", userId, groupId,
 						uuid);
 				response.sendError(HttpServletResponse.SC_FORBIDDEN);

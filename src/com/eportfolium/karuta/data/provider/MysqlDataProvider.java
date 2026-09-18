@@ -128,7 +128,7 @@ public class MysqlDataProvider implements DataProvider {
 
 	public static final String XML_YES = "y";
 
-	final private Credential cred = new Credential();
+	final private Credential cred = Credential.getInstance();
 
 	private final String userDir;
 
