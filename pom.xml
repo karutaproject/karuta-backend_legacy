@@ -169,6 +169,7 @@
 		<dependency>
 			<groupId>org.sakaiproject.basiclti</groupId>
 			<artifactId>basiclti-util</artifactId>
+			<!-- 23.5 almost available, basiclti is missing -->
 			<version>23.3</version>
 			<exclusions>
 				<exclusion>
@@ -176,8 +177,8 @@
 					<artifactId>oauth</artifactId>
 				</exclusion>
 			</exclusions>
-
 		</dependency>
+		
 		<dependency>
 			<groupId>org.jasig.cas.client</groupId>
 			<artifactId>cas-client-core</artifactId>

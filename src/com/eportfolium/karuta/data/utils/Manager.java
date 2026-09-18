@@ -7,7 +7,9 @@ import com.eportfolium.karuta.data.attachment.EmploiStoreService;
 
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.annotation.WebListener;
 
+@WebListener
 public class Manager implements ServletContextListener {
 	private final static Logger logger = LoggerFactory.getLogger(Manager.class);
 
