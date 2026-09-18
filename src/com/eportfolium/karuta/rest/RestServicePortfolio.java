@@ -39,10 +39,6 @@ import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import javax.activation.MimeType;
-import javax.servlet.ServletConfig;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
@@ -92,6 +88,10 @@ import com.eportfolium.karuta.security.NodeRight;
 import com.eportfolium.karuta.socialnetwork.Elgg;
 import com.google.gson.Gson;
 
+import jakarta.activation.MimeType;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.CookieParam;
 import jakarta.ws.rs.DELETE;
@@ -257,7 +257,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Delete a right definition for a node DELETE /rest/api/groupRights parameters:
+	 * Delete a right definition for a node
+	 * DELETE /rest/api/groupRights
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/groupRights")
@@ -654,8 +656,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * !! This or the other gets deleted (redundant) Delete users DELETE
-	 * /rest/api/users parameters: return:
+	 * !! This or the other gets deleted (redundant)
+	 * Delete users
+	 * DELETE /rest/api/users
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/users")
 	@DELETE
@@ -703,8 +708,12 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Remove a user from a user group, or remove a usergroup DELETE
-	 * /rest/api/usersgroups parameters: - group: group id - user: user id return:
+	 * Remove a user from a user group, or remove a usergroup
+	 * DELETE /rest/api/usersgroups
+	 * parameters:
+	 * - group: group id
+	 * - user: user id
+	 * return:
 	 * Code 200
 	 **/
 	@Path("/usersgroups")
@@ -737,10 +746,19 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch current user info GET /rest/api/credential parameters: return:
-	 * <user id="uid"> <username></username> <firstname></firstname>
-	 * <lastname></lastname> <email></email> <admin>1/0</admin>
-	 * <designer>1/0</designer> <active>1/0</active> <substitute>1/0</substitute>
+	 * Fetch current user info
+	 * GET /rest/api/credential
+	 * parameters:
+	 * return:
+	 * <user id="uid">
+	 * <username></username>
+	 * <firstname></firstname>
+	 * <lastname></lastname>
+	 * <email></email>
+	 * <admin>1/0</admin>
+	 * <designer>1/0</designer>
+	 * <active>1/0</active>
+	 * <substitute>1/0</substitute>
 	 * </user>
 	 **/
 	@Path("/credential")
@@ -920,7 +938,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * elgg related GET /rest/api/elgg/site/river_feed parameters: return:
+	 * elgg related
+	 * GET /rest/api/elgg/site/river_feed
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/elgg/site/river_feed")
 	@GET
@@ -948,7 +969,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * elgg related POST /rest/api/elgg/wire parameters: return:
+	 * elgg related
+	 * POST /rest/api/elgg/wire
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/elgg/wire")
 	@POST
@@ -976,11 +1000,17 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get rights in a role from a groupid GET /rest/api/groupRights parameters: -
-	 * group: role id return: <groupRights> <groupRight gid="groupid"
-	 * templateId="grouprightid> <item AD="True/False" creator="uid"; date="";
-	 * DL="True/False" id=uuid owner=uid"; RD="True/False" SB="True"/"False"
-	 * typeId=" "; WR="True/False"/>"; </groupRight> </groupRights>
+	 * Get rights in a role from a groupid
+	 * GET /rest/api/groupRights
+	 * parameters:
+	 * - group: role id
+	 * @return: {@code
+	 * <groupRights>
+	 * <groupRight gid="groupid" templateId="grouprightid">
+	 * <item AD="True/False" creator="uid" date="" DL="True/False" id=uuid owner="uid" RD="True/False" SB="True"/"False" typeId=" " WR="True/False"/>
+	 * </groupRight>
+	 * </groupRights>
+	 * }
 	 **/
 	@Path("/groupRights")
 	@GET
@@ -1011,10 +1041,17 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get role list from portfolio from uuid GET /rest/api/groupRightsInfos
-	 * parameters: - portfolioId: portfolio uuid return: <groupRightsInfos>
-	 * <groupRightInfo grid="grouprightid"> <label></label> <owner>UID</owner>
-	 * </groupRightInfo> </groupRightsInfos>
+	 * Get role list from portfolio from uuid
+	 * GET /rest/api/groupRightsInfos
+	 * parameters:
+	 * - portfolioId: portfolio uuid
+	 * return:
+	 * <groupRightsInfos>
+	 * <groupRightInfo grid="grouprightid">
+	 * <label></label>
+	 * <owner>UID</owner>
+	 * </groupRightInfo>
+	 * </groupRightsInfos>
 	 **/
 	@Path("/groupRightsInfos")
 	@GET
@@ -1050,9 +1087,15 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get groups from a user id GET /rest/api/groups parameters: - group: group id
-	 * return: <groups> <group id="gid" owner="uid" templateId="rrgid">GROUP
-	 * LABEL</group> ... </groups>
+	 * Get groups from a user id
+	 * GET /rest/api/groups
+	 * parameters:
+	 * - group: group id
+	 * return:
+	 * <groups>
+	 * <group id="gid" owner="uid" templateId="rrgid">GROUP LABEL</group>
+	 * ...
+	 * </groups>
 	 **/
 	@Path("/groups")
 	@GET
@@ -1083,8 +1126,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch groups from a role and portfolio id GET
-	 * /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/groups parameters:
+	 * Fetch groups from a role and portfolio id
+	 * GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/groups
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/users/Portfolio/{portfolio-id}/Role/{role}/groups")
@@ -1120,7 +1164,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get roles in a portfolio GET /rest/api/groups/{portfolio-id} parameters:
+	 * Get roles in a portfolio
+	 * GET /rest/api/groups/{portfolio-id}
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/groups/{portfolio-id}")
@@ -1157,9 +1203,17 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get a list of role/group for this user GET
-	 * /rest/api/users/user/{user-id}/groups parameters: return: <profiles>
-	 * <profile> <group id="gid"> <label></label> <role></role> </group> </profile>
+	 * Get a list of role/group for this user
+	 * GET /rest/api/users/user/{user-id}/groups
+	 * parameters:
+	 * return:
+	 * <profiles>
+	 * <profile>
+	 * <group id="gid">
+	 * <label></label>
+	 * <role></role>
+	 * </group>
+	 * </profile>
 	 * </profiles>
 	 **/
 	@Path("/users/user/{user-id}/groups")
@@ -1191,8 +1245,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch a model FIXME: Most probably useless GET /rest/api/{model-id}
-	 * parameters: return:
+	 * Fetch a model
+	 * FIXME: Most probably useless
+	 * GET /rest/api/{model-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Deprecated
 	@Path("/models/{model-id}")
@@ -1233,8 +1290,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch all models FIXME: Most probably useless GET /rest/api/models
-	 * parameters: return:
+	 * Fetch all models
+	 * FIXME: Most probably useless
+	 * GET /rest/api/models
+	 * parameters:
+	 * return:
 	 **/
 	@Deprecated
 	@Path("/models")
@@ -1275,7 +1335,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Ning related GET /rest/api/ning/activities parameters: return:
+	 * Ning related
+	 * GET /rest/api/ning/activities
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/ning/activities")
 	@GET
@@ -1289,8 +1352,12 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get a node, without children FIXME: Check if it's the case GET
-	 * /rest/api/nodes/node/{node-id} parameters: return: nodes in the ASM format
+	 * Get a node, without children
+	 * FIXME: Check if it's the case
+	 * GET /rest/api/nodes/node/{node-id}
+	 * parameters:
+	 * return:
+	 * nodes in the ASM format
 	 **/
 	@Path("/nodes/node/{node-id}")
 	@GET
@@ -1341,9 +1408,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get the single first semantic tag node inside specified portfolio GET
-	 * /rest/api/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag} parameters:
-	 * return: node in ASM format
+	 * Get the single first semantic tag node inside specified portfolio
+	 * GET /rest/api/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag}
+	 * parameters:
+	 * return:
+	 * node in ASM format
 	 **/
 	@Path("/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag}")
 	@GET
@@ -1378,8 +1447,12 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch nodes metdata GET /rest/api/nodes/node/{node-id}/metadatawad
-	 * parameters: return: <metadata-wad/>
+	 * Fetch nodes metdata
+	 * GET /rest/api/nodes/node/{node-id}/metadatawad
+	 * parameters:
+	 * @return: {@code
+	 * <metadata-wad/>
+	 * }
 	 **/
 	@Path("/nodes/node/{nodeid}/metadatawad")
 	@GET
@@ -1427,13 +1500,12 @@ public class RestServicePortfolio {
 		}
 	}
 
-	// GET /portfolios/zip ? portfolio={}, toujours avec files
-	// zip séparés
-	// zip des zip
-
 	/**
-	 * Fetch portfolio id from a given node id GET
-	 * /rest/api/nodes/node/{node-id}/portfolioid parameters: return: portfolioid
+	 * Fetch portfolio id from a given node id
+	 * GET /rest/api/nodes/node/{node-id}/portfolioid
+	 * parameters:
+	 * return:
+	 * portfolioid
 	 **/
 	@Path("/nodes/node/{node-id}/portfolioid")
 	@GET
@@ -1483,9 +1555,15 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch rights per role for a node GET /rest/api/nodes/node/{node-id}/rights
-	 * parameters: return: <node uuid=""> <role name=""> <right RD="" WR="" DL="" />
-	 * </role> </node>
+	 * Fetch rights per role for a node
+	 * GET /rest/api/nodes/node/{node-id}/rights
+	 * parameters:
+	 * return:
+	 * <node uuid="">
+	 * <role name="">
+	 * <right RD="" WR="" DL="" />
+	 * </role>
+	 * </node>
 	 **/
 	@Path("/nodes/node/{node-id}/rights")
 	@GET
@@ -1538,10 +1616,13 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch nodes right GET /rest/api/nodes parameters: - portfoliocode: mandatory
-	 * - semtag_parent, code_parent: From a code_parent, find the children that have
-	 * semtag_parent - semtag: mandatory, find the semtag under portfoliocode, or
-	 * the selection from semtag_parent/code_parent return:
+	 * Fetch nodes right
+	 * GET /rest/api/nodes
+	 * parameters:
+	 * - portfoliocode: mandatory
+	 * - semtag_parent, code_parent: From a code_parent, find the children that have semtag_parent
+	 * - semtag:	mandatory, find the semtag under portfoliocode, or the selection from semtag_parent/code_parent
+	 * return:
 	 **/
 	@Path("/nodes")
 	@GET
@@ -1587,9 +1668,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get multiple semantic tag nodes inside specified portfolio GET
-	 * /rest/api/nodes/nodes/bysemantictag/{portfolio-uuid}/{semantictag}
-	 * parameters: return: nodes in ASM format
+	 * Get multiple semantic tag nodes inside specified portfolio
+	 * GET /rest/api/nodes/nodes/bysemantictag/{portfolio-uuid}/{semantictag}
+	 * parameters:
+	 * return:
+	 * nodes in ASM format
 	 **/
 	@Path("/nodes/bysemantictag/{portfolio-uuid}/{semantictag}")
 	@GET
@@ -1634,9 +1717,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch nodes and childrens from node uuid GET
-	 * /rest/api/nodes/node/{node-id}/children parameters: return: nodes in the ASM
-	 * format
+	 * Fetch nodes and childrens from node uuid
+	 * GET /rest/api/nodes/node/{node-id}/children
+	 * parameters:
+	 * return:
+	 * nodes in the ASM format
 	 **/
 	@Path("/nodes/node/{node-id}/children")
 	@GET
@@ -1683,7 +1768,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch node content GET /rest/api/nodes/{node-id} parameters: return:
+	 * Fetch node content
+	 * GET /rest/api/nodes/{node-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/{node-id}")
 	@GET
@@ -1748,15 +1836,29 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get a portfolio from uuid GET /rest/api/portfolios/portfolio/{portfolio-id}
-	 * parameters: - resources: - files: if set with resource, return a zip file -
-	 * export: if set, return xml as a file download return: zip as file download
-	 * content <?xml version=\"1.0\" encoding=\"UTF-8\"?> <portfolio code=\"0\"
-	 * id=\""+portfolioUuid+"\" owner=\""+isOwner+"\"><version>4</version> <asmRoot>
-	 * <asm*> <metadata-wad></metadata-wad> <metadata></metadata>
-	 * <metadata-epm></metadata-epm> <asmResource xsi_type="nodeRes">
-	 * <asmResource xsi_type="context"> <asmResource xsi_type="SPECIFIC TYPE">
-	 * </asm*> </asmRoot> </portfolio>
+	 * Get a portfolio from uuid
+	 * GET /rest/api/portfolios/portfolio/{portfolio-id}
+	 * parameters:
+	 * - resources:
+	 * - files: if set with resource, return a zip file
+	 * - export: if set, return xml as a file download
+	 * @return: zip as file download
+	 * {@code
+	 * content
+	 * <?xml version=\"1.0\" encoding=\"UTF-8\"?>
+	 * <portfolio code=\"0\" id=\""+portfolioUuid+"\" owner=\""+isOwner+"\"><version>4</version>
+	 * <asmRoot>
+	 * <asm*>
+	 * <metadata-wad></metadata-wad>
+	 * <metadata></metadata>
+	 * <metadata-epm></metadata-epm>
+	 * <asmResource xsi_type="nodeRes">
+	 * <asmResource xsi_type="context">
+	 * <asmResource xsi_type="SPECIFIC TYPE">
+	 * </asm*>
+	 * </asmRoot>
+	 * </portfolio>
+	 * }
 	 **/
 	@Path("/portfolios/portfolio/{portfolio-id}")
 	@GET
@@ -1860,9 +1962,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Return the portfolio from its code GET /rest/api/portfolios/code/{code}
-	 * parameters: return: see 'content' of "GET
-	 * /rest/api/portfolios/portfolio/{portfolio-id}"
+	 * Return the portfolio from its code
+	 * GET /rest/api/portfolios/code/{code}
+	 * parameters:
+	 * return:
+	 * see 'content' of "GET /rest/api/portfolios/portfolio/{portfolio-id}"
 	 **/
 	@Path("/portfolios/portfolio/code/{code : .+}")
 	@GET
@@ -1931,13 +2035,24 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get portfolio by portfoliogroup, or if there's no group id give, give the
-	 * list of portfolio group GET /rest/api/portfoliogroups parameters: - group:
-	 * group id - label: group label -> Return group id return: - Without group id
-	 * <groups> <group id={groupid}> <label>{group name}</label> </group> ...
+	 * Get portfolio by portfoliogroup, or if there's no group id give, give the list of portfolio group
+	 * GET /rest/api/portfoliogroups
+	 * parameters:
+	 * - group: group id
+	 * - label: group label -> Return group id
+	 * return:
+	 * - Without group id
+	 * <groups>
+	 * <group id={groupid}>
+	 * <label>{group name}</label>
+	 * </group>
+	 * ...
 	 * </groups>
 	 * <p>
-	 * - With group id <group id={groupid}> <portfolio id={uuid}></portfolio> ...
+	 * - With group id
+	 * <group id={groupid}>
+	 * <portfolio id={uuid}></portfolio>
+	 * ...
 	 * </group>
 	 **/
 	@Path("/portfoliogroups")
@@ -1981,8 +2096,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * List all users in a specified roles GET /rest/api/rolerightsgroups/all/users
-	 * parameters: return:
+	 * List all users in a specified roles
+	 * GET /rest/api/rolerightsgroups/all/users
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/rolerightsgroups/all/users")
 	@GET
@@ -2029,16 +2146,33 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * List portfolios for current user (return also other things, but should be
-	 * removed) GET /rest/api/portfolios parameters: - active: false/0 (also show
-	 * inactive portoflios) - code - n: number of results (10<n<50) - i: index start
-	 * + n - userid: for this user (only with root) return: <?xml version=\"1.0\"
-	 * encoding=\"UTF-8\"?> <portfolios>
-	 * <portfolio id="uuid" root_node_id="uuid" owner="Y/N" ownerid="uid" modified=
-	 * "DATE"> <asmRoot id="uuid"> <metadata-wad/> <metadata-epm/> <metadata/>
-	 * <code></code> <label/> <description/> <semanticTag/>
+	 * List portfolios for current user (return also other things, but should be removed)
+	 * GET /rest/api/portfolios
+	 * @parameters:
+	 * - active: false/0	(also show inactive portoflios)
+	 * - code
+	 * - n: number of results (10<n<50)
+	 * - i: index start + n
+	 * - userid: for this user (only with root)
+	 * @return: {@code
+	 * <?xml version=\"1.0\" encoding=\"UTF-8\"?>
+	 * <portfolios>
+	 * <portfolio  id="uuid" root_node_id="uuid" owner="Y/N" ownerid="uid" modified="DATE">
+	 * <asmRoot id="uuid">
+	 * <metadata-wad/>
+	 * <metadata-epm/>
+	 * <metadata/>
+	 * <code></code>
+	 * <label/>
+	 * <description/>
+	 * <semanticTag/>
 	 * <asmResource xsi_type="nodeRes"></asmResource>
-	 * <asmResource xsi_type="context"/> </asmRoot> </portfolio> ... </portfolios>
+	 * <asmResource xsi_type="context"/>
+	 * </asmRoot>
+	 * </portfolio>
+	 * ...
+	 * </portfolios>
+	 * }
 	 **/
 	@Path("/portfolios")
 	@GET
@@ -2154,8 +2288,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Return a list of portfolio shared to a user GET /portfolios/shared/{userid}
-	 * parameters: return:
+	 * Return a list of portfolio shared to a user
+	 * GET /portfolios/shared/{userid}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/portfolios/shared/{userid}")
 	@POST
@@ -2191,10 +2327,16 @@ public class RestServicePortfolio {
 		}
 	}
 
+	// GET /portfolios/zip ? portfolio={}, toujours avec files
+	// zip séparés
+	// zip des zip
 	/**
-	 * Fetching multiple portfolio in a zip GET /rest/api/portfolios parameters:
-	 * portfolio: separated with ',' return: zipped portfolio (with files) inside
-	 * zip file
+	 * Fetching multiple portfolio in a zip
+	 * GET /rest/api/portfolios
+	 * parameters:
+	 * portfolio: separated with ','
+	 * return:
+	 * zipped portfolio (with files) inside zip file
 	 **/
 	@Path("/portfolios/zip")
 	@GET
@@ -2329,12 +2471,25 @@ public class RestServicePortfolio {
 		}
 	}
 
+	/*
+	 *  Ressources
+	 *
+	 *  ######  #######  #####   #####   #####  ##   ## ######   #####  #######  #####
+	 *  ##   ## ##      ##   ## ##   ## ##   ## ##   ## ##   ## ##   ## ##      ##   ##
+	 *  ##   ## ##      ##      ##      ##   ## ##   ## ##   ## ##      ##      ##
+	 *  ######  ####     #####   #####  ##   ## ##   ## ######  ##      ####     #####
+	 *  ##   ## ##           ##      ## ##   ## ##   ## ##   ## ##      ##           ##
+	 *  ##   ## ##      ##   ## ##   ## ##   ## ##   ## ##   ## ##   ## ##      ##   ##
+	 *  ##   ## #######  #####   #####   #####   #####  ##   ##  #####  #######  #####
+	 **/
 	/**
-	 * Fetch resource from node uuid GET
-	 * /rest/api/resources/resource/{node-parent-id} parameters: - portfoliocode:
-	 * mandatory - semtag_parent, code_parent: From a code_parent, find the children
-	 * that have semtag_parent - semtag: mandatory, find the semtag under
-	 * portfoliocode, or the selection from semtag_parent/code_parent return:
+	 * Fetch resource from node uuid
+	 * GET /rest/api/resources/resource/{node-parent-id}
+	 * parameters:
+	 * - portfoliocode: mandatory
+	 * - semtag_parent, code_parent: From a code_parent, find the children that have semtag_parent
+	 * - semtag:	mandatory, find the semtag under portfoliocode, or the selection from semtag_parent/code_parent
+	 * return:
 	 **/
 	@Path("/resources/resource/{node-parent-id}")
 	@GET
@@ -2388,9 +2543,12 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch all resource in a portfolio TODO: is it used? GET
-	 * /rest/api/resources/portfolios/{portfolio-id} parameters: - portfolio-id
-	 * return:
+	 * Fetch all resource in a portfolio
+	 * TODO: is it used?
+	 * 	GET /rest/api/resources/portfolios/{portfolio-id}
+	 * 	parameters:
+	 * 	- portfolio-id
+	 * 	return:
 	 **/
 	@Path("/resources/portfolios/{portfolio-id}")
 	@GET
@@ -2433,8 +2591,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * List rights in the specified role GET
-	 * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id} parameters:
+	 * List rights in the specified role
+	 * GET /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
@@ -2475,7 +2634,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * List roles GET /rest/api/rolerightsgroups parameters: return:
+	 * List roles
+	 * GET /rest/api/rolerightsgroups
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/rolerightsgroups")
 	@GET
@@ -2519,8 +2681,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch rights in a role FIXME: Might be redundant GET
-	 * /rest/api/roles/role/{role-id} parameters: return:
+	 * Fetch rights in a role
+	 * FIXME: Might be redundant
+	 * GET /rest/api/roles/role/{role-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/roles/role/{role-id}")
 	@GET
@@ -2555,8 +2720,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch all role in a portfolio GET /rest/api/roles/portfolio/{portfolio-id}
-	 * parameters: return:
+	 * Fetch all role in a portfolio
+	 * GET /rest/api/roles/portfolio/{portfolio-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/roles/portfolio/{portfolio-id}")
 	@GET
@@ -2593,10 +2760,20 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get a specific user info GET /rest/api/users/user/{user-id} parameters:
-	 * return: <user id="uid"> <username></username> <firstname></firstname>
-	 * <lastname></lastname> <admin>1/0</admin> <designer>1/0</designer>
-	 * <email></email> <active>1/0</active> <substitute>1/0</substitute> </user>
+	 * Get a specific user info
+	 * GET /rest/api/users/user/{user-id}
+	 * parameters:
+	 * return:
+	 * <user id="uid">
+	 * <username></username>
+	 * <firstname></firstname>
+	 * <lastname></lastname>
+	 * <admin>1/0</admin>
+	 * <designer>1/0</designer>
+	 * <email></email>
+	 * <active>1/0</active>
+	 * <substitute>1/0</substitute>
+	 * </user>
 	 **/
 	@Path("/users/user/{user-id}")
 	@GET
@@ -2629,8 +2806,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get roles in a portfolio GET /rest/api/credential/group/{portfolio-id}
-	 * parameters: return:
+	 * Get roles in a portfolio
+	 * GET /rest/api/groups/{portfolio-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/credential/group/{portfolio-id}")
 	@GET
@@ -2683,8 +2862,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get user id from username GET /rest/api/users/user/username/{username}
-	 * parameters: return: userid (long)
+	 * Get user id from username
+	 * GET /rest/api/users/user/username/{username}
+	 * parameters:
+	 * return:
+	 * userid (long)
 	 **/
 	@Path("/users/user/username/{username}")
 	@GET
@@ -2716,10 +2898,23 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get user list GET /rest/api/users parameters: return: <users> <user id="uid">
-	 * <username></username> <firstname></firstname> <lastname></lastname>
-	 * <admin>1/0</admin> <designer>1/0</designer> <email></email>
-	 * <active>1/0</active> <substitute>1/0</substitute> </user> ... </users>
+	 * Get user list
+	 * GET /rest/api/users
+	 * parameters:
+	 * return:
+	 * <users>
+	 * <user id="uid">
+	 * <username></username>
+	 * <firstname></firstname>
+	 * <lastname></lastname>
+	 * <admin>1/0</admin>
+	 * <designer>1/0</designer>
+	 * <email></email>
+	 * <active>1/0</active>
+	 * <substitute>1/0</substitute>
+	 * </user>
+	 * ...
+	 * </users>
 	 **/
 	@Path("/users")
 	@GET
@@ -2764,8 +2959,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch userlist from a role and portfolio id GET
-	 * /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/users parameters:
+	 * Fetch userlist from a role and portfolio id
+	 * GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/users
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/users/Portfolio/{portfolio-id}/Role/{role}/users")
@@ -2800,12 +2996,24 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Get users by usergroup, or if there's no group id give, give the list of user
-	 * group GET /rest/api/usersgroups parameters: - group: group id return: -
-	 * Without group id <groups> <group id={groupid}> <label>{group name}</label>
-	 * </group> ... </groups>
+	 * Get users by usergroup, or if there's no group id give, give the list of user group
+	 * GET /rest/api/usersgroups
+	 * parameters:
+	 * - group: group id
+	 * return:
+	 * - Without group id
+	 * <groups>
+	 * <group id={groupid}>
+	 * <label>{group name}</label>
+	 * </group>
+	 * ...
+	 * </groups>
 	 * <p>
-	 * - With group id <group id={groupid}> <user id={userid}></user> ... </group>
+	 * - With group id
+	 * <group id={groupid}>
+	 * <user id={userid}></user>
+	 * ...
+	 * </group>
 	 **/
 	@Path("/usersgroups")
 	@GET
@@ -2847,18 +3055,6 @@ public class RestServicePortfolio {
 		return xmlUsers;
 	}
 
-	/*
-	 *  Ressources
-	 *
-	 *  ######  #######  #####   #####   #####  ##   ## ######   #####  #######  #####
-	 *  ##   ## ##      ##   ## ##   ## ##   ## ##   ## ##   ## ##   ## ##      ##   ##
-	 *  ##   ## ##      ##      ##      ##   ## ##   ## ##   ## ##      ##      ##
-	 *  ######  ####     #####   #####  ##   ## ##   ## ######  ##      ####     #####
-	 *  ##   ## ##           ##      ## ##   ## ##   ## ##   ## ##      ##           ##
-	 *  ##   ## ##      ##   ## ##   ## ##   ## ##   ## ##   ## ##   ## ##      ##   ##
-	 *  ##   ## #######  #####   #####   #####   #####  ##   ##  #####  #######  #####
-	 **/
-
 	@Path("/version")
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON })
@@ -2877,7 +3073,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Ask to logout, clear session POST /rest/api/credential/logout parameters:
+	 * Ask to logout, clear session
+	 * POST /rest/api/credential/logout
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/credential/logout")
@@ -2925,8 +3123,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Execute a macro command on a node, changing rights related POST
-	 * /rest/api/nodes/node/{node-id}/action/{action-name} parameters: return:
+	 * Execute a macro command on a node, changing rights related
+	 * POST /rest/api/nodes/node/{node-id}/action/{action-name}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/{node-id}/action/{action-name}")
 	@POST
@@ -2971,8 +3171,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Move a node to another parent POST
-	 * /rest/api/nodes/node/{node-id}/parentof/{parent-id} parameters: return:
+	 * Move a node to another parent
+	 * POST /rest/api/nodes/node/{node-id}/parentof/{parent-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/{node-id}/parentof/{parent-id}")
 	@POST
@@ -3026,8 +3228,20 @@ public class RestServicePortfolio {
 		}
 	}
 
+	/*
+	 * ######  #######   ###   ##   ## #######  #####
+	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
+	 * ##   ##    #    ##      ##   ##    #    ##
+	 * ######     #    ##  ### #######    #     #####
+	 * ##   ##    #    ##   ## ##   ##    #         ##
+	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
+	 * ##   ## #######   ###   ##   ##    #     #####
+	 /** Partie groupe de droits et utilisateurs            **/
 	/**
-	 * Change rights POST /rest/api/rights parameters: return:
+	 * Change rights
+	 * POST /rest/api/rights
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/rights")
 	@POST
@@ -3203,7 +3417,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Raw copy a node POST /rest/api/nodes/node/copy/{dest-id} parameters: return:
+	 * Raw copy a node
+	 * POST /rest/api/nodes/node/copy/{dest-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/copy/{dest-id}")
 	@POST
@@ -3262,9 +3479,12 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * From a base portfolio, just make a direct copy without rights parsing POST
-	 * /rest/api/portfolios/copy/{portfolio-id} parameters: Same as in instanciate
-	 * return: Same as in instanciate
+	 * From a base portfolio, just make a direct copy without rights parsing
+	 * POST /rest/api/portfolios/copy/{portfolio-id}
+	 * parameters:
+	 * Same as in instanciate
+	 * return:
+	 * Same as in instanciate
 	 **/
 	@Path("/portfolios/copy/{portfolio-id}")
 	@POST
@@ -3319,8 +3539,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Fetch current user information (CAS) GET /rest/api/credential/login/cas
-	 * parameters: return:
+	 * Fetch current user information (CAS)
+	 * GET /rest/api/credential/login/cas
+	 * parameters:
+	 * return:
 	 **/
 	@POST
 	@Path("/credential/login/cas")
@@ -3333,7 +3555,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Send login information POST /rest/api/credential/login parameters: return:
+	 * Send login information
+	 * PUT /rest/api/credential/login
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/credential/login")
 	@POST
@@ -3445,9 +3670,12 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Selecting role for current user TODO: Was deactivated, but it might come back
-	 * later on POST /rest/api/credential/group/{group-id} parameters: - group:
-	 * group id return:
+	 * Selecting role for current user
+	 * 	TODO: Was deactivated, but it might come back later on
+	 * 	POST /rest/api/credential/group/{group-id}
+	 * 	parameters:
+	 * 	- group: group id
+	 * 	return:
 	 **/
 	@Deprecated
 	@Path("/credential/group/{group-id}")
@@ -3478,7 +3706,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Unused (?) POST /rest/api/label/{label} parameters: return:
+	 * Unused (?)
+	 * POST /rest/api/label/{label}
+	 * parameters:
+	 * return:
 	 **/
 	@Deprecated
 	@Path("/label/{label}")
@@ -3502,8 +3733,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Tell system you forgot your password POST /rest/api/credential/forgot
-	 * parameters: return:
+	 * Tell system you forgot your password
+	 * POST /rest/api/credential/forgot
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/credential/forgot")
 	@POST
@@ -3579,7 +3812,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * As a form, import xml into the database POST /rest/api/portfolios parameters:
+	 * As a form, import xml into the database
+	 * POST /rest/api/portfolios
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/portfolios")
@@ -3598,10 +3833,13 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Add a user group POST /rest/api/credential/group/{group-id} parameters:
+	 * Add a user group
+	 * POST /rest/api/credential/group/{group-id}
+	 * parameters:
 	 * <group grid="" owner="" label=""></group>
 	 * <p>
-	 * return: <group grid="" owner="" label=""></group>
+	 * return:
+	 * <group grid="" owner="" label=""></group>
 	 **/
 	@Path("group")
 	@POST
@@ -3635,8 +3873,13 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Insert a user in a user group POST /rest/api/groupsUsers parameters: - group:
-	 * gid - userId: uid return: <ok/>
+	 * Insert a user in a user group
+	 * POST /rest/api/groupsUsers
+	 * parameters:
+	 * -	group: gid
+	 * - userId: uid
+	 * return:
+	 * <ok/>
 	 **/
 	@Path("/groupsUsers")
 	@POST
@@ -3674,8 +3917,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Instanciate a node with right parsing POST
-	 * /rest/api/nodes/node/import/{dest-id} parameters: return:
+	 * Instanciate a node with right parsing
+	 * POST /rest/api/nodes/node/import/{dest-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/import/{dest-id}")
 	@POST
@@ -3730,15 +3975,15 @@ public class RestServicePortfolio {
 
 	/**
 	 * From a base portfolio, make an instance with parsed rights in the attributes
-	 * POST /rest/api/portfolios/instanciate/{portfolio-id} parameters: -
-	 * sourcecode: if set, rather than use the provided portfolio uuid, search for
-	 * the portfolio by code - targetcode: code we want the portfolio to have. If
-	 * code already exists, adds a number after - copyshared: y/null Make a copy of
-	 * shared nodes, rather than keeping the link to the original data - owner:
-	 * true/null Set the current user instanciating the portfolio as owner.
-	 * Otherwise keep the one that created it.
+	 * POST /rest/api/portfolios/instanciate/{portfolio-id}
+	 * parameters:
+	 * - sourcecode: if set, rather than use the provided portfolio uuid, search for the portfolio by code
+	 * - targetcode: code we want the portfolio to have. If code already exists, adds a number after
+	 * - copyshared: y/null Make a copy of shared nodes, rather than keeping the link to the original data
+	 * - owner: true/null Set the current user instanciating the portfolio as owner. Otherwise keep the one that created it.
 	 * <p>
-	 * return: instanciated portfolio uuid
+	 * return:
+	 * instanciated portfolio uuid
 	 **/
 	@Path("/portfolios/instanciate/{portfolio-id}")
 	@POST
@@ -3809,9 +4054,20 @@ public class RestServicePortfolio {
 		}
 	}
 
+	/*
+	 * ##   ##   ###     ###   #####     ###
+	 * ### ### ##   ## ##   ## ##   ## ##   ##
+	 * ## # ## ##   ## ##      ##   ## ##   ##
+	 * ##   ## ####### ##      #####   ##   ##
+	 * ##   ## ##   ## ##      ##   ## ##   ##
+	 * ##   ## ##   ## ##   ## ##   ## ##   ##
+	 * ##   ## ##   ##   ###   ##   ##   ###
+	 /** Partie utilisation des macro-commandes et gestion **/
 	/**
-	 * Executing pre-defined macro command on a node POST
-	 * /rest/api/action/{uuid}/{macro-name} parameters: return:
+	 * Executing pre-defined macro command on a node
+	 * POST /rest/api/action/{uuid}/{macro-name}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/action/{uuid}/{macro-name}")
 	@POST
@@ -3862,7 +4118,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Add a model (deprecated) POST /rest/api/models parameters: return:
+	 * Add a model (deprecated)
+	 * POST /rest/api/models
+	 * parameters:
+	 * return:
 	 **/
 	@Deprecated
 	@Path("/models")
@@ -3904,8 +4163,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Move a node up between siblings POST /rest/api/nodes/node/{node-id}/moveup
-	 * parameters: return:
+	 * Move a node up between siblings
+	 * POST /rest/api/nodes/node/{node-id}/moveup
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/{node-id}/moveup")
 	@POST
@@ -3966,8 +4227,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Insert XML in a node. Moslty used by admin, other people use the import/copy
-	 * node POST /rest/api/nodes/node/{parent-id} parameters: return:
+	 * Insert XML in a node. Moslty used by admin, other people use the import/copy node
+	 * POST /rest/api/nodes/node/{parent-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/{parent-id}")
 	@POST
@@ -4029,7 +4292,8 @@ public class RestServicePortfolio {
 
 	/**
 	 * POST /rest/api/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}
-	 * parameters: return:
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}")
 	@POST
@@ -4077,8 +4341,14 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Change nodes right POST /rest/api/nodes/node/{node-id}/rights parameters:
-	 * content: <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
+	 * Change nodes right
+	 * POST /rest/api/nodes/node/{node-id}/rights
+	 * parameters:
+	 * content:
+	 * <node uuid="">
+	 * <role name="">
+	 * <right RD="" WR="" DL="" />
+	 * </role>
 	 * </node>
 	 * <p>
 	 * return:
@@ -4182,8 +4452,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Reparse portfolio rights POST
-	 * /rest/api/portfolios/portfolios/{portfolio-id}/parserights parameters:
+	 * Reparse portfolio rights
+	 * POST /rest/api/portfolios/portfolios/{portfolio-id}/parserights
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/portfolios/portfolio/{portfolio-id}/parserights")
@@ -4217,12 +4488,18 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * As a form, import xml into the database POST /rest/api/portfolios parameters:
-	 * - model: another uuid, not sure why it's here - srce: sakai/null Need to be
-	 * logged in on sakai first - srceurl: url part of the sakai system to fetch -
-	 * xsl: filename when using with sakai source, convert data before importing it
-	 * - instance: true/null if as an instance, parse rights. Otherwise just write
-	 * nodes xml: ASM format return: <portfolios> <portfolio id="uuid"/>
+	 * As a form, import xml into the database
+	 * POST /rest/api/portfolios
+	 * parameters:
+	 * - model: another uuid, not sure why it's here
+	 * - srce: sakai/null	Need to be logged in on sakai first
+	 * - srceurl: url part of the sakai system to fetch
+	 * - xsl: filename when using with sakai source, convert data before importing it
+	 * - instance: true/null if as an instance, parse rights. Otherwise just write nodes
+	 * xml: ASM format
+	 * return:
+	 * <portfolios>
+	 * <portfolio id="uuid"/>
 	 * </portfolios>
 	 **/
 	@Path("/portfolios")
@@ -4324,7 +4601,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Import zip file POST /rest/api/portfolios/zip parameters: return:
+	 * Import zip file
+	 * POST /rest/api/portfolios/zip
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/portfolios/zip")
 	@POST
@@ -4375,9 +4655,14 @@ public class RestServicePortfolio {
 	 * ##       #####  ##   ##    #      ###   ##   ##
 	 ** Managing and listing portfolios */
 	/**
-	 * Create a new portfolio group POST /rest/api/portfoliogroups parameters: -
-	 * label: Name of the group we are creating - parent: parentid - type:
-	 * group/portfolio return: - groupid
+	 * Create a new portfolio group
+	 * POST /rest/api/portfoliogroups
+	 * parameters:
+	 * - label: Name of the group we are creating
+	 * - parent: parentid
+	 * - type: group/portfolio
+	 * return:
+	 * - groupid
 	 **/
 	@Path("/portfoliogroups")
 	@POST
@@ -4411,8 +4696,11 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * As a form, import zip, extract data and put everything into the database POST
-	 * /rest/api/portfolios parameters: zip: From a zip export of the system return:
+	 * As a form, import zip, extract data and put everything into the database
+	 * POST /rest/api/portfolios
+	 * parameters:
+	 * zip: From a zip export of the system
+	 * return:
 	 * portfolio uuid
 	 **/
 	@Path("/portfolios/zip")
@@ -4451,7 +4739,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * (?) POST /rest/api/resources parameters: return:
+	 * (?)
+	 * POST /rest/api/resources
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/resources")
 	@POST
@@ -4493,7 +4784,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Add a resource (?) POST /rest/api/resources/{node-parent-uuid} parameters:
+	 * Add a resource (?)
+	 * POST /rest/api/resources/{node-parent-uuid}
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/resources/{node-parent-uuid}")
@@ -4542,8 +4835,12 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Change the group right associated to a user group POST /rest/api/RightGroup
-	 * parameters: - group: user group id - groupRightId: group right id return:
+	 * Change the group right associated to a user group
+	 * POST /rest/api/RightGroup
+	 * parameters:
+	 * - group:	user group id
+	 * - groupRightId: group right id
+	 * return:
 	 **/
 	@Path("RightGroup")
 	@POST
@@ -4582,8 +4879,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Add a role in the portfolio POST /rest/api/rolerightsgroups/{portfolio-id}
-	 * parameters: return:
+	 * Add a role in the portfolio
+	 * POST /rest/api/rolerightsgroups/{portfolio-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/rolerightsgroups/{portfolio-id}")
 	@POST
@@ -4629,9 +4928,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Add user in a role POST
-	 * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users
-	 * parameters: return:
+	 * Add user in a role
+	 * POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users")
 	@POST
@@ -4667,9 +4967,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Add user in a role POST
-	 * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
-	 * parameters: return:
+	 * Add user in a role
+	 * POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}")
 	@POST
@@ -4707,7 +5008,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Add user to a role (?) POST /rest/api/roleUser parameters: return:
+	 * Add user to a role (?)
+	 * POST /rest/api/roleUser
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/roleUser")
 	@POST
@@ -4749,10 +5053,23 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Add a user POST /rest/api/users parameters: content: <users> <user id="uid">
-	 * <username></username> <firstname></firstname> <lastname></lastname>
-	 * <admin>1/0</admin> <designer>1/0</designer> <email></email>
-	 * <active>1/0</active> <substitute>1/0</substitute> </user> ... </users>
+	 * Add a user
+	 * POST /rest/api/users
+	 * parameters:
+	 * content:
+	 * <users>
+	 * <user id="uid">
+	 * <username></username>
+	 * <firstname></firstname>
+	 * <lastname></lastname>
+	 * <admin>1/0</admin>
+	 * <designer>1/0</designer>
+	 * <email></email>
+	 * <active>1/0</active>
+	 * <substitute>1/0</substitute>
+	 * </user>
+	 * ...
+	 * </users>
 	 * <p>
 	 * return:
 	 **/
@@ -4790,16 +5107,6 @@ public class RestServicePortfolio {
 	}
 
 	/*
-	 * ##   ##   ###     ###   #####     ###
-	 * ### ### ##   ## ##   ## ##   ## ##   ##
-	 * ## # ## ##   ## ##      ##   ## ##   ##
-	 * ##   ## ####### ##      #####   ##   ##
-	 * ##   ## ##   ## ##      ##   ## ##   ##
-	 * ##   ## ##   ## ##   ## ##   ## ##   ##
-	 * ##   ## ##   ##   ###   ##   ##   ###
-	 /** Partie utilisation des macro-commandes et gestion **/
-
-	/*
 	 * ##   ##  #####  ####### #####     ###   ######
 	 * ##   ## ##   ## ##      ##   ## ##   ## ##   ##
 	 * ##   ## ##      ##      ##   ## ##      ##   ##
@@ -4809,8 +5116,12 @@ public class RestServicePortfolio {
 	 *  #####   #####  ####### ##   ##   ###   ##   ##
 	 ** Managing and listing user groups*/
 	/**
-	 * Create a new user group POST /rest/api/usersgroups parameters: - label: Name
-	 * of the group we are creating return: - groupid
+	 * Create a new user group
+	 * POST /rest/api/usersgroups
+	 * parameters:
+	 * - label: Name of the group we are creating
+	 * return:
+	 * - groupid
 	 **/
 	@Path("/usersgroups")
 	@POST
@@ -4846,18 +5157,11 @@ public class RestServicePortfolio {
 		return Integer.toString(response);
 	}
 
-	/*
-	 * ######  #######   ###   ##   ## #######  #####
-	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
-	 * ##   ##    #    ##      ##   ##    #    ##
-	 * ######     #    ##  ### #######    #     #####
-	 * ##   ##    #    ##   ## ##   ##    #         ##
-	 * ##   ##    #    ##   ## ##   ##    #    ##   ##
-	 * ##   ## #######   ###   ##   ##    #     #####
-	 /** Partie groupe de droits et utilisateurs            **/
-
 	/**
-	 * Send login information PUT /rest/api/credential/login parameters: return:
+	 * Send login information
+	 * PUT /rest/api/credential/login
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/credential/login")
 	@PUT
@@ -4870,7 +5174,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Rewrite node PUT /rest/api/nodes/node/{node-id} parameters: return:
+	 * Rewrite node
+	 * PUT /rest/api/nodes/node/{node-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/{node-id}")
 	@PUT
@@ -4920,7 +5227,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Rewrite node metadata PUT /rest/api/nodes/node/{node-id}/metadata parameters:
+	 * Rewrite node metadata
+	 * PUT /rest/api/nodes/node/{node-id}/metadata
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/nodes/node/{nodeid}/metadata")
@@ -4982,8 +5291,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Rewrite node epm metadata PUT /rest/api/nodes/node/{node-id}/metadataepm
-	 * parameters: return:
+	 * Rewrite node epm metadata
+	 * PUT /rest/api/nodes/node/{node-id}/metadataepm
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/{nodeid}/metadataepm")
 	@PUT
@@ -5050,8 +5361,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Rewrite node wad metadata PUT /rest/api/nodes/node/{node-id}/metadatawas
-	 * parameters: return:
+	 * Rewrite node wad metadata
+	 * PUT /rest/api/nodes/node/{node-id}/metadatawas
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/{nodeid}/metadatawad")
 	@PUT
@@ -5110,8 +5423,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Rewrite node nodecontext PUT /rest/api/nodes/node/{node-id}/nodecontext
-	 * parameters: return:
+	 * Rewrite node nodecontext
+	 * PUT /rest/api/nodes/node/{node-id}/nodecontext
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/{nodeid}/nodecontext")
 	@PUT
@@ -5177,8 +5492,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Rewrite node resource PUT /rest/api/nodes/node/{node-id}/noderesource
-	 * parameters: return:
+	 * Rewrite node resource
+	 * PUT /rest/api/nodes/node/{node-id}/noderesource
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/nodes/node/{nodeid}/noderesource")
 	@PUT
@@ -5246,9 +5563,13 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Rewrite portfolio content PUT /rest/api/portfolios/portfolios/{portfolio-id}
-	 * parameters: content see GET /rest/api/portfolios/portfolio/{portfolio-id}
-	 * and/or the asm format return:
+	 * Rewrite portfolio content
+	 * PUT /rest/api/portfolios/portfolios/{portfolio-id}
+	 * parameters:
+	 * content
+	 * see GET /rest/api/portfolios/portfolio/{portfolio-id}
+	 * and/or the asm format
+	 * return:
 	 **/
 	@Path("/portfolios/portfolio/{portfolio-id}")
 	@PUT
@@ -5291,9 +5612,12 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Modify some portfolio option PUT
-	 * /rest/api/portfolios/portfolios/{portfolio-id} parameters: - portfolio: uuid
-	 * - active: 0/1, true/false return:
+	 * Modify some portfolio option
+	 * PUT /rest/api/portfolios/portfolios/{portfolio-id}
+	 * parameters:
+	 * - portfolio: uuid
+	 * - active:	0/1, true/false
+	 * return:
 	 **/
 	@Path("/portfolios")
 	@PUT
@@ -5333,8 +5657,13 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Put a portfolio in portfolio group PUT /rest/api/portfoliogroups parameters:
-	 * - group: group id - uuid: portfolio id return: Code 200
+	 * Put a portfolio in portfolio group
+	 * PUT /rest/api/portfoliogroups
+	 * parameters:
+	 * - group: group id
+	 * - uuid: portfolio id
+	 * return:
+	 * Code 200
 	 **/
 	@Path("/portfoliogroups")
 	@PUT
@@ -5364,9 +5693,12 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Change portfolio owner PUT
-	 * /rest/api/portfolios/portfolios/{portfolio-id}/setOwner/{newOwnerId}
-	 * parameters: - portfolio-id - newOwnerId return:
+	 * Change portfolio owner
+	 * PUT /rest/api/portfolios/portfolios/{portfolio-id}/setOwner/{newOwnerId}
+	 * parameters:
+	 * - portfolio-id
+	 * - newOwnerId
+	 * return:
 	 **/
 	@Path("/portfolios/portfolio/{portfolio-id}/setOwner/{newOwnerId}")
 	@PUT
@@ -5405,8 +5737,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Modify resource content PUT /rest/api/resources/resource/{node-parent-uuid}
-	 * parameters: return:
+	 * Modify resource content
+	 * PUT /rest/api/resources/resource/{node-parent-uuid}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/resources/resource/{node-parent-uuid}")
 	@PUT
@@ -5488,8 +5822,9 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Change a right in role PUT
-	 * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id} parameters:
+	 * Change a right in role
+	 * PUT /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+	 * parameters:
 	 * return:
 	 **/
 	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
@@ -5530,7 +5865,10 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Modify a role PUT /rest/api/roles/role/{role-id} parameters: return:
+	 * Modify a role
+	 * PUT /rest/api/roles/role/{role-id}
+	 * parameters:
+	 * return:
 	 **/
 	@Path("/roles/role/{role-id}")
 	@PUT
@@ -5572,16 +5910,33 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Modify user info PUT /rest/api/users/user/{user-id} body: <user id="uid">
-	 * <username></username> <firstname></firstname> <lastname></lastname>
-	 * <admin>1/0</admin> <designer>1/0</designer> <email></email>
-	 * <active>1/0</active> <substitute>1/0</substitute> </user>
+	 * Modify user info
+	 * PUT /rest/api/users/user/{user-id}
+	 * body:
+	 * <user id="uid">
+	 * <username></username>
+	 * <firstname></firstname>
+	 * <lastname></lastname>
+	 * <admin>1/0</admin>
+	 * <designer>1/0</designer>
+	 * <email></email>
+	 * <active>1/0</active>
+	 * <substitute>1/0</substitute>
+	 * </user>
 	 * <p>
 	 * parameters:
 	 * <p>
-	 * return: <user id="uid"> <username></username> <firstname></firstname>
-	 * <lastname></lastname> <admin>1/0</admin> <designer>1/0</designer>
-	 * <email></email> <active>1/0</active> <substitute>1/0</substitute> </user>
+	 * return:
+	 * <user id="uid">
+	 * <username></username>
+	 * <firstname></firstname>
+	 * <lastname></lastname>
+	 * <admin>1/0</admin>
+	 * <designer>1/0</designer>
+	 * <email></email>
+	 * <active>1/0</active>
+	 * <substitute>1/0</substitute>
+	 * </user>
 	 **/
 	@Path("/users/user/{user-id}")
 	@PUT
@@ -5629,8 +5984,14 @@ public class RestServicePortfolio {
 	}
 
 	/**
-	 * Put a user in user group PUT /rest/api/usersgroups parameters: - group: group
-	 * id - user: user id - label: label return: Code 200
+	 * Put a user in user group
+	 * PUT /rest/api/usersgroups
+	 * parameters:
+	 * - group: group id
+	 * - user: user id
+	 * - label: label
+	 * return:
+	 * Code 200
 	 **/
 	@Path("/usersgroups")
 	@PUT

@@ -34,11 +34,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
 import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
@@ -53,11 +51,8 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.w3c.dom.ls.DOMImplementationLS;
-import org.w3c.dom.ls.LSSerializer;
 import org.w3c.tidy.Tidy;
 import org.xml.sax.InputSource;
 
@@ -90,18 +85,10 @@ public class DomUtils {
 	//  ============================= Manage DOM =============================================
 	//  ==================================================================================
 
-	//  =======================================
-	private static Document buildDOM(String xmlString) throws Exception {
-		//  =======================================
-		final DocumentBuilderFactory domBuildFact = DocumentBuilderFactory.newInstance();
-		final DocumentBuilder domBuild = domBuildFact.newDocumentBuilder();
-		return domBuild.parse(new InputSource(new StringReader(xmlString)));
-	}
-
 	public static String cleanXMLData(String data) throws UnsupportedEncodingException {
 		// data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"+data;
 
-		final Tidy tidy = new Tidy();
+		final var tidy = new Tidy();
 		tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
 		tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
 		tidy.setWraplen(Integer.MAX_VALUE);
@@ -111,8 +98,8 @@ public class DomUtils {
 		tidy.setSmartIndent(true);
 		tidy.setMakeClean(true);
 		tidy.setForceOutput(true);
-		final ByteArrayInputStream inputStream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-		final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		final var inputStream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+		final var outputStream = new ByteArrayOutputStream();
 		tidy.parseDOM(inputStream, outputStream);
 		return outputStream.toString(StandardCharsets.UTF_8.toString());
 	}
@@ -141,9 +128,9 @@ public class DomUtils {
 		//	}
 		//	if (html.length()>0) {  // xml is html
 		//	html = "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN' 'http://www.w3.org/TR/html4/loose.dtd'><head><title></title></head><body>" +html+"</body>";
-		final StringReader in = new StringReader(xml);
-		final StringWriter out = new StringWriter();
-		final Tidy tidy = new Tidy();
+		final var in = new StringReader(xml);
+		final var out = new StringWriter();
+		final var tidy = new Tidy();
 		tidy.setInputEncoding(StandardCharsets.UTF_8.toString());
 		tidy.setOutputEncoding(StandardCharsets.UTF_8.toString());
 		tidy.setWraplen(Integer.MAX_VALUE);
@@ -156,7 +143,7 @@ public class DomUtils {
 
 		//	tidy.setWraplen(0);
 		tidy.parseDOM(in, out);
-		final String newXML = out.toString();
+		final var newXML = out.toString();
 		//	newXML = xml1+newHTML.substring(newHTML.indexOf("<body>")+6,newHTML.indexOf("</body>"))+xml2;
 		//	} else {
 		//	newXML =xml;
@@ -174,18 +161,13 @@ public class DomUtils {
 
 	}
 
-	//  ==================================================================================
-	//  ============================= Transformation  ===========================================
-	//  ==================================================================================
-
 	//  =======================================
 	public static String file2String(String fileName, StringBuilder outTrace) throws Exception {
 		//  =======================================
-		final StringBuilder result = new StringBuilder();
+		final var result = new StringBuilder();
 		try {
-			final FileInputStream fichierSrce = new FileInputStream(fileName);
-			final BufferedReader readerSrce = new BufferedReader(
-					new InputStreamReader(fichierSrce, StandardCharsets.UTF_8));
+			final var fichierSrce = new FileInputStream(fileName);
+			final var readerSrce = new BufferedReader(new InputStreamReader(fichierSrce, StandardCharsets.UTF_8));
 			String line;
 			while ((line = readerSrce.readLine()) != null) {
 				result.append(line);
@@ -200,9 +182,13 @@ public class DomUtils {
 
 	}
 
+	//  ==================================================================================
+	//  ============================= Transformation  ===========================================
+	//  ==================================================================================
+
 	public static String filterXmlResource(String xml) throws UnsupportedEncodingException {
 		if (xml.startsWith("<?xml")) {
-			final int posEndXml = xml.indexOf("?>");
+			final var posEndXml = xml.indexOf("?>");
 			xml = xml.substring(posEndXml);
 
 			return DomUtils.cleanXMLData(xml);
@@ -213,19 +199,18 @@ public class DomUtils {
 	}
 
 	public static String filtrerInnerXml(String chaine) {
-		final String motif = "<?xml version=\"1.0\" encoding=\"UTF-16\"?>";
+		final var motif = "<?xml version=\"1.0\" encoding=\"UTF-16\"?>";
 		chaine = chaine.replace(motif, "").trim();
 		chaine = chaine.replace("\n\t\t\t\t\n", "\n").trim();
 		return chaine;
 	}
 
 	public static String getInnerXml(Node node) {
-		final DOMImplementationLS lsImpl = (DOMImplementationLS) node.getOwnerDocument().getImplementation()
-				.getFeature("LS", "3.0");
-		final LSSerializer lsSerializer = lsImpl.createLSSerializer();
-		final NodeList childNodes = node.getChildNodes();
-		final StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < childNodes.getLength(); i++) {
+		final var lsImpl = (DOMImplementationLS) node.getOwnerDocument().getImplementation().getFeature("LS", "3.0");
+		final var lsSerializer = lsImpl.createLSSerializer();
+		final var childNodes = node.getChildNodes();
+		final var sb = new StringBuilder();
+		for (var i = 0; i < childNodes.getLength(); i++) {
 			sb.append(lsSerializer.writeToString(childNodes.item(i)));
 		}
 		// TODO Comprendre pourquoi CDATA est mal fermé
@@ -240,6 +225,13 @@ public class DomUtils {
 			attributeValue = "";
 		}
 		return "'-" + attributeName + "': '" + attributeValue + "'";
+	}
+
+	public static String getJsonElementOutput(String tagName, String value) {
+		if (value == null) {
+			return "'" + tagName + "': ''";
+		}
+		return "'" + tagName + "': '" + value + "'";
 	}
 
 	//=======================================
@@ -266,18 +258,11 @@ public class DomUtils {
 	//  ================================ Utilitaires  ===========================================
 	//  ==================================================================================
 
-	public static String getJsonElementOutput(String tagName, String value) {
-		if (value == null) {
-			return "'" + tagName + "': ''";
-		}
-		return "'" + tagName + "': '" + value + "'";
-	}
-
 	public static String getNodeAttributesString(Node node) {
-		final StringBuilder ret = new StringBuilder();
-		final NamedNodeMap attributes = node.getAttributes();
-		for (int i = 0; i < attributes.getLength(); i++) {
-			final Attr attribute = (Attr) attributes.item(i);
+		final var ret = new StringBuilder();
+		final var attributes = node.getAttributes();
+		for (var i = 0; i < attributes.getLength(); i++) {
+			final var attribute = (Attr) attributes.item(i);
 			ret.append(attribute.getName().trim()).append("=\"")
 					.append(StringEscapeUtils.escapeXml11(attribute.getValue().trim())).append("\" ");
 		}
@@ -288,9 +273,9 @@ public class DomUtils {
 	public static String getRootuuid(Node node) throws Exception {
 		//  ---------------------------------------------------
 		String result = null;
-		final NodeList liste = ((Document) node).getElementsByTagName("asmRoot");
+		final var liste = ((Document) node).getElementsByTagName("asmRoot");
 		if (liste.getLength() != 0) {
-			final Element elt = (Element) liste.item(0);
+			final var elt = (Element) liste.item(0);
 			result = elt.getAttribute("uuid");
 		}
 		return result;
@@ -308,6 +293,13 @@ public class DomUtils {
 			attributeValue = 0;
 		}
 		return attributeName + "=\"" + attributeValue + "\"";
+	}
+
+	public static String getXmlElementOutput(String tagName, String value) {
+		if (value == null) {
+			return "<" + tagName + "/>";
+		}
+		return "<" + tagName + ">" + value + "</" + tagName + ">";
 	}
 
 	// -------------------------------------------------------------------------------
@@ -362,15 +354,8 @@ public class DomUtils {
 	}
 	*/
 
-	public static String getXmlElementOutput(String tagName, String value) {
-		if (value == null) {
-			return "<" + tagName + "/>";
-		}
-		return "<" + tagName + ">" + value + "</" + tagName + ">";
-	}
-
 	public static DocumentBuilderFactory newSecureDocumentBuilderFactory() {
-		final DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+		final var docFactory = DocumentBuilderFactory.newInstance();
 		docFactory.setXIncludeAware(false);
 		docFactory.setExpandEntityReferences(false);
 		trySetFeature(docFactory, XMLConstants.FEATURE_SECURE_PROCESSING, true);
@@ -380,18 +365,6 @@ public class DomUtils {
 		trySetAttribute(docFactory, "http://javax.xml.XMLConstants/property/accessExternalDTD", "");
 		trySetAttribute(docFactory, "http://javax.xml.XMLConstants/property/accessExternalSchema", "");
 		return docFactory;
-	}
-
-	private static TransformerFactory newSecureTransformerFactory() throws TransformerConfigurationException {
-		final TransformerFactory transformerFactory = TransformerFactory.newInstance();
-		transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-		if (transformerFactory.getFeature(ACCESS_EXTERNAL_DTD)) {
-			transformerFactory.setFeature(ACCESS_EXTERNAL_DTD, false);
-		}
-		if (transformerFactory.getFeature(ACCESS_EXTERNAL_STYLESHEET)) {
-			transformerFactory.setFeature(ACCESS_EXTERNAL_STYLESHEET, false);
-		}
-		return transformerFactory;
 	}
 
 	//  =======================================
@@ -417,8 +390,8 @@ public class DomUtils {
 			throws Exception {
 		//  =======================================
 		outTrace.append("<br>processXSLT... ").append(xsltName);
-		final StreamSource stylesource = new StreamSource(xsltName);
-		final Transformer transformer = newSecureTransformerFactory().newTransformer(stylesource);
+		final var stylesource = new StreamSource(xsltName);
+		final var transformer = newSecureTransformerFactory().newTransformer(stylesource);
 
 		try {
 			transformer.transform(xml, result);
@@ -436,14 +409,13 @@ public class DomUtils {
 		//  =======================================
 		logger.debug("<br>-->processXSLTfile2String-" + xslFile);
 		outTrace.append("<br>-->processXSLTfile2String-").append(xslFile);
-		final Transformer transformer = newSecureTransformerFactory()
-				.newTransformer(new StreamSource(new File(xslFile)));
+		final var transformer = newSecureTransformerFactory().newTransformer(new StreamSource(new File(xslFile)));
 		outTrace.append(".1");
-		final StreamResult result = new StreamResult(new StringWriter());
+		final var result = new StreamResult(new StringWriter());
 		outTrace.append(".2");
-		final DOMSource source = new DOMSource(xml);
+		final var source = new DOMSource(xml);
 		outTrace.append(".3");
-		for (int i = 0; i < param.length; i++) {
+		for (var i = 0; i < param.length; i++) {
 			outTrace.append("<br>setParemater - ").append(param[i]).append(":").append(paramVal[i]).append("...");
 			logger.debug("<br>setParameter - " + param[i] + ":" + paramVal[i] + "...");
 			transformer.setParameter(param[i], paramVal[i]);
@@ -463,7 +435,7 @@ public class DomUtils {
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 		String reqSQL = null;
-		String xmlString = "";
+		var xmlString = "";
 		try {
 			reqSQL = "SELECT xml FROM tree where id=" + id;
 			ps = connexion.prepareStatement(reqSQL);
@@ -495,6 +467,37 @@ public class DomUtils {
 
 	}
 
+	//  =======================================
+	public static Document xmlString2Document(String xmlString, StringBuilder outTrace) throws Exception {
+		//  =======================================
+		final var factory = newSecureDocumentBuilderFactory();
+
+		Document xmldoc = null;
+		final var builder = factory.newDocumentBuilder();
+		xmldoc = builder.parse(new InputSource(new StringReader(xmlString)));
+		return xmldoc;
+	}
+
+	//  =======================================
+	private static Document buildDOM(String xmlString) throws Exception {
+		//  =======================================
+		final var domBuildFact = DocumentBuilderFactory.newInstance();
+		final var domBuild = domBuildFact.newDocumentBuilder();
+		return domBuild.parse(new InputSource(new StringReader(xmlString)));
+	}
+
+	private static TransformerFactory newSecureTransformerFactory() throws TransformerConfigurationException {
+		final var transformerFactory = TransformerFactory.newInstance();
+		transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		if (transformerFactory.getFeature(ACCESS_EXTERNAL_DTD)) {
+			transformerFactory.setFeature(ACCESS_EXTERNAL_DTD, false);
+		}
+		if (transformerFactory.getFeature(ACCESS_EXTERNAL_STYLESHEET)) {
+			transformerFactory.setFeature(ACCESS_EXTERNAL_STYLESHEET, false);
+		}
+		return transformerFactory;
+	}
+
 	private static void trySetAttribute(DocumentBuilderFactory factory, String feature, String value) {
 		try {
 			factory.setAttribute(feature, value);
@@ -511,17 +514,6 @@ public class DomUtils {
 			logger.info("The feature '" + feature + "' is probably not supported by your XML processor.");
 			throw new RuntimeException(e);
 		}
-	}
-
-	//  =======================================
-	public static Document xmlString2Document(String xmlString, StringBuilder outTrace) throws Exception {
-		//  =======================================
-		final DocumentBuilderFactory factory = newSecureDocumentBuilderFactory();
-
-		Document xmldoc = null;
-		final DocumentBuilder builder = factory.newDocumentBuilder();
-		xmldoc = builder.parse(new InputSource(new StringReader(xmlString)));
-		return xmldoc;
 	}
 
 }

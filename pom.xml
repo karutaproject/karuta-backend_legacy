@@ -104,12 +104,12 @@
 			<id>tomcat10</id>
 			<properties>
 				<JERSEY_VER>3.1.10</JERSEY_VER>
-				<JDK_VER>11</JDK_VER>
+				<JDK_VER>17</JDK_VER>
 			</properties>
 			<dependencies>
 				<dependency>
-					<groupId>javax.servlet</groupId>
-					<artifactId>javax.servlet-api</artifactId>
+					<groupId>jakarta.servlet</groupId>
+					<artifactId>jakarta.servlet-api</artifactId>
 					<version>6.1.0</version>
 				</dependency>
 				<dependency>
@@ -166,8 +166,8 @@
 				</dependency>
 				<dependency>
 					<groupId>jakarta.mail</groupId>
-					<artifactId>jakarta.mail</artifactId>
-					<version>2.1.3</version>
+					<artifactId>jakarta.mail-api</artifactId>
+					<version>2.1.4</version>
 				</dependency>
 			</dependencies>
 		</profile>
@@ -219,6 +219,12 @@
 			<version>2.1.3</version>
 		</dependency>
 
+		<!-- only lti related code -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>4.0.1</version>
+		</dependency>
 		<dependency>
 			<groupId>org.sakaiproject.basiclti</groupId>
 			<artifactId>basiclti-util</artifactId>

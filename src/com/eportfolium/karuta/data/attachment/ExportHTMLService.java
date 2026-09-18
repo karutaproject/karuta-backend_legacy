@@ -18,49 +18,42 @@ package com.eportfolium.karuta.data.attachment;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipOutputStream;
 
-import javax.activation.MimeType;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpHeaders;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.eportfolium.karuta.data.provider.DataProvider;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 import com.eportfolium.karuta.data.utils.DomUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
+
+import jakarta.activation.MimeType;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 public class ExportHTMLService extends HttpServlet {
 
@@ -76,6 +69,23 @@ public class ExportHTMLService extends HttpServlet {
 	private String backend;
 
 	@Override
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		try {
+			ConfigUtils.init(getServletContext());
+			dataProvider = SqlUtils.initProvider();
+			tempdir = System.getProperty("java.io.tmpdir", null);
+			backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
+		} catch (final Exception e) {
+			logger.error("Can't init servlet", e);
+			throw new ServletException(e);
+		}
+	}
+
+	public void initialize(HttpServletRequest httpServletRequest) {
+	}
+
+	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		request.getReader().close();
 		response.getWriter().close();
@@ -84,7 +94,7 @@ public class ExportHTMLService extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		/// Check if user is logged in
-		final HttpSession session = request.getSession(false);
+		final var session = request.getSession(false);
 		if (session == null) {
 			return;
 		}
@@ -96,16 +106,16 @@ public class ExportHTMLService extends HttpServlet {
 
 		request.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 
-		final String portfolioUuid = request.getParameter("pid");
-		String lang = request.getParameter("lang");
+		final var portfolioUuid = request.getParameter("pid");
+		var lang = request.getParameter("lang");
 
-		final StringBuilder data = new StringBuilder();
+		final var data = new StringBuilder();
 		/// Only a div
 		data.append(request.getParameter("content"));
 
 		// Fetch raw portfolio, since it's easier to know if it's a document or image
 		Connection c;
-		String portfolio = "";
+		var portfolio = "";
 		try {
 			c = SqlUtils.getConnection();
 			portfolio = dataProvider
@@ -118,29 +128,29 @@ public class ExportHTMLService extends HttpServlet {
 		}
 
 		/// Temp file in temp directory
-		final File tempDir = new File(tempdir);
+		final var tempDir = new File(tempdir);
 		if (!tempDir.isDirectory()) {
 			tempDir.mkdirs();
 		}
-		final File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
+		final var tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
 
-		final FileOutputStream fos = new FileOutputStream(tempZip);
-		final ZipOutputStream zos = new ZipOutputStream(fos);
+		final var fos = new FileOutputStream(tempZip);
+		final var zos = new ZipOutputStream(fos);
 
-		final String ref = request.getHeaders(HttpHeaders.REFERER).nextElement();
-		final String appliname = ref.replaceFirst("(http[s]?://[^/]*/[^/]*/).*", "$1");
+		final var ref = request.getHeaders(HttpHeaders.REFERER).nextElement();
+		final var appliname = ref.replaceFirst("(http[s]?://[^/]*/[^/]*/).*", "$1");
 
 		//////// Check where the CSS are in the webpage
 		// http://localhost:8079/karuta/other/bootstrap/css/bootstrap.min.css
 
-		Matcher m = STYLESHEET_URL_PATTERN.matcher(data);
+		var m = STYLESHEET_URL_PATTERN.matcher(data);
 		//// Find all css links
 		while (m.find()) {
-			String link = m.group(1);
-			final String filename = link.substring(link.lastIndexOf("/") + 1);
+			var link = m.group(1);
+			final var filename = link.substring(link.lastIndexOf("/") + 1);
 			// Fix relative CSS link, could easily break.
 			if (link.contains("../../../")) {
-				final String servername = request.getScheme() +
+				final var servername = request.getScheme() +
 						"://" +
 						request.getServerName() +
 						":" +
@@ -159,7 +169,7 @@ public class ExportHTMLService extends HttpServlet {
 		}
 
 		//// Rewrite html link for the CSS
-		String datastr = data.toString();
+		var datastr = data.toString();
 		datastr = datastr.replaceAll("href=\"[^\"]*(/[^\"]*.[css|less]\")", "href=\"css$1");
 
 		// Add export javascript file
@@ -170,10 +180,10 @@ public class ExportHTMLService extends HttpServlet {
 		//////// Find all fileid/filename
 		Document doc;
 		NodeList nodelist = null;
-		final XPath xPath = XPathFactory.newInstance().newXPath();
+		final var xPath = XPathFactory.newInstance().newXPath();
 		try {
 			doc = DomUtils.xmlString2Document(portfolio, new StringBuilder());
-			final String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
+			final var filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
 			nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 		} catch (final Exception e) {
 			logger.error("Intercepted error", e);
@@ -181,28 +191,28 @@ public class ExportHTMLService extends HttpServlet {
 		}
 
 		/// Fetch all files
-		for (int i = 0; i < nodelist.getLength(); ++i) {
+		for (var i = 0; i < nodelist.getLength(); ++i) {
 			// Fetch back parent node that has all info under or at that level
-			final Node res = nodelist.item(i).getParentNode();
+			final var res = nodelist.item(i).getParentNode();
 			/// Check if fileid has a lang
-			final Element resel = (Element) res;
+			final var resel = (Element) res;
 
-			final NodeList fileids = resel.getElementsByTagName("fileid");
-			final NodeList filenames = resel.getElementsByTagName("filename");
-			for (int j = 0; j < fileids.getLength(); ++j) {
-				final Node resLang = fileids.item(j);
-				final Node resFilename = filenames.item(j);
-				final Node langAtt = resLang.getAttributes().getNamedItem("lang");
-				final String contextid = res.getAttributes().getNamedItem("contextid").getTextContent();
-				final String realFilename = resFilename.getTextContent();
-				final String fileid = resLang.getTextContent();
+			final var fileids = resel.getElementsByTagName("fileid");
+			final var filenames = resel.getElementsByTagName("filename");
+			for (var j = 0; j < fileids.getLength(); ++j) {
+				final var resLang = fileids.item(j);
+				final var resFilename = filenames.item(j);
+				final var langAtt = resLang.getAttributes().getNamedItem("lang");
+				final var contextid = res.getAttributes().getNamedItem("contextid").getTextContent();
+				final var realFilename = resFilename.getTextContent();
+				final var fileid = resLang.getTextContent();
 				logger.info("===== context: {} =====", i);
 				logger.info("Context: {}", contextid);
 				logger.info("Fileid: {}", fileid);
 				logger.info("Filename: {}", realFilename);
 				logger.info("Lang: {}", langAtt);
 				logger.info("==========");
-				String filterName = "";
+				var filterName = "";
 				if (langAtt != null) {
 					lang = langAtt.getNodeValue();
 					filterName = ".//*[local-name()='filename' and @lang='" + lang + "' and text()]";
@@ -210,10 +220,10 @@ public class ExportHTMLService extends HttpServlet {
 					filterName = ".//*[local-name()='filename' and @lang and text()]";
 				}
 
-				final Node p = res.getParentNode(); // fileid -> resource
-				final Node gp = p.getParentNode(); // resource -> context
-				final Node uuidNode = gp.getAttributes().getNamedItem("id");
-				final String uuid = uuidNode.getTextContent();
+				final var p = res.getParentNode(); // fileid -> resource
+				final var gp = p.getParentNode(); // resource -> context
+				final var uuidNode = gp.getAttributes().getNamedItem("id");
+				final var uuid = uuidNode.getTextContent();
 
 				NodeList textList = null;
 				try {
@@ -223,7 +233,7 @@ public class ExportHTMLService extends HttpServlet {
 				}
 				String filename = null;
 				if (textList != null && textList.getLength() != 0) {
-					final Element fileNode = (Element) textList.item(0);
+					final var fileNode = (Element) textList.item(0);
 					filename = fileNode.getTextContent();
 					lang = fileNode.getAttribute("lang"); // In case it's a general fileid, fetch first filename (which can break things if nodes are not clean)
 					if ("".equals(lang)) {
@@ -235,17 +245,17 @@ public class ExportHTMLService extends HttpServlet {
 				if (filename == null || filename.isEmpty()) {
 					continue;
 				}
-				int lastDot = filename.lastIndexOf(".");
+				var lastDot = filename.lastIndexOf(".");
 				if (lastDot < 0) {
 					lastDot = 0;
 				}
-				String filenameext = filename.substring(0); /// find extension
-				final int extindex = filenameext.lastIndexOf(".") + 1;
+				var filenameext = filename.substring(0); /// find extension
+				final var extindex = filenameext.lastIndexOf(".") + 1;
 				filenameext = uuid + "_" + lang + "." + filenameext.substring(extindex);
 
-				final String url = backend + "/resources/resource/file/" + contextid + "?lang=" + lang;
+				final var url = backend + "/resources/resource/file/" + contextid + "?lang=" + lang;
 
-				final String filepath = "files" + File.separator + lang + File.separator + filename;
+				final var filepath = "files" + File.separator + lang + File.separator + filename;
 
 				logger.info("Added files URL: {}", url);
 
@@ -272,16 +282,16 @@ public class ExportHTMLService extends HttpServlet {
 		m = IMG_URL_PATTERN.matcher(data);
 		// Find all resource links
 		while (m.find()) {
-			final String baselink = m.group(1);
-			final String filename = baselink.substring(baselink.lastIndexOf("/") + 1);
+			final var baselink = m.group(1);
+			final var filename = baselink.substring(baselink.lastIndexOf("/") + 1);
 			// Fix relative resource link, could easily break.
-			final String servername = request.getScheme() +
+			final var servername = request.getScheme() +
 					"://" +
 					request.getServerName() +
 					":" +
 					request.getServerPort() +
 					"/";
-			String link = baselink;
+			var link = baselink;
 			if (baselink.contains("../../../")) {
 				link = servername + baselink.replace("../../../", "");
 			} else {
@@ -304,10 +314,10 @@ public class ExportHTMLService extends HttpServlet {
 				"fonts" + File.separator + "glyphicons-halflings-regular.ttf", zos);
 
 		/// Write main html file to zip
-		final ZipEntry ze = new ZipEntry("portfolio.html");
+		final var ze = new ZipEntry("portfolio.html");
 		zos.putNextEntry(ze);
 
-		final byte[] bytes = datastr.getBytes();
+		final var bytes = datastr.getBytes();
 		zos.write(bytes);
 
 		zos.closeEntry();
@@ -316,17 +326,17 @@ public class ExportHTMLService extends HttpServlet {
 		fos.close();
 
 		/// Return data
-		final RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
-		final byte[] b = new byte[(int) f.length()];
+		final var f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
+		final var b = new byte[(int) f.length()];
 		f.read(b);
 		f.close();
 
-		final String timeFormat = DATE_PATTERN_FILENAME.format(new Date());
+		final var timeFormat = DATE_PATTERN_FILENAME.format(new Date());
 
 		response.addHeader("Content-Type", "application/zip");
 		response.addHeader("Content-Length", Integer.toString(b.length));
 		response.addHeader("Content-Disposition", "attachment; filename=\"Export-" + timeFormat + ".zip\"");
-		final ServletOutputStream writer = response.getOutputStream();
+		final var writer = response.getOutputStream();
 		writer.write(b);
 		writer.close();
 		request.getInputStream().close();
@@ -335,43 +345,26 @@ public class ExportHTMLService extends HttpServlet {
 		tempZip.delete();
 	}
 
-	@Override
-	public void init(ServletConfig config) throws ServletException {
-		super.init(config);
-		try {
-			ConfigUtils.init(getServletContext());
-			dataProvider = SqlUtils.initProvider();
-			tempdir = System.getProperty("java.io.tmpdir", null);
-			backend = ConfigUtils.getInstance().getRequiredProperty("backendserver");
-		} catch (final Exception e) {
-			logger.error("Can't init servlet", e);
-			throw new ServletException(e);
-		}
-	}
-
-	public void initialize(HttpServletRequest httpServletRequest) {
-	}
-
 	protected void WriteURLInZip(HttpSession session, String url, String filepath, ZipOutputStream zipfile)
 			throws IllegalStateException, IOException {
-		final HttpGet get = new HttpGet(url);
+		final var get = new HttpGet(url);
 
 		// Transfer sessionid so that local request still get security checked
 		get.addHeader("Cookie", "JSESSIONID=" + session.getId());
 
 		// Send request
-		final CloseableHttpClient client = HttpClients.createDefault();
-		final CloseableHttpResponse ret = client.execute(get);
-		final HttpEntity entity = ret.getEntity();
+		final var client = HttpClients.createDefault();
+		final var ret = client.execute(get);
+		final var entity = ret.getEntity();
 
 		// Save it to zip file with a folder name
-		final InputStream content = entity.getContent();
-		final ZipEntry ze = new ZipEntry(filepath);
+		final var content = entity.getContent();
+		final var ze = new ZipEntry(filepath);
 		try {
-			int totalread = 0;
+			var totalread = 0;
 			zipfile.putNextEntry(ze);
 			int inByte;
-			final byte[] buf = new byte[4096];
+			final var buf = new byte[4096];
 			while ((inByte = content.read(buf)) != -1) {
 				totalread += inByte;
 				zipfile.write(buf, 0, inByte);

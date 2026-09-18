@@ -22,13 +22,13 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Set;
 
-import javax.activation.MimeType;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.eportfolium.karuta.security.NodeRight;
+
+import jakarta.activation.MimeType;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * @author vassoill Le dataProvider est la classe d'acc�s aux donn�es. Voici

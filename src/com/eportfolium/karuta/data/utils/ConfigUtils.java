@@ -27,8 +27,6 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.jar.Manifest;
 
-import javax.servlet.ServletContext;
-
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.message.BasicHeader;
@@ -37,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 
+import jakarta.servlet.ServletContext;
 import jakarta.ws.rs.core.MediaType;
 
 public class ConfigUtils {
@@ -192,8 +191,7 @@ public class ConfigUtils {
 		final var configEnvDir = System.getenv(KARUTA_ENV_HOME);
 		final var configPropDir = System.getProperty(KARUTA_PROP_HOME);
 		// The jvm property override the environment property if set
-		final var configDir = (configPropDir != null && !configPropDir.trim().isEmpty()) ? configPropDir
-				: configEnvDir;
+		final var configDir = (configPropDir != null && !configPropDir.trim().isEmpty()) ? configPropDir : configEnvDir;
 		servletName = context.getContextPath();
 		if (configDir != null && !configDir.trim().isEmpty()) {
 			final var base = new File(configDir.trim());
@@ -257,8 +255,7 @@ public class ConfigUtils {
 			try {
 				final var inputStream = httpentity.getContent();
 
-				final var reader = new BufferedReader(
-						new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8);
+				final var reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8), 8);
 				final var sb = new StringBuilder();
 				String line = null;
 

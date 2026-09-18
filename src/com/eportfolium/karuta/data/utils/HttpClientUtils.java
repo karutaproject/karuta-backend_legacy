@@ -14,33 +14,32 @@ import org.slf4j.LoggerFactory;
 
 public class HttpClientUtils {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpClientUtils.class);
+	private static final Logger logger = LoggerFactory.getLogger(HttpClientUtils.class);
 
-    private static CloseableHttpClient httpclient;
+	private static CloseableHttpClient httpclient;
 
-    public static CloseableHttpResponse goGet(final Set<Header> headers, final String url) {
-        try {
-            if (httpclient == null) {
-                httpclient = HttpClients.createSystem();
-            }
+	public static CloseableHttpResponse goGet(final Set<Header> headers, final String url) {
+		try {
+			if (httpclient == null) {
+				httpclient = HttpClients.createSystem();
+			}
 
-            /// Fetch page
-            HttpGet get = new HttpGet(url);
-            for (Header header : headers) {
-                get.addHeader(header);
-            }
+			/// Fetch page
+			final var get = new HttpGet(url);
+			for (final Header header : headers) {
+				get.addHeader(header);
+			}
 
+			final var response = httpclient.execute(get);
+			if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+				logger.error("Method failed: {} on {} and with headers {}", response.getStatusLine(), url, headers);
+				return null;
+			}
 
-            final CloseableHttpResponse response = httpclient.execute(get);
-            if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
-                logger.error("Method failed: {} on {} and with headers {}", response.getStatusLine(), url, headers);
-                return null;
-            }
-
-            return response;
-        } catch (IOException e) {
-            logger.error("Can't do Request on {} and with headers {}", url, headers, e);
-        }
-        return null;
-    }
+			return response;
+		} catch (final IOException e) {
+			logger.error("Can't do Request on {} and with headers {}", url, headers, e);
+		}
+		return null;
+	}
 }

@@ -57,24 +57,24 @@ public class SqlUtils {
 	// If servContext is null, only load from pooled connection
 	public static Connection getConnection() throws Exception {
 		if (!loaded) {
-			final String resourceDatasourceName = ConfigUtils.getInstance().getProperty("JDBC.external.resourceName");
+			final var resourceDatasourceName = ConfigUtils.getInstance().getProperty("JDBC.external.resourceName");
 			if (resourceDatasourceName != null) {
 				ctx = new InitialContext();
-				final Context envCtx = (Context) ctx.lookup("java:comp/env");
+				final var envCtx = (Context) ctx.lookup("java:comp/env");
 				ds = (DataSource) envCtx.lookup(resourceDatasourceName);
 				logger.info("Using external datasource with name {}: {}", resourceDatasourceName, ds.toString());
 
 			} else {
-				final DriverAdapterCPDS cpds = new DriverAdapterCPDS();
+				final var cpds = new DriverAdapterCPDS();
 				cpds.setDriver(ConfigUtils.getInstance().getRequiredProperty("DBDriver"));
 				cpds.setUrl(ConfigUtils.getInstance().getRequiredProperty("DBUrl"));
 
-				final Properties info = new Properties();
+				final var info = new Properties();
 				info.put("user", ConfigUtils.getInstance().getRequiredProperty("DBUser"));
 				info.put("password", ConfigUtils.getInstance().getRequiredProperty("DBPass"));
 				cpds.setConnectionProperties(info);
 
-				final SharedPoolDataSource tds = new SharedPoolDataSource();
+				final var tds = new SharedPoolDataSource();
 				tds.setConnectionPoolDataSource(cpds);
 
 				/// TODO: Complete it with other parameters, also, benchmark
@@ -101,7 +101,7 @@ public class SqlUtils {
 	}
 
 	public static String getCurrentTimeStamp() {
-		final java.util.Date date = new java.util.Date();
+		final var date = new java.util.Date();
 		return new Timestamp(date.getTime()).toString();
 	}
 
@@ -111,7 +111,7 @@ public class SqlUtils {
 
 	public static DataProvider initProvider() throws Exception {
 		//============= init servers ===============================
-		final String dataProviderName = ConfigUtils.getInstance().getRequiredProperty(PROP_DATA_PROVIDER_CLASS);
+		final var dataProviderName = ConfigUtils.getInstance().getRequiredProperty(PROP_DATA_PROVIDER_CLASS);
 		if (dp == null) {
 			dp = (DataProvider) Class.forName(dataProviderName).getConstructor().newInstance();
 		}
@@ -124,7 +124,7 @@ public class SqlUtils {
 
 	public static ReportHelperProvider initProviderHelper() throws Exception {
 		//============= init servers ===============================
-		final String dataProviderName = "com.eportfolium.karuta.data.provider.ReportHelperProvider";
+		final var dataProviderName = "com.eportfolium.karuta.data.provider.ReportHelperProvider";
 		if (rh == null) {
 			rh = (ReportHelperProvider) Class.forName(dataProviderName).getConstructor().newInstance();
 		}

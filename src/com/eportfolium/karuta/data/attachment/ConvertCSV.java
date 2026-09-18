@@ -22,15 +22,9 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload2.core.DiskFileItemFactory;
+import org.apache.commons.fileupload2.core.FileItem;
+import org.apache.commons.fileupload2.jakarta.servlet6.JakartaServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -40,6 +34,11 @@ import org.slf4j.LoggerFactory;
 import com.eportfolium.karuta.data.utils.ConfigUtils;
 
 import au.com.bytecode.opencsv.CSVReader;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 public class ConvertCSV extends HttpServlet {
 
@@ -60,9 +59,13 @@ public class ConvertCSV extends HttpServlet {
 
 	private String csvsep;
 
+	public void initialize(HttpServletRequest httpServletRequest) {
+		csvsep = ConfigUtils.getInstance().getProperty("csv_separator", ",");
+	}
+
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException {
-		final boolean isMultipart = ServletFileUpload.isMultipartContent(request);
+		final var isMultipart = JakartaServletFileUpload.isMultipartContent(request);
 		if (!isMultipart) {
 			try {
 				request.getInputStream().close();
@@ -79,12 +82,12 @@ public class ConvertCSV extends HttpServlet {
 		response.setContentType("application/json");
 		response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
 
-		final char csvseparator = csvsep.charAt(0); // Otherwise just fetch the first character defined
+		final var csvseparator = csvsep.charAt(0); // Otherwise just fetch the first character defined
 
 		JSONObject data = null;
 		try {
-			final DiskFileItemFactory factory = new DiskFileItemFactory();
-			final ServletFileUpload upload = new ServletFileUpload(factory);
+			final var factory = DiskFileItemFactory.builder().get();
+			final var upload = new JakartaServletFileUpload(factory);
 			final List<FileItem> items = upload.parseRequest(request);
 
 			//			List<String[]> meta = new ArrayList<String[]>();
@@ -93,12 +96,12 @@ public class ConvertCSV extends HttpServlet {
 			for (final FileItem item : items) {
 				if (!item.isFormField()) {
 					// Process form file field (input type="file").
-					final String fieldname = item.getFieldName();
+					final var fieldname = item.getFieldName();
 					if ("uploadfile".equals(fieldname)) // name="uploadfile"
 					{
-						final InputStreamReader isr = new InputStreamReader(item.getInputStream());
-						final byte[] rawdata = IOUtils.toByteArray(isr, StandardCharsets.UTF_8);
-						InputStreamReader byteReader = new InputStreamReader(new ByteArrayInputStream(rawdata));
+						final var isr = new InputStreamReader(item.getInputStream());
+						final var rawdata = IOUtils.toByteArray(isr, StandardCharsets.UTF_8);
+						var byteReader = new InputStreamReader(new ByteArrayInputStream(rawdata));
 
 						// Different tries depending on locale
 						data = ReadCSV(byteReader, ',');
@@ -140,13 +143,9 @@ public class ConvertCSV extends HttpServlet {
 
 	}
 
-	public void initialize(HttpServletRequest httpServletRequest) {
-		csvsep = ConfigUtils.getInstance().getProperty("csv_separator", ",");
-	}
-
 	protected JSONObject ReadCSV(InputStreamReader isr, char separator) throws IOException {
-		final JSONObject data = new JSONObject();
-		final CSVReader reader = new CSVReader(isr, separator);
+		final var data = new JSONObject();
+		final var reader = new CSVReader(isr, separator);
 		String[] headerLine;
 		String[] dataLine;
 
@@ -163,7 +162,7 @@ public class ConvertCSV extends HttpServlet {
 			return data;
 		}
 
-		for (int i = 0; i < headerLine.length; ++i) {
+		for (var i = 0; i < headerLine.length; ++i) {
 			data.put(headerLine[i], dataLine[i]);
 		}
 
@@ -173,10 +172,10 @@ public class ConvertCSV extends HttpServlet {
 			return data;
 		}
 
-		final JSONArray lines = new JSONArray();
+		final var lines = new JSONArray();
 		while ((dataLine = reader.readNext()) != null) {
-			final JSONObject lineInfo = new JSONObject();
-			for (int i = 0; i < headerLine.length; ++i) {
+			final var lineInfo = new JSONObject();
+			for (var i = 0; i < headerLine.length; ++i) {
 				lineInfo.put(headerLine[i], dataLine[i]);
 			}
 			lines.put(lineInfo);

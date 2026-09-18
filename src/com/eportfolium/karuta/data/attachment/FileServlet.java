@@ -31,22 +31,16 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload2.core.DiskFileItemFactory;
+import org.apache.commons.fileupload2.core.FileItem;
+import org.apache.commons.fileupload2.jakarta.servlet6.JakartaServletFileUpload;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -66,6 +60,13 @@ import com.eportfolium.karuta.rest.RestWebApplicationException;
 import com.eportfolium.karuta.security.Credential;
 import com.google.gson.stream.JsonWriter;
 
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.Response.Status;
 
 public class FileServlet extends HttpServlet {
@@ -592,10 +593,10 @@ public class FileServlet extends HttpServlet {
 
 			// Unpack form, fetch binary data and send
 			// Create a factory for disk-based file items
-			final var factory = new DiskFileItemFactory();
+			final var factory = DiskFileItemFactory.builder().get();
 
 			// Create a new file upload handler
-			final var upload = new ServletFileUpload(factory);
+			final var upload = new JakartaServletFileUpload(factory);
 
 			var json = "";
 			HttpURLConnection connection = null;
@@ -631,7 +632,7 @@ public class FileServlet extends HttpServlet {
 				}
 			} else //				if( ServletFileUpload.isMultipartContent(request) )
 			if (true) {
-				final var items = upload.parseRequest(request);
+				final List<FileItem> items = upload.parseRequest(request);
 				for (FileItem item : items) {
 					if ("uploadfile".equals(item.getFieldName())) {
 						// Send raw data
@@ -859,10 +860,10 @@ public class FileServlet extends HttpServlet {
 
 			// Unpack form, fetch binary data and send
 			// Create a factory for disk-based file items
-			final var factory = new DiskFileItemFactory();
+			final var factory = DiskFileItemFactory.builder().get();
 
 			// Create a new file upload handler
-			final var upload = new ServletFileUpload(factory);
+			final var upload = new JakartaServletFileUpload(factory);
 
 			var json = "";
 			HttpURLConnection connection = null;
@@ -899,7 +900,7 @@ public class FileServlet extends HttpServlet {
 			} else //				if( ServletFileUpload.isMultipartContent(request) )
 			// TODO review this part, something should be removed or modified
 			if (true) {
-				final var items = upload.parseRequest(request);
+				final List<FileItem> items = upload.parseRequest(request);
 				// Process the uploaded items
 				for (final FileItem item : items) {
 					if ("uploadfile".equals(item.getFieldName())) {
