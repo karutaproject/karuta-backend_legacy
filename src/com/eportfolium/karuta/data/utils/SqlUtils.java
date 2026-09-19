@@ -57,6 +57,29 @@ public class SqlUtils {
 	// If servContext is null, only load from pooled connection
 	public static Connection getConnection() throws Exception {
 		if (!loaded) {
+			initDataSource();
+		}
+		return ds.getConnection();
+	}
+
+	public static String getCurrentTimeStamp() {
+		final var date = new java.util.Date();
+		return new Timestamp(date.getTime()).toString();
+	}
+
+	public static Timestamp getCurrentTimeStamp2() {
+		return new Timestamp(System.currentTimeMillis());
+	}
+
+	public static DataSource getDataSource() {
+		if (!loaded) {
+			return initDataSource();
+		}
+		return ds;
+	}
+
+	public static DataSource initDataSource() {
+		try {
 			final var resourceDatasourceName = ConfigUtils.getInstance().getProperty("JDBC.external.resourceName");
 			if (resourceDatasourceName != null) {
 				ctx = new InitialContext();
@@ -96,17 +119,11 @@ public class SqlUtils {
 			}
 
 			loaded = true;
+		} catch (final Exception e) {
+			e.printStackTrace();
 		}
-		return ds.getConnection();
-	}
 
-	public static String getCurrentTimeStamp() {
-		final var date = new java.util.Date();
-		return new Timestamp(date.getTime()).toString();
-	}
-
-	public static Timestamp getCurrentTimeStamp2() {
-		return new Timestamp(System.currentTimeMillis());
+		return ds;
 	}
 
 	public static DataProvider initProvider() throws Exception {
@@ -118,7 +135,6 @@ public class SqlUtils {
 
 		//		Connection connection = getConnection(application);
 		//		dataProvider.setConnection(connection);
-
 		return dp;
 	}
 

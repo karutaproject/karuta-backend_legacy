@@ -85,6 +85,7 @@ import com.eportfolium.karuta.eventbus.KEventbus;
 import com.eportfolium.karuta.security.ConnexionLdap;
 import com.eportfolium.karuta.security.Credential;
 import com.eportfolium.karuta.security.NodeRight;
+import com.eportfolium.karuta.security.UserInfo;
 import com.eportfolium.karuta.socialnetwork.Elgg;
 import com.google.gson.Gson;
 
@@ -111,30 +112,6 @@ import jakarta.ws.rs.core.Response.Status;
 /// I hate this line, sometime it works with a '/', sometime it doesn't
 @Path("/api")
 public class RestServicePortfolio {
-
-	class UserInfo {
-		String subUser = "";
-		int subId = 0;
-		String User = "";
-		int userId = 0;
-		//		int groupId = -1;
-
-		@Override
-		public String toString() {
-			return "UserInfo{" +
-					"subUser='" +
-					subUser +
-					'\'' +
-					", subId=" +
-					subId +
-					", User='" +
-					User +
-					'\'' +
-					", userId=" +
-					userId +
-					'}';
-		}
-	}
 
 	private static final SimpleDateFormat DT = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 	private static final SimpleDateFormat DT2 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
@@ -233,24 +210,26 @@ public class RestServicePortfolio {
 	public UserInfo checkCredential(HttpServletRequest request, String login, String token, String group) {
 		final var session = request.getSession(true);
 
-		final var ui = new UserInfo();
-		var val = (Integer) session.getAttribute("uid");
-		if (val == null) {
+		final var userid = (Integer) session.getAttribute("uid");
+		if (userid == null) {
 			// Non valid userid
 			logger.error("Request {} on '{}' unauthorized for a not logged in user", request.getMethod(),
 					request.getRequestURI());
 			throw new RestWebApplicationException(Status.UNAUTHORIZED, "User not logged in");
 		}
-		ui.userId = val;
+		final var user = (String) session.getAttribute("user");
 		//		val = (Integer) session.getAttribute("gid");
 		//		if( val != null )
 		//			ui.groupId = val;
-		val = (Integer) session.getAttribute("subuid");
-		if (val != null) {
-			ui.subId = val;
+		final var subid = (Integer) session.getAttribute("subuid");
+
+		UserInfo ui;
+		if (subid != null) {
+			final var subUser = (String) session.getAttribute("subuser");
+			ui = new UserInfo(userid, user, subid, subUser);
+		} else {
+			ui = new UserInfo(userid, user);
 		}
-		ui.User = (String) session.getAttribute("user");
-		ui.subUser = (String) session.getAttribute("subuser");
 
 		return ui;
 	}

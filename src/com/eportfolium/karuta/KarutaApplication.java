@@ -1,10 +1,8 @@
-package com.eportfolium.karuta.spring;
+package com.eportfolium.karuta;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.web.servlet.ServletComponentScan;
 
-@ServletComponentScan("com.eportfolium.karuta.data.utils")
 @SpringBootApplication
 public class KarutaApplication {
 	public static void main(String[] args) {
