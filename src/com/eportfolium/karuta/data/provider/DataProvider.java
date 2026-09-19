@@ -40,6 +40,8 @@ public interface DataProvider {
 
 	public boolean changePassword(Connection c, String username, String password);
 
+	public boolean changePasswordTimed(Connection c, String username, String password);
+
 	public String createGroup(Connection c, String name);
 
 	public String createUser(Connection c, String username, String email) throws Exception;

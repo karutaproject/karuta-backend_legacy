@@ -52,6 +52,12 @@ public class MongoDBDataProvider implements DataProvider {
 		return false;
 	}
 
+	@Override
+	public boolean changePasswordTimed(Connection c, String username, String password) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 	/*
 	@Override
 	public void setDataSource( DataSource source )
