@@ -3754,7 +3754,7 @@ public class RestServicePortfolio {
 					password = password.substring(0, 9);
 
 					// Write change
-					final var result = dataProvider.changePassword(c, username, password);
+					final var result = dataProvider.changePasswordTimed(c, username, password);
 					final var content = emailResetMessage + password + "<br>\n";
 					httpServletRequest.getHeader("referer");
 
@@ -3767,6 +3767,12 @@ public class RestServicePortfolio {
 						MailUtils.postMail(sc, email, ccEmail, "Password change for Karuta", content, logger);
 						retVal = 200;
 						retText = "sent";
+					}
+					else {
+						if (securityLog != null) {
+							final var ip = httpServletRequest.getRemoteAddr();
+							securityLog.info("[{}] [{}] reset password not executed", ip, username);
+						}
 					}
 				}
 			} catch (final RestWebApplicationException ex) {
