@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS `credential` (
   `password` binary(20) NOT NULL,
   `token` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `c_date` bigint(20) DEFAULT NULL,
+  `date_limit` timestamp DEFAULT NULL,
   `other` varchar(255) DEFAULT '' NOT NULL,
   PRIMARY KEY (`userid`),
   UNIQUE KEY `login` (`login`)
