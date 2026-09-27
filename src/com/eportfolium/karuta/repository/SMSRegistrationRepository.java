@@ -17,15 +17,18 @@ package com.eportfolium.karuta.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.eportfolium.karuta.entity.SMSEntity;
+import com.eportfolium.karuta.entity.SMSRegistrationEntity;
+import java.util.UUID;
 
-public interface SMSRepository extends JpaRepository<SMSEntity, Long> {
+public interface SMSRegistrationRepository extends JpaRepository<SMSRegistrationEntity, Long> {
 
-    SMSEntity save(SMSEntity smsEntity);
+    SMSRegistrationEntity save( SMSRegistrationEntity registration );
 
-    void delete(SMSEntity smsEntity);
+    void delete( SMSRegistrationEntity registration );
     
     boolean existsByUserId(Long userId);
-    
-	SMSEntity findByUserId(Long userId);
+
+    SMSRegistrationEntity findByUserId(Long userId);
+
+    SMSRegistrationEntity findByRequestId(UUID uuid);
 }

@@ -13,19 +13,40 @@
 	permissions and limitations under the License.
    ======================================================= */
 
-package com.eportfolium.karuta.repository;
+package com.eportfolium.karuta.controller;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
+import java.util.List;
 
-import com.eportfolium.karuta.entity.SMSEntity;
+/**
+ *
+ * @author Nobry
+ */
 
-public interface SMSRepository extends JpaRepository<SMSEntity, Long> {
+public record WebhookRequest(
+    Data data
+) {
+    public record Data(
+        @JsonProperty("event_type")
+        String eventType,
 
-    SMSEntity save(SMSEntity smsEntity);
+        String id,
+        
+        @JsonProperty("occurred_at")
+        Instant occurredAt,
 
-    void delete(SMSEntity smsEntity);
-    
-    boolean existsByUserId(Long userId);
-    
-	SMSEntity findByUserId(Long userId);
+        Payload payload
+    ) {}
+
+    public record Payload(
+        String id,
+        List<Recipient> to
+    ) {}
+
+    public record Recipient(
+        @JsonProperty("phone_number")
+        String phoneNumber,
+        String status
+    ) {}
 }

@@ -102,6 +102,20 @@
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 
+        <!-- SMS related -->
+        <dependency>
+            <groupId>com.telnyx.sdk</groupId>
+            <artifactId>telnyx-lib</artifactId>
+            <version>6.92.0</version>
+            <scope>runtime</scope>
+        </dependency>        
+        <dependency>
+            <groupId>com.telnyx.sdk</groupId>
+            <artifactId>telnyx-client-okhttp</artifactId>
+            <version>6.92.0</version>
+            <scope>compile</scope>
+        </dependency>
+
 		<dependency>
 			<groupId>commons-logging</groupId>
 			<artifactId>commons-logging</artifactId>
