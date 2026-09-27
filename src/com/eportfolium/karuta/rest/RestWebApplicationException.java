@@ -15,17 +15,13 @@
 
 package com.eportfolium.karuta.rest;
 
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.Status;
 
-public class RestWebApplicationException extends WebApplicationException {
+public class RestWebApplicationException extends RuntimeException {
 	Status stat;
 	String msg;
 
 	public RestWebApplicationException(Status status, String message) {
-		super(Response.status(status).entity(message).type(MediaType.TEXT_PLAIN).build());
 		msg = message;
 		stat = status;
 	}

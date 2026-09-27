@@ -305,7 +305,7 @@ public class RestServicePortfolio {
 			return "";
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("Managed error", ex);
 
@@ -1463,7 +1463,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -1514,7 +1514,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Error, shouldn't happen.");
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(ex.getStatus(), ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(ex.getStatus(), ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -1572,7 +1572,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("SQLException error", ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -1679,7 +1679,7 @@ public class RestServicePortfolio {
 			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits necessaires");
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -1917,7 +1917,7 @@ public class RestServicePortfolio {
 			}
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 
 			logger.info("Portfolio " + portfolioUuid + " not found");
@@ -1994,7 +1994,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("getPortfolioByCode error, will return FORBIDDEN", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("getPortfolioByCode error, will return NOT_FOUND for code {}", code, ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio code = " + code + " not found");
@@ -2245,7 +2245,7 @@ public class RestServicePortfolio {
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
 
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("Managed error", ex);
 
@@ -2500,7 +2500,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("Managed error", ex);
 
@@ -2767,7 +2767,7 @@ public class RestServicePortfolio {
 		} catch (final RestWebApplicationException ex) {
 			logger.error("getUser - Managed error", ex);
 
-			throw new RestWebApplicationException(Status.NOT_FOUND, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.NOT_FOUND, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("getUser - Managed error", ex);
 
@@ -2860,7 +2860,7 @@ public class RestServicePortfolio {
 			return dataProvider.getUserID(c, ui.userId, username);
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.NOT_FOUND, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.NOT_FOUND, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -3133,7 +3133,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -3191,7 +3191,7 @@ public class RestServicePortfolio {
 			return response;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -3440,7 +3440,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 
@@ -3884,7 +3884,7 @@ public class RestServicePortfolio {
 
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 
@@ -3941,7 +3941,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 
@@ -4193,7 +4193,7 @@ public class RestServicePortfolio {
 			}
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -4258,7 +4258,7 @@ public class RestServicePortfolio {
 			return response;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 
@@ -4308,7 +4308,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 
@@ -4414,7 +4414,7 @@ public class RestServicePortfolio {
 
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final NullPointerException ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -4751,7 +4751,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 
@@ -4802,7 +4802,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 
@@ -4845,7 +4845,7 @@ public class RestServicePortfolio {
 
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 
@@ -5019,7 +5019,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 			//
@@ -5192,7 +5192,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -5256,7 +5256,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -5324,7 +5324,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("Managed error", ex);
 
@@ -5388,7 +5388,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final SQLException ex) {
 			logger.error("Managed error", ex);
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
@@ -5459,7 +5459,7 @@ public class RestServicePortfolio {
 			return returnValue;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("Managed error", ex);
 
@@ -5953,7 +5953,7 @@ public class RestServicePortfolio {
 			return queryuser;
 		} catch (final RestWebApplicationException ex) {
 			logger.error("putUser - Managed error", ex);
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getCustomMessage());
 		} catch (final Exception ex) {
 			logger.error("getUsers - Managed error", ex);
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, "Error : " + ex.getMessage());
