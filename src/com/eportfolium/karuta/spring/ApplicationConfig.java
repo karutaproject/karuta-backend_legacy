@@ -16,6 +16,8 @@ public class ApplicationConfig {
 	public ServletContextInitializer configInitializer() {
 		return servletContext -> {
 			try {
+                // TODO: Untangle the need for servlet context and use env
+                // Then have it loaded as regular bean
 				ConfigUtils.init(servletContext);
 			} catch (final Exception e) {
 				e.printStackTrace();
