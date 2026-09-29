@@ -40,7 +40,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SMSService {
 	private static final Logger logger = LoggerFactory.getLogger(SMSService.class);
 
-    @Value("${number}")
+    // Auto-wired
     private String number;
     
 	private final SMSRepository smsRepository;

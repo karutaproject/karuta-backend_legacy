@@ -73,9 +73,9 @@
 		<JACKSON_VER>1.9.13</JACKSON_VER>
 		<CAS_VER>3.6.4</CAS_VER>
 		<xmlgraphics.version>2.11</xmlgraphics.version>
-		<java.version>17</java.version>
+		<java.version>21</java.version>
 				<JERSEY_VER>3.1.10</JERSEY_VER>
-				<JDK_VER>17</JDK_VER>
+				<JDK_VER>21</JDK_VER>
 	</properties>
 
 	<parent>
