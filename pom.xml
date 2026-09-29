@@ -105,22 +105,11 @@
         <!-- SMS related -->
         <dependency>
             <groupId>com.telnyx.sdk</groupId>
-            <artifactId>telnyx-lib</artifactId>
-            <version>6.92.0</version>
-            <scope>runtime</scope>
-        </dependency>        
-        <dependency>
-            <groupId>com.telnyx.sdk</groupId>
             <artifactId>telnyx-client-okhttp</artifactId>
             <version>6.92.0</version>
             <scope>compile</scope>
         </dependency>
 
-		<dependency>
-			<groupId>commons-logging</groupId>
-			<artifactId>commons-logging</artifactId>
-			<version>1.4.0</version>
-				</dependency>
 				<dependency>
 					<groupId>jakarta.ws.rs</groupId>
 					<artifactId>jakarta.ws.rs-api</artifactId>
@@ -134,41 +123,14 @@
 					<artifactId>commons-fileupload2-jakarta-servlet6</artifactId>
 					<version>2.0.0-M4</version>
 				</dependency>
-				<dependency>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-api</artifactId>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.logging.log4j</groupId>
-					<artifactId>log4j-slf4j2-impl</artifactId>
-					<scope>compile</scope>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.logging.log4j</groupId>
-					<artifactId>log4j-core</artifactId>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.logging.log4j</groupId>
-					<artifactId>log4j-api</artifactId>
-				</dependency>
-				<dependency>
-					<groupId>com.mysql</groupId>
-					<artifactId>mysql-connector-j</artifactId>
-					<scope>compile</scope>
-				</dependency>
-				<dependency>
-					<groupId>org.mariadb.jdbc</groupId>
-					<artifactId>mariadb-java-client</artifactId>
-				</dependency>
-				<dependency>
+                <dependency>
+                    <groupId>org.mariadb.jdbc</groupId>
+                    <artifactId>mariadb-java-client</artifactId>
+                </dependency>
+                <dependency>
 					<groupId>jakarta.mail</groupId>
 					<artifactId>jakarta.mail-api</artifactId>
 				</dependency>
-		<dependency>
-			<groupId>org.bouncycastle</groupId>
-			<artifactId>bcprov-jdk18on</artifactId>
-			<version>1.84</version>
-		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpcore</artifactId>
@@ -209,30 +171,6 @@
 			</exclusions>
 		</dependency>
 
-		<dependency>
-			<groupId>org.jasig.cas.client</groupId>
-			<artifactId>cas-client-support-distributed-ehcache</artifactId>
-			<version>${CAS_VER}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>javax.xml.bind</groupId>
-					<artifactId>jaxb-api</artifactId>
-				</exclusion>
-			</exclusions>
-
-		</dependency>
-		<dependency>
-			<groupId>org.jasig.cas.client</groupId>
-			<artifactId>cas-client-support-distributed-memcached</artifactId>
-			<version>${CAS_VER}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>javax.xml.bind</groupId>
-					<artifactId>jaxb-api</artifactId>
-				</exclusion>
-			</exclusions>
-
-		</dependency>
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
@@ -297,11 +235,6 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.glassfish.jersey.containers</groupId>
-			<artifactId>jersey-container-servlet</artifactId>
-		</dependency>
-
-		<dependency>
 			<groupId>org.json</groupId>
 			<artifactId>json</artifactId>
 			<version>20250517</version>
@@ -337,15 +270,6 @@
 			<version>2.3</version>
 		</dependency>
 		<dependency>
-			<groupId>org.scribe</groupId>
-			<artifactId>scribe</artifactId>
-			<version>1.3.7</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-pool2</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-dbcp2</artifactId>
 		</dependency>
@@ -354,17 +278,6 @@
 			<groupId>org.bitbucket.b_c</groupId>
 			<artifactId>jose4j</artifactId>
 			<version>0.9.6</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.servicemix.bundles</groupId>
-			<artifactId>org.apache.servicemix.bundles.xalan</artifactId>
-			<version>2.7.3_3</version><!--$NO-MVN-MAN-VER$-->
-			<exclusions>
-				<exclusion>
-					<groupId>xml-apis</groupId>
-					<artifactId>xml-apis</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 	</dependencies>
 	<build>
@@ -502,7 +415,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
+                  <plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
 				<version>1.7.0</version>
