@@ -14,6 +14,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "sms_registration")
 public class SMSRegistrationEntity {
+    public SMSRegistrationEntity() {
+        code = "";
+    }
     
     public SMSRegistrationEntity( long userId, String code, UUID requestId, String status ) {
         this.userId = userId;
@@ -21,7 +24,8 @@ public class SMSRegistrationEntity {
         this.requestId = requestId;
         this.occurredAt = Instant.now();
         this.status = status;
-        this.attempt = 3;
+        this.eventType = "sent";
+        this.attempt = 2;
     }
     
 	@Id

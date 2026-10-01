@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/sms")
@@ -43,28 +44,24 @@ public class SMSController {
 	}
 
 	@PostMapping("/register")
-	public ResponseEntity<?> registerNumber(HttpServletRequest request) {
+	public ResponseEntity<?> registerNumber(HttpServletRequest request, @RequestParam("number") final String number) {
 		final var userInfo = authenticationService.getAuthenticateUser(request);
 
 		if (userInfo.isEmpty()) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
-
-		final var number = request.getParameter("number");
 
 		final var intval = smsService.registerNumber((long)userInfo.get().userId, number);
 		return ResponseEntity.ok(intval);
 	}
 
     @PostMapping("/register/confirm")
-	public ResponseEntity<?> confirmNumber(HttpServletRequest request) {
+	public ResponseEntity<?> confirmNumber(HttpServletRequest request, @RequestParam("number") final String number) {
 		final var userInfo = authenticationService.getAuthenticateUser(request);
 
 		if (userInfo.isEmpty()) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
-
-		final var number = request.getParameter("number");
 
 		final var intval = smsService.validateNumber((long)userInfo.get().userId, number);
 		return ResponseEntity.ok(intval);

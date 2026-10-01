@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "sms_table")
 public class SMSEntity {
+    public SMSEntity() {}
     
     public SMSEntity( long userId, String phone ) {
         this.userId = userId;

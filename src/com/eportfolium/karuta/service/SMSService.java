@@ -36,19 +36,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Service
-@ConfigurationProperties(prefix = "telnyx")
 public class SMSService {
 	private static final Logger logger = LoggerFactory.getLogger(SMSService.class);
 
-    // Auto-wired
-    private String number;
+    private final String number;
     
 	private final SMSRepository smsRepository;
 	private final SMSRegistrationRepository smsRegistrationRepository;
 
-	public SMSService(SMSRepository smsRepository, SMSRegistrationRepository smsRegistrationRepository) {
+	public SMSService(SMSRepository smsRepository, SMSRegistrationRepository smsRegistrationRepository, @Value("${telnyx.number}") String number) {
 		this.smsRepository = smsRepository;
         this.smsRegistrationRepository = smsRegistrationRepository;
+        this.number = number;
 	}
 
 	public int registerNumber(Long userId, String destNumber) {
@@ -56,7 +55,7 @@ public class SMSService {
         
         //// Check if a number isn't already registered
         //// and an active request for this user doesn't exist
-        if( smsRepository.existsByUserId(userId) || smsRegistrationRepository.existsByUserId(userId) )
+        if( smsRepository.existsByUserIdAndVerifiedTrue(userId) || smsRegistrationRepository.existsByUserId(userId) )
             return -1;
         
         //// Keep number

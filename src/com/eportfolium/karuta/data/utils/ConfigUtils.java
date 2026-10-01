@@ -169,7 +169,7 @@ public class ConfigUtils {
 	}
 
 	private void loadBuildedInfo(final ServletContext context) {
-		final var inputStream = context.getResourceAsStream("/META-INF/MANIFEST.MF");
+		final var inputStream = getClass().getClassLoader().getResourceAsStream("META-INF/MANIFEST.MF");
 		Manifest manifest = null;
 		try {
 			manifest = new Manifest(inputStream);

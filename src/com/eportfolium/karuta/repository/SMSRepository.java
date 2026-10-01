@@ -27,5 +27,7 @@ public interface SMSRepository extends JpaRepository<SMSEntity, Long> {
     
     boolean existsByUserId(Long userId);
     
+    boolean existsByUserIdAndVerifiedTrue(Long userId);
+    
 	SMSEntity findByUserId(Long userId);
 }
