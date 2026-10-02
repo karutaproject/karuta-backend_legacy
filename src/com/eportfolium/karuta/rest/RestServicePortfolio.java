@@ -82,10 +82,12 @@ import com.eportfolium.karuta.data.utils.MailUtils;
 import com.eportfolium.karuta.data.utils.SqlUtils;
 import com.eportfolium.karuta.eventbus.KEvent;
 import com.eportfolium.karuta.eventbus.KEventbus;
+import com.eportfolium.karuta.repository.SMSRepository;
 import com.eportfolium.karuta.security.ConnexionLdap;
 import com.eportfolium.karuta.security.Credential;
 import com.eportfolium.karuta.security.NodeRight;
 import com.eportfolium.karuta.security.UserInfo;
+import com.eportfolium.karuta.service.SMSService;
 import com.eportfolium.karuta.socialnetwork.Elgg;
 import com.google.gson.Gson;
 
@@ -108,8 +110,10 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.Status;
+import java.security.SecureRandom;
+import org.springframework.stereotype.Component;
 
-/// I hate this line, sometime it works with a '/', sometime it doesn't
+@Component
 @Path("/api")
 public class RestServicePortfolio {
 
@@ -130,6 +134,8 @@ public class RestServicePortfolio {
 
 	//	DataSource ds;
 	private DataProvider dataProvider;
+	private final SMSRepository smsRepository;
+	private final SMSService smsService;
 
 	// Options
 	private boolean activelogin;
@@ -158,10 +164,12 @@ public class RestServicePortfolio {
 	/**
 	 * Initialize service objects
 	 **/
-	public RestServicePortfolio(@Context ServletConfig sc) {
+	public RestServicePortfolio(@Context ServletConfig sc, SMSRepository smsRepository, SMSService smsService) {
+        this.smsRepository = smsRepository;
+        this.smsService = smsService;
 		try {
 			// Loading configKaruta.properties
-			ConfigUtils.init(sc.getServletContext());
+			//ConfigUtils.init(sc.getServletContext());
 
 			tempdir = System.getProperty("java.io.tmpdir", null);
 
@@ -3710,6 +3718,18 @@ public class RestServicePortfolio {
 		}
 	}
 
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final char[] ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
+
+    static String generateTempPassword() {
+        StringBuilder password = new StringBuilder(9);
+
+        for (int i = 0; i < 9; i++) {
+            password.append(ALPHABET[RANDOM.nextInt(ALPHABET.length)]);
+        }
+
+        return password.toString();
+    }
 	/**
 	 * Tell system you forgot your password
 	 * POST /rest/api/credential/forgot
@@ -3743,15 +3763,27 @@ public class RestServicePortfolio {
 				}
 
 				c = SqlUtils.getConnection();
+                // Check is SMS number has been registered
+                long userid = Long.parseLong(dataProvider.getUserId(c, username, null));
+                if ( smsRepository.existsByUserId(userid) )
+                {
+					var password = generateTempPassword();
+                    int data = smsService.sendMessage(userid, String.format("Votre code: %s", password));
+                    if (data == 0){
+                        if (securityLog != null) {
+							final var ip = httpServletRequest.getRemoteAddr();
+							securityLog.info("[{}] [{}] asked to reset password", ip, username);
+						}
+
+                    }
+                }
+                else {
+                
 				// Check if we have that email somewhere
 				final var email = dataProvider.emailFromLogin(c, username);
 				if (email != null && !"".equals(email)) {
 					// Generate password
-					final var base = System.currentTimeMillis();
-					final var md = MessageDigest.getInstance("SHA-1");
-					final var output = md.digest(Long.toString(base).getBytes());
-					var password = String.format("%032X", new BigInteger(1, output));
-					password = password.substring(0, 9);
+					var password = generateTempPassword();
 
 					// Write change
 					final var result = dataProvider.changePasswordTimed(c, username, password);
@@ -3775,6 +3807,7 @@ public class RestServicePortfolio {
 						}
 					}
 				}
+                }
 			} catch (final RestWebApplicationException ex) {
 				logger.error("Managed error", ex);
 				throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());

@@ -27,13 +27,13 @@ import com.telnyx.sdk.errors.RateLimitException;
 import com.telnyx.sdk.errors.TelnyxException;
 import com.telnyx.sdk.models.messages.MessageSendParams;
 import com.telnyx.sdk.models.messages.MessageSendResponse;
+import com.telnyx.sdk.models.messages.MessagingOutboundMessagePayload;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Service
 public class SMSService {
@@ -66,43 +66,18 @@ public class SMSService {
         final var code = String.format("%06d", new SecureRandom().nextInt(1_000_000));
         
         //// Send request
-        // apiKey loaded from java property telnyx.apiKey, or TELNYX_API_KEY env variable
-        TelnyxClient client = TelnyxOkHttpClient.fromEnv();
+        MessagingOutboundMessagePayload data = sendMessage(destNumber, String.format("Votre code de confirmation: %s", code));
+        if( data == null )
+    		return -2;
 
-        MessageSendParams params = MessageSendParams.builder()
-            .from(number)
-            .to(destNumber)
-            .text(String.format("Votre code de confirmation: %s", code))
-            .build();
+        String idString = data.id().get();
+        String status = data.to().get().getFirst().status().get().toString();
+        UUID id = UUID.fromString(idString);
 
-        int maxRetries = 3;
-        for (int attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                MessageSendResponse response = client.messages().send(params);
-                logger.info("Message sent: " + response);
-                String idString = response.data().get().id().get();
-                String status = response.data().get().to().get().getFirst().status().get().toString();
-                UUID id = UUID.fromString(idString);
-                
-                SMSRegistrationEntity registration = new SMSRegistrationEntity(userId, code, id, status);
-                smsRegistrationRepository.save(registration);
-                
-                return 0;
-            } catch (RateLimitException e) {
-                long waitMs = (long) Math.pow(2, attempt) * 1000;
-                logger.info("Rate limited. Retrying in %dms...%n", waitMs);
-                try {
-                    Thread.sleep(waitMs);
-                } catch (InterruptedException e2) {
+        SMSRegistrationEntity registration = new SMSRegistrationEntity(userId, code, id, status);
+        smsRegistrationRepository.save(registration);
 
-                }
-
-            } catch (TelnyxException e) {
-                throw e;
-            }
-        }
-
-		return 0;
+        return 0;
 	}
 
 	public int validateNumber(Long userId, String number) {
@@ -156,5 +131,50 @@ public class SMSService {
         smsRegistrationRepository.save(reg);
         
         return 0;
+    }
+    
+    public int sendMessage( long userId, String message ) {
+        SMSEntity smsEntity = smsRepository.findByUserId(userId);
+        if( smsEntity == null ) return -1;
+        
+        MessagingOutboundMessagePayload data = sendMessage( smsEntity.getPhone(), message );
+        /// Keep log of requests?
+        
+        if( data == null ) return -1;
+        
+        return 0;
+    }
+    
+    private MessagingOutboundMessagePayload sendMessage( String destNumber, String message ) {
+        // apiKey loaded from java property telnyx.apiKey, or TELNYX_API_KEY env variable
+        TelnyxClient client = TelnyxOkHttpClient.fromEnv();
+
+        MessageSendParams params = MessageSendParams.builder()
+            .from(number)
+            .to(destNumber)
+            .text(message)
+            .build();
+
+        int maxRetries = 3;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                MessageSendResponse response = client.messages().send(params);
+                logger.info("Message sent: " + response);
+
+                return response.data().get();
+            } catch (RateLimitException e) {
+                long waitMs = (long) Math.pow(2, attempt) * 1000;
+                logger.info("Rate limited. Retrying in %dms...%n", waitMs);
+                try {
+                    Thread.sleep(waitMs);
+                } catch (InterruptedException e2) {
+
+                }
+            } catch (TelnyxException e) {
+                throw e;
+            }
+        }
+
+        return null;
     }
 }
