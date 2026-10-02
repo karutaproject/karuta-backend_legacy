@@ -17,6 +17,7 @@ package com.eportfolium.karuta.service;
 
 import com.eportfolium.karuta.entity.SMSEntity;
 import com.eportfolium.karuta.entity.SMSRegistrationEntity;
+import com.eportfolium.karuta.entity.SMSRegistrationEntity.ConfirmationAction;
 import com.eportfolium.karuta.repository.SMSRegistrationRepository;
 import org.springframework.stereotype.Service;
 
@@ -50,13 +51,25 @@ public class SMSService {
         this.number = number;
 	}
 
-	public int registerNumber(Long userId, String destNumber) {
+	public int registerNumber(Long userId, String destNumber, ConfirmationAction action) {
         // Number format: "+15559876543"
         
-        //// Check if a number isn't already registered
-        //// and an active request for this user doesn't exist
-        if( smsRepository.existsByUserIdAndVerifiedTrue(userId) || smsRegistrationRepository.existsByUserId(userId) )
-            return -1;
+        switch( action ){
+            case REGISTER -> {
+                //// Check if a number isn't already registered
+                //// and an active request for this user doesn't exist
+                if( smsRepository.existsByUserIdAndVerifiedTrue(userId) ||
+                        smsRegistrationRepository.existsByUserId(userId) )
+                    return -1;
+            }
+            case DEREGISTER -> {
+                //// Check if a number already registered match
+                //// and an active request for this user doesn't exist
+                if( !smsRepository.existsByUserIdAndPhone(userId, destNumber) ||
+                        smsRegistrationRepository.existsByUserId(userId) )
+                    return -1;
+            }
+        }
         
         //// Keep number
         SMSEntity smsEntity = new SMSEntity(userId, destNumber);
@@ -74,7 +87,7 @@ public class SMSService {
         String status = data.to().get().getFirst().status().get().toString();
         UUID id = UUID.fromString(idString);
 
-        SMSRegistrationEntity registration = new SMSRegistrationEntity(userId, code, id, status);
+        SMSRegistrationEntity registration = new SMSRegistrationEntity(userId, action, code, id, status);
         smsRegistrationRepository.save(registration);
 
         return 0;
@@ -103,10 +116,18 @@ public class SMSService {
         }
         
         //// Code match
-        // Update user entry
         SMSEntity smsEntity = smsRepository.findById(userId).get();
-        smsEntity.setVerified();
-        smsRepository.save(smsEntity);
+        // Update user entry
+        switch( reg.getConfirmationAction() ) {
+            case REGISTER -> {
+                smsEntity.setVerified();
+                smsRepository.save(smsEntity);
+            }
+                
+            case DEREGISTER -> {
+                smsRepository.delete(smsEntity);
+            }
+        }
         
         // Remove registration follow-up
         smsRegistrationRepository.delete(reg);

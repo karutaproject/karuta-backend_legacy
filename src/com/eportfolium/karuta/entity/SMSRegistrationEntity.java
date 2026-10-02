@@ -2,6 +2,8 @@ package com.eportfolium.karuta.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
@@ -14,12 +16,19 @@ import java.util.UUID;
 @Entity
 @Table(name = "sms_registration")
 public class SMSRegistrationEntity {
+
+    public enum ConfirmationAction {
+        REGISTER,
+        DEREGISTER
+    }
+
     public SMSRegistrationEntity() {
         code = "";
     }
     
-    public SMSRegistrationEntity( long userId, String code, UUID requestId, String status ) {
+    public SMSRegistrationEntity( long userId, ConfirmationAction action, String code, UUID requestId, String status ) {
         this.userId = userId;
+        this.action = action;
         this.code = code;
         this.requestId = requestId;
         this.occurredAt = Instant.now();
@@ -44,6 +53,11 @@ public class SMSRegistrationEntity {
             return -2;
         return -1;
     }
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "confirm_action", nullable = false)
+    private ConfirmationAction action;
+    public ConfirmationAction getConfirmationAction() { return action; }
 
     /// Provider part
 	@Column(name = "request_id", unique = true)

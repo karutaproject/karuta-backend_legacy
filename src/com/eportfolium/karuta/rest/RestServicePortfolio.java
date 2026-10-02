@@ -3765,17 +3765,24 @@ public class RestServicePortfolio {
 				c = SqlUtils.getConnection();
                 // Check is SMS number has been registered
                 long userid = Long.parseLong(dataProvider.getUserId(c, username, null));
-                if ( smsRepository.existsByUserId(userid) )
+                if ( smsRepository.existsByUserIdAndVerifiedTrue(userid) )
                 {
 					var password = generateTempPassword();
+					// Write change
+					final var result = dataProvider.changePasswordTimed(c, username, password);
+                    
+					if (result) {
                     int data = smsService.sendMessage(userid, String.format("Votre code: %s", password));
-                    if (data == 0){
-                        if (securityLog != null) {
-							final var ip = httpServletRequest.getRemoteAddr();
-							securityLog.info("[{}] [{}] asked to reset password", ip, username);
-						}
+                        if (data == 0){
+                            if (securityLog != null) {
+                                final var ip = httpServletRequest.getRemoteAddr();
+                                securityLog.info("[{}] [{}] asked to reset password", ip, username);
+                            }
 
+                        }
                     }
+                    retVal = 200;
+                    retText = "sent";
                 }
                 else {
                 

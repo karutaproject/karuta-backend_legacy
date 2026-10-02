@@ -15,6 +15,7 @@
 
 package com.eportfolium.karuta.controller;
 
+import com.eportfolium.karuta.entity.SMSRegistrationEntity.ConfirmationAction;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,18 +24,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.eportfolium.karuta.service.SMSService;
 import com.eportfolium.karuta.spring.AuthenticationService;
-import com.fasterxml.jackson.databind.JsonNode;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.time.Instant;
 import java.util.UUID;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
+@Validated
 @RequestMapping("/sms")
 public class SMSController {
-
+    private static final String PHONE_PATTERN = "^\\+\\d+$";
+    private static final String PHONE_PATTERN_ERROR = "Phone number must start with + and contain only digits";
+    
 	private final AuthenticationService authenticationService;
 	private final SMSService smsService;
 
@@ -44,19 +50,39 @@ public class SMSController {
 	}
 
 	@PostMapping("/register")
-	public ResponseEntity<?> registerNumber(HttpServletRequest request, @RequestParam("number") final String number) {
+	public ResponseEntity<?> registerNumber(HttpServletRequest request,
+            @RequestParam("number")
+            @NotBlank
+            @Pattern(message = PHONE_PATTERN_ERROR,
+                    regexp = PHONE_PATTERN) final String number) {
 		final var userInfo = authenticationService.getAuthenticateUser(request);
 
 		if (userInfo.isEmpty()) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 
-		final var intval = smsService.registerNumber((long)userInfo.get().userId, number);
+		final var intval = smsService.registerNumber((long)userInfo.get().userId, number, ConfirmationAction.REGISTER);
 		return ResponseEntity.ok(intval);
 	}
 
-    @PostMapping("/register/confirm")
-	public ResponseEntity<?> confirmNumber(HttpServletRequest request, @RequestParam("number") final String number) {
+	@PostMapping("/deregister")
+	public ResponseEntity<?> deRegisterNumber(HttpServletRequest request,
+            @RequestParam("number")
+            @NotBlank
+            @Pattern(message = PHONE_PATTERN_ERROR,
+                    regexp = PHONE_PATTERN) final String number) {
+		final var userInfo = authenticationService.getAuthenticateUser(request);
+
+		if (userInfo.isEmpty()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+
+		final var intval = smsService.registerNumber((long)userInfo.get().userId, number, ConfirmationAction.DEREGISTER);
+		return ResponseEntity.ok(intval);
+	}
+
+    @PostMapping("/confirm")
+	public ResponseEntity<?> confirmRegister(HttpServletRequest request, @RequestParam("number") final String number) {
 		final var userInfo = authenticationService.getAuthenticateUser(request);
 
 		if (userInfo.isEmpty()) {
@@ -66,7 +92,7 @@ public class SMSController {
 		final var intval = smsService.validateNumber((long)userInfo.get().userId, number);
 		return ResponseEntity.ok(intval);
 	}
-
+    
 	@PostMapping("/webhook")
 	public ResponseEntity<?> webhook(@RequestBody WebhookRequest request) {
         String eventType = request.data().eventType();

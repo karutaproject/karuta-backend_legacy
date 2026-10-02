@@ -21,11 +21,25 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.eportfolium.karuta.rest.RestWebApplicationException;
+import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.MediaType;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 	@ExceptionHandler(RestWebApplicationException.class)
 	public ResponseEntity<String> handleUnauthorized(RestWebApplicationException ex) {
-		return ResponseEntity.status(HttpStatus.valueOf(ex.getStatus().name())).body(ex.getMessage());
+		return ResponseEntity
+                .status(HttpStatus.valueOf(ex.getStatus().name()))
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(ex.getMessage());
 	}
+    
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<String> handleConstraintViolation(ConstraintViolationException ex) {
+        return ResponseEntity
+                .badRequest()
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(ex.getMessage());
+    }
+
 }
