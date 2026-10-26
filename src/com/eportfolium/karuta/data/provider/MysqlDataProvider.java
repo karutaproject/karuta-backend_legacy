@@ -234,7 +234,7 @@ public class MysqlDataProvider implements DataProvider {
 		final ResultSet res = null;
 
 		try {
-			sql = "UPDATE credential SET password=UNHEX(SHA1(?)) WHERE login=?";
+			sql = "UPDATE credential SET password=UNHEX(SHA1(?)), date_limit=null WHERE login=?";
 			st = c.prepareStatement(sql);
 			st.setString(1, password);
 			st.setString(2, username);
@@ -258,6 +258,29 @@ public class MysqlDataProvider implements DataProvider {
 
 		return changed;
 	}
+
+	@Override
+	public boolean changePasswordTimed(Connection c, String username, String password) {
+		var changed = false;
+
+		final String sql= "UPDATE credential SET password=UNHEX(SHA1(?)), date_limit=now() "
+				+ "WHERE login=?";
+		final ResultSet res = null;
+		var pwResetTimeout = ConfigUtils.getInstance().getProperty("password_reset_timeout");
+		int resetTimeout = pwResetTimeout == null ? 5 : Integer.parseInt(pwResetTimeout);
+		try (PreparedStatement st = c.prepareStatement(sql)) {
+			st.setString(1, password);
+			st.setString(2, username);
+			var numChanged = st.executeUpdate();
+
+			changed = numChanged > 0 ? true : false;
+		} catch (final Exception ex) {
+				ex.printStackTrace();
+		}
+
+		return changed;
+	}
+
 
 	@Override
 	public String createGroup(Connection c, String name) {
@@ -6218,21 +6241,23 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public String[] postCredentialFromXml(Connection c, Integer userId, String username, String password,
 			String substitute) throws ServletException, IOException {
-		String sql;
 		ResultSet rs;
 		PreparedStatement stmt;
 		String[] returnValue = null;
 		int uid;
 		var subuid = 0;
+                final var pwResetTimeout = ConfigUtils.getInstance().getProperty("password_reset_timeout");
+                final int resetTimeout = pwResetTimeout == null ? 5 : Integer.parseInt(pwResetTimeout);
+                String sql = "SELECT userid, login FROM credential WHERE login=? AND password=UNHEX(SHA1(?)) AND (date_limit is null OR TIMESTAMPDIFF(MINUTE, date_limit, now()) < ?)";
+                if (dbserveur.equals("oracle")) {
+                    sql = "SELECT userid, login FROM credential WHERE login=? AND password=crypt(?)";
+                }
+                    // Does user have a valid account?
 		try {
-			// Does user have a valid account?
-			sql = "SELECT userid, login FROM credential WHERE login=? AND password=UNHEX(SHA1(?))";
-			if (dbserveur.equals("oracle")) {
-				sql = "SELECT userid, login FROM credential WHERE login=? AND password=crypt(?)";
-			}
 			stmt = c.prepareStatement(sql);
 			stmt.setString(1, username);
 			stmt.setString(2, password);
+			stmt.setInt(3, resetTimeout);
 			rs = stmt.executeQuery();
 
 			if (!rs.next()) {

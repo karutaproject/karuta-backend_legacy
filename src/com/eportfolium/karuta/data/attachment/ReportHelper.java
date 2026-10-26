@@ -18,8 +18,6 @@ package com.eportfolium.karuta.data.attachment;
 import java.io.ByteArrayInputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -93,8 +91,7 @@ public class ReportHelper extends HttpServlet {
 			return;
 		}
 
-		Connection c = null;
-		try {
+		try (var c = SqlUtils.getConnection()) {
 			final var map = new HashMap<String, String>();
 
 			//// Process input
@@ -115,32 +112,19 @@ public class ReportHelper extends HttpServlet {
 			}
 
 			/// Query
-			c = SqlUtils.getConnection();
 			map.put("userid", Integer.toString(uid));
 
 			final var value = dataProvider.deleteVector(c, map);
 
 			// Send result
-			final OutputStream output = response.getOutputStream();
-			output.write(Integer.toString(value).getBytes());
-			output.close();
+			try (final OutputStream output = response.getOutputStream()) {
+				output.write(Integer.toString(value).getBytes());
+			}
 
 		} catch (final Exception e) {
 			e.printStackTrace();
 			response.setStatus(500);
-		} finally {
-			/// Close connections
-			try {
-				if (c != null) {
-					c.close();
-					//				request.getReader().close();
-					//				response.getWriter().close();
-				}
-			} catch (final Exception e) {
-				e.printStackTrace();
-			}
 		}
-
 	}
 
 	// Searching
@@ -159,8 +143,7 @@ public class ReportHelper extends HttpServlet {
 			return;
 		}
 
-		Connection c = null;
-		try {
+		try (var c = SqlUtils.getConnection()) {
 			final var map = new HashMap<String, String>();
 
 			//// Process input
@@ -181,32 +164,19 @@ public class ReportHelper extends HttpServlet {
 				}
 			}
 			/// Query
-			c = SqlUtils.getConnection();
 			final var vectorValue = dataProvider.getVector(c, uid, map);
 
 			// Send result
 			response.setContentType(ContentType.APPLICATION_XML.getMimeType());
 			response.setCharacterEncoding(StandardCharsets.UTF_8.toString());
-			final OutputStream output = response.getOutputStream();
-			output.write(vectorValue.getBytes(StandardCharsets.UTF_8));
-			output.close();
+			try (final OutputStream output = response.getOutputStream()) {
+				output.write(vectorValue.getBytes(StandardCharsets.UTF_8));
+			}
 
 		} catch (final Exception e) {
 			e.printStackTrace();
 			response.setStatus(500);
-		} finally {
-			/// Close connections
-			try {
-				if (c != null) {
-					c.close();
-					//			request.getReader().close();
-					//			response.getWriter().close();
-				}
-			} catch (final Exception e) {
-				e.printStackTrace();
-			}
 		}
-
 	}
 
 	// Write vector
@@ -227,8 +197,7 @@ public class ReportHelper extends HttpServlet {
 		}
 		//*/
 
-		Connection c = null;
-		try {
+		try (var c = SqlUtils.getConnection()) {
 			final var documentBuilderFactory = DomUtils.newSecureDocumentBuilderFactory();
 			documentBuilderFactory.setAttribute("http://apache.org/xml/features/disallow-doctype-decl", false);
 			final var documentBuilder = documentBuilderFactory.newDocumentBuilder();
@@ -285,39 +254,26 @@ public class ReportHelper extends HttpServlet {
 			}
 
 			/// Send query
-			c = SqlUtils.getConnection();
 			c.setAutoCommit(false);
-			final var retValue = dataProvider.writeVector(c, uid, map, groups);
+			try {
+				final var retValue = dataProvider.writeVector(c, uid, map, groups);
 
-			// Send result
-			final OutputStream output = response.getOutputStream();
-			var text = "OK";
-			if (retValue < 0) {
-				response.setStatus(304);
-				text = "Not modified";
+				// Send result
+				var text = "OK";
+				if (retValue < 0) {
+					response.setStatus(304);
+					text = "Not modified";
+				}
+				try (final OutputStream output = response.getOutputStream()) {
+					output.write(text.getBytes());
+				}
+			} catch (final Exception e) {
+				c.rollback();
+				throw e;
 			}
-			output.write(text.getBytes());
-			output.close();
-
 		} catch (final Exception e) {
 			logger.error("Exception", e);
-			try {
-				if (c != null) {
-					c.rollback();
-				}
-			} catch (final SQLException e1) {
-				logger.error("SQLException", e1);
-			}
 			response.setStatus(500);
-		} finally {
-			try {
-				if (c != null) {
-					c.commit();
-					c.close();
-				}
-			} catch (final SQLException e) {
-				logger.error("SQLException", e);
-			}
 		}
 	}
 }

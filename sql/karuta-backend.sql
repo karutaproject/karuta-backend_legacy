@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS `credential` (
   `password` binary(20) NOT NULL,
   `token` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `c_date` bigint(20) DEFAULT NULL,
+  `date_limit` timestamp DEFAULT NULL,
   `other` varchar(255) DEFAULT '' NOT NULL,
   PRIMARY KEY (`userid`),
   UNIQUE KEY `login` (`login`)
@@ -257,7 +258,7 @@ CREATE TABLE IF NOT EXISTS `data_table` (
 --
 
 
-INSERT IGNORE INTO `credential` VALUES (1, 'root', 1, 0, 1, 0, 1, 'root', '', NULL, UNHEX(SHA1('mati')), NULL, NULL, '');
-INSERT IGNORE INTO `credential` VALUES (2, 'sys_public', 0, 0, 0, 0, 1, 'System public account (users with account)', '', NULL, UNHEX(SHA1('THIS NEEDS TO BE CHANGED')), NULL, NULL, '');
-INSERT IGNORE INTO `credential` VALUES (3, 'public', 0, 0, 0, 0, 1, 'Public account (World)', '', NULL, UNHEX(SHA1('public')), NULL, NULL, '');
+INSERT IGNORE INTO `credential` VALUES (1, 'root', 1, 0, 1, 0, 1, 'root', '', NULL, UNHEX(SHA1('mati')), NULL, NULL, NULL, '');
+INSERT IGNORE INTO `credential` VALUES (2, 'sys_public', 0, 0, 0, 0, 1, 'System public account (users with account)', '', NULL, UNHEX(SHA1('THIS NEEDS TO BE CHANGED')), NULL, NULL, NULL, '');
+INSERT IGNORE INTO `credential` VALUES (3, 'public', 0, 0, 0, 0, 1, 'Public account (World)', '', NULL, UNHEX(SHA1('public')), NULL, NULL, NULL, '');
 

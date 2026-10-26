@@ -141,8 +141,8 @@ public class ReportHelperProvider {
 		final var vals = new ArrayList<String>();
 		if (!cred.isAdmin(c, userId)) {
 			// If user is not admin, check if read access is defined
-			cols.add("a1=?");
-			final var user = cred.getUsername(c, userId);
+			cols.add("(a1=? OR a1='all')");
+			final String user = cred.getUsername(c, userId);
 			vals.add(user);
 		}
 
