@@ -3,4 +3,4 @@
 
 USE `karuta-backend`;
 
-ALTER TABLE `credential` ADD COLUMN `date_limit` timestamp DEFAULT NULL AFTER c_date;
+ALTER TABLE `credential` ADD COLUMN `date_limit` timestamp NULL DEFAULT NULL AFTER c_date;
