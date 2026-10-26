@@ -89,14 +89,14 @@ public class Credential {
 		}
 
 		final String query = "SELECT gri.grid " +
-				"FROM group_info gi, group_user gu, group_right_info gri, node n " +
-				"WHERE gu.userid=? AND gu.gid=gi.gid AND gi.label=? AND gi.grid=gri.grid " +
-                "AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?);";
+				"FROM node n, group_right_info gri, group_info gi, group_user gu " +
+				"WHERE n.node_uuid=uuid2bin(?) AND gri.portfolio_id=n.portfolio_id " +
+                "AND gi.grid=gri.grid AND gi.label=? AND gu.gid=gi.gid AND gu.userid=?;";
 
 		try (PreparedStatement stmt = c.prepareStatement(query)) {
-			stmt.setInt(1, userId);
+			stmt.setString(1, nodeUuid);
 			stmt.setString(2, role);
-			stmt.setString(3, nodeUuid);
+			stmt.setInt(3, userId);
 			try (ResultSet rs = stmt.executeQuery()) {
 				if (rs.next()) {
 					return rs.getInt(1);
