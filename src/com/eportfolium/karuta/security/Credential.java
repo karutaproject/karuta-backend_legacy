@@ -83,19 +83,20 @@ public class Credential {
 		}
 	}
 
-	public int getGroupid(Connection c, String role, String nodeUuid) {
+	public int getGroupid(Connection c, int userId, String role, String nodeUuid) {
 		if (role == null || nodeUuid == null) {
 			return -1;
 		}
 
 		final String query = "SELECT gri.grid " +
-				"FROM group_info gi, group_right_info gri, node n " +
-				"WHERE n.node_uuid=uuid2bin(?) AND n.portfolio_id=gri.portfolio_id AND gri.grid=gi.grid " +
-				"AND gi.label=?;";
+				"FROM group_info gi, group_user gu, group_right_info gri, node n " +
+				"WHERE gu.userid=? AND gu.gid=gi.gid AND gi.label=? AND gi.grid=gri.grid " +
+                "AND gri.portfolio_id=n.portfolio_id AND n.node_uuid=uuid2bin(?);";
 
 		try (PreparedStatement stmt = c.prepareStatement(query)) {
-			stmt.setString(1, nodeUuid);
+			stmt.setInt(1, userId);
 			stmt.setString(2, role);
+			stmt.setString(3, nodeUuid);
 			try (ResultSet rs = stmt.executeQuery()) {
 				if (rs.next()) {
 					return rs.getInt(1);
@@ -143,7 +144,7 @@ public class Credential {
 		final NodeRight nodeRight = new NodeRight(false, false, false, false, false, false);
 
 		// If userrole specified, use it if something is found
-		final int groupid = getGroupid(c, userRole, node_uuid);
+		final int groupid = getGroupid(c, userId, userRole, node_uuid);
 		if (groupid != -1) {
 			groupId = groupid;
 			nodeRight.groupId = groupId;

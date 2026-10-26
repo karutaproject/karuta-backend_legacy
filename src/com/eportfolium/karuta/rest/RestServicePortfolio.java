@@ -5145,7 +5145,7 @@ public class RestServicePortfolio {
 
 			/// If no groupId was specified, but a role was sent
 			if (groupId == 0 && userrole != null) {
-				groupId = credential.getGroupid(c, userrole, nodeUuid);
+				groupId = credential.getGroupid(c, ui.userId, userrole, nodeUuid);
 			}
 
 			final var returnValue = dataProvider
@@ -5216,7 +5216,7 @@ public class RestServicePortfolio {
 
 			/// If no groupId was specified, but a role was sent
 			if (groupId == 0 && userrole != null) {
-				groupId = credential.getGroupid(c, userrole, nodeUuid);
+				groupId = credential.getGroupid(c, ui.userId, userrole, nodeUuid);
 			}
 
 			final var returnValue = dataProvider
@@ -5447,7 +5447,7 @@ public class RestServicePortfolio {
 
 			/// If no groupId was specified, but a role was sent
 			if (groupId == 0 && userrole != null) {
-				groupId = credential.getGroupid(c, userrole, nodeParentUuid);
+				groupId = credential.getGroupid(c, ui.userId, userrole, nodeParentUuid);
 			}
 
 			final var returnValue = dataProvider
