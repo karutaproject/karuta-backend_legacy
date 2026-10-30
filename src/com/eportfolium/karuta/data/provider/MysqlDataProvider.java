@@ -94,10 +94,10 @@ import com.eportfolium.karuta.security.Credential;
 import com.eportfolium.karuta.security.NodeRight;
 
 import jakarta.activation.MimeType;
+import jakarta.activation.MimeTypeParseException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.core.Response.Status;
-import javax.activation.MimeTypeParseException;
 import javax.xml.xpath.XPath;
 
 /**
