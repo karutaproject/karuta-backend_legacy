@@ -97,6 +97,8 @@ import jakarta.activation.MimeType;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.core.Response.Status;
+import javax.activation.MimeTypeParseException;
+import javax.xml.xpath.XPath;
 
 /**
  * @author vassoill Implementation du dataProvider pour MySQL
@@ -2215,7 +2217,7 @@ public class MysqlDataProvider implements DataProvider {
 		String nodeUuid = null;
 
 		// On recupere d'abord l'uuid du premier noeud trouve correspondant au semantictag
-		final var res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semantictag);
+		final var res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semantictag, userId);
 		if (!res.isEmpty()) {
 			nodeUuid = res.get(0).get("node_uuid");
 		}
@@ -2580,7 +2582,7 @@ public class MysqlDataProvider implements DataProvider {
 				List<HashMap<String, String>> res1;
 
 				try {
-					res1 = getMysqlNodeUuidBySemanticTag(c, pid, semtag);
+					res1 = getMysqlNodeUuidBySemanticTag(c, pid, semtag, userId);
 				} catch (final Exception ex) {
 					ex.printStackTrace();
 					return null;
@@ -2630,8 +2632,9 @@ public class MysqlDataProvider implements DataProvider {
 	@Override
 	public Object getNodesBySemanticTag(Connection c, MimeType outMimeType, int userId, int groupId,
 			String portfolioUuid, String semanticTag) throws SQLException {
-		final var res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semanticTag);
 		var result = new StringBuilder();
+        try {
+		final var res = this.getMysqlNodeUuidBySemanticTag(c, portfolioUuid, semanticTag, userId);
 		if (outMimeType.getSubType().equals("xml")) {
 			result = new StringBuilder("<nodes>");
 			for (final HashMap<String, String> resMap : res) {
@@ -2662,6 +2665,8 @@ public class MysqlDataProvider implements DataProvider {
 			}
 			result.append("] } }");
 		}
+        }
+        catch(Exception e) {}
 
 		return result.toString();
 	}
@@ -12879,30 +12884,37 @@ public class MysqlDataProvider implements DataProvider {
 	}
 
 	private List<HashMap<String, String>> getMysqlNodeUuidBySemanticTag(Connection c, String portfolioUuid,
-			String semantictag) throws SQLException {
-		final var sql = "SELECT bin2uuid(node_uuid) AS node_uuid, bin2uuid(res_node_uuid) AS res_node_uuid, bin2uuid(res_res_node_uuid) AS res_res_node_uuid, bin2uuid(res_context_node_uuid) AS res_context_node_uuid, " +
-				"node_children_uuid, code, asm_type, label, node_order " +
-				"FROM node WHERE portfolio_id = uuid2bin(?) AND " +
-				"semantictag LIKE ? ORDER BY code, node_order";
-		final var text = "%" + semantictag + "%";
-		final List<HashMap<String, String>> result = new ArrayList<>();
+			String semantictag, int userId) throws SQLException, MimeTypeParseException, Exception {
+        var portfolio = getPortfolio(c, new MimeType("text/xml"), portfolioUuid, userId, 0,
+                null, "", "", -1, null);
+        
+        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newDefaultInstance();
+        DocumentBuilder builder = builderFactory.newDocumentBuilder();
+        Document xmlDocument = builder.parse(new InputSource(new StringReader(portfolio)));
+        XPath xPath = XPathFactory.newInstance().newXPath();
+        String expression = String.format("//metadata[contains(@semantictag, '%s')]/..", semantictag);
+        NodeList nodeList = (NodeList) xPath.compile(expression).evaluate(xmlDocument, XPathConstants.NODESET);
 
-		try (var st = c.prepareStatement(sql)) {
-			st.setString(1, portfolioUuid);
-			st.setString(2, text);
+        final List<HashMap<String, String>> result = new ArrayList<>();
+        try {
+            Transformer t = TransformerFactory.newInstance().newTransformer();
+            t.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            t.setOutputProperty(OutputKeys.INDENT, "no");
+            for( var i=0; i<nodeList.getLength(); ++i ) {
+                var node = nodeList.item(i);
+                StringWriter sw = new StringWriter();
+                t.transform(new DOMSource(node), new StreamResult(sw));
+                final var nodeuuid = node.getAttributes().getNamedItem("id").getTextContent();
+                final var data = sw.toString();
+                final var resMap = new HashMap<String, String>();
+                resMap.put("node_uuid", nodeuuid);
+                resMap.put("asm_type", data);
+                result.add(resMap);
+            }
+        }
+        catch( TransformerException e ) {}
 
-			try (var rs = st.executeQuery()) {
-				while (rs.next()) {
-					final var resMap = new HashMap<String, String>();
-					resMap.put("node_uuid", rs.getString("node_uuid"));
-					resMap.put("asm_type", rs.getString("asm_type"));
-					result.add(resMap);
-				}
-			}
-		} catch (final Exception ex) {
-			ex.printStackTrace();
-		}
-		return result;
+        return result;
 	}
 
 	private ResultSet getMysqlOtherNodeUuidByPortfolioModelUuidBySemanticTag(Connection c, String portfolioModelUuid,
